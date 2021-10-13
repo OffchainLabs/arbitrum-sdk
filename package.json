@@ -1,71 +1,72 @@
 {
-  "name": "arbitrum",
-  "version": "0.2.0",
-  "description": "The Arbitrum Monorepo",
+  "name": "arb-ts",
+  "version": "0.0.42",
+  "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/OffchainLabs/arbitrum.git"
+    "url": "git+https://github.com/offchainlabs/arbitrum.git",
+    "directory": "packages/arb-ts"
   },
   "bugs": {
     "url": "https://github.com/offchainlabs/arbitrum/issues"
   },
-  "homepage": "https://offchainlabs.com/",
+  "homepage": "https://offchainlabs.com",
   "scripts": {
-    "audit:ci": "audit-ci -l -a 1748",
-    "install:deps": "./scripts/install-deps",
-    "install:validator": "./scripts/install-validator",
-    "update:abi": "yarn go:generate && yarn workspace arb-ts update:abi",
-    "build": "yarn workspace arb-ts build",
-    "docker:build:parity": "yarn workspace arb-bridge-eth docker:build:parity",
-    "docker:build:ganache": "yarn workspace arb-bridge-eth docker:build:ganache",
-    "run:local:geth": "yarn workspace arb-bridge-eth run:local:geth",
-    "kill:geth": "kill $(lsof -t -i:7545)",
-    "docker:build:geth": "yarn workspace arb-bridge-eth docker:build:geth",
-    "docker:parity": "yarn workspace arb-bridge-eth docker:parity",
-    "docker:ganache": "yarn workspace arb-bridge-eth docker:ganache",
-    "docker:geth": "yarn workspace arb-bridge-eth docker:geth",
-    "go:vet": "./scripts/run-go-packages \"go list ./... | grep -v 'arb-node-core/ethbridge[^/]*contracts' | xargs go vet\"",
-    "go:generate": "./scripts/run-go-packages 'go generate ./...'",
-    "go:tidy": "./scripts/run-go-packages 'go mod tidy'",
-    "go:test": "./scripts/run-go-packages 'go test ./...'",
-    "demo:initialize": "yarn workspace tools demo:initialize",
-    "demo:deploy": "./scripts/arb_deploy.py local",
-    "prod:initialize": "yarn workspace tools prod:initialize",
-    "deploy:validators": "./scripts/arb_deploy.py"
+    "prepublishOnly": "yarn build && yarn format",
+    "preversion": "yarn lint",
+    "build": "./scripts/builder",
+    "watch": "tsc --watch",
+    "test": "mocha",
+    "test:coverage": "nyc mocha",
+    "test:ci": "nyc --reporter=lcovonly mocha --reporter xunit",
+    "lint": "eslint .",
+    "format": "prettier './**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
+    "update:abi": "./scripts/update-abi && yarn format",
+    "test:integration": "yarn run mocha integration_test/ --timeout 30000000 --bail",
+    "generate_docs": "typedoc --plugin none",
+    "generate_token_list": "ts-node token_lists/generate_json.ts",
+    "checkRetryable": "ts-node scripts/checkRetryableStatus.ts",
+    "redeemRetryable": "ts-node scripts/redeemRetryable.ts",
+    "setStandard": "ts-node scripts/setStandardGateways.ts",
+    "setCustom": "ts-node scripts/setArbCustomGateways.ts",
+    "cancelRetryable": "ts-node scripts/cancelRetryable.ts"
   },
-  "engines": {
-    "node": ">= 8.0.0",
-    "npm": "^6.0.0",
-    "yarn": "^1.0.0"
-  },
-  "engine-strict": true,
-  "private": true,
-  "workspaces": {
-    "packages": [
-      "packages/arb-bridge-eth",
-      "packages/tools",
-      "packages/arb-bridge-peripherals",
-      "packages/arb-ts",
-      "packages/arb-os/contracts",
-      "packages/arb-upgrades"
-    ],
-    "nohoist": [
-      "**/@openzeppelin/contracts",
-      "**/@openzeppelin/contracts-upgradeable"
-    ]
-  },
-  "devDependencies": {
-    "eslint": "^7.32.0",
-    "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-mocha": "^9.0.0",
-    "eslint-plugin-prettier": "^4.0.0",
-    "prettier": "^2.3.2",
-    "prettier-plugin-solidity": "^1.0.0-beta.17"
+  "dependencies": {
+    "@ethersproject/address": "^5.0.8",
+    "@ethersproject/bignumber": "^5.1.1",
+    "@ethersproject/bytes": "^5.0.8",
+    "@nomiclabs/hardhat-ethers": "^2.0.2",
+    "dotenv": "^10.0.0",
+    "ethers": "^5.1.0"
   },
   "resolutions": {
-    "eth-sig-util/ethereumjs-abi": "^0.6.8-1",
-    "typechain/web3-v1/web3": "^1.0.0"
-  }
+    "@ethersproject/bignumber": "^5.1.1"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.2.11",
+    "@types/mocha": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "^4.29.0",
+    "@typescript-eslint/parser": "^4.29.0",
+    "@uniswap/token-lists": "^1.0.0-beta.25",
+    "ajv": "^8.6.2",
+    "ajv-formats": "^2.1.1",
+    "axios": "^0.21.3",
+    "chai": "^4.2.0",
+    "chalk": "^4.1.0",
+    "ethereum-waffle": "^3.4.0",
+    "mocha": "^9.1.1",
+    "nyc": "^15.1.0",
+    "ts-node": "^10.2.1",
+    "typedoc": "^0.21.5",
+    "typedoc-plugin-markdown": "^3.10.4",
+    "typescript": "^4.2.2",
+    "yargs": "^17.1.1"
+  },
+  "files": [
+    "dist/**/*"
+  ]
 }
