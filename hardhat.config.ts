@@ -1,4 +1,6 @@
 import '@nomiclabs/hardhat-ethers'
+import dotenv from 'dotenv'
+dotenv.config()
 
 const config = {
   defaultNetwork: 'hardhat',
