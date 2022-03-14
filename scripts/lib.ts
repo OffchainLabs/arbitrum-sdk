@@ -112,14 +112,14 @@ export const setGateWays = async (
 
   console.log('redeeming retryable ticket:')
   const l2Tx = await rec.getL1ToL2Message(l2Signer)
-  const messageRes = await l2Tx.wait(false)
+  const messageRes = await l2Tx.waitForStatus()
   if (messageRes.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
     const redeemRes = await l2Tx.redeem()
     const redeemRec = await redeemRes.wait()
     console.log('Done redeeming:', redeemRec)
     console.log(redeemRec.status === 1 ? ' success!' : 'failed...')
     return redeemRec
-  } else console.log(`Unpexpected message status: ${messageRes.status}.`)
+  } else throw new Error(`Unpexpected message status: ${messageRes.status}.`)
 }
 
 export const checkRetryableStatus = async (l1Hash: string): Promise<void> => {
@@ -127,6 +127,7 @@ export const checkRetryableStatus = async (l1Hash: string): Promise<void> => {
   const l1Provider = l1Signer.provider!
   const l2Provider = l2Signer.provider!
   const rec = await l1Provider.getTransactionReceipt(l1Hash)
+  if (!rec) throw new Error('L1 tx not found!')
   const message = await new L1TransactionReceipt(rec).getL1ToL2Message(
     l2Provider
   )
