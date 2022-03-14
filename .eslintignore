@@ -1,3 +1,5 @@
-**/src/lib/abi/**
-**/dist/main.js
-**/node_modules/**
+dist/**
+node_modules/**
+coverage/**
+src/lib/abi
+docs/**
