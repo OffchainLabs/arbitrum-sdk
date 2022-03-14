@@ -43,6 +43,7 @@
     "@ethersproject/bytes": "^5.0.8",
     "@typechain/ethers-v5": "9.0.0",
     "@types/prompts": "^2.0.14",
+    "@types/yargs": "^17.0.9",
     "arb-bridge-eth": "0.7.5",
     "arb-bridge-peripherals": "1.0.6",
     "arbos-precompiles": "1.0.2",
