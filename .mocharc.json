@@ -1,5 +1,5 @@
 {
-    "extension": ["ts"],
-    "package": "./package.json",
-    "require": "ts-node/register"
+  "extension": ["ts"],
+  "package": "./package.json",
+  "require": "ts-node/register"
 }
