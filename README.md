@@ -54,7 +54,7 @@ if (res.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
 - ##### Check if sequencer has included a transaction in L1 data
 
 ```ts
-import { L1TransactionReceipt, L2TransactionReceipt } from '@arbitrum/sdk'
+import { L2TransactionReceipt } from '@arbitrum/sdk'
 
 const l2TxnReceipt = new L2TransactionReceipt(
   txnReceipt /** <-- ethers-js TransactionReceipt of an arbitrum tx */
