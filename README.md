@@ -50,7 +50,7 @@ Defaults to `rinkArby`, for custom network use `--network` flag.
 
 Bridging new a token to L2 (i.e., deploying a new token contract) through the standard gateway is done by simply depositing a token that hasn't yet been bridged. This repo includes a script to trigger this initial deposit/deployment:
 
-1. clone `arbitrum-sdk` monorepo
+1. clone `arbitrum-sdk`
 
 2. `yarn install` (from root)
 
