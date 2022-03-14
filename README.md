@@ -1,12 +1,12 @@
-# Arb-Ts
+# Arbitrum SDK
 
-Typescript library for client-side interactions with Arbitrum. Arb-ts provides common helper functionaliy as well access to the underlying smart contract interfaces.
+Typescript library for client-side interactions with Arbitrum. Arbitrum SDK provides common helper functionaliy as well access to the underlying smart contract interfaces.
 
-Below is an overview of the Arb-Ts functionlity. See the [tutorials](https://github.com/OffchainLabs/arbitrum-tutorials) for examples of how to use these classes.
+Below is an overview of the Arbitrum SDK functionlity. See the [tutorials](https://github.com/OffchainLabs/arbitrum-tutorials) for examples of how to use these classes.
 
 ### Bridging assets
 
-Arb-Ts can be used to bridge assets to/from the rollup chain.The following asset bridgers are currently available:
+Arbitrum SDK can be used to bridge assets to/from the rollup chain.The following asset bridgers are currently available:
 
 - EthBridger
 - Erc20Bridger
@@ -25,7 +25,7 @@ When assets are moved by the L1 and L2 cross chain messages are sent. The lifecy
 
 ### Networks
 
-Arb-Ts comes pre-configured for the Mainnet and Rinkeby, and their Arbitrum counterparts. However the networks functionlity can be used register networks for custom Arbitrum instances. Most of the classes in Arb-Ts depend on network objects so this must be configured before using other Arb-Ts functionlity.
+Arbitrum SDK comes pre-configured for the Mainnet and Rinkeby, and their Arbitrum counterparts. However the networks functionlity can be used register networks for custom Arbitrum instances. Most of the classes in Arbitrum SDK depend on network objects so this must be configured before using other Arbitrum SDK functionlity.
 
 ### Inbox tools
 
@@ -50,19 +50,15 @@ Defaults to `rinkArby`, for custom network use `--network` flag.
 
 Bridging new a token to L2 (i.e., deploying a new token contract) through the standard gateway is done by simply depositing a token that hasn't yet been bridged. This repo includes a script to trigger this initial deposit/deployment:
 
-1. clone `arbitrum` monorepo
+1. clone `arbitrum-sdk` monorepo
 
-1. `git submodule update --init --recursive`
+2. `yarn install` (from root)
 
-1. `yarn install` (from root)
+3. Set `PRIVKEY` environmental variable (you can use .env) to the key of the account from which you'll be deploying (account should have some balance of the token you're bridging).
 
-1. `cd packages/arb-ts`
+4. Set MAINNET_RPC environmental variable to L1 RPC endpoint (i.e., https://mainnet.infura.io/v3/my-infura-key)
 
-1. Set `PRIVKEY` environmental variable (you can use .env) to the key of the account from which you'll be deploying (account should have some balance of the token you're bridging).
-
-1. Set MAINNET_RPC environmental variable to L1 RPC endpoint (i.e., https://mainnet.infura.io/v3/my-infura-key)
-
-1. `yarn bridgeStandardToken`
+5. `yarn bridgeStandardToken`
 
 Required CL params:
 `networkID`:number — Chain ID of L1 network

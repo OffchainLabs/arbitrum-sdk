@@ -22,11 +22,11 @@ async function main() {
       'No support for npm_execpath env variable in package manager'
     )
 
-  // TODO: use `HARDHAT_ARTIFACT_PATH` to write files to arb-ts instead of the packages themselves.
+  // TODO: use `HARDHAT_ARTIFACT_PATH` to write files to arbitrum sdk instead of the packages themselves.
   // this is currently broken since hardhat throws a weird error:
   // `Error HH702: Invalid artifact path [...] its correct case-sensitive path is...`
   // https://yarnpkg.com/advanced/rulebook#packages-should-never-write-inside-their-own-folder-outside-of-postinstall
-  // instead of writing in postinstall in each of those packages, we should target a local folder in arb-ts' postinstall
+  // instead of writing in postinstall in each of those packages, we should target a local folder in sdk's postinstall
 
   console.log('building arbos')
   console.log(`${cwd}/contract-artifacts/arbos/`)

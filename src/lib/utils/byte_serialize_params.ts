@@ -19,7 +19,7 @@
 /**
 #### Byte Serializing Solidity Arguments Schema
 
-Arb-ts includes methods for [serializing parameters](https://developer.offchainlabs.com/docs/special_features#parameter-byte-serialization) for a solidity method into a single byte array to minimize calldata. It uses the following schema:
+Arbitrum SDK includes methods for [serializing parameters](https://developer.offchainlabs.com/docs/special_features#parameter-byte-serialization) for a solidity method into a single byte array to minimize calldata. It uses the following schema:
 
 #### address[]:
 
