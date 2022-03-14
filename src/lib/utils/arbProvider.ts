@@ -18,7 +18,7 @@ import {
   SequencerBatchDeliveredFromOriginEvent,
 } from '../abi/ISequencerInbox'
 import { EventFetcher } from './eventFetcher'
-import { TypedEvent, TypedEventFilter } from '../abi/common'
+import { TypedEventFilter } from '../abi/common'
 
 type ArbFormats = Formats & {
   feeStats: FormatFuncs

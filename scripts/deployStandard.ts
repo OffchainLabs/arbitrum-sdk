@@ -132,10 +132,10 @@ const main = async () => {
       `Allowance successfully set — L1 tx hash: ${rec.transactionHash}`
     )
   }
-  const depositParams = {
-    erc20L1Address: l1TokenAddress,
-    amount: BigNumber.from(0),
-  }
+  // const depositParams = {
+  //   erc20L1Address: l1TokenAddress,
+  //   amount: BigNumber.from(0),
+  // }
   /* check for required gas */
   const gasNeeded = await erc20Bridger.depositEstimateGas({
     amount,

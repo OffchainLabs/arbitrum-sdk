@@ -16,12 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import {
-  Provider,
-  Filter,
-  EventFilter,
-  BlockTag,
-} from '@ethersproject/abstract-provider'
+import { Provider, BlockTag } from '@ethersproject/abstract-provider'
 import { Contract, Event } from '@ethersproject/contracts'
 import { TypedEvent, TypedEventFilter } from '../abi/common'
 
