@@ -64,6 +64,7 @@ jobs:
   sdk-audit:
     docker:
       - image: offchainlabs/frontend-base:0.4.0
+    steps:
       - restore_cache: *restore_yarn_cache
       - run:
           name: install and audit
