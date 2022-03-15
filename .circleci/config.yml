@@ -39,7 +39,7 @@ workflows:
 jobs:
   sdk:
     docker:
-      - image: offchainlabs/frontend-base:0.4.0
+      - image: offchainlabs/frontend-base:0.6.1
     environment:
       TEST_RESULTS: *test-path
     steps:
@@ -63,7 +63,9 @@ jobs:
           path: *test-path
   sdk-audit:
     docker:
-      - image: offchainlabs/frontend-base:0.4.0
+      - image: offchainlabs/frontend-base:0.6.1
+    steps:
+      - checkout
       - restore_cache: *restore_yarn_cache
       - run:
           name: install and audit

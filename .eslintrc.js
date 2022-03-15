@@ -15,7 +15,7 @@ module.exports = {
   },
   rules: {
     'prettier/prettier': 'error',
-    'no-unused-vars': 'warn',
+    'no-unused-vars': 'off',
     'prefer-const': [2, { destructuring: 'all' }],
     'object-curly-spacing': ['error', 'always'],
   },
@@ -33,10 +33,18 @@ module.exports = {
         'no-empty-pattern': 'warn',
         'prettier/prettier': ['error', { singleQuote: true }],
         '@typescript-eslint/member-delimiter-style': ['off'],
-        '@typescript-eslint/no-explicit-any': ['warn'],
+        '@typescript-eslint/no-explicit-any': ['off'],
         '@typescript-eslint/no-use-before-define': ['off'],
         '@typescript-eslint/no-non-null-assertion': ['off'],
         '@typescript-eslint/ban-ts-comment': ['warn'],
+        '@typescript-eslint/no-unused-vars': [
+          'warn',
+          {
+            argsIgnorePattern: '^_',
+            varsIgnorePattern: '^_',
+            caughtErrorsIgnorePattern: '^_',
+          },
+        ],
       },
     },
   ],
