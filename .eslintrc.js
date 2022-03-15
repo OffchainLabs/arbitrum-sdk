@@ -33,7 +33,7 @@ module.exports = {
         'no-empty-pattern': 'warn',
         'prettier/prettier': ['error', { singleQuote: true }],
         '@typescript-eslint/member-delimiter-style': ['off'],
-        '@typescript-eslint/no-explicit-any': ['warn'],
+        '@typescript-eslint/no-explicit-any': ['off'],
         '@typescript-eslint/no-use-before-define': ['off'],
         '@typescript-eslint/no-non-null-assertion': ['off'],
         '@typescript-eslint/ban-ts-comment': ['warn'],
