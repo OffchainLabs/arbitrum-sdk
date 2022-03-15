@@ -44,10 +44,6 @@ jobs:
       TEST_RESULTS: *test-path
     steps:
       - checkout
-      - run:
-          name: 'Pull Submodules'
-          command: |
-            git submodule update --init --recommend-shallow packages/arb-os
       - run: mkdir -p $TEST_RESULTS
       - restore_cache: *restore_yarn_cache
       - run: yarn install --cache-folder ~/.cache/yarn
@@ -70,10 +66,6 @@ jobs:
       - image: offchainlabs/frontend-base:0.6.1
     steps:
       - checkout
-      - run:
-          name: 'Pull Submodules'
-          command: |
-            git submodule update --init --recommend-shallow packages/arb-os
       - restore_cache: *restore_yarn_cache
       - run:
           name: install and audit
