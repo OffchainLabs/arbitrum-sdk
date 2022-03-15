@@ -20,7 +20,6 @@ import { expect } from 'chai'
 
 import { BigNumber } from '@ethersproject/bignumber'
 import { Logger, LogLevel } from '@ethersproject/logger'
-// import { Provider } from '@ethersproject/abstract-provider'
 Logger.setLogLevel(LogLevel.ERROR)
 
 import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
