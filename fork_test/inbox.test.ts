@@ -34,8 +34,6 @@ import { hexZeroPad } from '@ethersproject/bytes'
 import { l2Networks, L2Network } from '../src/lib/dataEntities/networks'
 import { solidityKeccak256 } from 'ethers/lib/utils'
 import { ContractTransaction, Signer } from 'ethers'
-// import { ArbTsError } from '../src/lib/dataEntities/errors'
-// import { SignerProviderUtils } from '../src/lib/dataEntities/signerOrProvider'
 
 const submitL2Tx = async (
   tx: {
