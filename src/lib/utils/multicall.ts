@@ -34,7 +34,7 @@ import {
 /**
  * Input to multicall aggregator
  */
-export type CallInput<T extends unknown> = {
+export type CallInput<T> = {
   /**
    * Address of the target contract to be called
    */
