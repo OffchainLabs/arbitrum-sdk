@@ -49,12 +49,12 @@ jobs:
       - run: yarn install --cache-folder ~/.cache/yarn
       - save_cache: *save_yarn_cache
       - run:
-          name: test arb-ts
+          name: test sdk
           command: |
             yarn
-            yarn build --reporter-options output=${TEST_RESULTS}/arb-ts.xml
-            yarn lint --format junit -o ${TEST_RESULTS}/arb-ts-lint.xml
-          working_directory: /home/user/project/packages/arb-ts
+            yarn build --reporter-options output=${TEST_RESULTS}/sdk.xml
+            yarn lint --format junit -o ${TEST_RESULTS}/sdk-lint.xml
+          working_directory: /home/user/project/
       - run:
           name: Upload Coverage to Codecov
           command: codecovbash
