@@ -39,22 +39,26 @@ workflows:
 jobs:
   sdk:
     docker:
-      - image: offchainlabs/frontend-base:0.4.0
+      - image: offchainlabs/frontend-base:0.6.1
     environment:
       TEST_RESULTS: *test-path
     steps:
       - checkout
+      - run:
+          name: 'Pull Submodules'
+          command: |
+            git submodule update --init --recommend-shallow packages/arb-os
       - run: mkdir -p $TEST_RESULTS
       - restore_cache: *restore_yarn_cache
       - run: yarn install --cache-folder ~/.cache/yarn
       - save_cache: *save_yarn_cache
       - run:
-          name: test sdk
+          name: test arb-ts
           command: |
             yarn
-            yarn build --reporter-options output=${TEST_RESULTS}/sdk.xml
-            yarn lint --format junit -o ${TEST_RESULTS}/sdk-lint.xml
-          working_directory: /home/user/project/
+            yarn build --reporter-options output=${TEST_RESULTS}/arb-ts.xml
+            yarn lint --format junit -o ${TEST_RESULTS}/arb-ts-lint.xml
+          working_directory: /home/user/project/packages/arb-ts
       - run:
           name: Upload Coverage to Codecov
           command: codecovbash
@@ -63,7 +67,13 @@ jobs:
           path: *test-path
   sdk-audit:
     docker:
-      - image: offchainlabs/frontend-base:0.4.0
+      - image: offchainlabs/frontend-base:0.6.1
+    steps:
+      - checkout
+      - run:
+          name: 'Pull Submodules'
+          command: |
+            git submodule update --init --recommend-shallow packages/arb-os
       - restore_cache: *restore_yarn_cache
       - run:
           name: install and audit
