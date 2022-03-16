@@ -1,12 +1,75 @@
-# Arb-Ts
+# Arbitrum SDK
 
-Typescript library for client-side interactions with Arbitrum. Arb-ts provides common helper functionaliy as well access to the underlying smart contract interfaces.
+Typescript library for client-side interactions with Arbitrum. Arbitrum SDK provides common helper functionaliy as well access to the underlying smart contract interfaces.
 
-Below is an overview of the Arb-Ts functionlity. See the [tutorials](https://github.com/OffchainLabs/arbitrum-tutorials) for examples of how to use these classes.
+Below is an overview of the Arbitrum SDK functionality. See the [tutorials](https://github.com/OffchainLabs/arbitrum-tutorials) for further examples of how to use these classes.
+
+### Quickstart Recipes
+
+- ##### Deposit Ether Into Arbitrum
+
+```ts
+import { getL2Network, EthBridger } from '@arbitrum/sdk'
+
+const l2Network = await getL2Network(
+  l2ChainID /** <-- chain id of target Arbitrum chain */
+)
+const ethBridger = new EthBridger(l2Network)
+
+const ethDepositTxResponse = await ethBridger.deposit({
+  amount: utils.parseEther('23'),
+  l1Signer: l1Signer /** <-- connected ethers-js Wallet */,
+  l2Provider: l2Provider /** <--- ethers-js Provider */,
+})
+
+const ethDepositTxReceipt = await ethDepositTxResponse.wait()
+
+/** check ethDepositTxReceipt.status  */
+```
+
+- ##### Redeem an L1 to L2 Message
+
+```ts
+import { L1TransactionReceipt, L1ToL2MessageStatus } from '@arbitrum/sdk'
+
+const l1TxnReceipt = new L1TransactionReceipt(
+  txnReceipt /** <-- ethers-js TransactionReceipt of an ethereum tx that triggered an L1 to L2 message (say depositting a token via a bridge)  */
+)
+
+const l1ToL2Message = await l1TxnReceipt.getL1ToL2Message(
+  l2Signer /** <-- connected ethers-js Wallet */
+)
+
+const res = await l1ToL2Message.waitForStatus()
+
+if (res.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
+  /** Message wasn't auto-redeemed; redeem it now: */
+  const response = await l1ToL2Message.redeem()
+  const receipt = await response.wait()
+} else if (res.status === L1ToL2MessageStatus.REDEEMED) {
+  /** Message succesfully redeeemed */
+}
+```
+
+- ##### Check if sequencer has included a transaction in L1 data
+
+```ts
+import { L2TransactionReceipt } from '@arbitrum/sdk'
+
+const l2TxnReceipt = new L2TransactionReceipt(
+  txnReceipt /** <-- ethers-js TransactionReceipt of an arbitrum tx */
+)
+s
+/** Wait 3 minutes: */
+setTimeout(() => {
+  const dataIsOnL1 = l2TxnReceipt.isDataAvailable(l2Provider, l1Provider)
+  // if dataIsOnL1, sequencer has posted it and it inherits full rollup/L1 security
+}, 1000 * 60 * 3000)
+```
 
 ### Bridging assets
 
-Arb-Ts can be used to bridge assets to/from the rollup chain.The following asset bridgers are currently available:
+Arbitrum SDK can be used to bridge assets to/from the rollup chain.The following asset bridgers are currently available:
 
 - EthBridger
 - Erc20Bridger
@@ -25,7 +88,7 @@ When assets are moved by the L1 and L2 cross chain messages are sent. The lifecy
 
 ### Networks
 
-Arb-Ts comes pre-configured for the Mainnet and Rinkeby, and their Arbitrum counterparts. However the networks functionlity can be used register networks for custom Arbitrum instances. Most of the classes in Arb-Ts depend on network objects so this must be configured before using other Arb-Ts functionlity.
+Arbitrum SDK comes pre-configured for the Mainnet and Rinkeby, and their Arbitrum counterparts. However the networks functionlity can be used register networks for custom Arbitrum instances. Most of the classes in Arbitrum SDK depend on network objects so this must be configured before using other Arbitrum SDK functionlity.
 
 ### Inbox tools
 
@@ -50,19 +113,15 @@ Defaults to `rinkArby`, for custom network use `--network` flag.
 
 Bridging new a token to L2 (i.e., deploying a new token contract) through the standard gateway is done by simply depositing a token that hasn't yet been bridged. This repo includes a script to trigger this initial deposit/deployment:
 
-1. clone `arbitrum` monorepo
+1. clone `arbitrum-sdk`
 
-1. `git submodule update --init --recursive`
+2. `yarn install` (from root)
 
-1. `yarn install` (from root)
+3. Set `PRIVKEY` environmental variable (you can use .env) to the key of the account from which you'll be deploying (account should have some balance of the token you're bridging).
 
-1. `cd packages/arb-ts`
+4. Set MAINNET_RPC environmental variable to L1 RPC endpoint (i.e., https://mainnet.infura.io/v3/my-infura-key)
 
-1. Set `PRIVKEY` environmental variable (you can use .env) to the key of the account from which you'll be deploying (account should have some balance of the token you're bridging).
-
-1. Set MAINNET_RPC environmental variable to L1 RPC endpoint (i.e., https://mainnet.infura.io/v3/my-infura-key)
-
-1. `yarn bridgeStandardToken`
+5. `yarn bridgeStandardToken`
 
 Required CL params:
 `networkID`:number — Chain ID of L1 network

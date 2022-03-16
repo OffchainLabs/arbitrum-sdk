@@ -1,6 +1,6 @@
 {
-  "name": "arb-ts",
-  "version": "2.0.0-beta.14",
+  "name": "@arbitrum/sdk",
+  "version": "1.0.0",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -8,14 +8,14 @@
   "types": "dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/offchainlabs/arbitrum.git",
-    "directory": "packages/arb-ts"
+    "url": "git+https://github.com/offchainlabs/arbitrum-sdk.git"
   },
   "bugs": {
-    "url": "https://github.com/offchainlabs/arbitrum/issues"
+    "url": "https://github.com/offchainlabs/arbitrum-sdk/issues"
   },
   "homepage": "https://offchainlabs.com",
   "scripts": {
+    "audit:ci": "audit-ci -l -a 1006805 1006806 1006865 1006896 1006899",
     "postinstall": "node ./scripts/genAbi.js",
     "gen:abi": "node ./scripts/genAbi.js",
     "prepublishOnly": "yarn build && yarn format",
@@ -44,6 +44,7 @@
     "@ethersproject/bytes": "^5.0.8",
     "@typechain/ethers-v5": "9.0.0",
     "@types/prompts": "^2.0.14",
+    "@types/yargs": "^17.0.9",
     "arb-bridge-eth": "0.7.5",
     "arb-bridge-peripherals": "1.0.6",
     "arbos-precompiles": "1.0.2",
@@ -57,15 +58,22 @@
     "@types/chai": "^4.2.11",
     "@types/mocha": "^9.0.0",
     "@types/prompts": "^2.0.14",
-    "@typescript-eslint/eslint-plugin": "^4.29.0",
-    "@typescript-eslint/parser": "^4.29.0",
+    "@typescript-eslint/eslint-plugin": "^5.14.0",
+    "@typescript-eslint/parser": "^5.14.0",
+    "audit-ci": "^5.1.2",
     "axios": "^0.21.3",
     "chai": "^4.2.0",
     "chalk": "^4.1.0",
+    "eslint": "^7.32.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-mocha": "^9.0.0",
+    "eslint-plugin-prettier": "^4.0.0",
     "ethereum-waffle": "^3.4.0",
     "hardhat": "^2.8.3",
     "mocha": "^9.2.1",
     "nyc": "^15.1.0",
+    "prettier": "^2.3.2",
+    "prettier-plugin-solidity": "^1.0.0-beta.17",
     "prompts": "^2.4.2",
     "typedoc": "^0.21.5",
     "typedoc-plugin-markdown": "^3.10.4",
