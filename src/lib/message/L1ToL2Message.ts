@@ -31,6 +31,7 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { ArbTsError } from '../dataEntities/errors'
+import { hexDataSlice, defaultAbiCoder } from 'ethers/lib/utils'
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -63,6 +64,17 @@ export enum L1ToL2MessageStatus {
    * The message has either expired or has been canceled. It can no longer be redeemed.
    */
   EXPIRED = 5,
+}
+
+export interface L1toL2MessageInputs {
+  destinationAddress: string
+  l2CallValue: BigNumber
+  maxSubmissionCost: BigNumber
+  excessFeeRefundAddress: string
+  callValueRefundAddress: string
+  maxGas: BigNumber
+  gasPriceBid: BigNumber
+  callDataLength: BigNumber
 }
 
 /**
@@ -235,6 +247,53 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     // timeoutTimestamp returns the timestamp at which the retryable ticket expires
     // it can also return 0 if the ticket l2Tx does not exist
     return currentTimestamp.gte(timeoutTimestamp)
+  }
+
+  public async getMessageInputs(): Promise<L1toL2MessageInputs> {
+    const txData = (
+      await this.l2Provider.getTransaction(this.retryableCreationId)
+    ).data
+    // Ignore first 4 bytes: message ID
+    const inputsData = hexDataSlice(txData, 4)
+    const [
+      destinationAddress,
+      l2CallValue,
+      maxSubmissionCost,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
+      maxGas,
+      gasPriceBid,
+      _sizeOfCallDataLength, //** Specifies encoding for dynamic length arrays */
+      callDataLength,
+    ] = defaultAbiCoder.decode(
+      [
+        'address',
+        'uint256',
+        'uint256',
+        'address',
+        'address',
+        'uint256',
+        'uint256',
+        'uint256',
+        'uint256',
+      ],
+      inputsData
+    )
+    // sanity check
+    if (_sizeOfCallDataLength.toNumber() !== 256)
+      throw new ArbTsError(
+        `Error getting Msg inputs data; unrecognized encoding. Execpeted ${_sizeOfCallDataLength.toNumber()} to be 256 `
+      )
+    return {
+      destinationAddress,
+      l2CallValue,
+      maxSubmissionCost,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
+      maxGas,
+      gasPriceBid,
+      callDataLength,
+    }
   }
 
   protected async receiptsToStatus(
