@@ -23,7 +23,6 @@ export const applyL1ToL2Alias = (l1Address: string): string => {
 
   // we use BigInts in here and undo to allow for proper under/overflow behaviour
   // BigInt.asUintN calculates the correct positive modulus
-
   return getAddress(
     '0x' +
       BigInt.asUintN(160, BigInt(l1Address) + ADDRESS_ALIAS_OFFSET_BIG_INT)
