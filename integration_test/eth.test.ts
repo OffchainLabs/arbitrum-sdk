@@ -87,6 +87,34 @@ describe('Ether', async () => {
     )
 
     const waitResult = await rec.waitForL2(l2Signer.provider!)
+
+    const l1ToL2Messages = await rec.getL1ToL2Messages(l2Signer)
+    expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
+    const l1ToL2Message = l1ToL2Messages[0]
+
+    const {
+      destinationAddress,
+      l2CallValue,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
+      maxGas,
+      gasPriceBid,
+      callDataLength,
+    } = await l1ToL2Message.getInputs()
+    const walletAddress = await l1Signer.getAddress()
+
+    for (const addr of [
+      destinationAddress,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
+    ]) {
+      expect(addr).to.eq(walletAddress, 'message inputs value error')
+    }
+
+    for (const value of [l2CallValue, maxGas, gasPriceBid, callDataLength]) {
+      expect(value.isZero(), 'message inputs value error').to.be.true
+    }
+
     prettyLog('l2TxHash: ' + waitResult.message.retryableCreationId)
     prettyLog('l2 transaction found!')
     expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
@@ -94,19 +122,9 @@ describe('Ether', async () => {
       L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
       'eth deposit l2 transaction not found'
     )
-
-    for (let i = 0; i < 60; i++) {
-      prettyLog('balance check attempt ' + (i + 1))
-      await wait(5000)
-      const testWalletL2EthBalance = await l2Signer.getBalance()
-      if (testWalletL2EthBalance.gt(Zero)) {
-        prettyLog(`balance updated!  ${testWalletL2EthBalance.toString()}`)
-        expect(true).to.be.true
-        return
-        break
-      }
-    }
-    expect(false).to.be.true
+    const testWalletL2EthBalance = await l2Signer.getBalance()
+    expect(testWalletL2EthBalance.gt(Zero), 'eth balance still 0 after deposit')
+      .to.be.true
   })
 
   it('withdraw Ether transaction succeeds', async () => {
