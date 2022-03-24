@@ -18,7 +18,7 @@
 
 import { expect } from 'chai'
 
-import { applyL1ToL2Alias, undoL1ToL2Alias } from '../src/lib/utils/lib'
+import { Address } from '../src/lib/dataEntities/address'
 import { BigNumber } from 'ethers'
 import { ADDRESS_ALIAS_OFFSET } from '../src/lib/dataEntities/constants'
 import { hexZeroPad } from '@ethersproject/bytes'
@@ -26,23 +26,25 @@ import { getAddress } from '@ethersproject/address'
 const offset = BigNumber.from(ADDRESS_ALIAS_OFFSET)
 const maxAddr = BigNumber.from('0xffffffffffffffffffffffffffffffffffffffff')
 
-describe.only('Address alias', () => {
+describe('Address', () => {
   const testApplyUndo = (
     addr: string,
     expectedApply: string,
     expectedUndo: string
   ) => {
-    const afterApply = applyL1ToL2Alias(addr)
-    expect(afterApply, 'invalid apply alias').to.eq(expectedApply)
+    const address = new Address(addr)
 
-    const afterApplyUndo = undoL1ToL2Alias(afterApply)
-    expect(afterApplyUndo, 'invalid undo after apply alias').to.eq(addr)
+    const afterApply = address.applyAlias()
+    expect(afterApply.value, 'invalid apply alias').to.eq(expectedApply)
 
-    const afterUndo = undoL1ToL2Alias(addr)
-    expect(afterUndo, 'invalid undo alias').to.eq(expectedUndo)
+    const afterApplyUndo = afterApply.undoAlias()
+    expect(afterApplyUndo.value, 'invalid undo after apply alias').to.eq(addr)
 
-    const afterUndoApply = applyL1ToL2Alias(afterUndo)
-    expect(afterUndoApply, 'invalid apply after undo alias').to.eq(addr)
+    const afterUndo = address.undoAlias()
+    expect(afterUndo.value, 'invalid undo alias').to.eq(expectedUndo)
+
+    const afterUndoApply = afterUndo.applyAlias()
+    expect(afterUndoApply.value, 'invalid apply after undo alias').to.eq(addr)
   }
 
   it('does alias correctly below offset', async () => {
