@@ -1,9 +1,11 @@
-import { BigNumber, utils } from 'ethers'
+import { utils } from 'ethers'
 import { ADDRESS_ALIAS_OFFSET } from '../dataEntities/constants'
 import { ArbTsError } from '../dataEntities/errors'
 
 export const wait = (ms: number): Promise<void> =>
   new Promise(res => setTimeout(res, ms))
+
+const ADDRESS_ALIAS_OFFSET_BIG_INT = BigInt(ADDRESS_ALIAS_OFFSET)
 
 export const throwIfNotAddress = (address: string) => {
   if (!utils.isAddress(address))
@@ -15,9 +17,17 @@ export const throwIfNotAddress = (address: string) => {
  * @param l1Address
  * @returns
  */
-export const applyL1ToL2Alias = (l1Address: string): BigNumber => {
+export const applyL1ToL2Alias = (l1Address: string): string => {
   throwIfNotAddress(l1Address)
-  return BigNumber.from(l1Address).add(ADDRESS_ALIAS_OFFSET)
+  
+  // we use BigInts in here and undo to allow for proper under/overflow behaviour
+  // BigInt.asUintN calculates the correct positive modulus
+  return (
+    '0x' +
+    BigInt.asUintN(160, BigInt(l1Address) + ADDRESS_ALIAS_OFFSET_BIG_INT)
+      .toString(16)
+      .padStart(40, '0')
+  )
 }
 
 /**
@@ -25,7 +35,15 @@ export const applyL1ToL2Alias = (l1Address: string): BigNumber => {
  * @param l2Address
  * @returns
  */
-export const undoL1ToL2Alias = (l2Address: string): BigNumber => {
+export const undoL1ToL2Alias = (l2Address: string): string => {
   throwIfNotAddress(l2Address)
-  return BigNumber.from(l2Address).sub(ADDRESS_ALIAS_OFFSET)
+
+  // we use BigInts in here and apply to allow for proper under/overflow behaviour
+  // BigInt.asUintN calculates the correct positive modulus
+  return (
+    '0x' +
+    BigInt.asUintN(160, BigInt(l2Address) - ADDRESS_ALIAS_OFFSET_BIG_INT)
+      .toString(16)
+      .padStart(40, '0')
+  )
 }
