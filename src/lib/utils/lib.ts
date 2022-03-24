@@ -1,4 +1,4 @@
-import { getAddress as getAddress } from '@ethersproject/address'
+import { getAddress } from '@ethersproject/address'
 import { utils } from 'ethers'
 import { ADDRESS_ALIAS_OFFSET } from '../dataEntities/constants'
 import { ArbTsError } from '../dataEntities/errors'
@@ -7,6 +7,8 @@ export const wait = (ms: number): Promise<void> =>
   new Promise(res => setTimeout(res, ms))
 
 const ADDRESS_ALIAS_OFFSET_BIG_INT = BigInt(ADDRESS_ALIAS_OFFSET)
+const ADDRESS_BIT_LENGTH = 160
+const ADDRESS_NIBBLE_LENGTH = 40
 
 export const throwIfNotAddress = (address: string) => {
   if (!utils.isAddress(address))
@@ -25,9 +27,12 @@ export const applyL1ToL2Alias = (l1Address: string): string => {
   // BigInt.asUintN calculates the correct positive modulus
   return getAddress(
     '0x' +
-      BigInt.asUintN(160, BigInt(l1Address) + ADDRESS_ALIAS_OFFSET_BIG_INT)
+      BigInt.asUintN(
+        ADDRESS_BIT_LENGTH,
+        BigInt(l1Address) + ADDRESS_ALIAS_OFFSET_BIG_INT
+      )
         .toString(16)
-        .padStart(40, '0')
+        .padStart(ADDRESS_NIBBLE_LENGTH, '0')
   )
 }
 
@@ -43,8 +48,11 @@ export const undoL1ToL2Alias = (l2Address: string): string => {
   // BigInt.asUintN calculates the correct positive modulus
   return getAddress(
     '0x' +
-      BigInt.asUintN(160, BigInt(l2Address) - ADDRESS_ALIAS_OFFSET_BIG_INT)
+      BigInt.asUintN(
+        ADDRESS_BIT_LENGTH,
+        BigInt(l2Address) - ADDRESS_ALIAS_OFFSET_BIG_INT
+      )
         .toString(16)
-        .padStart(40, '0')
+        .padStart(ADDRESS_NIBBLE_LENGTH, '0')
   )
 }
