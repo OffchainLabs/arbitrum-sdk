@@ -100,7 +100,7 @@ describe('Ether', async () => {
       maxGas,
       gasPriceBid,
       callDataLength,
-    } = await l1ToL2Message.getMessageInputs()
+    } = await l1ToL2Message.getInputs()
     const walletAddress = await l1Signer.getAddress()
 
     for (const addr of [

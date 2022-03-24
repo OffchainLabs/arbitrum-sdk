@@ -67,13 +67,37 @@ export enum L1ToL2MessageStatus {
 }
 
 export interface L1toL2MessageInputs {
+  /**
+   * Destination address for L2 message
+   */
   destinationAddress: string
+  /**
+   * Call value in L2 message
+   */
   l2CallValue: BigNumber
+  /**
+   * Max gas deducted from L2 balance to cover base submission fee
+   */
   maxSubmissionCost: BigNumber
+  /**
+   * L2 address address to credit (maxgas x gasprice - execution cost)
+   */
   excessFeeRefundAddress: string
+  /**
+   *  Address to credit l2Callvalue on L2 if retryable txn times out or gets cancelled
+   */
   callValueRefundAddress: string
+  /**
+   * Max gas deducted from user's L2 balance to cover L2 execution
+   */
   maxGas: BigNumber
+  /**
+   * Gas price bid for L2 execution
+   */
   gasPriceBid: BigNumber
+  /**
+   * Length in bytes calldata of L2 message
+   */
   callDataLength: BigNumber
 }
 
@@ -248,8 +272,10 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     // it can also return 0 if the ticket l2Tx does not exist
     return currentTimestamp.gte(timeoutTimestamp)
   }
-
-  public async getMessageInputs(): Promise<L1toL2MessageInputs> {
+  /**
+   * Get and format inputs provided in calldata for retryable messsage (message type 9)
+   */
+  public async getInputs(): Promise<L1toL2MessageInputs> {
     const txData = (
       await this.l2Provider.getTransaction(this.retryableCreationId)
     ).data
