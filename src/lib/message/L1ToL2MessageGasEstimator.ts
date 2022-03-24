@@ -9,6 +9,7 @@ import {
 import { BigNumber } from '@ethersproject/bignumber'
 import { constants } from 'ethers'
 import { utils } from 'ethers'
+import { Interface } from 'ethers/lib/utils'
 
 const DEFAULT_SUBMISSION_PRICE_PERCENT_INCREASE = BigNumber.from(340)
 
@@ -41,7 +42,8 @@ export interface GasOverrides {
 
 const defaultL1ToL2MessageEstimateOptions = {
   maxSubmissionFeePercentIncrease: DEFAULT_SUBMISSION_PRICE_PERCENT_INCREASE,
-  maxGasPercentIncrease: constants.Zero,
+  // CHRIS: TODO: remove
+  maxGasPercentIncrease: BigNumber.from(100),
   maxGasPricePercentIncrease: constants.Zero,
   sendL2CallValueFromL1: true,
 }
@@ -78,6 +80,7 @@ export class L1ToL2MessageGasEstimator {
    * @returns
    */
   public async estimateSubmissionPrice(
+    l1BaseFee: BigNumber,
     callDataSize: BigNumber | number,
     options?: {
       base?: BigNumber
@@ -89,12 +92,37 @@ export class L1ToL2MessageGasEstimator {
   }> {
     const defaultedOptions = this.applySubmissionPriceDefaults(options)
 
+    // CHRIS: TODO: go back to this nitro hash: 69b2212fe03de20dd29eb3261978510f954876f2
+    // if prefix == 105 {
+    //   res, _ := rlp.EncodeToBytes(x)
+    //   os.Stdout.WriteString(hex.EncodeToString(res))
+    // }
+    // CHRIS: TODO: add some padding to the l1basefee
+
+    // CHRIS: TODO: tidy below
+    // const nodeInterface = NodeInterface__factory.connect(NODE_INTERFACE_ADDRESS, this.l2Provider);
+    // CHRIS: TODO: remove the .mul(10)
+    const submissionGas = BigNumber.from(callDataSize).mul(6).add(1400).mul(10)
+    console.log("in")
+
+    return {
+      submissionPrice: l1BaseFee.mul(submissionGas),
+      nextUpdateTimestamp: BigNumber.from(1),
+    }
+
+    return {
+      submissionPrice: BigNumber.from(100000000),
+      nextUpdateTimestamp: BigNumber.from(1),
+    }
+
     const arbRetryableTx = ArbRetryableTx__factory.connect(
       ARB_RETRYABLE_TX_ADDRESS,
       this.l2Provider
     )
-    const [currentSubmissionPrice, nextUpdateTimestamp] =
-      await arbRetryableTx.getSubmissionPrice(callDataSize)
+    const [
+      currentSubmissionPrice,
+      nextUpdateTimestamp,
+    ] = await arbRetryableTx.getSubmissionPrice(callDataSize)
     // Apply percent increase
     const submissionPrice = this.percentIncrease(
       defaultedOptions.base || currentSubmissionPrice,
@@ -136,6 +164,42 @@ export class L1ToL2MessageGasEstimator {
       NODE_INTERFACE_ADDRESS,
       this.l2Provider
     )
+
+    // CHRIS: TODO: put this back - use the new abis
+    const iface = new Interface([
+      'function estimateRetryableTicket(address sender,uint256 deposit,address to,uint256 l2CallValue,address excessFeeRefundAddress,address callValueRefundAddress,bytes calldata data)',
+    ])
+
+    console.log("befpre")
+    const res = await this.l2Provider.call({
+      to: NODE_INTERFACE_ADDRESS,
+      data: iface.encodeFunctionData('estimateRetryableTicket', [
+        sender,
+        senderDeposit,
+        destAddr,
+        l2CallValue,
+        excessFeeRefundAddress,
+        callValueRefundAddress,
+        calldata,
+      ]),
+    })
+    console.log(res)
+    console.log("after")
+
+    return await this.l2Provider.estimateGas({
+      to: NODE_INTERFACE_ADDRESS,
+      data: iface.encodeFunctionData('estimateRetryableTicket', [
+        sender,
+        senderDeposit,
+        destAddr,
+        l2CallValue,
+        excessFeeRefundAddress,
+        callValueRefundAddress,
+        calldata,
+      ]),
+      gasPrice: 100000000
+    })
+
     return (
       await nodeInterface.estimateRetryableTicket(
         sender,
@@ -188,6 +252,7 @@ export class L1ToL2MessageGasEstimator {
     destAddr: string,
     l2CallDataHex: string,
     l2CallValue: BigNumber,
+    l1BaseFee: BigNumber,
     options?: GasOverrides
   ): Promise<{
     maxGasBid: BigNumber
@@ -197,18 +262,25 @@ export class L1ToL2MessageGasEstimator {
   }> {
     const defaultedOptions = this.applyDefaults(options)
 
+    console.log("q")
+
     const maxGasPriceBid = this.percentIncrease(
       defaultedOptions.maxGasPrice.base ||
         (await this.l2Provider.getGasPrice()),
       defaultedOptions.maxGasPrice.percentIncrease
     )
+    console.log("qp")
 
     const maxSubmissionPriceBid = (
       await this.estimateSubmissionPrice(
+        l1BaseFee,
+        // CHRIS: TODO: use utils.hexDataLength elsewhere?
         utils.hexDataLength(l2CallDataHex),
         options?.maxSubmissionPrice
       )
     ).submissionPrice
+
+    console.log("qpa")
 
     const calculatedMaxGas = this.percentIncrease(
       defaultedOptions.maxGas.base ||
@@ -230,10 +302,13 @@ export class L1ToL2MessageGasEstimator {
         )),
       defaultedOptions.maxGas.percentIncrease
     )
+    console.log("qpb")
     // always ensure the max gas is greater than the min
     const maxGas = calculatedMaxGas.gt(defaultedOptions.maxGas.min)
       ? calculatedMaxGas
       : defaultedOptions.maxGas.min
+
+    console.log("lookup", defaultedOptions.sendL2CallValueFromL1, maxSubmissionPriceBid.toString(), maxGasPriceBid.toString(), maxGas.toString())
 
     let totalDepositValue = maxSubmissionPriceBid.add(
       maxGasPriceBid.mul(maxGas)

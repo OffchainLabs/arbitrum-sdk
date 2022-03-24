@@ -21,7 +21,7 @@ import { ArbTsError } from '../dataEntities/errors'
 import { L1ContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'
 
-import networks, { L1Network, L2Network } from '../dataEntities/networks'
+import { l1Networks, L1Network, L2Network } from '../dataEntities/networks'
 import {
   SignerOrProvider,
   SignerProviderUtils,
@@ -34,7 +34,7 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   public readonly l1Network: L1Network
 
   public constructor(public readonly l2Network: L2Network) {
-    this.l1Network = networks.l1Networks[l2Network.partnerChainID]
+    this.l1Network = l1Networks[l2Network.partnerChainID]
     if (!this.l1Network) {
       throw new ArbTsError(
         `Unknown l1 network chain id: ${l2Network.partnerChainID}`

@@ -38,7 +38,7 @@ if (!l1Txn) {
   const l1Receipt = new L1TransactionReceipt(
     await l1Provider.getTransactionReceipt(l1Txn)
   )
-  const l1ToL2Message = await l1Receipt.getL1ToL2Message(l2Signer)
+  const l1ToL2Message = await l1Receipt.getL1ToL2Message(l2Signer, l1Signer.provider!)
   const res = await l1ToL2Message.redeem()
   const rec = await res.wait()
   console.log('done:', rec)

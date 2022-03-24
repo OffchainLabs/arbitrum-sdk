@@ -31,7 +31,7 @@ import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
-import { ContractTransaction } from 'ethers'
+import { ContractTransaction, ethers } from 'ethers'
 import { EventFetcher } from '../utils/eventFetcher'
 import { ArbTsError } from '../dataEntities/errors'
 import {
@@ -269,6 +269,29 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     }
   }
 
+  // CHRIS: TODO: blockhash should already be in this hash
+  public async tryGetSendRoot(l2BlockHash: string): Promise<string | null> {
+    // CHRIS: TODO: do this properly
+    const outboxIface = new ethers.utils.Interface([
+      'event SendRootUpdated(bytes32 indexed blockHash, bytes32 indexed outputRoot)',
+    ])
+    const topics = outboxIface.encodeFilterTopics(
+      outboxIface.getEvent('SendRootUpdated'),
+      [l2BlockHash]
+    )
+    const logs = await this.l1Provider.getLogs({
+      address: this.outboxAddress,
+      topics: topics,
+    })
+    if (logs.length === 1) {
+      const parsedLog = outboxIface.parseLog(logs[0]).args as unknown as {
+        blockHash: string
+        outputRoot: string
+      }
+      return parsedLog.outputRoot
+    } else return null
+  }
+
   /**
    * Get the status of this message
    * In order to check if the message has been executed proof info must be provided.
@@ -276,24 +299,21 @@ export class L2ToL1MessageReader extends L2ToL1Message {
    * @returns
    */
   public async status(
-    proofInfo: MessageBatchProofInfo | null
+    proofInfo: MessageBatchProofInfo | null,
+    l2BlockHash: string
   ): Promise<L2ToL1MessageStatus> {
-    try {
-      if (proofInfo) {
-        const messageExecuted = await this.hasExecuted(proofInfo)
-        if (messageExecuted) {
-          return L2ToL1MessageStatus.EXECUTED
-        }
+    if (proofInfo) {
+      const messageExecuted = await this.hasExecuted(proofInfo)
+      if (messageExecuted) {
+        return L2ToL1MessageStatus.EXECUTED
       }
-
-      const outboxEntryExists = await this.outboxEntryExists()
-      return outboxEntryExists
-        ? L2ToL1MessageStatus.CONFIRMED
-        : L2ToL1MessageStatus.UNCONFIRMED
-    } catch (e) {
-      console.warn('666: error in fetching status:', e)
-      return L2ToL1MessageStatus.NOT_FOUND
     }
+
+    const sendRootExists = await this.tryGetSendRoot(l2BlockHash)
+
+    return sendRootExists
+      ? L2ToL1MessageStatus.CONFIRMED
+      : L2ToL1MessageStatus.UNCONFIRMED
   }
 
   /**
@@ -327,6 +347,14 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
     super(l1Signer.provider!, outboxAddress, batchNumber, indexInBatch)
   }
 
+  // CHRIS: TODO:
+  // 1. we need to calculate the send root somehow
+  // 2. then check if that sendRoot has been populated
+  // 3. if it has then we can execute
+
+  // 4. unless the item has already been executed, this we can check
+  // by looking to see if the specified index was spent
+
   /**
    * Executes the L2ToL1Message on L1.
    * Will throw an error if the outbox entry has not been created, which happens when the
@@ -334,9 +362,11 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
    * @returns
    */
   public async execute(
-    proofInfo: MessageBatchProofInfo
+    proofInfo: MessageBatchProofInfo,
+    // CHRIS: TODO: remove
+    blockHash: string
   ): Promise<ContractTransaction> {
-    const status = await this.status(proofInfo)
+    const status = await this.status(proofInfo, blockHash)
     if (status !== L2ToL1MessageStatus.CONFIRMED) {
       throw new ArbTsError(
         `Cannot execute message. Status is: ${status} but must be ${L2ToL1MessageStatus.CONFIRMED}.`

@@ -20,6 +20,7 @@ import dotenv from 'dotenv'
 import { BigNumber } from 'ethers'
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbTsError } from '../dataEntities/errors'
+import fs from 'fs'
 
 dotenv.config()
 
@@ -137,6 +138,56 @@ const mainnetETHBridge: EthBridge = {
   rollup: '0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A',
 }
 
+// CHRIS: TODO: why is it generating two partner chainids?
+// CHRIS: TODO: should be able to load these from a file
+
+// check for the env var? or just try to load?
+
+// CHRIS: TODO: remove these later
+const locNitro1: L1Network = {
+  blockTime: 10,
+  chainID: 1337,
+  explorerUrl: '',
+  isCustom: true,
+  name: 'EthLocal',
+  partnerChainIDs: [ 421612 ],
+  rpcURL: 'http://localhost:8545'
+}
+
+const locNitro2: L2Network =  {
+  chainID: 421612,
+  confirmPeriodBlocks: 20,
+  ethBridge: {
+    bridge: '0x5de967b6e7f900130f1ce30a128a79ef46ee0ad6',
+    inbox: '0x5149d6687abb16f6b2f3ce0f6413d39c584cc9d5',
+    outboxes: { '0x575Ed6453F49Af7c1B5ab0A82e551510f9bc65d6': BigNumber.from(0) },
+    rollup: '0x1c998f5993435d733188cc59f0f75d0a350bec31',
+    sequencerInbox: '0x9d70e351ff38accf56591bb1214353769f3cab4f'
+  },
+  explorerUrl: '',
+  isArbitrum: true,
+  isCustom: true,
+  name: 'ArbLocal',
+  partnerChainID: 1337,
+  rpcURL: 'http://localhost:7545',
+  tokenBridge: {
+    l1CustomGateway: '0x1967F2Fe8E438F0281C48E101f6B706E7D8220e7',
+    l1ERC20Gateway: '0x8fc2dD9a4c78d8754E0f30747a2A63a264028fF0',
+    l1GatewayRouter: '0xdB9dB6eCfd5E005EE76a7DEAD898c56Ba4C2d195',
+    l1MultiCall: '0x45d087A0fa5c21B67777B44B075011667b75f3bE',
+    l1ProxyAdmin: '0xF24e7667E5D62921B5e2fa9F78DFEE09a9260Cb8',
+    l1Weth: '0x5dec0c90fbBE3aF4C0bEeE12b71d99ae19B65Aa7',
+    l1WethGateway: '0xc4e0757cFaEb01d8493E4CA90FD02EF4e969A011',
+    l2CustomGateway: '0xF0B003F9247f2DC0e874710eD55e55f8C63B14a3',
+    l2ERC20Gateway: '0x78a6dC8D17027992230c112432E42EC3d6838d74',
+    l2GatewayRouter: '0x7b650845242a96595f3a9766D4e8e5ab0887936A',
+    l2Multicall: '0x9b890cA9dE3D317b165afA7DFb8C65f2e4c95C20',
+    l2ProxyAdmin: '0x7F85fB7f42A0c0D40431cc0f7DFDf88be6495e67',
+    l2Weth: '0x36BeF5fD671f2aA8686023dE4797A7dae3082D5F',
+    l2WethGateway: '0x2E76efCC2518CB801E5340d5f140B1c1911b4F4B'
+  }
+}
+
 export const l1Networks: L1Networks = {
   1: {
     chainID: 1,
@@ -147,13 +198,13 @@ export const l1Networks: L1Networks = {
     rpcURL: process.env['MAINNET_RPC'] as string,
     isCustom: false,
   },
-  1337: {
-    chainID: 1337,
+  1338: {
+    chainID: 1338,
     name: 'Hardhat_Mainnet_Fork',
     explorerUrl: 'https://etherscan.io',
     partnerChainIDs: [42161], // TODO: use sequencer fork ID
-    blockTime: 15,
-    rpcURL: process.env['HARDHAT_RPC'] || 'http://127.0.0.1:8545/',
+    blockTime: 1,
+    rpcURL: 'http://127.0.0.1:8545/',
     isCustom: false,
   },
   4: {
@@ -165,6 +216,7 @@ export const l1Networks: L1Networks = {
     rpcURL: process.env['RINKEBY_RPC'] as string,
     isCustom: false,
   },
+  [locNitro1.chainID]: locNitro1,
 }
 
 export const l2Networks: L2Networks = {
@@ -192,6 +244,7 @@ export const l2Networks: L2Networks = {
     rpcURL: process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc',
     isCustom: false,
   },
+  [locNitro2.chainID]: locNitro2,
 }
 
 const getNetwork = async (
@@ -229,7 +282,7 @@ export const getL2Network = (
   return getNetwork(signerOrProviderOrChainID, 2) as Promise<L2Network>
 }
 
-const addCustomNetwork = ({
+export const addCustomNetwork = ({
   customL1Network,
   customL2Network,
 }: {
@@ -264,7 +317,9 @@ const addCustomNetwork = ({
       `Network ${customL2Network.chainID}'s partner network, ${customL2Network.partnerChainID}, not recognized`
     )
 
-  l1PartnerChain.partnerChainIDs.push(customL2Network.chainID)
+  if (!l1PartnerChain.partnerChainIDs.includes(customL2Network.chainID)) {
+    l1PartnerChain.partnerChainIDs.push(customL2Network.chainID)
+  }
 }
 
 export const isL1Network = (
@@ -273,5 +328,3 @@ export const isL1Network = (
   if ((network as L1Network).partnerChainIDs) return true
   else return false
 }
-
-export default { l1Networks, l2Networks, addCustomNetwork, isL1Network }

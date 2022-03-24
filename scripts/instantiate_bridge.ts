@@ -20,16 +20,20 @@ import { JsonRpcProvider } from '@ethersproject/providers'
 import { Wallet } from '@ethersproject/wallet'
 
 import dotenv from 'dotenv'
-import args from './getCLargs'
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
   L1Network,
-  l1Networks,
   L2Network,
-  l2Networks,
+  getL1Network,
+  getL2Network,
+  addCustomNetwork,
 } from '../src/lib/dataEntities/networks'
-import { Signer } from 'ethers'
+import { BigNumber, Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
+import { execSync } from 'child_process'
+import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
+import { RollupAdminFacet__factory } from '../src/lib/abi/factories/RollupAdminFacet__factory'
+import { deployErc20AndInit } from './deployBridge'
 
 dotenv.config()
 
@@ -37,12 +41,126 @@ const pk = process.env['DEVNET_PRIVKEY'] as string
 const mnemonic = process.env['DEV_MNEMONIC'] as string
 const verbose = process.env['VERBOSE'] as string
 
-const defaultNetworkId = 421611
+// CHRIS: TODO allow switching between local network and live testnets (eg rinkeby)
+const arbUrl = process.env['ARB_URL'] as string
+const ethUrl = process.env['ETH_URL'] as string
 
-export const instantiateBridge = (
+// const defaultNetworkId = 421611
+
+export const getCustomNetworks = async (
+  l1Url: string,
+  l2Url: string
+): Promise<{
+  l1Network: L1Network
+  l2Network: Omit<L2Network, 'tokenBridge'>
+}> => {
+  const l1Provider = new JsonRpcProvider(l1Url)
+  const l2Provider = new JsonRpcProvider(l2Url)
+  const deploymentData = execSync(
+    'docker exec nitro_sequencer_1 cat /deploydata/deployment.json'
+  ).toString()
+  const parsedDeploymentData = JSON.parse(deploymentData) as {
+    Bridge: string
+    Inbox: string
+    SequencerInbox: string
+    Rollup: string
+  }
+  const rollup = RollupAdminFacet__factory.connect(
+    parsedDeploymentData.Rollup,
+    l1Provider
+  )
+  const confirmPeriodBlocks = await rollup.confirmPeriodBlocks()
+
+  const bridge = Bridge__factory.connect(
+    parsedDeploymentData.Bridge,
+    l1Provider
+  )
+  const outboxAddr = await bridge.allowedOutboxList(0)
+
+  const l1NetworkInfo = await l1Provider.getNetwork()
+  const l2NetworkInfo = await l2Provider.getNetwork()
+
+  const l1Network: L1Network = {
+    blockTime: 10,
+    chainID: l1NetworkInfo.chainId,
+    explorerUrl: '',
+    isCustom: true,
+    name: 'EthLocal',
+    partnerChainIDs: [l2NetworkInfo.chainId],
+    rpcURL: l1Url,
+  }
+
+  const l2Network: Omit<L2Network, 'tokenBridge'> = {
+    chainID: l2NetworkInfo.chainId,
+    confirmPeriodBlocks: confirmPeriodBlocks.toNumber(),
+    ethBridge: {
+      bridge: parsedDeploymentData.Bridge,
+      inbox: parsedDeploymentData.Inbox,
+      outboxes: {
+        [outboxAddr]: BigNumber.from(0),
+      },
+      rollup: parsedDeploymentData.Rollup,
+      sequencerInbox: parsedDeploymentData.SequencerInbox,
+    },
+    explorerUrl: '',
+    isArbitrum: true,
+    isCustom: true,
+    name: 'ArbLocal',
+    partnerChainID: l1NetworkInfo.chainId,
+    rpcURL: l2Url,
+  }
+  return {
+    l1Network,
+    l2Network,
+  }
+}
+
+export const setupNetworks = async (l1Deployer: Signer, l2Deployer: Signer) => {
+  // CHRIS: TODO: pass in these urls - they should be on the signers already?
+  const { l1Network, l2Network: coreL2Network } = await getCustomNetworks(
+    ethUrl,
+    arbUrl
+  )
+  const { l1: l1Contracts, l2: l2Contracts } = await deployErc20AndInit(
+    l1Deployer,
+    l2Deployer,
+    coreL2Network.ethBridge.inbox
+  )
+  const l2Network: L2Network = {
+    ...coreL2Network,
+    tokenBridge: {
+      l1CustomGateway: l1Contracts.customGateway.address,
+      l1ERC20Gateway: l1Contracts.standardGateway.address,
+      l1GatewayRouter: l1Contracts.router.address,
+      l1MultiCall: l1Contracts.multicall.address,
+      l1ProxyAdmin: l1Contracts.proxyAdmin.address,
+      l1Weth: l1Contracts.weth.address,
+      l1WethGateway: l1Contracts.wethGateway.address,
+
+      l2CustomGateway: l2Contracts.customGateway.address,
+      l2ERC20Gateway: l2Contracts.standardGateway.address,
+      l2GatewayRouter: l2Contracts.router.address,
+      l2Multicall: l2Contracts.multicall.address,
+      l2ProxyAdmin: l2Contracts.proxyAdmin.address,
+      l2Weth: l2Contracts.weth.address,
+      l2WethGateway: l2Contracts.wethGateway.address,
+    },
+  }
+
+  return {
+    l1Network,
+    l2Network,
+  }
+}
+
+// CHRIS: TODO: we shouldnt access environment variables all over the place
+const arbGenesisWallet = new Wallet(process.env.ARB_GENESIS_KEY as string)
+console.debug('genesis addr', arbGenesisWallet.address)
+
+export const instantiateBridge = async (
   l1pkParam?: string,
   l2PkParam?: string
-): {
+): Promise<{
   l1Network: L1Network
   l2Network: L2Network
   l1Signer: Signer
@@ -50,8 +168,10 @@ export const instantiateBridge = (
   erc20Bridger: Erc20Bridger
   ethBridger: EthBridger
   adminErc20Bridger: AdminErc20Bridger
-  inboxTools: InboxTools
-} => {
+  inboxTools: InboxTools,
+  l1Deployer: Signer
+  l2Deployer: Signer
+}> => {
   if (!l1pkParam) {
     if (!pk && !mnemonic)
       throw new Error('need DEVNET_PRIVKEY or DEV_MNEMONIC env var')
@@ -62,44 +182,27 @@ export const instantiateBridge = (
       )
   }
 
-  let networkID = args.networkID
-  if (!networkID) {
-    verbose &&
-      console.log(
-        'No networkID command line arg provided; using network',
-        defaultNetworkId
-      )
+  const ethProvider = new JsonRpcProvider(ethUrl)
+  const arbProvider = new JsonRpcProvider(arbUrl)
 
-    networkID = defaultNetworkId
-  }
-  const isL1 = !!l1Networks[networkID]
-  const isL2 = !!l2Networks[networkID]
-  if (!isL1 && !isL2) {
-    throw new Error(`Unrecognized network ID: ${networkID}`)
-  }
-  if (!isL2) {
-    throw new Error(`Tests must specify an L2 network ID: ${networkID}`)
-  }
+  // const arbSigner = arbProvider.getSigner(0)
+  const ethDeployer = ethProvider.getSigner(0)
+  // console.log(
+  //   (await ethDeployer.getAddress()).toString(),
+  //   (await ethDeployer.getBalance()).toString()
+  // )
+  const arbDeployer = arbGenesisWallet.connect(arbProvider)
+  // console.log(
+  //   (await arbDeployer.getAddress()).toString(),
+  //   (await arbDeployer.getBalance()).toString()
+  // )
+  // console.log(
+  //   (await arbSigner.getAddress()).toString(),
+  //   (await arbSigner.getBalance()).toString()
+  // )
 
-  const l2Network = l2Networks[networkID]
-  const l1Network = l1Networks[l2Network.partnerChainID]
-
-  if (!l1Network) {
-    throw new Error(
-      `Unrecognised partner chain id: ${l2Network.partnerChainID}`
-    )
-  }
-
-  if (!l1Network.rpcURL) {
-    throw new Error('L1 rpc url not set (see .env.sample or networks.ts)')
-  }
-  if (!l2Network.rpcURL) {
-    throw new Error('L2 rpc url not set (see .env.sample or utils/networks.ts)')
-  }
-  const ethProvider = new JsonRpcProvider(l1Network.rpcURL)
-
-  const arbProvider = new JsonRpcProvider(l2Network.rpcURL)
-
+  // CHRIS: TODO: this l1signer and the l2signer
+  // CHRIS: TODO: should they be the deployer or the user?
   const l1Signer = (() => {
     if (l1pkParam) {
       return new Wallet(l1pkParam, ethProvider)
@@ -134,19 +237,37 @@ export const instantiateBridge = (
     console.log('')
   }
 
+  let l1Network: L1Network
+  let l2Network: L2Network
+  try {
+    l1Network = await getL1Network(ethDeployer)
+    l2Network = await getL2Network(arbDeployer)
+  } catch (err) {
+    // ok if this fails
+    const setup = await setupNetworks(ethDeployer, arbDeployer)
+    l1Network = setup.l1Network
+    l2Network = setup.l2Network
+    addCustomNetwork({
+      customL1Network: l1Network,
+      customL2Network: l2Network,
+    })
+  }
+
   const erc20Bridger = new Erc20Bridger(l2Network)
   const adminErc20Bridger = new AdminErc20Bridger(l2Network)
   const ethBridger = new EthBridger(l2Network)
   const inboxTools = new InboxTools(l1Signer, l2Network)
 
   return {
-    l1Network,
-    l2Network,
     l1Signer,
     l2Signer,
-    erc20Bridger: erc20Bridger,
-    ethBridger,
+    l1Network,
+    l2Network,
+    erc20Bridger,
     adminErc20Bridger,
+    ethBridger,
     inboxTools,
+    l1Deployer: ethDeployer,
+    l2Deployer: arbDeployer
   }
 }

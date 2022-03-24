@@ -39,6 +39,6 @@ export default {
     outBoxUpdateTimeout: 100000,
     existentTestCustomToken: '0x7A58e7f78893bcC15E1DAf6bfD08E527567C0552',
   },
-  '1337': mainnetConfig,
+  '1338': mainnetConfig,
   '1': mainnetConfig,
 }

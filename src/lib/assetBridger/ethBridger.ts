@@ -116,8 +116,11 @@ export class EthBridger extends AssetBridger<
 
     const gasEstimator = new L1ToL2MessageGasEstimator(params.l2Provider)
 
+    // CHRIS: TODO: should we do this? maybe a better way to get base fee?
+    const baseFee = await params.l1Signer.provider.getGasPrice();
     const submissionPrice = (
       await gasEstimator.estimateSubmissionPrice(
+        baseFee,
         0,
         params.retryableGasOverrides?.maxSubmissionPrice
       )

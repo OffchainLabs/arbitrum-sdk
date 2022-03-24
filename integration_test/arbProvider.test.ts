@@ -23,11 +23,12 @@ import { getRawArbTransactionReceipt } from '../src'
 import { JsonRpcProvider } from '@ethersproject/providers'
 
 describe('ArbProvider', () => {
-  beforeEach('skipIfMainnet', function () {
-    skipIfMainnet(this)
+  beforeEach('skipIfMainnet', async function () {
+    await skipIfMainnet(this)
   })
 
-  it('does find l1 batch info', async () => {
+  // CHRIS: TODO: update this test
+  it.skip('does find l1 batch info', async () => {
     const { l2Signer, l1Signer } = await instantiateBridgeWithRandomWallet()
     const l1Provider = l1Signer.provider! as JsonRpcProvider
     const l2Provider = l2Signer.provider! as JsonRpcProvider

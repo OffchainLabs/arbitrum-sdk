@@ -30,7 +30,6 @@ import {
 } from './L1ToL2Message'
 
 import { L1ERC20Gateway__factory } from '../abi/factories/L1ERC20Gateway__factory'
-import { Bridge__factory } from '../abi/factories/Bridge__factory'
 import { DepositInitiatedEvent } from '../abi/L1ERC20Gateway'
 import {
   SignerProviderUtils,
@@ -38,6 +37,10 @@ import {
 } from '../dataEntities/signerOrProvider'
 import { ArbTsError } from '../dataEntities/errors'
 import { MessageDeliveredEvent } from '../abi/Bridge'
+import { ethers } from 'ethers'
+import { Inbox__factory } from '../abi/factories/Inbox__factory'
+import { InboxMessageDeliveredEvent } from '../abi/Inbox'
+import { getL2Network } from '../..'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -45,10 +48,20 @@ export interface L1ContractTransaction<
   wait(confirmations?: number): Promise<TReceipt>
 }
 // some helper interfaces to reduce the verbosity elsewhere
-export type L1EthDepositTransaction =
-  L1ContractTransaction<L1EthDepositTransactionReceipt>
-export type L1ContractCallTransaction =
-  L1ContractTransaction<L1ContractCallTransactionReceipt>
+export type L1EthDepositTransaction = L1ContractTransaction<
+  L1EthDepositTransactionReceipt
+>
+export type L1ContractCallTransaction = L1ContractTransaction<
+  L1ContractCallTransactionReceipt
+>
+
+// CHRIS: TODO: remove and use proper abi
+interface TempMessageDeliveredEvent {
+  messageIndex: BigNumber
+  sender: string,
+  baseFeeL1: BigNumber,
+
+}
 
 export class L1TransactionReceipt implements TransactionReceipt {
   public readonly to: string
@@ -93,15 +106,130 @@ export class L1TransactionReceipt implements TransactionReceipt {
    * Get the numbers of any messages created by this transaction
    * @returns
    */
-  public getMessages(): MessageDeliveredEvent['args'][] {
-    const iface = Bridge__factory.createInterface()
+  public getMessageDeliveredEvents(): TempMessageDeliveredEvent[] {
+    // CHRIS: TODO: this will work when we have the proper abis
+    // const iface = Bridge__factory.createInterface()
+    const iface = new ethers.utils.Interface([
+      'event MessageDelivered(      uint256 indexed messageIndex,      bytes32 indexed beforeInboxAcc,      address inbox,      uint8 kind,      address sender,      bytes32 messageDataHash,      uint256 baseFeeL1,      uint64 timestamp  )',
+    ])
+
+    // CHRIS: TODO: remove
+    // const messageDeliveredTopic = "0x56a6ba8f7d1bbd65f69c805ab40646c6784bfbfaf5d54a6672f5910e8f2e9e65"
+
     const messageDeliveredTopic = iface.getEventTopic(
       iface.getEvent('MessageDelivered')
     )
+    console.log('bridge topic', messageDeliveredTopic)
 
     return this.logs
       .filter(log => log.topics[0] === messageDeliveredTopic)
-      .map(l => iface.parseLog(l).args as MessageDeliveredEvent['args'])
+      .map(l => iface.parseLog(l).args as unknown as TempMessageDeliveredEvent)
+  }
+
+  /**
+   * Get the numbers of any messages created by this transaction
+   * @returns
+   */
+  // TODO: CHRIS: we need to get the sender from the message delivered event
+  // TODO: CHRIS: we should make sure that we dont use any non general stuff here
+  // TOOD: CHRIS: we also need inbox message from origin event
+  public getInboxMessageDeliveredEvent(): InboxMessageDeliveredEvent['args'][] {
+    const iFace = Inbox__factory.createInterface()
+    const inboxMessageDeliveredTopic = iFace.getEventTopic(
+      iFace.events['InboxMessageDelivered(uint256,bytes)']
+    )
+    console.log('inbox topic', inboxMessageDeliveredTopic)
+    return this.logs
+      .filter(log => log.topics[0] === inboxMessageDeliveredTopic)
+      .map(l => iFace.parseLog(l).args as InboxMessageDeliveredEvent['args'])
+  }
+
+  public getMessageEvents(): {
+    inboxMessageEvent: InboxMessageDeliveredEvent['args']
+    bridgeMessageEvent: TempMessageDeliveredEvent
+  }[] {
+    const bridgeMessages = this.getMessageDeliveredEvents()
+    const inboxMessages = this.getInboxMessageDeliveredEvent()
+
+    if (bridgeMessages.length !== inboxMessages.length) {
+      console.log(this.logs)
+      throw new ArbTsError(
+        `Unexpected missing events. Inbox message count: ${
+          inboxMessages.length
+        } does not equal bridge message count: ${
+          bridgeMessages.length
+        }. ${JSON.stringify(inboxMessages)} ${JSON.stringify(bridgeMessages)}`
+      )
+    }
+
+    const messages: {
+      inboxMessageEvent: InboxMessageDeliveredEvent['args']
+      bridgeMessageEvent: TempMessageDeliveredEvent
+    }[] = []
+    for (const bm of bridgeMessages) {
+      const im = inboxMessages.filter(i => i.messageNum.eq(bm.messageIndex))[0]
+      if (!im) {
+        throw new ArbTsError(
+          `Unexepected missing event for message index: ${bm.messageIndex.toString()}. ${JSON.stringify(
+            inboxMessages
+          )}`
+        )
+      }
+
+      messages.push({
+        inboxMessageEvent: im,
+        bridgeMessageEvent: bm,
+      })
+    }
+    return messages
+  }
+
+  private parseInboxMessage(
+    inboxMessageDeliveredEvent: InboxMessageDeliveredEvent['args']
+  ) {
+    // decode the data field - is been packed so we cant decode the bytes field this way
+    const parsed = ethers.utils.defaultAbiCoder.decode(
+      [
+        'uint256', // dest
+        'uint256', // l2 call balue
+        'uint256', // msg val
+        'uint256', // max submission
+        'uint256', // excess fee refund addr
+        'uint256', // call value refund addr
+        'uint256', // max gas
+        'uint256', // gas price bid
+        'uint256', // data length
+      ],
+      inboxMessageDeliveredEvent.data.substring(0, 64 * 9 + 2)
+    )
+    // CHRIS: TODO: we shouldnt use getAddress as it does a checksum - which we cant guarantee here
+    const destAddress = ethers.utils.getAddress(
+      (parsed[0] as BigNumber).toHexString()
+    )
+    const l2CallValue = parsed[1] as BigNumber
+    const l1Value = parsed[2] as BigNumber
+    const maxSubmissionCost = parsed[3] as BigNumber
+    const excessFeeRefundAddress = ethers.utils.getAddress(
+      (parsed[4] as BigNumber).toHexString()
+    )
+    const callValueRefundAddress = ethers.utils.getAddress(
+      (parsed[5] as BigNumber).toHexString()
+    )
+    const maxGas = parsed[6] as BigNumber
+    const gasPriceBid = parsed[7] as BigNumber
+    const data = '0x' + inboxMessageDeliveredEvent.data.substring(64 * 9 + 2)
+
+    return {
+      destAddress,
+      l2CallValue,
+      l1Value,
+      maxSubmissionCost,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
+      maxGas,
+      gasPriceBid,
+      data,
+    }
   }
 
   /**
@@ -109,31 +237,49 @@ export class L1TransactionReceipt implements TransactionReceipt {
    * @param l2SignerOrProvider
    */
   public async getL1ToL2Messages<T extends SignerOrProvider>(
-    l2SignerOrProvider: T
+    l2SignerOrProvider: T,
   ): Promise<L1ToL2MessageReaderOrWriter<T>[]>
   public async getL1ToL2Messages<T extends SignerOrProvider>(
-    l2SignerOrProvider: T
+    l2SignerOrProvider: T,
   ): Promise<L1ToL2MessageReader[] | L1ToL2MessageWriter[]> {
     const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
-
     const chainID = (await provider.getNetwork()).chainId.toString()
 
-    const messages = this.getMessages()
+    const messages = this.getMessageEvents()
     if (!messages || messages.length === 0) return []
 
-    return messages
-      .map(m => m.messageIndex)
-      .map(mn => {
-        const ticketCreationHash = L1ToL2Message.calculateRetryableCreationId(
-          BigNumber.from(chainID),
-          mn
-        )
-        return L1ToL2Message.fromRetryableCreationId(
-          l2SignerOrProvider,
-          ticketCreationHash,
-          mn
-        )
-      })
+    // CHRIS: TODO: remove this
+    const network = await getL2Network(parseInt(chainID))
+
+    return messages.map(mn => {
+      console.log('bridge address', network.tokenBridge.l1ERC20Gateway)
+      console.log('bridge sender', mn.bridgeMessageEvent.sender)
+      // CHRIS: TODO: tidy up
+      const inboxMessageData = this.parseInboxMessage(mn.inboxMessageEvent)
+
+      const ticketCreationHash = L1ToL2Message.calculateSubmitRetryableId(
+        BigNumber.from(chainID),
+
+        mn.bridgeMessageEvent.sender,
+        mn.inboxMessageEvent.messageNum,
+        mn.bridgeMessageEvent.baseFeeL1,
+
+        inboxMessageData.destAddress,
+        inboxMessageData.l2CallValue,
+        inboxMessageData.l1Value,
+        inboxMessageData.maxSubmissionCost,
+        inboxMessageData.excessFeeRefundAddress,
+        inboxMessageData.callValueRefundAddress,
+        inboxMessageData.maxGas,
+        inboxMessageData.gasPriceBid,
+        inboxMessageData.data
+      )
+      return L1ToL2Message.fromRetryableCreationId(
+        l2SignerOrProvider,
+        ticketCreationHash,
+        mn.inboxMessageEvent.messageNum
+      )
+    })
   }
 
   /**
@@ -151,7 +297,9 @@ export class L1TransactionReceipt implements TransactionReceipt {
     l2SignerOrProvider: T,
     messageIndex?: number
   ): Promise<L1ToL2MessageReader | L1ToL2MessageWriter> {
-    const allL1ToL2Messages = await this.getL1ToL2Messages(l2SignerOrProvider)
+    const allL1ToL2Messages = await this.getL1ToL2Messages(
+      l2SignerOrProvider,
+    )
     const messageCount = allL1ToL2Messages.length
     if (!messageCount)
       throw new ArbTsError(
@@ -257,7 +405,9 @@ export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
       message: L1ToL2MessageReaderOrWriter<T>
     } & L1ToL2MessageWaitResult
   > {
-    const message = (await this.getL1ToL2Messages(l2SignerOrProvider))[0]
+    const message = (
+      await this.getL1ToL2Messages(l2SignerOrProvider)
+    )[0]
     const res = await message.waitForStatus(confirmations, timeout)
 
     return {
@@ -296,7 +446,9 @@ export class L1ContractCallTransactionReceipt extends L1TransactionReceipt {
       message: L1ToL2MessageReaderOrWriter<T>
     } & L1ToL2MessageWaitResult
   > {
-    const message = (await this.getL1ToL2Messages(l2SignerOrProvider))[0]
+    const message = (
+      await this.getL1ToL2Messages(l2SignerOrProvider)
+    )[0]
     const res = await message.waitForStatus(confirmations, timeout)
 
     return {

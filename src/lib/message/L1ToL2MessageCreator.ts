@@ -10,6 +10,8 @@ import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { l2Networks } from '../dataEntities/networks'
 import { ContractReceipt, PayableOverrides } from '@ethersproject/contracts'
 import { BigNumber } from 'ethers'
+import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
+import { MissingProviderArbTsError } from '../dataEntities/errors'
 
 interface CreateRetryableTicketOpptions {
   excessFeeRefundAddress?: string
@@ -17,7 +19,11 @@ interface CreateRetryableTicketOpptions {
 }
 export class L1ToL2MessageCreator {
   sender?: string
-  constructor(public readonly l1Signer: Signer) {}
+  constructor(public readonly l1Signer: Signer) {
+    if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
+      throw new MissingProviderArbTsError('l1Signer')
+    }
+  }
 
   public async createRetryableTicketFromGasParams(
     gasParams: L1toL2MessageGasValues,
@@ -70,11 +76,14 @@ export class L1ToL2MessageCreator {
   ): Promise<L1TransactionReceipt> {
     const sender = await this.getSender()
     const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
+    // CHRIS: TODO: should we do this? maybe a better way to get base fee?
+    const baseFee = await this.l1Signer.provider!.getGasPrice();
     const gasParams = await gasEstimator.estimateMessage(
       sender,
       destAddr,
       callDataHex,
-      l2CallValue
+      l2CallValue,
+      baseFee
     )
     const l2ChainID = (await l2Provider.getNetwork()).chainId
     const rec = await this.createRetryableTicketFromGasParams(
