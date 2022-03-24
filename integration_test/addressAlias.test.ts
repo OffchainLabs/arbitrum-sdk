@@ -21,34 +21,78 @@ import { expect } from 'chai'
 import { applyL1ToL2Alias, undoL1ToL2Alias } from '../src/lib/utils/lib'
 import { BigNumber } from 'ethers'
 import { ADDRESS_ALIAS_OFFSET } from '../src/lib/dataEntities/constants'
+import { hexZeroPad } from '@ethersproject/bytes'
+import { getAddress } from '@ethersproject/address'
 const offset = BigNumber.from(ADDRESS_ALIAS_OFFSET)
-const maxAddr = BigNumber.from("0xffffffffffffffffffffffffffffffffffffffff");
+const maxAddr = BigNumber.from('0xffffffffffffffffffffffffffffffffffffffff')
 
 describe.only('Address alias', () => {
-  it('does alias correctly below offset', async () => {
-    const belowOffset = maxAddr.sub(offset).sub(10)
-    const afterApply = applyL1ToL2Alias(belowOffset.toHexString())
-    expect(afterApply, "invalid apply alias").to.eq("0xfffffffffffffffffffffffffffffffffffffff5")
+  const testApplyUndo = (
+    addr: string,
+    expectedApply: string,
+    expectedUndo: string
+  ) => {
+    const afterApply = applyL1ToL2Alias(addr)
+    expect(afterApply, 'invalid apply alias').to.eq(expectedApply)
 
-    const afterUndo = undoL1ToL2Alias(afterApply);
-    expect(afterUndo, "invalid undo alias").to.eq(belowOffset.toHexString())
+    const afterApplyUndo = undoL1ToL2Alias(afterApply)
+    expect(afterApplyUndo, 'invalid undo after apply alias').to.eq(addr)
+
+    const afterUndo = undoL1ToL2Alias(addr)
+    expect(afterUndo, 'invalid undo alias').to.eq(expectedUndo)
+
+    const afterUndoApply = applyL1ToL2Alias(afterUndo)
+    expect(afterUndoApply, 'invalid apply after undo alias').to.eq(addr)
+  }
+
+  it('does alias correctly below offset', async () => {
+    // 0xeeeeffffffffffffffffffffffffffffffffeee4
+    const belowOffset = hexZeroPad(
+      maxAddr.sub(offset).sub(10).toHexString(),
+      20
+    )
+
+    testApplyUndo(
+      getAddress(belowOffset),
+      getAddress('0xfffffffffffffffffffffffffffffffffffffff5'),
+      getAddress('0xddddffffffffffffffffffffffffffffffffddd3')
+    )
   })
 
   it('does alias correctly on', async () => {
-    const belowOffset = maxAddr.sub(offset).add(0)
-    const afterApply = applyL1ToL2Alias(belowOffset.toHexString())
-    expect(afterApply, "invalid apply alias").to.eq("0xffffffffffffffffffffffffffffffffffffffff")
+    // 0xeeeeffffffffffffffffffffffffffffffffeeee
+    const onOffset = hexZeroPad(maxAddr.sub(offset).add(0).toHexString(), 20)
 
-    const afterUndo = undoL1ToL2Alias(afterApply);
-    expect(afterUndo, "invalid undo alias").to.eq(belowOffset.toHexString())
+    testApplyUndo(
+      getAddress(onOffset),
+      getAddress('0xffffffffffffffffffffffffffffffffffffffff'),
+      getAddress('0xddddffffffffffffffffffffffffffffffffdddd')
+    )
   })
 
   it('does alias correctly above offset', async () => {
-    const belowOffset = maxAddr.sub(offset).add(10)
-    const afterApply = applyL1ToL2Alias(belowOffset.toHexString())
-    expect(afterApply, "invalid apply alias").to.eq("0x0000000000000000000000000000000000000009")
-                                                                   
-    const afterUndo = undoL1ToL2Alias(afterApply);
-    expect(afterUndo, "invalid undo alias").to.eq(belowOffset.toHexString())
+    // 0xeeeeffffffffffffffffffffffffffffffffeef8
+    const aboveOffset = hexZeroPad(
+      maxAddr.sub(offset).add(10).toHexString(),
+      20
+    )
+
+    testApplyUndo(
+      getAddress(aboveOffset),
+      getAddress('0x0000000000000000000000000000000000000009'),
+      getAddress('0xddddffffffffffffffffffffffffffffffffdde7')
+    )
+  })
+
+  it('does alias special case', async () => {
+    // this is the address that initially caused the overflow bug in
+    // in address aliasing, so we just keep it here as a test case
+    const special = '0xFfC98231ef2fd1F77106E10581A1faC14E29d014'
+
+    testApplyUndo(
+      getAddress(special),
+      getAddress('0x10da8231ef2fd1f77106e10581a1fac14e29e125'),
+      getAddress('0xeeb88231ef2fd1f77106e10581a1fac14e29bf03')
+    )
   })
 })

@@ -1,3 +1,4 @@
+import { getAddress as getAddress } from '@ethersproject/address'
 import { utils } from 'ethers'
 import { ADDRESS_ALIAS_OFFSET } from '../dataEntities/constants'
 import { ArbTsError } from '../dataEntities/errors'
@@ -19,14 +20,15 @@ export const throwIfNotAddress = (address: string) => {
  */
 export const applyL1ToL2Alias = (l1Address: string): string => {
   throwIfNotAddress(l1Address)
-  
+
   // we use BigInts in here and undo to allow for proper under/overflow behaviour
   // BigInt.asUintN calculates the correct positive modulus
-  return (
+
+  return getAddress(
     '0x' +
-    BigInt.asUintN(160, BigInt(l1Address) + ADDRESS_ALIAS_OFFSET_BIG_INT)
-      .toString(16)
-      .padStart(40, '0')
+      BigInt.asUintN(160, BigInt(l1Address) + ADDRESS_ALIAS_OFFSET_BIG_INT)
+        .toString(16)
+        .padStart(40, '0')
   )
 }
 
@@ -40,10 +42,10 @@ export const undoL1ToL2Alias = (l2Address: string): string => {
 
   // we use BigInts in here and apply to allow for proper under/overflow behaviour
   // BigInt.asUintN calculates the correct positive modulus
-  return (
+  return getAddress(
     '0x' +
-    BigInt.asUintN(160, BigInt(l2Address) - ADDRESS_ALIAS_OFFSET_BIG_INT)
-      .toString(16)
-      .padStart(40, '0')
+      BigInt.asUintN(160, BigInt(l2Address) - ADDRESS_ALIAS_OFFSET_BIG_INT)
+        .toString(16)
+        .padStart(40, '0')
   )
 }
