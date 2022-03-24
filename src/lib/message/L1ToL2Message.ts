@@ -289,7 +289,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     return L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
   }
 
-  protected async status(): Promise<L1ToL2MessageStatus> {
+  public async status(): Promise<L1ToL2MessageStatus> {
     return this.receiptsToStatus(
       await this.getRetryableCreationReceipt(),
       await this.getL2TxReceipt()
