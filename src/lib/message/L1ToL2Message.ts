@@ -142,13 +142,9 @@ export class L1ToL2Message {
       return ethers.utils.stripZeros(value.toHexString())
     }
 
-    console.log(l1BaseFee.toHexString())
-
     const addressAlias = new Address(fromAddress);
     
     const from = addressAlias.applyAlias()
-    console.log("prefrom", fromAddress)
-    console.log("postfrom", from.value)
     const chainId = BigNumber.from(l2ChainId)
     const msgNum = BigNumber.from(messageNumber)
 
@@ -168,14 +164,12 @@ export class L1ToL2Message {
       excessFeeRefundAddress,
       data,
     ]
-    console.log("fields", fields.map(f => hexlify(f)) )
 
     // arbitrum submit retry transactions have type 0x69
     const rlpEnc = ethers.utils.hexConcat([
       '0x69',
       ethers.utils.RLP.encode(fields),
     ])
-    console.log(rlpEnc)
 
     return ethers.utils.keccak256(rlpEnc)
   }
@@ -280,20 +274,15 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       null,
       0,
     ])
-    console.log('redeem topics', topics)
     const logs = await this.l2Provider.getLogs({
       topics,
       fromBlock: 0,
       toBlock: 'latest',
     })
-    console.log(logs)
-    console.log('redeem scheduled log length', logs.length)
-
     if (logs.length === 0) return null
     if (logs.length > 1) {
       // CHRIS: TODO: this sometimes happens - lets take a look at the receipt?
       // CHRIS: TODO: what other logs are available?
-      console.log(logs)
       throw new Error('Unexpected log count')
     }
 
@@ -303,7 +292,6 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       logs[logs.length - 1].topics
     )
     const hash = decoded['retryTxHash'] as string
-    console.log('retryhash', hash)
     return await this.l2Provider.getTransactionReceipt(hash)
   }
 
@@ -316,7 +304,6 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       (await this.l2Provider.getBlock('latest')).timestamp
     )
     const timeoutTimestamp = await this.getTimeout()
-    console.log('left timeout')
 
     // timeoutTimestamp returns the timestamp at which the retryable ticket expires
     // it can also return 0 if the ticket l2Tx does not exist
@@ -407,11 +394,10 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       donatedGas: BigNumber
       gasDonor: string
     }
-    console.log(parsedEvent)
     return await l2Provider.getTransactionReceipt(parsedEvent.retryTxHash)
   }
 
-  //1. so we can redeem, we can see a new item scheduled, but we cant see the scheduled item actually get run
+  // 1. so we can redeem, we can see a new item scheduled, but we cant see the scheduled item actually get run
   // 2. put some logging in for all retry transactions - done
 
   /**
@@ -430,8 +416,6 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     confirmations?: number,
     timeout = 900000
   ): Promise<L1ToL2MessageWaitResult> {
-    console.log('retryable id', this.retryableCreationId)
-
     // try to wait for the retryable ticket to be created
     let retryableCreationReceipt: TransactionReceipt | undefined
     try {
@@ -448,9 +432,6 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
     // CHRIS: TODO: remove this wait - we shouldnt need it right? we could make a batch rpc request? - we shold probably do a waitfortransaction here actually
     await arbLib.wait(1000)
-
-    // get the l2TxReceipt, don't bother trying if we couldn't get the retryableCreationReceipt
-    console.log('getting l2 receipt', !!retryableCreationReceipt)
 
     const l2TxReceipt = retryableCreationReceipt
       ? await L1ToL2MessageReader.getRedeemReceipt(retryableCreationReceipt, this.l2Provider)
@@ -483,15 +464,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       ARB_RETRYABLE_TX_ADDRESS,
       this.l2Provider
     )
-    console.log('timeb', this.retryableCreationId)
-    // CHRIS: TODO: 'missing revert data in call exception' - this is the error we get for a missing timeout
-
-    const timeout2 = await arbRetryableTx.getTimeout(this.retryableCreationId)
-    // const timeout2 = await arbRetryableTx.getTimeout(this.retryableCreationId)
-    console.log('timeb0')
-    const timeout = await arbRetryableTx.getTimeout(this.retryableCreationId)
-    console.log('timea')
-    return timeout
+    return await arbRetryableTx.getTimeout(this.retryableCreationId)
   }
 
   /**
@@ -531,20 +504,6 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
         this.l2Signer
       )
       const gasPrice = await this.l2Signer.provider!.getGasPrice();
-      // const gasEstimate = await arbRetryableTx.estimateGas.redeem(this.retryableCreationId, {
-      //   // CHRIS: TODO: dont use 1559 tx
-      //   maxFeePerGas: gasPrice,
-      //   maxPriorityFeePerGas: 0,
-      //   gasLimit: 150000
-      // })
-      // console.log("gas estimate", gasEstimate.toString())
-
-      await arbRetryableTx.callStatic.redeem(this.retryableCreationId, {
-        // CHRIS: TODO: dont use 1559 tx
-        maxFeePerGas: gasPrice,
-        maxPriorityFeePerGas: 0,
-        gasLimit: gasLimit
-      })
       
       return await arbRetryableTx.redeem(this.retryableCreationId, {
         // CHRIS: TODO: dont use 1559 tx

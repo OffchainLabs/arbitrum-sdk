@@ -119,8 +119,6 @@ export class L1TransactionReceipt implements TransactionReceipt {
     const messageDeliveredTopic = iface.getEventTopic(
       iface.getEvent('MessageDelivered')
     )
-    console.log('bridge topic', messageDeliveredTopic)
-
     return this.logs
       .filter(log => log.topics[0] === messageDeliveredTopic)
       .map(l => iface.parseLog(l).args as unknown as TempMessageDeliveredEvent)
@@ -138,7 +136,6 @@ export class L1TransactionReceipt implements TransactionReceipt {
     const inboxMessageDeliveredTopic = iFace.getEventTopic(
       iFace.events['InboxMessageDelivered(uint256,bytes)']
     )
-    console.log('inbox topic', inboxMessageDeliveredTopic)
     return this.logs
       .filter(log => log.topics[0] === inboxMessageDeliveredTopic)
       .map(l => iFace.parseLog(l).args as InboxMessageDeliveredEvent['args'])
@@ -152,7 +149,6 @@ export class L1TransactionReceipt implements TransactionReceipt {
     const inboxMessages = this.getInboxMessageDeliveredEvent()
 
     if (bridgeMessages.length !== inboxMessages.length) {
-      console.log(this.logs)
       throw new ArbTsError(
         `Unexpected missing events. Inbox message count: ${
           inboxMessages.length
@@ -252,8 +248,6 @@ export class L1TransactionReceipt implements TransactionReceipt {
     const network = await getL2Network(parseInt(chainID))
 
     return messages.map(mn => {
-      console.log('bridge address', network.tokenBridge.l1ERC20Gateway)
-      console.log('bridge sender', mn.bridgeMessageEvent.sender)
       // CHRIS: TODO: tidy up
       const inboxMessageData = this.parseInboxMessage(mn.inboxMessageEvent)
 

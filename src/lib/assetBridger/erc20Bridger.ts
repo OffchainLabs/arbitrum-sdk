@@ -190,7 +190,6 @@ export class Erc20Bridger extends AssetBridger<
       params.erc20L1Address,
       params.l1Signer.provider
     )
-    console.log('gateway addr', gatewayAddress)
     const contract = await ERC20__factory.connect(
       params.erc20L1Address,
       params.l1Signer
@@ -432,15 +431,7 @@ export class Erc20Bridger extends AssetBridger<
 
     const l2Dest = await l1Gateway.counterpartGateway()
     const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
-    // console.log("about to estimate gas")
-    // const l2Estimate = await l2Provider.estimateGas({
-    //   to: l2Dest,
-    //   data: depositCalldata,
-    //   from: l1Gateway.address
-    // })
-    // console.log("l2 only estimate", await l2Estimate.toString())
-
-
+    
     let tokenGasOverrides: GasOverrides | undefined = retryableGasOverrides
     if (!tokenGasOverrides) tokenGasOverrides = {}
     // we never send l2 call value from l1 for tokens
@@ -465,7 +456,6 @@ export class Erc20Bridger extends AssetBridger<
       baseFee,
       tokenGasOverrides
     )
-    console.log("retryable estimate", estimates.maxGasBid.toString())
 
     return {
       maxGas: estimates.maxGasBid,
@@ -505,15 +495,8 @@ export class Erc20Bridger extends AssetBridger<
       this.l2Network.tokenBridge.l1GatewayRouter,
       params.l1Signer
     )
-    const code = await params.l1Signer.provider!.getCode(
-      l1GatewayRouter.address
-    )
-    const whitelist = await l1GatewayRouter.whitelist()
-    console.log('here', estimate, code.length, whitelist)
 
-    console.log('deposit value', depositParams.l1CallValue.toString())
-
-    const q = await (estimate
+    return await (estimate
       ? l1GatewayRouter.estimateGas
       : l1GatewayRouter.functions
     ).outboundTransfer(
@@ -529,9 +512,6 @@ export class Erc20Bridger extends AssetBridger<
         gasLimit: 3000000,
       }
     )
-
-    console.log('after')
-    return q
   }
 
   /**
@@ -646,8 +626,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
       throw new MissingProviderArbTsError('l1Signer')
     }
-    console.log('o')
-
     await this.checkL1Network(l1Signer)
     await this.checkL2Network(l2Provider)
 
@@ -659,7 +637,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
     // sanity checks
     await l1Token.deployed()
     await l2Token.deployed()
-    console.log('o1')
 
     const l1AddressFromL2 = await l2Token.l1Address()
     if (l1AddressFromL2 !== l1TokenAddress) {
@@ -668,7 +645,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
       )
     }
     const gasPriceEstimator = new L1ToL2MessageGasEstimator(l2Provider)
-    console.log('o2')
 
     // internally the registerTokenOnL2 sends two l1tol2 messages
     // the first registers the tokens and the second sets the gateways
@@ -679,11 +655,9 @@ export class AdminErc20Bridger extends Erc20Bridger {
       'registerTokenFromL1',
       [[l1TokenAddress], [l2TokenAddress]]
     )
-    console.log('o3')
 
     // CHRIS: TODO: should we do this? maybe a better way to get base fee?
     const baseFee = await l1Signer.provider.getGasPrice()
-    console.log('o3A')
     const setTokenEstimates = await gasPriceEstimator.estimateMessage(
       this.l2Network.tokenBridge.l1CustomGateway,
       // l1SenderAddress,
@@ -692,7 +666,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
       Zero,
       baseFee
     )
-    console.log('o4')
 
     // 2. setGateway
     const iL2GatewayRouter = L2GatewayRouter__factory.createInterface()
@@ -701,53 +674,12 @@ export class AdminErc20Bridger extends Erc20Bridger {
       [[l1TokenAddress], [this.l2Network.tokenBridge.l1CustomGateway]]
     )
 
-    console.log('hi?')
     const setGatwayEstimates = await gasPriceEstimator.estimateMessage(
       this.l2Network.tokenBridge.l1GatewayRouter,
       this.l2Network.tokenBridge.l2GatewayRouter,
       l2SetGatewaysCallData,
       Zero,
       baseFee
-    )
-
-    // CHRIS: TODO: remove
-    console.log(
-      'call static',
-      setTokenEstimates.totalDepositValue
-        .add(setGatwayEstimates.totalDepositValue)
-        .toString()
-    )
-    const res = await l1Token.callStatic.registerTokenOnL2(
-      l2TokenAddress,
-      setTokenEstimates.maxSubmissionPriceBid,
-      setGatwayEstimates.maxSubmissionPriceBid,
-      setTokenEstimates.maxGasBid,
-      setGatwayEstimates.maxGasBid,
-      setGatwayEstimates.maxGasPriceBid,
-      setTokenEstimates.totalDepositValue,
-      setGatwayEstimates.totalDepositValue,
-      l1SenderAddress,
-      {
-        value: setTokenEstimates.totalDepositValue.add(
-          setGatwayEstimates.totalDepositValue
-        ),
-        from: await l1Signer.getAddress(),
-      }
-    )
-    console.log('after call static', res)
-    console.log(
-      'call vars',
-      setTokenEstimates.maxSubmissionPriceBid.toString(),
-      setGatwayEstimates.maxSubmissionPriceBid.toString(),
-      setTokenEstimates.maxGasBid.toString(),
-      setGatwayEstimates.maxGasBid.toString(),
-      setGatwayEstimates.maxGasPriceBid.toString(),
-      setTokenEstimates.totalDepositValue.toString(),
-      setGatwayEstimates.totalDepositValue.toString(),
-      l1SenderAddress,
-      setTokenEstimates.totalDepositValue
-        .add(setGatwayEstimates.totalDepositValue)
-        .toString()
     )
 
     // now execute the registration
@@ -767,7 +699,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
         ),
       }
     )
-    console.log('anddd completed?')
 
     return L1TransactionReceipt.monkeyPatchWait(customRegistrationTx)
   }

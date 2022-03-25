@@ -410,12 +410,9 @@ const depositTokenTest = async (
   l2Signer: Signer,
   retryableOverrides?: Omit<GasOverrides, 'sendL2CallValueFromL1'>
 ) => {
-  console.log('a')
   const deployErc20 = new TestERC20__factory().connect(l1Signer)
   const testToken = await deployErc20.deploy()
   await testToken.deployed()
-
-  console.log('b')
 
   await (await testToken.mint()).wait()
   await (
@@ -424,8 +421,6 @@ const depositTokenTest = async (
       l1Signer: l1Signer,
     })
   ).wait()
-
-  console.log('c')
 
   const expectedL1GatewayAddress = await erc20Bridger.getL1GatewayAddress(
     testToken.address,
@@ -442,13 +437,10 @@ const depositTokenTest = async (
   expect(allowance.eq(Erc20Bridger.MAX_APPROVAL), 'set token allowance failed')
     .to.be.true
 
-  console.log('d')
-
   const initialBridgeTokenBalance = await testToken.balanceOf(
     expectedL1GatewayAddress
   )
 
-  console.log('e')
   const depositRes = await erc20Bridger.deposit({
     l1Signer: l1Signer,
     l2Provider: l2Signer.provider!,
@@ -457,17 +449,10 @@ const depositTokenTest = async (
     retryableGasOverrides: retryableOverrides,
   })
 
-  console.log('f')
-
   const depositRec = await depositRes.wait()
-
-  console.log('g')
-
   const finalBridgeTokenBalance = await testToken.balanceOf(
     expectedL1GatewayAddress
   )
-
-  console.log('h')
 
   expect(
     initialBridgeTokenBalance.add(depositAmount).toNumber(),

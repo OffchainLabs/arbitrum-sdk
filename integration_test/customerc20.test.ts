@@ -578,10 +578,6 @@ describe('Custom ERC20', () => {
   // CHRIS: TODO: properly refactor L1 test case
   // CHRIS: TODO: important test case for address alias - also do something that's under the offset, or at the offset
 
-  // CHRIS: TODO: remove
-  it('deploy', async () => {
-    const { l1Network, l2Network } = await instantiateBridgeWithRandomWallet()
-  })
 
   it.skip('deposits erc20 (no L2 Eth funding)', async () => {
     const {

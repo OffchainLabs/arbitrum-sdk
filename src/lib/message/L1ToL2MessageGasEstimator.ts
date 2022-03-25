@@ -92,18 +92,8 @@ export class L1ToL2MessageGasEstimator {
   }> {
     const defaultedOptions = this.applySubmissionPriceDefaults(options)
 
-    // CHRIS: TODO: go back to this nitro hash: 69b2212fe03de20dd29eb3261978510f954876f2
-    // if prefix == 105 {
-    //   res, _ := rlp.EncodeToBytes(x)
-    //   os.Stdout.WriteString(hex.EncodeToString(res))
-    // }
-    // CHRIS: TODO: add some padding to the l1basefee
-
-    // CHRIS: TODO: tidy below
-    // const nodeInterface = NodeInterface__factory.connect(NODE_INTERFACE_ADDRESS, this.l2Provider);
-    // CHRIS: TODO: remove the .mul(10)
+    // CHRIS: TODO: tidy below and above and put in own formula or something? remove the .mul(10)
     const submissionGas = BigNumber.from(callDataSize).mul(6).add(1400).mul(10)
-    console.log("in")
 
     return {
       submissionPrice: l1BaseFee.mul(submissionGas),
@@ -153,7 +143,7 @@ export class L1ToL2MessageGasEstimator {
     senderDeposit: BigNumber,
     destAddr: string,
     l2CallValue: BigNumber,
-    maxSubmissionCost: BigNumber,
+    maxSubmissionCost: BigNumber, // CHRIS: TODO: we can get rid of these now yay!
     excessFeeRefundAddress: string,
     callValueRefundAddress: string,
     maxGas: BigNumber,
@@ -170,22 +160,6 @@ export class L1ToL2MessageGasEstimator {
       'function estimateRetryableTicket(address sender,uint256 deposit,address to,uint256 l2CallValue,address excessFeeRefundAddress,address callValueRefundAddress,bytes calldata data)',
     ])
 
-    console.log("befpre")
-    const res = await this.l2Provider.call({
-      to: NODE_INTERFACE_ADDRESS,
-      data: iface.encodeFunctionData('estimateRetryableTicket', [
-        sender,
-        senderDeposit,
-        destAddr,
-        l2CallValue,
-        excessFeeRefundAddress,
-        callValueRefundAddress,
-        calldata,
-      ]),
-    })
-    console.log(res)
-    console.log("after")
-
     return await this.l2Provider.estimateGas({
       to: NODE_INTERFACE_ADDRESS,
       data: iface.encodeFunctionData('estimateRetryableTicket', [
@@ -199,21 +173,6 @@ export class L1ToL2MessageGasEstimator {
       ]),
       gasPrice: 100000000
     })
-
-    return (
-      await nodeInterface.estimateRetryableTicket(
-        sender,
-        senderDeposit,
-        destAddr,
-        l2CallValue,
-        maxSubmissionCost,
-        excessFeeRefundAddress,
-        callValueRefundAddress,
-        maxGas,
-        gasPriceBid,
-        calldata
-      )
-    )[0]
   }
 
   private applyDefaults(options?: GasOverrides) {
@@ -262,14 +221,11 @@ export class L1ToL2MessageGasEstimator {
   }> {
     const defaultedOptions = this.applyDefaults(options)
 
-    console.log("q")
-
     const maxGasPriceBid = this.percentIncrease(
       defaultedOptions.maxGasPrice.base ||
         (await this.l2Provider.getGasPrice()),
       defaultedOptions.maxGasPrice.percentIncrease
     )
-    console.log("qp")
 
     const maxSubmissionPriceBid = (
       await this.estimateSubmissionPrice(
@@ -279,8 +235,6 @@ export class L1ToL2MessageGasEstimator {
         options?.maxSubmissionPrice
       )
     ).submissionPrice
-
-    console.log("qpa")
 
     const calculatedMaxGas = this.percentIncrease(
       defaultedOptions.maxGas.base ||
@@ -302,13 +256,10 @@ export class L1ToL2MessageGasEstimator {
         )),
       defaultedOptions.maxGas.percentIncrease
     )
-    console.log("qpb")
     // always ensure the max gas is greater than the min
     const maxGas = calculatedMaxGas.gt(defaultedOptions.maxGas.min)
       ? calculatedMaxGas
       : defaultedOptions.maxGas.min
-
-    console.log("lookup", defaultedOptions.sendL2CallValueFromL1, maxSubmissionPriceBid.toString(), maxGasPriceBid.toString(), maxGas.toString())
 
     let totalDepositValue = maxSubmissionPriceBid.add(
       maxGasPriceBid.mul(maxGas)

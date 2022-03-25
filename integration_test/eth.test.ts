@@ -43,11 +43,6 @@ describe('Ether', async () => {
     await skipIfMainnet(this)
   })
 
-  // CHRIS: TODO: remove
-  it('deploy', async () => {
-    await instantiateBridgeWithRandomWallet()
-  })
-
   it('transfers ether on l2', async () => {
     const { l2Signer } = await instantiateBridgeWithRandomWallet()
 

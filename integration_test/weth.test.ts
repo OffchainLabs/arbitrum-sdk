@@ -39,16 +39,6 @@ describe('WETH', async () => {
     await skipIfMainnet(this)
   })
 
-  // CHRIS: TODO: remove
-  it('deploy', async () => {
-    const {
-      l1Network,
-      l2Network,
-    } = await instantiateBridgeWithRandomWallet()
-    console.log('l1network', l1Network)
-    console.log('l2network', l2Network)
-  })
-
   it('withdraws WETH', async () => {
     const wethToWrap = parseEther('0.00001')
     const wethToWithdraw = parseEther('0.00000001')
@@ -70,28 +60,6 @@ describe('WETH', async () => {
     })
     const rec = await res.wait()
     expect(rec.status).to.equal(1, 'deposit txn failed')
-
-    const l1Gateway = await erc20Bridger.getL1GatewayAddress(
-      l2Network.tokenBridge.l1Weth,
-      l1Signer.provider!
-    )
-    console.log('l1 gateway', l1Gateway, l2Network.tokenBridge.l1WethGateway)
-
-    const l1WethGateway = L1WethGateway__factory.connect(
-      l2Network.tokenBridge.l1WethGateway,
-      l1Signer
-    )
-    const counterparty = await l1WethGateway.counterpartGateway()
-    console.log(
-      'conterparty',
-      counterparty,
-      l2Network.tokenBridge.l2WethGateway
-    )
-
-    const l2addr = await l1WethGateway.calculateL2TokenAddress(
-      l2Network.tokenBridge.l1Weth
-    )
-    console.log('wethaddr', l2addr, l2Network.tokenBridge.l2Weth)
 
     const withdrawRes = await erc20Bridger.withdraw({
       amount: wethToWithdraw,
@@ -194,12 +162,12 @@ describe('WETH', async () => {
       l1Signer.provider!,
       l1WethAddress
     )
-    console.log('weth addr', l2Network.tokenBridge.l1WethGateway)
+    
     const allowance = await l1Token.allowance(
       await l1Signer.getAddress(),
       l2Network.tokenBridge.l1WethGateway
     )
-    console.log(allowance.toString())
+    
     expect(allowance.eq(Erc20Bridger.MAX_APPROVAL), 'failed to set allowance')
       .to.be.true
 
