@@ -97,7 +97,7 @@ export const getCustomNetworks = async (
       bridge: parsedDeploymentData.Bridge,
       inbox: parsedDeploymentData.Inbox,
       outboxes: {
-        [outboxAddr]: BigNumber.from(0),
+        [outboxAddr]: 0,
       },
       rollup: parsedDeploymentData.Rollup,
       sequencerInbox: parsedDeploymentData.SequencerInbox,

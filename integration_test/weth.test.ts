@@ -39,6 +39,12 @@ describe('WETH', async () => {
     await skipIfMainnet(this)
   })
 
+  it.only("deploy", async () => {
+    const { l1Network, l2Network } = await instantiateBridgeWithRandomWallet()
+    console.log(l2Network)
+
+  })
+
   it('withdraws WETH', async () => {
     const wethToWrap = parseEther('0.00001')
     const wethToWithdraw = parseEther('0.00000001')

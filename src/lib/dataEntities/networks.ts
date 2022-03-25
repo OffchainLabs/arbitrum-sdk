@@ -70,7 +70,7 @@ export interface EthBridge {
    * Outbox addresses paired with the first batch number at which they
    * were activated.
    */
-  outboxes: { [address: string]: BigNumber }
+  outboxes: { [address: string]: number }
   rollup: string
 }
 
@@ -121,8 +121,8 @@ const rinkebyETHBridge: EthBridge = {
   inbox: '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e',
   sequencerInbox: '0xe1ae39e91c5505f7f0ffc9e2bbf1f6e1122dcfa8',
   outboxes: {
-    '0xefa1a42D3c4699822eE42677515A64b658be1bFc': BigNumber.from(0),
-    '0x2360A33905dc1c72b12d975d975F42BaBdcef9F3': BigNumber.from(326),
+    '0xefa1a42D3c4699822eE42677515A64b658be1bFc': 0,
+    '0x2360A33905dc1c72b12d975d975F42BaBdcef9F3': 326,
   },
   rollup: '0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c',
 }
@@ -132,8 +132,8 @@ const mainnetETHBridge: EthBridge = {
   inbox: '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f',
   sequencerInbox: '0x4c6f947Ae67F572afa4ae0730947DE7C874F95Ef',
   outboxes: {
-    '0x667e23ABd27E623c11d4CC00ca3EC4d0bD63337a': BigNumber.from(0),
-    '0x760723CD2e632826c38Fef8CD438A4CC7E7E1A40': BigNumber.from(30),
+    '0x667e23ABd27E623c11d4CC00ca3EC4d0bD63337a': 0,
+    '0x760723CD2e632826c38Fef8CD438A4CC7E7E1A40': 30,
   },
   rollup: '0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A',
 }
@@ -160,7 +160,7 @@ const locNitro2: L2Network =   {
   ethBridge: {
     bridge: '0x5de967b6e7f900130f1ce30a128a79ef46ee0ad6',
     inbox: '0x5149d6687abb16f6b2f3ce0f6413d39c584cc9d5',
-    outboxes: { '0x575Ed6453F49Af7c1B5ab0A82e551510f9bc65d6': BigNumber.from(0) },
+    outboxes: { '0x575Ed6453F49Af7c1B5ab0A82e551510f9bc65d6': 0 },
     rollup: '0x1c998f5993435d733188cc59f0f75d0a350bec31',
     sequencerInbox: '0x9d70e351ff38accf56591bb1214353769f3cab4f'
   },
