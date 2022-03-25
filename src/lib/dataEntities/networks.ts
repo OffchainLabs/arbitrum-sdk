@@ -17,10 +17,8 @@
 'use strict'
 
 import dotenv from 'dotenv'
-import { BigNumber } from 'ethers'
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbTsError } from '../dataEntities/errors'
-import fs from 'fs'
 
 dotenv.config()
 
@@ -143,51 +141,6 @@ const mainnetETHBridge: EthBridge = {
 
 // check for the env var? or just try to load?
 
-// CHRIS: TODO: remove these later
-const locNitro1: L1Network = {
-  blockTime: 10,
-  chainID: 1337,
-  explorerUrl: '',
-  isCustom: true,
-  name: 'EthLocal',
-  partnerChainIDs: [ 421612 ],
-  rpcURL: 'http://localhost:8545'
-}
-
-const locNitro2: L2Network = {
-  chainID: 421612,
-  confirmPeriodBlocks: 20,
-  ethBridge: {
-    bridge: '0x5de967b6e7f900130f1ce30a128a79ef46ee0ad6',
-    inbox: '0x5149d6687abb16f6b2f3ce0f6413d39c584cc9d5',
-    outboxes: { '0x575Ed6453F49Af7c1B5ab0A82e551510f9bc65d6': 0 },
-    rollup: '0x1c998f5993435d733188cc59f0f75d0a350bec31',
-    sequencerInbox: '0x9d70e351ff38accf56591bb1214353769f3cab4f'
-  },
-  explorerUrl: '',
-  isArbitrum: true,
-  isCustom: true,
-  name: 'ArbLocal',
-  partnerChainID: 1337,
-  rpcURL: 'http://localhost:7545',
-  tokenBridge: {
-    l1CustomGateway: '0x6B7672F5C6AdA08Db56C1C126730dD51ffDF9255',
-    l1ERC20Gateway: '0x7446E200f160218D8f0d716eC6ef4F28c3c6eB18',
-    l1GatewayRouter: '0xEcCA410C2a3cb01e87580cD1CAB86B69777ecdDB',
-    l1MultiCall: '0xBf4961aE407019c82D5a09ac10F5dEbD2A7aC86c',
-    l1ProxyAdmin: '0x1ec6759A665dA7197bf6B17577FC92DA5E33c034',
-    l1Weth: '0x02Ea40f105747cCea4b7F62Cd509590e014bfB13',
-    l1WethGateway: '0x21E4CDeEC9c6767978af95dB7dB6C5F60eE5cC52',
-    l2CustomGateway: '0x297e7ccC2d14E7F520767418b4a95537cC18245F',
-    l2ERC20Gateway: '0x2f3dA890e2d26eC2595466662510E43E95EA36f8',
-    l2GatewayRouter: '0xA78d950f441B1BA7D2a5270e523C8B03C24ac698',
-    l2Multicall: '0x781a697538007d411Be9F390201C475B1bc07948',
-    l2ProxyAdmin: '0x6e003fEDa76886A321CC7270429c4a789FC90B79',
-    l2Weth: '0x1c4050d2A1ea580A57A29A50D6529659A43f3C7f',
-    l2WethGateway: '0x83F76163dd14A9349f980090862815115470893f'
-  }
-}
-
 export const l1Networks: L1Networks = {
   1: {
     chainID: 1,
@@ -215,8 +168,7 @@ export const l1Networks: L1Networks = {
     blockTime: 15,
     rpcURL: process.env['RINKEBY_RPC'] as string,
     isCustom: false,
-  },
-  [locNitro1.chainID]: locNitro1,
+  }
 }
 
 export const l2Networks: L2Networks = {
@@ -243,8 +195,7 @@ export const l2Networks: L2Networks = {
     confirmPeriodBlocks: 6545, // TODO
     rpcURL: process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc',
     isCustom: false,
-  },
-  [locNitro2.chainID]: locNitro2,
+  }
 }
 
 const getNetwork = async (

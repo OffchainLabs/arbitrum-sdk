@@ -33,6 +33,7 @@ rollups
 cache
 compile_commands.json
 .envrc
+localNetwork.json
 
 # Logs
 logs

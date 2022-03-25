@@ -34,6 +34,8 @@ import { execSync } from 'child_process'
 import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
 import { RollupAdminFacet__factory } from '../src/lib/abi/factories/RollupAdminFacet__factory'
 import { deployErc20AndInit } from './deployBridge'
+import * as path from 'path'
+import * as fs from 'fs'
 
 dotenv.config()
 
@@ -116,69 +118,60 @@ export const getCustomNetworks = async (
 }
 
 export const setupNetworks = async (l1Deployer: Signer, l2Deployer: Signer) => {
-  try {
-    const l1Network = await getL1Network(l1Deployer)
-    const l2Network = await getL2Network(l2Deployer)
-    return {
-      l1Network,
-      l2Network,
-    }
-  } catch (err) {
-    // CHRIS: TODO: pass in these urls - they should be on the signers already?
-    const { l1Network, l2Network: coreL2Network } = await getCustomNetworks(
-      ethUrl,
-      arbUrl
-    )
-    const { l1: l1Contracts, l2: l2Contracts } = await deployErc20AndInit(
-      l1Deployer,
-      l2Deployer,
-      coreL2Network.ethBridge.inbox
-    )
-    const l2Network: L2Network = {
-      ...coreL2Network,
-      tokenBridge: {
-        l1CustomGateway: l1Contracts.customGateway.address,
-        l1ERC20Gateway: l1Contracts.standardGateway.address,
-        l1GatewayRouter: l1Contracts.router.address,
-        l1MultiCall: l1Contracts.multicall.address,
-        l1ProxyAdmin: l1Contracts.proxyAdmin.address,
-        l1Weth: l1Contracts.weth.address,
-        l1WethGateway: l1Contracts.wethGateway.address,
+  // CHRIS: TODO: pass in these urls - they should be on the signers already?
+  const { l1Network, l2Network: coreL2Network } = await getCustomNetworks(
+    ethUrl,
+    arbUrl
+  )
+  const { l1: l1Contracts, l2: l2Contracts } = await deployErc20AndInit(
+    l1Deployer,
+    l2Deployer,
+    coreL2Network.ethBridge.inbox
+  )
+  const l2Network: L2Network = {
+    ...coreL2Network,
+    tokenBridge: {
+      l1CustomGateway: l1Contracts.customGateway.address,
+      l1ERC20Gateway: l1Contracts.standardGateway.address,
+      l1GatewayRouter: l1Contracts.router.address,
+      l1MultiCall: l1Contracts.multicall.address,
+      l1ProxyAdmin: l1Contracts.proxyAdmin.address,
+      l1Weth: l1Contracts.weth.address,
+      l1WethGateway: l1Contracts.wethGateway.address,
 
-        l2CustomGateway: l2Contracts.customGateway.address,
-        l2ERC20Gateway: l2Contracts.standardGateway.address,
-        l2GatewayRouter: l2Contracts.router.address,
-        l2Multicall: l2Contracts.multicall.address,
-        l2ProxyAdmin: l2Contracts.proxyAdmin.address,
-        l2Weth: l2Contracts.weth.address,
-        l2WethGateway: l2Contracts.wethGateway.address,
-      },
-    }
+      l2CustomGateway: l2Contracts.customGateway.address,
+      l2ERC20Gateway: l2Contracts.standardGateway.address,
+      l2GatewayRouter: l2Contracts.router.address,
+      l2Multicall: l2Contracts.multicall.address,
+      l2ProxyAdmin: l2Contracts.proxyAdmin.address,
+      l2Weth: l2Contracts.weth.address,
+      l2WethGateway: l2Contracts.wethGateway.address,
+    },
+  }
 
-    addCustomNetwork({
-      customL1Network: l1Network,
-      customL2Network: l2Network,
-    })
+  addCustomNetwork({
+    customL1Network: l1Network,
+    customL2Network: l2Network,
+  })
 
-    // also register the weth gateway
-    // we add it here rather than in deployBridge because
-    // we have access to an adminerc20bridger
-    const adminErc20Bridger = new AdminErc20Bridger(l2Network)
+  // also register the weth gateway
+  // we add it here rather than in deployBridge because
+  // we have access to an adminerc20bridger
+  const adminErc20Bridger = new AdminErc20Bridger(l2Network)
+  await (
     await (
-      await (
-        await adminErc20Bridger.setGateways(l1Deployer, l2Deployer.provider!, [
-          {
-            gatewayAddr: l2Network.tokenBridge.l1WethGateway,
-            tokenAddr: l2Network.tokenBridge.l1Weth,
-          },
-        ])
-      ).wait()
-    ).waitForL2(l2Deployer)
+      await adminErc20Bridger.setGateways(l1Deployer, l2Deployer.provider!, [
+        {
+          gatewayAddr: l2Network.tokenBridge.l1WethGateway,
+          tokenAddr: l2Network.tokenBridge.l1Weth,
+        },
+      ])
+    ).wait()
+  ).waitForL2(l2Deployer)
 
-    return {
-      l1Network,
-      l2Network,
-    }
+  return {
+    l1Network,
+    l2Network,
   }
 }
 
@@ -253,18 +246,51 @@ export const instantiateBridge = async (
     console.log('')
   }
 
-  const { l1Network, l2Network } = await setupNetworks(ethDeployer, arbDeployer)
+  let setL1Network: L1Network, setL2Network: L2Network
+  try {
+    const l1Network = await getL1Network(ethDeployer)
+    const l2Network = await getL2Network(arbDeployer)
+    setL1Network = l1Network
+    setL2Network = l2Network
+  } catch (err) {
+    // the networks havent been added yet
 
-  const erc20Bridger = new Erc20Bridger(l2Network)
-  const adminErc20Bridger = new AdminErc20Bridger(l2Network)
-  const ethBridger = new EthBridger(l2Network)
-  const inboxTools = new InboxTools(l1Signer, l2Network)
+    // check if theres an existing network available
+    const localNetworkFile = path.join(__dirname, '..', 'localNetwork.json')
+    if (fs.existsSync(localNetworkFile)) {
+      const { l1Network, l2Network } = JSON.parse(
+        fs.readFileSync(localNetworkFile).toString()
+      ) as {
+        l1Network: L1Network
+        l2Network: L2Network
+      }
+      addCustomNetwork({
+        customL1Network: l1Network,
+        customL2Network: l2Network,
+      })
+      setL1Network = l1Network
+      setL2Network = l2Network
+    } else {
+      // deploy a new network
+      const { l1Network, l2Network } = await setupNetworks(
+        ethDeployer,
+        arbDeployer
+      )
+      setL1Network = l1Network
+      setL2Network = l2Network
+    }
+  }
+
+  const erc20Bridger = new Erc20Bridger(setL2Network)
+  const adminErc20Bridger = new AdminErc20Bridger(setL2Network)
+  const ethBridger = new EthBridger(setL2Network)
+  const inboxTools = new InboxTools(l1Signer, setL2Network)
 
   return {
     l1Signer,
     l2Signer,
-    l1Network,
-    l2Network,
+    l1Network: setL1Network,
+    l2Network: setL2Network,
     erc20Bridger,
     adminErc20Bridger,
     ethBridger,

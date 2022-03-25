@@ -18,6 +18,7 @@
     "audit:ci": "audit-ci -l -a 1006805 1006806 1006865 1006896 1006899",
     "postinstall": "node ./scripts/genAbi.js",
     "gen:abi": "node ./scripts/genAbi.js",
+    "gen:network": "ts-node ./scripts/genNetwork.ts",
     "prepublishOnly": "yarn build && yarn format",
     "preversion": "yarn lint",
     "build": "./scripts/builder",

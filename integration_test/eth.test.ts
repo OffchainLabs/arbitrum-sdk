@@ -120,6 +120,7 @@ describe('Ether', async () => {
     )
 
     const testWalletL2EthBalance = await l2Signer.getBalance()
+    // CHRIS: TODO: we should be able to calculate this exactly
     // expect(testWalletL2EthBalance.toString(), "final balance").to.eq(ethToDeposit.toString())
     expect(testWalletL2EthBalance.gt(0).toString(), "final balance").to.be.true;
   })
