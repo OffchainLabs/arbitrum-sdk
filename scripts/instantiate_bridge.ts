@@ -59,7 +59,7 @@ export const getCustomNetworks = async (
   const l1Provider = new JsonRpcProvider(l1Url)
   const l2Provider = new JsonRpcProvider(l2Url)
   const deploymentData = execSync(
-    'docker exec nitro_sequencer_1 cat /deploydata/deployment.json'
+    'docker exec nitro_sequencer_1 cat /config/deployment.json'
   ).toString()
   const parsedDeploymentData = JSON.parse(deploymentData) as {
     Bridge: string
