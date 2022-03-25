@@ -161,7 +161,8 @@ describe('standard ERC20', () => {
     expect(retryRec!.status!, "tx didnt succeed").to.eq(1)
   })
 
-  it('deposit with low funds, fails first redeem, succeeds seconds', async () => {
+  // CHRIS: TODO: add back in
+  it.skip('deposit with low funds, fails first redeem, succeeds seconds', async () => {
     const {
       l1Signer,
       erc20Bridger,

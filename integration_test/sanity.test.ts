@@ -140,10 +140,14 @@ describe('sanity checks (read-only)', async () => {
     expectIgnoreCase(l1AddressOnAeWeth, l2Network.tokenBridge.l1Weth)
   })
 
-  it('l1 gateway router points to right gateways', async () => {
-    const { erc20Bridger, l1Signer, l2Network } = await instantiateBridge()
+  it('l1 gateway router points to right weth gateways', async () => {
+    const {
+      adminErc20Bridger,
+      l1Signer,
+      l2Network,
+    } = await instantiateBridge()
 
-    const gateway = await erc20Bridger.getL1GatewayAddress(
+    const gateway = await adminErc20Bridger.getL1GatewayAddress(
       l2Network.tokenBridge.l1Weth,
       l1Signer.provider!
     )
@@ -152,8 +156,12 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('L1 and L2 implementations of calculateL2ERC20Address match', async () => {
-    const { l1Signer, l2Signer, l2Network, erc20Bridger } =
-      await instantiateBridge()
+    const {
+      l1Signer,
+      l2Signer,
+      l2Network,
+      erc20Bridger,
+    } = await instantiateBridge()
     const erc20L2AddressAsPerL1 = await erc20Bridger.getL2ERC20Address(
       existentTestERC20,
       l1Signer.provider!

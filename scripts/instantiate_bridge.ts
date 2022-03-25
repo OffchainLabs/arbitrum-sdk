@@ -116,40 +116,69 @@ export const getCustomNetworks = async (
 }
 
 export const setupNetworks = async (l1Deployer: Signer, l2Deployer: Signer) => {
-  // CHRIS: TODO: pass in these urls - they should be on the signers already?
-  const { l1Network, l2Network: coreL2Network } = await getCustomNetworks(
-    ethUrl,
-    arbUrl
-  )
-  const { l1: l1Contracts, l2: l2Contracts } = await deployErc20AndInit(
-    l1Deployer,
-    l2Deployer,
-    coreL2Network.ethBridge.inbox
-  )
-  const l2Network: L2Network = {
-    ...coreL2Network,
-    tokenBridge: {
-      l1CustomGateway: l1Contracts.customGateway.address,
-      l1ERC20Gateway: l1Contracts.standardGateway.address,
-      l1GatewayRouter: l1Contracts.router.address,
-      l1MultiCall: l1Contracts.multicall.address,
-      l1ProxyAdmin: l1Contracts.proxyAdmin.address,
-      l1Weth: l1Contracts.weth.address,
-      l1WethGateway: l1Contracts.wethGateway.address,
+  try {
+    const l1Network = await getL1Network(l1Deployer)
+    const l2Network = await getL2Network(l2Deployer)
+    return {
+      l1Network,
+      l2Network,
+    }
+  } catch (err) {
+    // CHRIS: TODO: pass in these urls - they should be on the signers already?
+    const { l1Network, l2Network: coreL2Network } = await getCustomNetworks(
+      ethUrl,
+      arbUrl
+    )
+    const { l1: l1Contracts, l2: l2Contracts } = await deployErc20AndInit(
+      l1Deployer,
+      l2Deployer,
+      coreL2Network.ethBridge.inbox
+    )
+    const l2Network: L2Network = {
+      ...coreL2Network,
+      tokenBridge: {
+        l1CustomGateway: l1Contracts.customGateway.address,
+        l1ERC20Gateway: l1Contracts.standardGateway.address,
+        l1GatewayRouter: l1Contracts.router.address,
+        l1MultiCall: l1Contracts.multicall.address,
+        l1ProxyAdmin: l1Contracts.proxyAdmin.address,
+        l1Weth: l1Contracts.weth.address,
+        l1WethGateway: l1Contracts.wethGateway.address,
 
-      l2CustomGateway: l2Contracts.customGateway.address,
-      l2ERC20Gateway: l2Contracts.standardGateway.address,
-      l2GatewayRouter: l2Contracts.router.address,
-      l2Multicall: l2Contracts.multicall.address,
-      l2ProxyAdmin: l2Contracts.proxyAdmin.address,
-      l2Weth: l2Contracts.weth.address,
-      l2WethGateway: l2Contracts.wethGateway.address,
-    },
-  }
+        l2CustomGateway: l2Contracts.customGateway.address,
+        l2ERC20Gateway: l2Contracts.standardGateway.address,
+        l2GatewayRouter: l2Contracts.router.address,
+        l2Multicall: l2Contracts.multicall.address,
+        l2ProxyAdmin: l2Contracts.proxyAdmin.address,
+        l2Weth: l2Contracts.weth.address,
+        l2WethGateway: l2Contracts.wethGateway.address,
+      },
+    }
 
-  return {
-    l1Network,
-    l2Network,
+    addCustomNetwork({
+      customL1Network: l1Network,
+      customL2Network: l2Network,
+    })
+
+    // also register the weth gateway
+    // we add it here rather than in deployBridge because
+    // we have access to an adminerc20bridger
+    const adminErc20Bridger = new AdminErc20Bridger(l2Network)
+    await (
+      await (
+        await adminErc20Bridger.setGateways(l1Deployer, l2Deployer.provider!, [
+          {
+            gatewayAddr: l2Network.tokenBridge.l1WethGateway,
+            tokenAddr: l2Network.tokenBridge.l1Weth,
+          },
+        ])
+      ).wait()
+    ).waitForL2(l2Deployer)
+
+    return {
+      l1Network,
+      l2Network,
+    }
   }
 }
 
@@ -168,7 +197,7 @@ export const instantiateBridge = async (
   erc20Bridger: Erc20Bridger
   ethBridger: EthBridger
   adminErc20Bridger: AdminErc20Bridger
-  inboxTools: InboxTools,
+  inboxTools: InboxTools
   l1Deployer: Signer
   l2Deployer: Signer
 }> => {
@@ -185,21 +214,8 @@ export const instantiateBridge = async (
   const ethProvider = new JsonRpcProvider(ethUrl)
   const arbProvider = new JsonRpcProvider(arbUrl)
 
-  // const arbSigner = arbProvider.getSigner(0)
   const ethDeployer = ethProvider.getSigner(0)
-  // console.log(
-  //   (await ethDeployer.getAddress()).toString(),
-  //   (await ethDeployer.getBalance()).toString()
-  // )
   const arbDeployer = arbGenesisWallet.connect(arbProvider)
-  // console.log(
-  //   (await arbDeployer.getAddress()).toString(),
-  //   (await arbDeployer.getBalance()).toString()
-  // )
-  // console.log(
-  //   (await arbSigner.getAddress()).toString(),
-  //   (await arbSigner.getBalance()).toString()
-  // )
 
   // CHRIS: TODO: this l1signer and the l2signer
   // CHRIS: TODO: should they be the deployer or the user?
@@ -237,21 +253,7 @@ export const instantiateBridge = async (
     console.log('')
   }
 
-  let l1Network: L1Network
-  let l2Network: L2Network
-  try {
-    l1Network = await getL1Network(ethDeployer)
-    l2Network = await getL2Network(arbDeployer)
-  } catch (err) {
-    // ok if this fails
-    const setup = await setupNetworks(ethDeployer, arbDeployer)
-    l1Network = setup.l1Network
-    l2Network = setup.l2Network
-    addCustomNetwork({
-      customL1Network: l1Network,
-      customL2Network: l2Network,
-    })
-  }
+  const { l1Network, l2Network } = await setupNetworks(ethDeployer, arbDeployer)
 
   const erc20Bridger = new Erc20Bridger(l2Network)
   const adminErc20Bridger = new AdminErc20Bridger(l2Network)
@@ -268,6 +270,6 @@ export const instantiateBridge = async (
     ethBridger,
     inboxTools,
     l1Deployer: ethDeployer,
-    l2Deployer: arbDeployer
+    l2Deployer: arbDeployer,
   }
 }

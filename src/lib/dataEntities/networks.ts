@@ -216,7 +216,7 @@ export const l1Networks: L1Networks = {
     rpcURL: process.env['RINKEBY_RPC'] as string,
     isCustom: false,
   },
-  [locNitro1.chainID]: locNitro1,
+  // [locNitro1.chainID]: locNitro1,
 }
 
 export const l2Networks: L2Networks = {
@@ -244,7 +244,7 @@ export const l2Networks: L2Networks = {
     rpcURL: process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc',
     isCustom: false,
   },
-  [locNitro2.chainID]: locNitro2,
+  // [locNitro2.chainID]: locNitro2,
 }
 
 const getNetwork = async (

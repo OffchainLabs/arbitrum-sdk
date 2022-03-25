@@ -54,6 +54,7 @@ class ArbFormatter extends Formatter {
       l1BlockNumber: number,
     }
 
+    // CHRIS: TODO: this needs to be updated
     const arbReceiptFormat = {
       ...superFormats.receipt,
       returnData: Formatter.allowNull(data),
@@ -345,5 +346,6 @@ export const getTransaction = async (
   const tx = await l2Provider.send('eth_getTransactionByHash', [txHash])
   if (tx === null) return null
   const arbFormatter = new ArbFormatter()
+  // CHRIS: TODO: check what a transaction looks like these days
   return arbFormatter.transactionResponse(tx)
 }

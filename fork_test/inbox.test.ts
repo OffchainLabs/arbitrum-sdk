@@ -90,8 +90,7 @@ describe('Inbox tools', () => {
   before(async () => {
     const { l1Provider } = await setup()
     forkBlockNumber = await l1Provider.getBlockNumber()
-    forkProviderUrl =
-      'https://mainnet.infura.io/v3/' + process.env['INFURA_KEY']
+    forkProviderUrl = 'http://localhost:8545'
   })
 
   const resetFork = async (blockNumber: number, jsonRpcUrl: string) => {

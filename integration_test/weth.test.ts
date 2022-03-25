@@ -40,34 +40,13 @@ describe('WETH', async () => {
   })
 
   // CHRIS: TODO: remove
-  it.skip('deploy', async () => {
+  it('deploy', async () => {
     const {
       l1Network,
       l2Network,
-      l1Deployer,
-      l2Deployer,
-      adminErc20Bridger,
     } = await instantiateBridgeWithRandomWallet()
     console.log('l1network', l1Network)
     console.log('l2network', l2Network)
-
-    const gatewaysSet = await adminErc20Bridger.setGateways(
-      l1Deployer,
-      l2Deployer.provider!,
-      [
-        {
-          gatewayAddr: l2Network.tokenBridge.l1WethGateway,
-          tokenAddr: l2Network.tokenBridge.l1Weth,
-        },
-      ]
-    )
-
-    const rec = await gatewaysSet.wait()
-    const waitRec = await rec.waitForL2(l2Deployer)
-
-    expect(waitRec.status, 'gateways not redeemed').to.eq(
-      L1ToL2MessageStatus.REDEEMED
-    )
   })
 
   it('withdraws WETH', async () => {

@@ -253,7 +253,7 @@ describe('Ether', async () => {
   //   // 1. deploy a contract with functions for returning block values
   // })
 
-  it.only('transfers ether on l2', async () => {
+  it('transfers ether on l2', async () => {
     const { l2Signer, l1Signer } = await instantiateBridgeWithRandomWallet()
 
     await fundL2(l2Signer)
@@ -326,22 +326,6 @@ describe('Ether', async () => {
         .sub(amountToSend)
         .toString()
     )
-
-    // const arbTxRec = await ArbProvider.getRawArbTransactionReceipt(
-    //   l2Signer.provider! as JsonRpcProvider,
-    //   rec.transactionHash
-    // )
-    // //  const w = await (l2Signer.provider! as JsonRpcProvider).send(
-    // //    "eth_getTransactionReceipt", [
-    // //      rec.transactionHash
-    // //    ]
-    // //  )
-    //  console.log(arbTxRec )
-
-    // expect(rec.status).to.equal(1, 'ether transfer failed')
-    // const newBalance = await l2Signer.provider!.getBalance(randomAddress)
-    // expect(newBalance.eq(amountToSend), "ether balance didn't update").to.be
-    //   .true
   })
   it('deposits ether', async () => {
     const {
