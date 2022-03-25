@@ -154,7 +154,7 @@ const locNitro1: L1Network = {
   rpcURL: 'http://localhost:8545'
 }
 
-const locNitro2: L2Network =  {
+const locNitro2: L2Network =   {
   chainID: 421612,
   confirmPeriodBlocks: 20,
   ethBridge: {
@@ -171,20 +171,20 @@ const locNitro2: L2Network =  {
   partnerChainID: 1337,
   rpcURL: 'http://localhost:7545',
   tokenBridge: {
-    l1CustomGateway: '0x1967F2Fe8E438F0281C48E101f6B706E7D8220e7',
-    l1ERC20Gateway: '0x8fc2dD9a4c78d8754E0f30747a2A63a264028fF0',
-    l1GatewayRouter: '0xdB9dB6eCfd5E005EE76a7DEAD898c56Ba4C2d195',
-    l1MultiCall: '0x45d087A0fa5c21B67777B44B075011667b75f3bE',
-    l1ProxyAdmin: '0xF24e7667E5D62921B5e2fa9F78DFEE09a9260Cb8',
-    l1Weth: '0x5dec0c90fbBE3aF4C0bEeE12b71d99ae19B65Aa7',
-    l1WethGateway: '0xc4e0757cFaEb01d8493E4CA90FD02EF4e969A011',
-    l2CustomGateway: '0xF0B003F9247f2DC0e874710eD55e55f8C63B14a3',
-    l2ERC20Gateway: '0x78a6dC8D17027992230c112432E42EC3d6838d74',
-    l2GatewayRouter: '0x7b650845242a96595f3a9766D4e8e5ab0887936A',
-    l2Multicall: '0x9b890cA9dE3D317b165afA7DFb8C65f2e4c95C20',
-    l2ProxyAdmin: '0x7F85fB7f42A0c0D40431cc0f7DFDf88be6495e67',
-    l2Weth: '0x36BeF5fD671f2aA8686023dE4797A7dae3082D5F',
-    l2WethGateway: '0x2E76efCC2518CB801E5340d5f140B1c1911b4F4B'
+    l1CustomGateway: '0x72b263CE9f2c16363f788b0a7c267e3366fe2579',
+    l1ERC20Gateway: '0x371bBb801Ea1BA99Ba3782e1ce007D006973e1B1',
+    l1GatewayRouter: '0x72afa166c5F377DB31E687042aFC33d1c0EAB755',
+    l1MultiCall: '0x711a214dFdA9d7632E659c0E7F15d1e1aE2E7564',
+    l1ProxyAdmin: '0xd1ED634FaE3ff5cbE05Be0B41ed4ff58ddb6c68c',
+    l1Weth: '0xc4559624FC3EF22155cD576705a9d6045ED3879D',
+    l1WethGateway: '0xE102772A6F105a9BEcD2c9497F85F5d33bFbB6de',
+    l2CustomGateway: '0x5B328f060Ac623A8e9EB9C6F5A7947F3Cdd82b37',
+    l2ERC20Gateway: '0x82993066c224A90b6712df2E77CdB7Aa0BD47Eb8',
+    l2GatewayRouter: '0x95B63F1d74B04B86226Efb622f7E55C56d068e96',
+    l2Multicall: '0xF686e1c5Fc9aE9D1FAE286f7ECCb2ad236829Dc0',
+    l2ProxyAdmin: '0xa93366dF17044ed01c3160D2b2cb04f943Ac0D1f',
+    l2Weth: '0x6d31A13358286596D1EC30944A7e787fAF1eE757',
+    l2WethGateway: '0x3A85e361917180567F6a0fb8c68B2b5065126aCA'
   }
 }
 
@@ -216,7 +216,7 @@ export const l1Networks: L1Networks = {
     rpcURL: process.env['RINKEBY_RPC'] as string,
     isCustom: false,
   },
-  // [locNitro1.chainID]: locNitro1,
+  [locNitro1.chainID]: locNitro1,
 }
 
 export const l2Networks: L2Networks = {
@@ -244,7 +244,7 @@ export const l2Networks: L2Networks = {
     rpcURL: process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc',
     isCustom: false,
   },
-  // [locNitro2.chainID]: locNitro2,
+  [locNitro2.chainID]: locNitro2,
 }
 
 const getNetwork = async (

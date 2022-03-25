@@ -43,26 +43,14 @@ describe('standard ERC20', () => {
     await skipIfMainnet(this)
   })
 
-  // CHRIS: TODO: remove
-  it('deploy', async () => {
-    const { l1Network, l2Network, l2Signer } = await instantiateBridgeWithRandomWallet()
-    // const txRec = await l2Signer.provider!.getTransactionReceipt("0x43652cf3656b601ce611e761ccf93316f5fed3cc91d518311496274b2dae7982")
-    // const tx = await l2Signer.provider!.getTransaction("0x43652cf3656b601ce611e761ccf93316f5fed3cc91d518311496274b2dae7982")
-    // console.log(txRec, tx)
-
-    // console.log(await l2Signer.provider!.getBlock("0x216b4521debdbf525b6ddc0169eaef2c2187884217b6a457764072ba13201dc2", true))
-
-    // console.log('l1network', l1Network)
-    // console.log('l2network', l2Network)
-  })
-
   // CHRIS: TODO: why skip these?
   it.skip('deposits erc20 (no L2 Eth funding)', async () => {
+    // CHRIS: TODO: another ticket, but refactor these tests
+
     const {
       l1Signer,
       erc20Bridger,
       l2Signer,
-      l2Network,
     } = await instantiateBridgeWithRandomWallet()
     await fundL1(l1Signer)
     await depositTokenTest(erc20Bridger, l1Signer, l2Signer)
@@ -74,25 +62,9 @@ describe('standard ERC20', () => {
       erc20Bridger,
       l2Signer,
     } = await instantiateBridgeWithRandomWallet()
-    const randomAddress = "0xb701964ac92fb03b1d96cfe4319cd59f61c679b1"
     await fundL1(l1Signer)
     await fundL2(l2Signer)
-    const {l2Token} = await depositTokenTest(erc20Bridger, l1Signer, l2Signer)
-    console.log("bal before", (await l2Token!.balanceOf(randomAddress)).toString())
-    console.log("bal before", (await l2Token!.balanceOf(await l2Signer.getAddress())).toString())
-    console.log("eth bal before", await l2Signer.getBalance())
-    const rec =  await (await l2Token!.connect(l2Signer).transfer(randomAddress, BigNumber.from(10))).wait()
-
-    console.log("bal after", (await l2Token!.balanceOf(randomAddress)).toString())
-    console.log("bal after", (await l2Token!.balanceOf(await l2Signer.getAddress())).toString())
-    console.log("eth bal after", await l2Signer.getBalance())
-    const q = await (l2Signer.provider! as JsonRpcProvider).send("eth_getTransactionReceipt", [
-      rec.transactionHash
-
-    ])
-    console.log("txfghjkllllllllllllllllllllllllllllllllllllllllllllllll")
-    console.log(q)
-    console.log(q.logs)
+    await depositTokenTest(erc20Bridger, l1Signer, l2Signer)
   })
 
   it('deposit with no funds, manual redeem', async () => {
@@ -105,27 +77,38 @@ describe('standard ERC20', () => {
 
     await fundL1(l1Signer)
     await fundL2(l2Signer)
-    const { testToken, waitRes } = await depositTokenTest(erc20Bridger, l1Signer, l2Signer, {
-      maxGas: {
-        base: BigNumber.from(0),
-      },
-      maxGasPrice: {
-        base: BigNumber.from(0),
-      },
-    })
+    const { waitRes } = await depositTokenTest(
+      erc20Bridger,
+      l1Signer,
+      l2Signer,
+      {
+        maxGas: {
+          base: BigNumber.from(0),
+        },
+        maxGasPrice: {
+          base: BigNumber.from(0),
+        },
+      }
+    )
 
     // we expect the status to be funds deposited
-    expect(waitRes.status, "Funds not deposited").to.eq(L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2);
+    expect(waitRes.status, 'Funds not deposited').to.eq(
+      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+    )
 
     // do a manual redeem
     const manualRedeem = await waitRes.message.redeem()
-    console.log("manual redeem", manualRedeem.hash);
     const rec = await manualRedeem.wait()
-    const retryRec = await L1ToL2MessageReader.getRedeemReceipt(rec, l2Signer.provider!)
+    const retryRec = await L1ToL2MessageReader.getRedeemReceipt(
+      rec,
+      l2Signer.provider!
+    )
     expect(retryRec).to.not.be.null
-    expect(retryRec!.blockHash, "redeemed in same block").to.eq(rec.blockHash)
-    expect(retryRec!.to!, "redeemed in same block").to.eq(l2Network.tokenBridge.l2ERC20Gateway)
-    expect(retryRec!.status!, "tx didnt succeed").to.eq(1)
+    expect(retryRec!.blockHash, 'redeemed in same block').to.eq(rec.blockHash)
+    expect(retryRec!.to!, 'redeemed in same block').to.eq(
+      l2Network.tokenBridge.l2ERC20Gateway
+    )
+    expect(retryRec!.status!, 'tx didnt succeed').to.eq(1)
   })
 
   it('deposit with low funds, manual redeem', async () => {
@@ -138,31 +121,42 @@ describe('standard ERC20', () => {
 
     await fundL1(l1Signer)
     await fundL2(l2Signer)
-    const { testToken, waitRes } = await depositTokenTest(erc20Bridger, l1Signer, l2Signer, {
-      maxGas: {
-        base: BigNumber.from(5),
-      },
-      maxGasPrice: {
-        base: BigNumber.from(5),
-      },
-    })
+    const { testToken, waitRes } = await depositTokenTest(
+      erc20Bridger,
+      l1Signer,
+      l2Signer,
+      {
+        maxGas: {
+          base: BigNumber.from(5),
+        },
+        maxGasPrice: {
+          base: BigNumber.from(5),
+        },
+      }
+    )
 
     // we expect the status to be funds deposited
-    expect(waitRes.status, "Funds not deposited").to.eq(L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2);
+    expect(waitRes.status, 'Funds not deposited').to.eq(
+      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+    )
 
     // do a manual redeem
     const manualRedeem = await waitRes.message.redeem()
-    console.log("manual redeem", manualRedeem.hash);
     const rec = await manualRedeem.wait()
-    const retryRec = await L1ToL2MessageReader.getRedeemReceipt(rec, l2Signer.provider!)
+    const retryRec = await L1ToL2MessageReader.getRedeemReceipt(
+      rec,
+      l2Signer.provider!
+    )
     expect(retryRec).to.not.be.null
-    expect(retryRec!.blockHash, "redeemed in same block").to.eq(rec.blockHash)
-    expect(retryRec!.to!, "redeemed in same block").to.eq(l2Network.tokenBridge.l2ERC20Gateway)
-    expect(retryRec!.status!, "tx didnt succeed").to.eq(1)
+    expect(retryRec!.blockHash, 'redeemed in same block').to.eq(rec.blockHash)
+    expect(retryRec!.to!, 'redeemed in same block').to.eq(
+      l2Network.tokenBridge.l2ERC20Gateway
+    )
+    expect(retryRec!.status!, 'tx didnt succeed').to.eq(1)
   })
 
   // CHRIS: TODO: add back in
-  it.skip('deposit with low funds, fails first redeem, succeeds seconds', async () => {
+  it('deposit with low funds, fails first redeem, succeeds seconds', async () => {
     const {
       l1Signer,
       erc20Bridger,
@@ -172,38 +166,52 @@ describe('standard ERC20', () => {
 
     await fundL1(l1Signer)
     await fundL2(l2Signer)
-    const { testToken, waitRes } = await depositTokenTest(erc20Bridger, l1Signer, l2Signer, {
-      maxGas: {
-        base: BigNumber.from(5),
-      },
-      maxGasPrice: {
-        base: BigNumber.from(5),
-      },
-    })
+    const { testToken, waitRes } = await depositTokenTest(
+      erc20Bridger,
+      l1Signer,
+      l2Signer,
+      {
+        maxGas: {
+          base: BigNumber.from(5),
+        },
+        maxGasPrice: {
+          base: BigNumber.from(5),
+        },
+      }
+    )
 
     // we expect the status to be funds deposited
-    expect(waitRes.status, "Funds not deposited").to.eq(L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2);
+    expect(waitRes.status, 'Funds not deposited').to.eq(
+      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+    )
 
     // do a manual redeem - supply enough gas so that the redeem tx succeeds but l2 tx doesnt
     const manualRedeem = await waitRes.message.redeem(BigNumber.from(120000))
     const rec = await manualRedeem.wait()
-    const retryRec = await L1ToL2MessageReader.getRedeemReceipt(rec, l2Signer.provider!)
-    console.log("retry", retryRec, retryRec?.gasUsed.toString())
-    expect(retryRec).to.not.be.null
-    expect(retryRec!.blockHash, "redeemed in same block").to.eq(rec.blockHash)
-    expect(retryRec!.to!, "redeemed in same block").to.eq(l2Network.tokenBridge.l2ERC20Gateway)
-    expect(retryRec!.status!, "tx didnt fail").to.eq(0)
+    const retryRec = await L1ToL2MessageReader.getRedeemReceipt(
+      rec,
+      l2Signer.provider!
+    )
+    expect(retryRec, 'null retry').to.not.be.null
+    expect(retryRec!.blockHash, 'redeemed in same block').to.eq(rec.blockHash)
+    expect(retryRec!.to!, 'redeemed in same block').to.eq(
+      l2Network.tokenBridge.l2ERC20Gateway
+    )
+    expect(retryRec!.status!, 'tx didnt fail').to.eq(0)
 
     // do a manual redeem - supply enough gas so that the redeem tx succeeds but l2 tx doesnt
     const manualRedeem2 = await waitRes.message.redeem(BigNumber.from(1000000))
     const rec2 = await manualRedeem2.wait()
-    console.log("rec 2", rec2, rec2?.gasUsed.toString())
-    const retryRec2 = await L1ToL2MessageReader.getRedeemReceipt(rec2, l2Signer.provider!)
-    console.log("retry 2", retryRec2, retryRec2?.gasUsed.toString())
-    expect(retryRec2).to.not.be.null
-    expect(retryRec2!.blockHash, "redeemed in same block").to.eq(rec2.blockHash)
-    expect(retryRec2!.to!, "redeemed in same block").to.eq(l2Network.tokenBridge.l2ERC20Gateway)
-    expect(retryRec2!.status!, "tx didnt succeed").to.eq(1)
+    const retryRec2 = await L1ToL2MessageReader.getRedeemReceipt(
+      rec2,
+      l2Signer.provider!
+    )
+    expect(retryRec2, 'null second retry').to.not.be.null
+    expect(retryRec2!.blockHash, 'redeemed in same block').to.eq(rec2.blockHash)
+    expect(retryRec2!.to!, 'redeemed in same block').to.eq(
+      l2Network.tokenBridge.l2ERC20Gateway
+    )
+    expect(retryRec2!.status!, 'tx didnt succeed').to.eq(1)
   })
 
   // CHRIS: TODO: why do we have this?
@@ -372,17 +380,14 @@ describe('standard ERC20', () => {
     const depositRec = await depositRes.wait()
     const waitRes = await depositRec.waitForL2(l2Signer)
     expect(waitRes.complete, 'wait res complete').to.eq(true)
-    console.log('a1')
     const queriedL2Address = await erc20Bridger.getL2ERC20Address(
       testToken.address,
       l1Signer.provider!
     )
-    console.log('b1')
     const queriedL1Address = await erc20Bridger.getL1ERC20Address(
       queriedL2Address,
       l2Signer.provider!
     )
-    console.log('c1')
     expect(queriedL1Address).to.equal(
       testToken.address,
       'getERC20L1Address/getERC20L2Address failed with proper token address'

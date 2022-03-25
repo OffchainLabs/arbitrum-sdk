@@ -579,10 +579,8 @@ describe('Custom ERC20', () => {
   // CHRIS: TODO: important test case for address alias - also do something that's under the offset, or at the offset
 
   // CHRIS: TODO: remove
-  it.skip('deploy', async () => {
+  it('deploy', async () => {
     const { l1Network, l2Network } = await instantiateBridgeWithRandomWallet()
-    console.log('l1network', l1Network)
-    console.log('l2network', l2Network)
   })
 
   it.skip('deposits erc20 (no L2 Eth funding)', async () => {
@@ -789,7 +787,6 @@ const registerCustomToken = async (
     'Start l2Erc20Address not equal empty address'
   ).to.eq(constants.AddressZero)
 
-  console.log('a')
   // send the messages
   const regTx = await adminErc20Bridger.registerCustomToken(
     l1CustomToken.address,
@@ -797,52 +794,17 @@ const registerCustomToken = async (
     l1Signer,
     l2Signer.provider!
   )
-  console.log('b')
   const regRec = await regTx.wait()
-  console.log('c')
 
   // wait on messages
   const l1ToL2Messages = await regRec.getL1ToL2Messages(l2Signer.provider!)
-  console.log('d')
   expect(l1ToL2Messages.length, 'Should be 2 messages.').to.eq(2)
 
-  console.log('logs', regRec.logs)
-
   const setTokenTx = await l1ToL2Messages[0].waitForStatus()
-  console.log('e')
   expect(setTokenTx.status, 'Set token not redeemed.').to.eq(
     L1ToL2MessageStatus.REDEEMED
   )
 
-  // ChainId   *big.Int
-  // RequestId common.Hash
-  // From      common.Address
-  // L1BaseFee *big.Int
-
-  // DepositValue     *big.Int 114888000206080
-  // GasFeeCap        *big.Int        // wei per gas 1000000000
-  // Gas              uint64          // gas limit 114888
-  // To               *common.Address `rlp:"nil"` // nil means contract creation
-  // Value            *big.Int        // wei amount 0?
-  // Beneficiary      common.Address 0x91EfB51E57AE53569CAf11445F7f156e1E87445a
-  // MaxSubmissionFee *big.Int 206080
-  // FeeRefundAddr    common.Address 0x91EfB51E57AE53569CAf11445F7f156e1E87445a?
-  // Data             []byte // contract invocation input data
-
-  // f9015583066eeca
-  // 0000000000000000000000000000000000000000000000000000000000000052f
-  // 94
-  //   10da8231ef2fd1f77106e10581a1fac14e29e125
-  // 01
-  //   10da8231ef2fd1f77106e10581a1fac14e29e125
-
-  // 0x01
-  // 10da8231ef 2fd1f77106 e10581a1fa c14e29e125
-  // 0786688308f3e500843b9aca008301c0e0947b650845242a96595f3a9766d4e8e5ab0887936a80945ae928b031bec25dd6de505d80aa98942219b7a183032500945ae928b031bec25dd6de505d80aa98942219b7a1b8c44201f98500000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000100000000000000000000000084d4b8072bb473fc04f561ebdcdef66cd74b39970000000000000000000000000000000000000000000000000000000000000001000000000000000000000000f0b003f9247f2dc0e874710ed55e55f8c63b14a3
-
-  0x0110da8231ef2fd1f77106e10581a1fac14e29e125
-
-  console.log('f')
   const setGateways = await l1ToL2Messages[1].waitForStatus()
   expect(setGateways.status, 'Set gateways not redeemed.').to.eq(
     L1ToL2MessageStatus.REDEEMED
@@ -933,7 +895,6 @@ const depositTokenTest = async (
   })
 
   const depositRec = await depositRes.wait()
-  console.log('exited')
 
   const finalBridgeTokenBalance = await testToken.balanceOf(
     expectedL1GatewayAddress
