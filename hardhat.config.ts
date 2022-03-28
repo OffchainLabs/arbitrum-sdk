@@ -47,6 +47,10 @@ const config = {
         enabled: process.env['SHOULD_FORK'] === '1',
       },
     },
+    localarb: {
+      url: process.env['ARB_URL'] || '',
+      accounts: [process.env['ARB_GENESIS_KEY']]
+    },
   },
   spdxLicenseIdentifier: {
     overwrite: false,
