@@ -32,6 +32,7 @@ import {
 } from '../dataEntities/signerOrProvider'
 import { ArbTsError } from '../dataEntities/errors'
 import { hexDataSlice, defaultAbiCoder } from 'ethers/lib/utils'
+import { toBigNumber } from '../utils/lib'
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -180,12 +181,12 @@ export class L1ToL2Message {
   public static fromRetryableCreationId<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
     retryableCreationId: string,
-    messageNumber: BigNumber
+    messageNumber: BigNumber | number
   ): L1ToL2MessageReaderOrWriter<T>
   public static fromRetryableCreationId<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
     retryableCreationId: string,
-    messageNumber: BigNumber
+    messageNumber: BigNumber | number
   ): L1ToL2MessageReader | L1ToL2MessageWriter {
     return SignerProviderUtils.isSigner(l2SignerOrProvider)
       ? new L1ToL2MessageWriter(
@@ -224,9 +225,9 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   public constructor(
     public readonly l2Provider: Provider,
     retryableCreationId: string,
-    messageNumber: BigNumber
+    messageNumber: BigNumber | number
   ) {
-    super(retryableCreationId, messageNumber)
+    super(retryableCreationId, toBigNumber(messageNumber))
   }
 
   /**
@@ -464,7 +465,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
   public constructor(
     public readonly l2Signer: Signer,
     retryableCreationId: string,
-    messageNumber: BigNumber
+    messageNumber: BigNumber | number
   ) {
     super(l2Signer.provider!, retryableCreationId, messageNumber)
     if (!l2Signer.provider) throw new Error('Signer not connected to provider.')
