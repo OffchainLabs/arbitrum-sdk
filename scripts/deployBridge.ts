@@ -234,23 +234,5 @@ export const deployErc20AndInit = async (
     l2.weth.address
   )).wait()
 
-  // CHRIS: TODO: estimate these properly
-  const maxGas = '800000000'
-  const maxSubmissionCost = '259829212830'
-  const gasPriceBid = '0'
-  console.log("initializing weth")
-
-  console.log(await l1Signer.getAddress());
-
-  // console.log(await l1.router.owner(), await l1Signer.getAddress())
-  // await (await l1.router.setGateways(
-  //   [l1.weth.address],
-  //   [l1.wethGateway.address],
-  //   maxGas,
-  //   gasPriceBid,
-  //   maxSubmissionCost,
-  //   { value: parseEther('0.01') }
-  // )).wait()
-
   return { l1, l2 }
 }

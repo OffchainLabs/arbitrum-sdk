@@ -18,9 +18,11 @@
 
 import { expect } from 'chai'
 
-import { instantiateBridgeWithRandomWallet, skipIfMainnet } from './testHelpers'
+import { fundL2, instantiateBridgeWithRandomWallet, skipIfMainnet } from './testHelpers'
 import { getRawArbTransactionReceipt } from '../src'
 import { JsonRpcProvider } from '@ethersproject/providers'
+import { Wallet } from 'ethers'
+import { parseEther } from 'ethers/lib/utils'
 
 describe('ArbProvider', () => {
   beforeEach('skipIfMainnet', async function () {
@@ -33,8 +35,27 @@ describe('ArbProvider', () => {
     const l1Provider = l1Signer.provider! as JsonRpcProvider
     const l2Provider = l2Signer.provider! as JsonRpcProvider
 
-    const testTxHash =
-      '0x4ab7b21ebb243a4eec8a5e08f9190e0c1c116363b165f15cc60aa9c247e530ca'
+    await fundL2(l2Signer)
+    const randomAddress = Wallet.createRandom().address
+    const amountToSend = parseEther('0.000005')
+
+    // send an l2 transaction, and get the receipt
+    const tx = await l2Signer.sendTransaction({
+       to: randomAddress, value: amountToSend
+    })
+    const rec = await tx.wait();
+    const testTxHash = rec.transactionHash;
+
+
+    const receipt = await l2Provider.send("eth_getTransactionReceipt", [testTxHash])
+    console.log("receipt", receipt)
+    const transaction = await l2Provider.send("eth_getTransactionByHash", [testTxHash])
+    console.log("transaction", transaction)
+
+    return
+
+    // const testTxHash =
+    //   '0x4ab7b21ebb243a4eec8a5e08f9190e0c1c116363b165f15cc60aa9c247e530ca'
 
     const arbReceipt = await getRawArbTransactionReceipt(
       l2Provider,

@@ -26,14 +26,21 @@ import { L2ToL1MessageStatus } from '../src/lib/message/L2ToL1Message'
 import {
   fundL1,
   fundL2,
-  testRetryableTicket,
   instantiateBridgeWithRandomWallet,
   skipIfMainnet,
+  depositToken,
 } from './testHelpers'
-import { Erc20Bridger, L1ToL2MessageReader, L1ToL2MessageStatus } from '../src'
-import { ethers, Signer, Wallet } from 'ethers'
-import { GasOverrides } from '../src/lib/message/L1ToL2MessageGasEstimator'
-import { wait } from '../src/lib/utils/lib'
+import {
+  Erc20Bridger,
+  L1ToL2MessageReader,
+  L1ToL2MessageStatus,
+  L1ToL2MessageWriter,
+  L2Network,
+  L2TransactionReceipt,
+} from '../src'
+import { Signer } from 'ethers'
+import { TestERC20 } from '../src/lib/abi/TestERC20'
+import { Provider } from '@ethersproject/abstract-provider'
 import { JsonRpcProvider } from '@ethersproject/providers'
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
@@ -43,256 +50,208 @@ describe('standard ERC20', () => {
     await skipIfMainnet(this)
   })
 
-  // CHRIS: TODO: why skip these?
-  it.skip('deposits erc20 (no L2 Eth funding)', async () => {
-    // CHRIS: TODO: another ticket, but refactor these tests
+  // test globals
+  let testState: {
+    l1Signer: Signer
+    l2Signer: Signer
+    erc20Bridger: Erc20Bridger
+    l2Network: L2Network
+    l1Token: TestERC20
+  }
 
-    const {
-      l1Signer,
-      erc20Bridger,
-      l2Signer,
-    } = await instantiateBridgeWithRandomWallet()
-    await fundL1(l1Signer)
-    await depositTokenTest(erc20Bridger, l1Signer, l2Signer)
+  before('init', async () => {
+    const setup = await instantiateBridgeWithRandomWallet()
+
+    await fundL1(setup.l1Signer)
+    await fundL2(setup.l2Signer)
+    // CHRIS: TODO: remove second fund
+    // await fundL2(setup.l2Signer)
+
+    const deployErc20 = new TestERC20__factory().connect(setup.l1Signer)
+    const testToken = await deployErc20.deploy()
+    await testToken.deployed()
+
+    await (await testToken.mint()).wait()
+
+    testState = { ...setup, l1Token: testToken }
   })
 
   it('deposits erc20 (with L2 Eth funding)', async () => {
-    const {
-      l1Signer,
-      erc20Bridger,
-      l2Signer,
-    } = await instantiateBridgeWithRandomWallet()
-    await fundL1(l1Signer)
-    await fundL2(l2Signer)
-    await depositTokenTest(erc20Bridger, l1Signer, l2Signer)
+    await depositToken(
+      depositAmount,
+      testState.l1Token.address,
+      testState.erc20Bridger,
+      testState.l1Signer,
+      testState.l2Signer,
+      L1ToL2MessageStatus.REDEEMED
+    )
   })
 
-  it('deposit with no funds, manual redeem', async () => {
-    const {
-      l1Signer,
-      erc20Bridger,
-      l2Signer,
-      l2Network,
-    } = await instantiateBridgeWithRandomWallet()
+  const redeemAndTest = async (
+    message: L1ToL2MessageWriter,
+    expectedStatus: 0 | 1,
+    gasLimit?: BigNumber
+  ) => {
+    // CHRIS: TODO: clean up this method
 
-    await fundL1(l1Signer)
-    await fundL2(l2Signer)
-    const { waitRes } = await depositTokenTest(
-      erc20Bridger,
-      l1Signer,
-      l2Signer,
+    // do a manual redeem - supply enough gas so that the redeem tx succeeds but l2 tx doesnt
+    const manualRedeem = await message.redeem({ gasLimit })
+    const rec = new L2TransactionReceipt(await manualRedeem.wait())
+    const redeemScheduledEvents = await rec.getRedeemScheduledEvents()
+    const retryRec = await message.l2Provider.getTransactionReceipt(
+      redeemScheduledEvents[0].retryTxHash
+    )
+
+    const rec1 = await (testState.l2Signer
+      .provider as JsonRpcProvider)?.send('eth_getTransactionReceipt', [
+      rec?.transactionHash,
+    ])
+    const rec2 = await (testState.l2Signer
+      .provider as JsonRpcProvider)?.send('eth_getTransactionReceipt', [
+      retryRec?.transactionHash,
+    ])
+
+    const eg1 = BigNumber.from(rec1.effectiveGasPrice)
+    const l1GasUsed1 = BigNumber.from(rec1.l1GasUsed)
+    const totalGasUsed1 = BigNumber.from(rec1.gasUsed)
+    const eg2 = BigNumber.from(rec2.effectiveGasPrice)
+    const l1GasUsed2 = BigNumber.from(rec2.l1GasUsed)
+    const totalGasUsed2 = BigNumber.from(rec2.gasUsed)
+
+    const feeData1 = await testState.l1Signer.provider!.getFeeData()
+    const feeData2 = await testState.l2Signer.provider!.getFeeData()
+
+    console.log(
+      'base fee l1',
+      (
+        await testState.l1Signer.provider!.getBlock('latest')
+      )?.baseFeePerGas?.toNumber()
+    )
+    console.log(
+      'base fee l2',
+      (
+        await testState.l2Signer.provider!.getBlock('latest')
+      )?.baseFeePerGas?.toNumber()
+    )
+    console.log(
+      'feedata 1',
+      feeData1.maxFeePerGas!.toString(),
+      feeData1.maxPriorityFeePerGas!.toString()
+    )
+    console.log(
+      'feedata 2',
+      feeData2.maxFeePerGas!.toString(),
+      feeData2.maxPriorityFeePerGas!.toString()
+    )
+    console.log(
+      eg1.toString(),
+      l1GasUsed1.toString(),
+      totalGasUsed1.sub(l1GasUsed1).toString(),
+      totalGasUsed1.mul(eg1).toString(),
+      eg2.toString(),
+      l1GasUsed2.toString(),
+      totalGasUsed2.sub(l1GasUsed2).toString(),
+      totalGasUsed2.mul(eg2).toString()
+    )
+
+    expect(retryRec!.blockHash, 'redeemed in same block').to.eq(rec.blockHash)
+    expect(retryRec!.to, 'redeemed in same block').to.eq(
+      testState.l2Network.tokenBridge.l2ERC20Gateway
+    )
+    expect(retryRec!.status, 'tx didnt fail').to.eq(expectedStatus)
+  }
+
+  it('deposit with no funds, manual redeem', async () => {
+    const { waitRes } = await depositToken(
+      depositAmount,
+      testState.l1Token.address,
+      testState.erc20Bridger,
+      testState.l1Signer,
+      testState.l2Signer,
+      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
       {
-        maxGas: {
-          base: BigNumber.from(0),
-        },
-        maxGasPrice: {
-          base: BigNumber.from(0),
-        },
+        maxGas: { base: BigNumber.from(0) },
+        maxGasPrice: { base: BigNumber.from(0) },
       }
     )
 
-    // we expect the status to be funds deposited
-    expect(waitRes.status, 'Funds not deposited').to.eq(
-      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
-    )
-
-    // do a manual redeem
-    const manualRedeem = await waitRes.message.redeem()
-    const rec = await manualRedeem.wait()
-    const retryRec = await L1ToL2MessageReader.getRedeemReceipt(
-      rec,
-      l2Signer.provider!
-    )
-    expect(retryRec).to.not.be.null
-    expect(retryRec!.blockHash, 'redeemed in same block').to.eq(rec.blockHash)
-    expect(retryRec!.to!, 'redeemed in same block').to.eq(
-      l2Network.tokenBridge.l2ERC20Gateway
-    )
-    expect(retryRec!.status!, 'tx didnt succeed').to.eq(1)
+    await redeemAndTest(waitRes.message, 1)
   })
 
   it('deposit with low funds, manual redeem', async () => {
-    const {
-      l1Signer,
-      erc20Bridger,
-      l2Signer,
-      l2Network,
-    } = await instantiateBridgeWithRandomWallet()
-
-    await fundL1(l1Signer)
-    await fundL2(l2Signer)
-    const { testToken, waitRes } = await depositTokenTest(
-      erc20Bridger,
-      l1Signer,
-      l2Signer,
+    const { waitRes } = await depositToken(
+      depositAmount,
+      testState.l1Token.address,
+      testState.erc20Bridger,
+      testState.l1Signer,
+      testState.l2Signer,
+      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
       {
-        maxGas: {
-          base: BigNumber.from(5),
-        },
-        maxGasPrice: {
-          base: BigNumber.from(5),
-        },
+        maxGas: { base: BigNumber.from(5) },
+        maxGasPrice: { base: BigNumber.from(5) },
       }
     )
 
-    // we expect the status to be funds deposited
-    expect(waitRes.status, 'Funds not deposited').to.eq(
-      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
-    )
-
-    // do a manual redeem
-    const manualRedeem = await waitRes.message.redeem()
-    const rec = await manualRedeem.wait()
-    const retryRec = await L1ToL2MessageReader.getRedeemReceipt(
-      rec,
-      l2Signer.provider!
-    )
-    expect(retryRec).to.not.be.null
-    expect(retryRec!.blockHash, 'redeemed in same block').to.eq(rec.blockHash)
-    expect(retryRec!.to!, 'redeemed in same block').to.eq(
-      l2Network.tokenBridge.l2ERC20Gateway
-    )
-    expect(retryRec!.status!, 'tx didnt succeed').to.eq(1)
+    await redeemAndTest(waitRes.message, 1)
   })
 
-  // CHRIS: TODO: add back in
-  it('deposit with low funds, fails first redeem, succeeds seconds', async () => {
-    const {
-      l1Signer,
-      erc20Bridger,
-      l2Signer,
-      l2Network,
-    } = await instantiateBridgeWithRandomWallet()
-
-    await fundL1(l1Signer)
-    await fundL2(l2Signer)
-    const { testToken, waitRes } = await depositTokenTest(
-      erc20Bridger,
-      l1Signer,
-      l2Signer,
+  // CHRIS: TODO: add this back in
+  it.skip('deposit with low funds, fails first redeem, succeeds seconds', async () => {
+    const { waitRes } = await depositToken(
+      depositAmount,
+      testState.l1Token.address,
+      testState.erc20Bridger,
+      testState.l1Signer,
+      testState.l2Signer,
+      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
       {
-        maxGas: {
-          base: BigNumber.from(5),
-        },
-        maxGasPrice: {
-          base: BigNumber.from(5),
-        },
+        maxGas: { base: BigNumber.from(5) },
+        maxGasPrice: { base: BigNumber.from(5) },
       }
     )
 
-    // we expect the status to be funds deposited
-    expect(waitRes.status, 'Funds not deposited').to.eq(
-      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
-    )
-
-    // do a manual redeem - supply enough gas so that the redeem tx succeeds but l2 tx doesnt
-    const manualRedeem = await waitRes.message.redeem(BigNumber.from(120000))
-    const rec = await manualRedeem.wait()
-    const retryRec = await L1ToL2MessageReader.getRedeemReceipt(
-      rec,
-      l2Signer.provider!
-    )
-    expect(retryRec, 'null retry').to.not.be.null
-    expect(retryRec!.blockHash, 'redeemed in same block').to.eq(rec.blockHash)
-    expect(retryRec!.to!, 'redeemed in same block').to.eq(
-      l2Network.tokenBridge.l2ERC20Gateway
-    )
-    expect(retryRec!.status!, 'tx didnt fail').to.eq(0)
-
-    // do a manual redeem - supply enough gas so that the redeem tx succeeds but l2 tx doesnt
-    const manualRedeem2 = await waitRes.message.redeem(BigNumber.from(1000000))
-    const rec2 = await manualRedeem2.wait()
-    const retryRec2 = await L1ToL2MessageReader.getRedeemReceipt(
-      rec2,
-      l2Signer.provider!
-    )
-    expect(retryRec2, 'null second retry').to.not.be.null
-    expect(retryRec2!.blockHash, 'redeemed in same block').to.eq(rec2.blockHash)
-    expect(retryRec2!.to!, 'redeemed in same block').to.eq(
-      l2Network.tokenBridge.l2ERC20Gateway
-    )
-    expect(retryRec2!.status!, 'tx didnt succeed').to.eq(1)
-  })
-
-  // CHRIS: TODO: why do we have this?
-  it('deposits erc20 and transfer to funding wallet', async () => {
-    const {
-      l1Signer,
-      erc20Bridger,
-      l2Signer,
-    } = await instantiateBridgeWithRandomWallet()
-    await fundL1(l1Signer)
-    await fundL2(l2Signer)
-    const { testToken } = await depositTokenTest(
-      erc20Bridger,
-      l1Signer,
-      l2Signer
-    )
-    const l2Token = erc20Bridger.getL2TokenContract(
-      l2Signer.provider!,
-      await erc20Bridger.getL2ERC20Address(
-        testToken.address,
-        l1Signer.provider!
-      )
-    )
-    const testWalletL2Balance = (
-      await l2Token.functions.balanceOf(await l2Signer.getAddress())
-    )[0]
-    const _preFundedL2Wallet = new Wallet(process.env.DEVNET_PRIVKEY as string)
-    await l2Token
-      .connect(l2Signer)
-      .transfer(_preFundedL2Wallet.address, testWalletL2Balance)
+    // not enough gas
+    // CHRIS:TODO: remvoe console.logs
+    await redeemAndTest(waitRes.message, 0, BigNumber.from(1250000))
+    console.log('a')
+    await redeemAndTest(waitRes.message, 1)
   })
 
   it('withdraws erc20', async function () {
-    const {
-      l1Signer,
-      l2Signer,
-      l2Network,
-      erc20Bridger,
-    } = await instantiateBridgeWithRandomWallet()
-
-    await fundL1(l1Signer)
-    await fundL2(l2Signer)
-    // deposit some tokens so we have enough to withdraw
-    const { testToken } = await depositTokenTest(
-      erc20Bridger,
-      l1Signer,
-      l2Signer
+    const l2TokenAddr = await testState.erc20Bridger.getL2ERC20Address(
+      testState.l1Token.address,
+      testState.l1Signer.provider!
     )
-
-    const l2TokenAddr = await erc20Bridger.getL2ERC20Address(
-      testToken.address,
-      l1Signer.provider!
-    )
-    const l2TokenContract = await erc20Bridger.getL2TokenContract(
-      l2Signer.provider!,
+    const l2TokenContract = await testState.erc20Bridger.getL2TokenContract(
+      testState.l2Signer.provider!,
       l2TokenAddr
     )
     const l2BalanceStart = await l2TokenContract.balanceOf(
-      await l2Signer.getAddress()
+      await testState.l2Signer.getAddress()
     )
+    // 4 deposits above - increase this number if more deposit tests added
+    const startBalance = depositAmount.mul(4)
     expect(l2BalanceStart.toNumber(), 'start balance').to.eq(
-      depositAmount.toNumber()
+      startBalance.toNumber()
     )
 
-    const l2GatewayAddr = await erc20Bridger.getL2GatewayAddress(
-      testToken.address,
-      l2Signer.provider!
+    const l2GatewayAddr = await testState.erc20Bridger.getL2GatewayAddress(
+      testState.l1Token.address,
+      testState.l2Signer.provider!
     )
     expect(l2GatewayAddr, 'standard gateway').to.eq(
-      l2Network.tokenBridge.l2ERC20Gateway
+      testState.l2Network.tokenBridge.l2ERC20Gateway
     )
     await (
       await l2TokenContract
-        .connect(l2Signer)
+        .connect(testState.l2Signer)
         .approve(l2GatewayAddr, withdrawalAmount)
     ).wait()
 
-    const withdrawRes = await erc20Bridger.withdraw({
+    const withdrawRes = await testState.erc20Bridger.withdraw({
       amount: withdrawalAmount,
-      erc20l1Address: testToken.address,
-      l2Signer: l2Signer,
+      erc20l1Address: testState.l1Token.address,
+      l2Signer: testState.l2Signer,
     })
     const withdrawRec = await withdrawRes.wait()
 
@@ -302,8 +261,8 @@ describe('standard ERC20', () => {
     )
 
     const outgoingMessages = await withdrawRec.getL2ToL1Messages(
-      l1Signer.provider!,
-      l2Network
+      testState.l1Signer.provider!,
+      testState.l2Network
     )
     const firstMessage = outgoingMessages[0]
     expect(firstMessage, 'getWithdrawalsInL2Transaction came back empty').to
@@ -316,32 +275,32 @@ describe('standard ERC20', () => {
       `standard token withdraw status returned ${messageStatus}`
     ).to.be.eq(L2ToL1MessageStatus.UNCONFIRMED)
 
-    const l2Token = erc20Bridger.getL2TokenContract(
-      l2Signer.provider!,
-      await erc20Bridger.getL2ERC20Address(
-        testToken.address,
-        l1Signer.provider!
+    const l2Token = testState.erc20Bridger.getL2TokenContract(
+      testState.l2Signer.provider!,
+      await testState.erc20Bridger.getL2ERC20Address(
+        testState.l1Token.address,
+        testState.l1Signer.provider!
       )
     )
     const testWalletL2Balance = (
-      await l2Token.functions.balanceOf(await l2Signer.getAddress())
+      await l2Token.functions.balanceOf(await testState.l2Signer.getAddress())
     )[0]
 
     expect(
       testWalletL2Balance.toNumber(),
       'token withdraw balance not deducted'
-    ).to.eq(depositAmount.sub(withdrawalAmount).toNumber())
-    const walletAddress = await l1Signer.getAddress()
+    ).to.eq(startBalance.sub(withdrawalAmount).toNumber())
+    const walletAddress = await testState.l1Signer.getAddress()
 
-    const gatewayAddress = await erc20Bridger.getL2GatewayAddress(
-      testToken.address,
-      l2Signer.provider!
+    const gatewayAddress = await testState.erc20Bridger.getL2GatewayAddress(
+      testState.l1Token.address,
+      testState.l2Signer.provider!
     )
-    const tokenWithdrawEvents = await erc20Bridger.getL2WithdrawalEvents(
-      l2Signer.provider!,
+    const tokenWithdrawEvents = await testState.erc20Bridger.getL2WithdrawalEvents(
+      testState.l2Signer.provider!,
       gatewayAddress,
       { fromBlock: withdrawRec.blockNumber, toBlock: 'latest' },
-      testToken.address,
+      testState.l1Token.address,
       walletAddress
     )
     expect(tokenWithdrawEvents.length).to.equal(
@@ -349,136 +308,4 @@ describe('standard ERC20', () => {
       'token filtered query failed'
     )
   })
-  it('getERC20L1Address/getERC20L2Address work as expected', async () => {
-    const {
-      l1Signer,
-      l2Signer,
-      erc20Bridger,
-    } = await instantiateBridgeWithRandomWallet()
-
-    await fundL1(l1Signer)
-    const deployErc20 = new TestERC20__factory().connect(l1Signer)
-    const testToken = await deployErc20.deploy()
-    await testToken.deployed()
-
-    // CHRIS: TODO: we should have an approve for deposit, and an approve for withdraw
-    // CHRIS: TODO: but do we need that for withdraw? if not include it in the docs
-
-    await (await testToken.mint()).wait()
-    await (
-      await erc20Bridger.approveToken({
-        erc20L1Address: testToken.address,
-        l1Signer: l1Signer,
-      })
-    ).wait()
-    const depositRes = await erc20Bridger.deposit({
-      l1Signer: l1Signer,
-      l2Provider: l2Signer.provider!,
-      erc20L1Address: testToken.address,
-      amount: depositAmount,
-    })
-    const depositRec = await depositRes.wait()
-    const waitRes = await depositRec.waitForL2(l2Signer)
-    expect(waitRes.complete, 'wait res complete').to.eq(true)
-    const queriedL2Address = await erc20Bridger.getL2ERC20Address(
-      testToken.address,
-      l1Signer.provider!
-    )
-    const queriedL1Address = await erc20Bridger.getL1ERC20Address(
-      queriedL2Address,
-      l2Signer.provider!
-    )
-    expect(queriedL1Address).to.equal(
-      testToken.address,
-      'getERC20L1Address/getERC20L2Address failed with proper token address'
-    )
-
-    const randomAddress = await l1Signer.getAddress()
-    try {
-      await erc20Bridger.getL1ERC20Address(randomAddress, l2Signer.provider!)
-      expect(true, 'expected getERC20L1Address to throw for random address').to
-        .be.false
-    } catch (err) {
-      // expected result
-    }
-  })
 })
-
-const depositTokenTest = async (
-  erc20Bridger: Erc20Bridger,
-  l1Signer: Signer,
-  l2Signer: Signer,
-  retryableOverrides?: Omit<GasOverrides, 'sendL2CallValueFromL1'>
-) => {
-  const deployErc20 = new TestERC20__factory().connect(l1Signer)
-  const testToken = await deployErc20.deploy()
-  await testToken.deployed()
-
-  await (await testToken.mint()).wait()
-  await (
-    await erc20Bridger.approveToken({
-      erc20L1Address: testToken.address,
-      l1Signer: l1Signer,
-    })
-  ).wait()
-
-  const expectedL1GatewayAddress = await erc20Bridger.getL1GatewayAddress(
-    testToken.address,
-    l1Signer.provider!
-  )
-  const l1Token = erc20Bridger.getL1TokenContract(
-    l1Signer.provider!,
-    testToken.address
-  )
-  const allowance = await l1Token.allowance(
-    await l1Signer.getAddress(),
-    expectedL1GatewayAddress
-  )
-  expect(allowance.eq(Erc20Bridger.MAX_APPROVAL), 'set token allowance failed')
-    .to.be.true
-
-  const initialBridgeTokenBalance = await testToken.balanceOf(
-    expectedL1GatewayAddress
-  )
-
-  const depositRes = await erc20Bridger.deposit({
-    l1Signer: l1Signer,
-    l2Provider: l2Signer.provider!,
-    erc20L1Address: testToken.address,
-    amount: depositAmount,
-    retryableGasOverrides: retryableOverrides,
-  })
-
-  const depositRec = await depositRes.wait()
-  const finalBridgeTokenBalance = await testToken.balanceOf(
-    expectedL1GatewayAddress
-  )
-
-  expect(
-    initialBridgeTokenBalance.add(depositAmount).toNumber(),
-    'bridge balance not updated after L1 token deposit txn'
-  ).to.eq(finalBridgeTokenBalance.toNumber())
-
-  const waitRes = await depositRec.waitForL2(l2Signer)
-  if (!!retryableOverrides)
-    return {
-      testToken,
-      waitRes,
-    }
-
-  await testRetryableTicket(l2Signer.provider!, depositRec)
-
-  const l2Token = erc20Bridger.getL2TokenContract(
-    l2Signer.provider!,
-    await erc20Bridger.getL2ERC20Address(testToken.address, l1Signer.provider!)
-  )
-  const testWalletL2Balance = await l2Token.balanceOf(
-    await l2Signer.getAddress()
-  )
-  expect(
-    testWalletL2Balance.eq(depositAmount),
-    'l2 wallet not updated after deposit'
-  ).to.be.true
-
-  return { testToken, waitRes, l2Token }
-}

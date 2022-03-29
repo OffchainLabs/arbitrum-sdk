@@ -35,6 +35,7 @@ import {
   L2ToL1MessageWriter,
 } from './L2ToL1Message'
 import { getRawArbTransactionReceipt } from '../..'
+import { Interface } from 'ethers/lib/utils'
 
 export interface L2ContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<L2TransactionReceipt>
@@ -94,6 +95,37 @@ export class L2TransactionReceipt implements TransactionReceipt {
     )
   }
 
+  /**
+   * Get event data for any redeems that were scheduled in this transaction
+   * @returns
+   */
+  public getRedeemScheduledEvents(): {
+    ticketId: string
+    retryTxHash: string
+    sequenceNum: BigNumber
+    donatedGas: BigNumber
+    gasDonor: string
+  }[] {
+    // CHRIS: TODO: use the proper ABI here and in the return sig of this function
+    const iFace = new Interface([
+      'event RedeemScheduled(     bytes32 indexed ticketId,     bytes32 indexed retryTxHash,     uint64 indexed sequenceNum,     uint64 donatedGas,     address gasDonor )',
+    ])
+    const redeemTopic = iFace.getEventTopic('RedeemScheduled')
+    const redeemScheduledEvents = this.logs.filter(
+      l => l.topics[0] === redeemTopic
+    )
+    return redeemScheduledEvents.map(
+      r =>
+        (iFace.parseLog(r).args as unknown) as {
+          ticketId: string
+          retryTxHash: string
+          sequenceNum: BigNumber
+          donatedGas: BigNumber
+          gasDonor: string
+        }
+    )
+  }
+
   private getOutboxAddr(network: L2Network, batchNumber: BigNumber) {
     // find the outbox where the activation batch number of the next outbox
     // is greater than the supplied batch
@@ -105,7 +137,8 @@ export class L2TransactionReceipt implements TransactionReceipt {
       })
       .find(
         (_, index, array) =>
-          array[index + 1] === undefined || array[index + 1][1] > batchNumber.toNumber()
+          array[index + 1] === undefined ||
+          array[index + 1][1] > batchNumber.toNumber()
       )
 
     if (!res) {

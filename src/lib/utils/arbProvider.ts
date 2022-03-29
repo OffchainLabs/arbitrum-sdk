@@ -55,7 +55,13 @@ class ArbFormatter extends Formatter {
     }
 
     // CHRIS: TODO: this needs to be updated
+
+    // l1BlockNumber, l1GasUsed
+    // missing: l1SequenceNumber, l1BlockNumber
+
     const arbReceiptFormat = {
+
+
       ...superFormats.receipt,
       returnData: Formatter.allowNull(data),
       returnCode: returnCode,

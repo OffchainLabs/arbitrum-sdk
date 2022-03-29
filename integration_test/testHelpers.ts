@@ -32,7 +32,12 @@ import { instantiateBridge } from '../scripts/instantiate_bridge'
 import config from './config'
 import { L1TransactionReceipt } from '../src/lib/message/L1Transaction'
 import { Signer } from 'ethers'
-import { EthBridger, InboxTools, Erc20Bridger } from '../src'
+import {
+  EthBridger,
+  InboxTools,
+  Erc20Bridger,
+  L1ToL2MessageStatus,
+} from '../src'
 import {
   L1Network,
   L2Network,
@@ -41,6 +46,7 @@ import {
 } from '../src/lib/dataEntities/networks'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { L2TxnType } from '../src/lib/message/L1ToL2Message'
+import { GasOverrides } from '../src/lib/message/L1ToL2MessageGasEstimator'
 
 const argv = yargs(process.argv.slice(2))
   .options({
@@ -65,57 +71,47 @@ export const existentTestCustomToken = _existentTestCustomToken as string
 
 export const preFundAmount = parseEther('0.1')
 
-export const testRetryableTicket = async (
-  l2Provider: Provider,
-  rec: ContractReceipt,
-): Promise<void> => {
-  prettyLog(`testing retryable for ${rec.transactionHash}`)
+// export const testRetryableTicket = async (
+//   l2Provider: Provider,
+//   rec: ContractReceipt,
+// ): Promise<void> => {
+//   prettyLog(`testing retryable for ${rec.transactionHash}`)
 
-  const messages = await new L1TransactionReceipt(rec).getL1ToL2Messages(
-    l2Provider,
-  )
+//   const messages = await new L1TransactionReceipt(rec).getL1ToL2Messages(
+//     l2Provider,
+//   )
 
-  const message = messages && messages[0]
-  if (!message) {
-    throw new Error('Seq num not found')
-  }
-  const retryableTicket = message.retryableCreationId
+//   const message = messages && messages[0]
+//   if (!message) {
+//     throw new Error('Seq num not found')
+//   }
+//   const retryableTicket = message.retryableCreationId
 
-  const redeemTransaction = message.l2TxHash
+//   const redeemTransaction = message.l2TxHash
 
-  prettyLog(`retryableTicket: ${retryableTicket}, redeem: ${redeemTransaction}`)
-  prettyLog('Waiting for retryable ticket')
+//   prettyLog(`retryableTicket: ${retryableTicket}, redeem: ${redeemTransaction}`)
+//   prettyLog('Waiting for retryable ticket')
 
-  await message.waitForStatus(1, 1000 * 60 * 15)
+//   await message.waitForStatus(1, 1000 * 60 * 15)
 
-  const retryableTicketReceipt = await message.getRetryableCreationReceipt()
+//   const retryableTicketReceipt = await message.getRetryableCreationReceipt()
 
-  prettyLog('retryableTicketReceipt found:')
+//   prettyLog('retryableTicketReceipt found:')
 
-  expect(retryableTicketReceipt && retryableTicketReceipt.status).to.equal(
-    1,
-    'retryable ticket txn failed'
-  )
+//   expect(retryableTicketReceipt && retryableTicketReceipt.status).to.equal(
+//     1,
+//     'retryable ticket txn failed'
+//   )
 
-  // prettyLog(`Waiting for auto redeem transaction (this shouldn't take long`)
-  // const autoRedeemReceipt = await message.getAutoRedeemReceipt()
+//   prettyLog('Getting redemption')
 
-  // prettyLog('autoRedeem receipt found!')
-
-  // expect(autoRedeemReceipt && autoRedeemReceipt.status).to.equal(
-  //   1,
-  //   'autoredeem txn failed'
-  // )
-
-  prettyLog('Getting redemption')
-
-  // CHRIS: we sometimes got a fail fetching teh receipt? cannot read "data" of undefined
-  const redemptionReceipt = await message.getL2TxReceipt()
-  expect(redemptionReceipt && redemptionReceipt.status).equals(
-    1,
-    'redeem txn failed'
-  )
-}
+//   // CHRIS: we sometimes got a fail fetching teh receipt? cannot read "data" of undefined
+//   const redemptionReceipt = await message.getL2TxReceipt()
+//   expect(redemptionReceipt && redemptionReceipt.status).equals(
+//     1,
+//     'redeem txn failed'
+//   )
+// }
 
 export const prettyLog = (text: string): void => {
   console.log(chalk.blue(`    *** ${text}`))
@@ -125,6 +121,105 @@ export const prettyLog = (text: string): void => {
 export const warn = (text: string): void => {
   console.log(chalk.red(`WARNING: ${text}`))
   console.log()
+}
+
+// CHRIS: TODO: add a check for if the correct gateway was registered and another for the expected token address on L2
+/**
+ * Deposits a token and tests that it occurred correctly
+ * @param depositAmount
+ * @param l1TokenAddress
+ * @param erc20Bridger
+ * @param l1Signer
+ * @param l2Signer
+ */
+export const depositToken = async (
+  depositAmount: BigNumber,
+  l1TokenAddress: string,
+  erc20Bridger: Erc20Bridger,
+  l1Signer: Signer,
+  l2Signer: Signer,
+  expectedStatus: L1ToL2MessageStatus,
+  retryableOverrides?: Omit<GasOverrides, 'sendL2CallValueFromL1'>,
+  // expectedGateway: 
+) => {
+  await (
+    await erc20Bridger.approveToken({
+      erc20L1Address: l1TokenAddress,
+      l1Signer: l1Signer,
+    })
+  ).wait()
+
+  const expectedL1GatewayAddress = await erc20Bridger.getL1GatewayAddress(
+    l1TokenAddress,
+    l1Signer.provider!
+  )
+  const l1Token = erc20Bridger.getL1TokenContract(
+    l1Signer.provider!,
+    l1TokenAddress
+  )
+  const allowance = await l1Token.allowance(
+    await l1Signer.getAddress(),
+    expectedL1GatewayAddress
+  )
+  expect(allowance.eq(Erc20Bridger.MAX_APPROVAL), 'set token allowance failed')
+    .to.be.true
+
+  const initialBridgeTokenBalance = await l1Token.balanceOf(
+    expectedL1GatewayAddress
+  )
+
+  const depositRes = await erc20Bridger.deposit({
+    l1Signer: l1Signer,
+    l2Provider: l2Signer.provider!,
+    erc20L1Address: l1TokenAddress,
+    amount: depositAmount,
+    retryableGasOverrides: retryableOverrides,
+  })
+
+  const depositRec = await depositRes.wait()
+  const finalBridgeTokenBalance = await l1Token.balanceOf(
+    expectedL1GatewayAddress
+  )
+
+  expect(
+    initialBridgeTokenBalance.add(depositAmount).toNumber(),
+    'bridge balance not updated after L1 token deposit txn'
+  ).to.eq(finalBridgeTokenBalance.toNumber())
+
+  const waitRes = await depositRec.waitForL2(l2Signer)
+  expect(waitRes.status, 'Unexpected status').to.eq(expectedStatus)
+  if (!!retryableOverrides)
+    return {
+      l1Token,
+      waitRes,
+    }
+
+  const l2Erc20Addr = await erc20Bridger.getL2ERC20Address(
+    l1TokenAddress,
+    l1Signer.provider!
+  )
+  const l2Token = erc20Bridger.getL2TokenContract(
+    l2Signer.provider!,
+    l2Erc20Addr
+  )
+  const l1Erc20Addr = await erc20Bridger.getL1ERC20Address(
+    l2Erc20Addr,
+    l2Signer.provider!
+  )
+  expect(l1Erc20Addr).to.equal(
+    l1TokenAddress,
+    'getERC20L1Address/getERC20L2Address failed with proper token address'
+  )
+
+  const testWalletL2Balance = await l2Token.balanceOf(
+    await l2Signer.getAddress()
+  )
+  expect(
+    testWalletL2Balance.eq(depositAmount),
+    'l2 wallet not updated after deposit'
+  ).to.be.true
+
+  return { l1Token, waitRes, l2Token }
 }
 
 export const instantiateBridgeWithRandomWallet = async (): Promise<{

@@ -29,7 +29,7 @@ import {
   PercentIncrease,
 } from '../message/L1ToL2MessageGasEstimator'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
-import { MissingProviderArbTsError } from '../dataEntities/errors'
+import { ArbTsError, MissingProviderArbTsError } from '../dataEntities/errors'
 import { AssetBridger } from './assetBridger'
 import {
   L1EthDepositTransaction,
@@ -116,15 +116,19 @@ export class EthBridger extends AssetBridger<
 
     const gasEstimator = new L1ToL2MessageGasEstimator(params.l2Provider)
 
-    // CHRIS: TODO: should we do this? maybe a better way to get base fee?
-    const baseFee = await params.l1Signer.provider.getGasPrice();
-    const submissionPrice = (
-      await gasEstimator.estimateSubmissionPrice(
-        baseFee,
-        0,
-        params.retryableGasOverrides?.maxSubmissionPrice
+    const baseFee = (await params.l1Signer.provider.getBlock('latest'))
+      .baseFeePerGas
+    if (!baseFee) {
+      throw new ArbTsError(
+        'Latest block did not contain base fee, ensure l1 provider is connected to a network that supports EIP 1559.'
       )
-    ).submissionPrice
+    }
+
+    const submissionCost = await gasEstimator.estimateSubmissionPrice(
+      baseFee,
+      0,
+      params.retryableGasOverrides?.maxSubmissionPrice
+    )
 
     const inbox = Inbox__factory.connect(
       this.l2Network.ethBridge.inbox,
@@ -132,9 +136,10 @@ export class EthBridger extends AssetBridger<
     )
 
     return (estimate ? inbox.estimateGas : inbox.functions).depositEth(
-      submissionPrice,
+      submissionCost,
       {
-        value: params.amount,
+        // CHRIS: TODO: should this be back ported?
+        value: params.amount.add(submissionCost),
         ...(params.overrides || {}),
       }
     )

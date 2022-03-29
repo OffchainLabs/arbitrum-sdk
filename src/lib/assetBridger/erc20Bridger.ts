@@ -674,6 +674,8 @@ export class AdminErc20Bridger extends Erc20Bridger {
       [[l1TokenAddress], [this.l2Network.tokenBridge.l1CustomGateway]]
     )
 
+    
+
     const setGatwayEstimates = await gasPriceEstimator.estimateMessage(
       this.l2Network.tokenBridge.l1GatewayRouter,
       this.l2Network.tokenBridge.l2GatewayRouter,
