@@ -23,7 +23,6 @@ import { parseEther } from '@ethersproject/units'
 import { AeWETH__factory } from '../src/lib/abi/factories/AeWETH__factory'
 
 import {
-  instantiateBridgeWithRandomWallet,
   fundL1,
   fundL2,
   skipIfMainnet,
@@ -32,6 +31,7 @@ import {
 import { L2ToL1MessageStatus } from '../src/lib/message/L2ToL1Message'
 import { Erc20Bridger, L1ToL2MessageStatus } from '../src'
 import { Wallet } from 'ethers'
+import { testSetup } from '../scripts/testSetup'
 
 describe('WETH', async () => {
   beforeEach('skipIfMainnet', async function () {
@@ -47,7 +47,7 @@ describe('WETH', async () => {
       l1Signer,
       l2Signer,
       erc20Bridger,
-    } = await instantiateBridgeWithRandomWallet()
+    } = await testSetup()
     await fundL2(l2Signer)
 
     const l2Weth = AeWETH__factory.connect(
@@ -131,7 +131,7 @@ describe('WETH', async () => {
       l1Signer,
       l2Signer,
       erc20Bridger,
-    } = await instantiateBridgeWithRandomWallet()
+    } = await testSetup()
 
     const l1WethAddress = l2Network.tokenBridge.l1Weth
 

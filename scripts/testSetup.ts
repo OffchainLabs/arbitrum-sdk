@@ -28,7 +28,7 @@ import {
   getL2Network,
   addCustomNetwork,
 } from '../src/lib/dataEntities/networks'
-import { BigNumber, Signer } from 'ethers'
+import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { execSync } from 'child_process'
 import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
@@ -39,15 +39,14 @@ import * as fs from 'fs'
 
 dotenv.config()
 
-const pk = process.env['DEVNET_PRIVKEY'] as string
-const mnemonic = process.env['DEV_MNEMONIC'] as string
-const verbose = process.env['VERBOSE'] as string
+// CHRIS: TODO: find all usages of the process.env, and streamline and update the .env-sample
+export const config = {
+  arbUrl: process.env['ARB_URL'] as string,
+  ethUrl: process.env['ETH_URL'] as string,
+  arbGenesisKey: process.env['ARB_GENESIS_KEY'] as string
+}
 
-// CHRIS: TODO allow switching between local network and live testnets (eg rinkeby)
-const arbUrl = process.env['ARB_URL'] as string
-const ethUrl = process.env['ETH_URL'] as string
-
-// const defaultNetworkId = 421611
+// CHRIS: TODO: check everything in the /scripts folder
 
 export const getCustomNetworks = async (
   l1Url: string,
@@ -117,11 +116,15 @@ export const getCustomNetworks = async (
   }
 }
 
-export const setupNetworks = async (l1Deployer: Signer, l2Deployer: Signer) => {
-  // CHRIS: TODO: pass in these urls - they should be on the signers already?
+export const setupNetworks = async (
+  l1Deployer: Signer,
+  l2Deployer: Signer,
+  l1Url: string,
+  l2Url: string
+) => {
   const { l1Network, l2Network: coreL2Network } = await getCustomNetworks(
-    ethUrl,
-    arbUrl
+    l1Url,
+    l2Url
   )
   const { l1: l1Contracts, l2: l2Contracts } = await deployErc20AndInit(
     l1Deployer,
@@ -175,14 +178,7 @@ export const setupNetworks = async (l1Deployer: Signer, l2Deployer: Signer) => {
   }
 }
 
-// CHRIS: TODO: we shouldnt access environment variables all over the place
-const arbGenesisWallet = new Wallet(process.env.ARB_GENESIS_KEY as string)
-console.debug('genesis addr', arbGenesisWallet.address)
-
-export const instantiateBridge = async (
-  l1pkParam?: string,
-  l2PkParam?: string
-): Promise<{
+export const testSetup = async (): Promise<{
   l1Network: L1Network
   l2Network: L2Network
   l1Signer: Signer
@@ -194,62 +190,21 @@ export const instantiateBridge = async (
   l1Deployer: Signer
   l2Deployer: Signer
 }> => {
-  if (!l1pkParam) {
-    if (!pk && !mnemonic)
-      throw new Error('need DEVNET_PRIVKEY or DEV_MNEMONIC env var')
+  const ethProvider = new JsonRpcProvider(config.ethUrl)
+  const arbProvider = new JsonRpcProvider(config.arbUrl)
 
-    if (pk && mnemonic)
-      throw new Error(
-        'You have both a DEVNET_PRIVKEY and DEV_MNEMONIC var set; pick one! '
-      )
-  }
+  const l1Deployer = ethProvider.getSigner(0)
+  const arbGenesisWallet = new Wallet(config.arbGenesisKey)
+  const l2Deployer = arbGenesisWallet.connect(arbProvider)
 
-  const ethProvider = new JsonRpcProvider(ethUrl)
-  const arbProvider = new JsonRpcProvider(arbUrl)
-
-  const ethDeployer = ethProvider.getSigner(0)
-  const arbDeployer = arbGenesisWallet.connect(arbProvider)
-
-  // CHRIS: TODO: this l1signer and the l2signer
-  // CHRIS: TODO: should they be the deployer or the user?
-  const l1Signer = (() => {
-    if (l1pkParam) {
-      return new Wallet(l1pkParam, ethProvider)
-    } else if (mnemonic) {
-      return Wallet.fromMnemonic(mnemonic).connect(ethProvider)
-    } else if (pk) {
-      return new Wallet(pk, ethProvider)
-    } else {
-      throw new Error('impossible path')
-    }
-  })()
-
-  const l2Signer = (() => {
-    if (l2PkParam) {
-      return new Wallet(l2PkParam, arbProvider)
-    } else if (mnemonic) {
-      return Wallet.fromMnemonic(mnemonic).connect(arbProvider)
-    } else if (pk) {
-      return new Wallet(pk, arbProvider)
-    } else {
-      throw new Error('impossible path')
-    }
-  })()
-
-  if (verbose) {
-    console.log('')
-    console.log(
-      '**** Bridger instantiated w/ address',
-      l1Signer.address,
-      '****'
-    )
-    console.log('')
-  }
+  const seed = Wallet.createRandom()
+  const l1Signer = seed.connect(ethProvider)
+  const l2Signer = seed.connect(arbProvider)
 
   let setL1Network: L1Network, setL2Network: L2Network
   try {
-    const l1Network = await getL1Network(ethDeployer)
-    const l2Network = await getL2Network(arbDeployer)
+    const l1Network = await getL1Network(l1Deployer)
+    const l2Network = await getL2Network(l2Deployer)
     setL1Network = l1Network
     setL2Network = l2Network
   } catch (err) {
@@ -273,8 +228,10 @@ export const instantiateBridge = async (
     } else {
       // deploy a new network
       const { l1Network, l2Network } = await setupNetworks(
-        ethDeployer,
-        arbDeployer
+        l1Deployer,
+        l2Deployer,
+        config.ethUrl,
+        config.arbUrl,
       )
       setL1Network = l1Network
       setL2Network = l2Network
@@ -295,7 +252,7 @@ export const instantiateBridge = async (
     adminErc20Bridger,
     ethBridger,
     inboxTools,
-    l1Deployer: ethDeployer,
-    l2Deployer: arbDeployer,
+    l1Deployer,
+    l2Deployer,
   }
 }

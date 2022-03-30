@@ -136,11 +136,6 @@ const mainnetETHBridge: EthBridge = {
   rollup: '0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A',
 }
 
-// CHRIS: TODO: why is it generating two partner chainids?
-// CHRIS: TODO: should be able to load these from a file
-
-// check for the env var? or just try to load?
-
 export const l1Networks: L1Networks = {
   1: {
     chainID: 1,

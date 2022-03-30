@@ -28,14 +28,15 @@ import { L2ToL1MessageStatus } from '../src/lib/message/L2ToL1Message'
 import {
   fundL1,
   fundL2,
-  instantiateBridgeWithRandomWallet,
   skipIfMainnet,
   depositToken,
+  ExpectedGatewayType,
 } from './testHelpers'
 import { L1ToL2MessageStatus, L2Network } from '../src'
 import { Signer, constants, ContractFactory } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { TestCustomTokenL1 } from '../src/lib/abi/TestCustomTokenL1'
+import { testSetup } from '../scripts/testSetup'
 
 const testCustomTokenAbi = [
   {
@@ -580,14 +581,14 @@ describe('Custom ERC20', () => {
 
   before('init', async () => {
     testState = {
-      ...(await instantiateBridgeWithRandomWallet()),
+      ...(await testSetup()),
       l1CustomToken: {} as any,
     }
     await fundL1(testState.l1Signer)
     await fundL2(testState.l2Signer)
   })
 
-  it.only('register custom token', async () => {
+  it('register custom token', async () => {
     const { l1CustomToken: l1Token } = await registerCustomToken(
       testState.l2Network,
       testState.l1Signer,
@@ -607,7 +608,8 @@ describe('Custom ERC20', () => {
       testState.adminErc20Bridger,
       testState.l1Signer,
       testState.l2Signer,
-      L1ToL2MessageStatus.REDEEMED
+      L1ToL2MessageStatus.REDEEMED,
+      ExpectedGatewayType.CUSTOM  
     )
   })
 
@@ -759,8 +761,6 @@ const registerCustomToken = async (
   expect(setTokenTx.status, 'Set token not redeemed.').to.eq(
     L1ToL2MessageStatus.REDEEMED
   )
-  // CHRIS: TODO: remove
-  console.log("wait for status 1")
 
   const setGateways = await l1ToL2Messages[1].waitForStatus()
   expect(setGateways.status, 'Set gateways not redeemed.').to.eq(
@@ -775,13 +775,14 @@ const registerCustomToken = async (
     endL1GatewayAddress,
     'End l1GatewayAddress not equal to l1 custom gateway'
   ).to.eq(l2Network.tokenBridge.l1CustomGateway)
-  const endL2GatewayAddress = await l1GatewayRouter.l1TokenToGateway(
-    l2CustomToken.address
+  
+  const endL2GatewayAddress = await l2GatewayRouter.l1TokenToGateway(
+    l1CustomToken.address
   )
   expect(
     endL2GatewayAddress,
-    'End l2GatewayAddress not equal to l1 custom gateway'
-  ).to.eq(l2Network.tokenBridge.l1CustomGateway)
+    'End l2GatewayAddress not equal to l2 custom gateway'
+  ).to.eq(l2Network.tokenBridge.l2CustomGateway)
 
   const endL1Erc20Address = await l1CustomGateway.l1ToL2Token(
     l1CustomToken.address
@@ -790,6 +791,7 @@ const registerCustomToken = async (
     endL1Erc20Address,
     'End l1Erc20Address not equal l1CustomToken address'
   ).to.eq(l2CustomToken.address)
+
   const endL2Erc20Address = await l2CustomGateway.l1ToL2Token(
     l1CustomToken.address
   )

@@ -112,8 +112,9 @@ export enum L2ToL1MessageStatus {
  * If T is of type Signer then L2ToL1MessageReaderOrWriter<T> will be of
  * type L2ToL1MessageWriter.
  */
-export type L2ToL1MessageReaderOrWriter<T extends SignerOrProvider> =
-  T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
+export type L2ToL1MessageReaderOrWriter<
+  T extends SignerOrProvider
+> = T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
 
 export class L2ToL1Message {
   /**
@@ -284,7 +285,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       topics: topics,
     })
     if (logs.length === 1) {
-      const parsedLog = outboxIface.parseLog(logs[0]).args as unknown as {
+      const parsedLog = (outboxIface.parseLog(logs[0]).args as unknown) as {
         blockHash: string
         outputRoot: string
       }
@@ -347,13 +348,22 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
     super(l1Signer.provider!, outboxAddress, batchNumber, indexInBatch)
   }
 
-  // CHRIS: TODO:
+  // CHRIS: TODO: do below
+  // 1. send the withdrawal transaction
+  // 2. look for the L2toL1Transaction event
+  // 3. this should contain the block hash - use this getBlock()
+  // 4. the mix hash of the block contains the the sendsRoot
+  // 5. Using the send root and the index, form the path? how is that done? need all the sends}
+
+  // CHRIS: TODO: update to below
   // 1. we need to calculate the send root somehow
   // 2. then check if that sendRoot has been populated
   // 3. if it has then we can execute
 
   // 4. unless the item has already been executed, this we can check
   // by looking to see if the specified index was spent
+
+  
 
   /**
    * Executes the L2ToL1Message on L1.

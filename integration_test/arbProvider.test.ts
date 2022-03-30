@@ -18,11 +18,12 @@
 
 import { expect } from 'chai'
 
-import { fundL2, instantiateBridgeWithRandomWallet, skipIfMainnet } from './testHelpers'
+import { fundL2, skipIfMainnet } from './testHelpers'
 import { getRawArbTransactionReceipt } from '../src'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { Wallet } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
+import { testSetup } from '../scripts/testSetup'
 
 describe('ArbProvider', () => {
   beforeEach('skipIfMainnet', async function () {
@@ -31,7 +32,7 @@ describe('ArbProvider', () => {
 
   // CHRIS: TODO: update this test
   it.skip('does find l1 batch info', async () => {
-    const { l2Signer, l1Signer } = await instantiateBridgeWithRandomWallet()
+    const { l2Signer, l1Signer } = await testSetup()
     const l1Provider = l1Signer.provider! as JsonRpcProvider
     const l2Provider = l2Signer.provider! as JsonRpcProvider
 

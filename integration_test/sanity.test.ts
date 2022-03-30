@@ -27,8 +27,8 @@ import { L1CustomGateway__factory } from '../src/lib/abi/factories/L1CustomGatew
 import { L2ERC20Gateway__factory } from '../src/lib/abi/factories/L2ERC20Gateway__factory'
 import { L1ERC20Gateway__factory } from '../src/lib/abi/factories/L1ERC20Gateway__factory'
 
-import { instantiateBridge } from '../scripts/instantiate_bridge'
-import { existentTestERC20 } from './testHelpers'
+import { testSetup } from '../scripts/testSetup'
+import { randomBytes, hexlify } from 'ethers/lib/utils'
 
 const expectIgnoreCase = (expected: string, actual: string) => {
   expect(expected.toLocaleLowerCase()).to.equal(actual.toLocaleLowerCase())
@@ -36,7 +36,7 @@ const expectIgnoreCase = (expected: string, actual: string) => {
 
 describe('sanity checks (read-only)', async () => {
   it('standard gateways public storage vars properly set', async () => {
-    const { l1Signer, l2Signer, l2Network } = await instantiateBridge()
+    const { l1Signer, l2Signer, l2Network } = await testSetup()
     const l1Gateway = await L1ERC20Gateway__factory.connect(
       l2Network.tokenBridge.l1ERC20Gateway,
       l1Signer
@@ -68,7 +68,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('custom gateways public storage vars properly set', async () => {
-    const { l1Signer, l2Signer, l2Network } = await instantiateBridge()
+    const { l1Signer, l2Signer, l2Network } = await testSetup()
     const l1Gateway = await L1CustomGateway__factory.connect(
       l2Network.tokenBridge.l1CustomGateway,
       l1Signer
@@ -95,7 +95,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('weth gateways gateways public storage vars properly set', async () => {
-    const { l1Signer, l2Signer, l2Network } = await instantiateBridge()
+    const { l1Signer, l2Signer, l2Network } = await testSetup()
 
     const l1Gateway = await L1WethGateway__factory.connect(
       l2Network.tokenBridge.l1WethGateway,
@@ -126,7 +126,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('aeWETh public vars properly set', async () => {
-    const { l2Signer, l2Network } = await instantiateBridge()
+    const { l2Signer, l2Network } = await testSetup()
 
     const aeWeth = AeWETH__factory.connect(
       l2Network.tokenBridge.l2Weth,
@@ -141,11 +141,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('l1 gateway router points to right weth gateways', async () => {
-    const {
-      adminErc20Bridger,
-      l1Signer,
-      l2Network,
-    } = await instantiateBridge()
+    const { adminErc20Bridger, l1Signer, l2Network } = await testSetup()
 
     const gateway = await adminErc20Bridger.getL1GatewayAddress(
       l2Network.tokenBridge.l1Weth,
@@ -161,19 +157,25 @@ describe('sanity checks (read-only)', async () => {
       l2Signer,
       l2Network,
       erc20Bridger,
-    } = await instantiateBridge()
+    } = await testSetup()
+
+    const address = hexlify(randomBytes(20))
+
     const erc20L2AddressAsPerL1 = await erc20Bridger.getL2ERC20Address(
-      existentTestERC20,
+      address,
       l1Signer.provider!
     )
     const l2gr = L2GatewayRouter__factory.connect(
       l2Network.tokenBridge.l2GatewayRouter,
       l2Signer.provider!
     )
-    const erc20L2AddressAsPerL2 = await l2gr.calculateL2TokenAddress(
-      existentTestERC20
-    )
+    const erc20L2AddressAsPerL2 = await l2gr.calculateL2TokenAddress(address)
 
     expect(erc20L2AddressAsPerL2).to.equal(erc20L2AddressAsPerL1)
   })
 })
+
+// CHRIS: TODO: sanity test:
+// 1. send an l1 to l2 message
+// 2. calculate the submission cost
+// 3. check how much arrived - it should be exactly the submission cost

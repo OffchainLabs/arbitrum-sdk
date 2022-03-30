@@ -36,11 +36,9 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { ArbTsError } from '../dataEntities/errors'
-import { MessageDeliveredEvent } from '../abi/Bridge'
 import { ethers } from 'ethers'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { InboxMessageDeliveredEvent } from '../abi/Inbox'
-import { getL2Network } from '../..'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -56,11 +54,11 @@ export type L1ContractCallTransaction = L1ContractTransaction<
 >
 
 // CHRIS: TODO: remove and use proper abi
+// CHRIS: TODO: remove all console logging in these arbitrum-sdk
 interface TempMessageDeliveredEvent {
   messageIndex: BigNumber
   sender: string,
   baseFeeL1: BigNumber,
-
 }
 
 export class L1TransactionReceipt implements TransactionReceipt {
@@ -112,9 +110,6 @@ export class L1TransactionReceipt implements TransactionReceipt {
     const iface = new ethers.utils.Interface([
       'event MessageDelivered(      uint256 indexed messageIndex,      bytes32 indexed beforeInboxAcc,      address inbox,      uint8 kind,      address sender,      bytes32 messageDataHash,      uint256 baseFeeL1,      uint64 timestamp  )',
     ])
-
-    // CHRIS: TODO: remove
-    // const messageDeliveredTopic = "0x56a6ba8f7d1bbd65f69c805ab40646c6784bfbfaf5d54a6672f5910e8f2e9e65"
 
     const messageDeliveredTopic = iface.getEventTopic(
       iface.getEvent('MessageDelivered')
@@ -186,7 +181,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     // decode the data field - is been packed so we cant decode the bytes field this way
     const parsed = ethers.utils.defaultAbiCoder.decode(
       [
-        'uint256', // dest
+        'uint256', // dest // CHRIS: TODO: why dont we just encode these as addresses?
         'uint256', // l2 call balue
         'uint256', // msg val
         'uint256', // max submission
@@ -198,7 +193,6 @@ export class L1TransactionReceipt implements TransactionReceipt {
       ],
       inboxMessageDeliveredEvent.data.substring(0, 64 * 9 + 2)
     )
-    // CHRIS: TODO: we shouldnt use getAddress as it does a checksum - which we cant guarantee here
     const destAddress = ethers.utils.getAddress(
       (parsed[0] as BigNumber).toHexString()
     )
@@ -243,12 +237,8 @@ export class L1TransactionReceipt implements TransactionReceipt {
 
     const messages = this.getMessageEvents()
     if (!messages || messages.length === 0) return []
-
-    // CHRIS: TODO: remove this
-    const network = await getL2Network(parseInt(chainID))
-
+    
     return messages.map(mn => {
-      // CHRIS: TODO: tidy up
       const inboxMessageData = this.parseInboxMessage(mn.inboxMessageEvent)
 
       const ticketCreationHash = L1ToL2Message.calculateSubmitRetryableId(

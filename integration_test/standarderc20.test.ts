@@ -26,13 +26,12 @@ import { L2ToL1MessageStatus } from '../src/lib/message/L2ToL1Message'
 import {
   fundL1,
   fundL2,
-  instantiateBridgeWithRandomWallet,
   skipIfMainnet,
   depositToken,
+  ExpectedGatewayType,
 } from './testHelpers'
 import {
   Erc20Bridger,
-  L1ToL2MessageReader,
   L1ToL2MessageStatus,
   L1ToL2MessageWriter,
   L2Network,
@@ -40,8 +39,8 @@ import {
 } from '../src'
 import { Signer } from 'ethers'
 import { TestERC20 } from '../src/lib/abi/TestERC20'
-import { Provider } from '@ethersproject/abstract-provider'
 import { JsonRpcProvider } from '@ethersproject/providers'
+import { testSetup } from '../scripts/testSetup'
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
@@ -60,7 +59,7 @@ describe('standard ERC20', () => {
   }
 
   before('init', async () => {
-    const setup = await instantiateBridgeWithRandomWallet()
+    const setup = await testSetup()
 
     await fundL1(setup.l1Signer)
     await fundL2(setup.l2Signer)
@@ -83,7 +82,8 @@ describe('standard ERC20', () => {
       testState.erc20Bridger,
       testState.l1Signer,
       testState.l2Signer,
-      L1ToL2MessageStatus.REDEEMED
+      L1ToL2MessageStatus.REDEEMED,
+      ExpectedGatewayType.STANDARD
     )
   })
 
@@ -169,6 +169,7 @@ describe('standard ERC20', () => {
       testState.l1Signer,
       testState.l2Signer,
       L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      ExpectedGatewayType.STANDARD,
       {
         maxGas: { base: BigNumber.from(0) },
         maxGasPrice: { base: BigNumber.from(0) },
@@ -186,6 +187,7 @@ describe('standard ERC20', () => {
       testState.l1Signer,
       testState.l2Signer,
       L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      ExpectedGatewayType.STANDARD,
       {
         maxGas: { base: BigNumber.from(5) },
         maxGasPrice: { base: BigNumber.from(5) },
@@ -204,6 +206,7 @@ describe('standard ERC20', () => {
       testState.l1Signer,
       testState.l2Signer,
       L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      ExpectedGatewayType.STANDARD,
       {
         maxGas: { base: BigNumber.from(5) },
         maxGasPrice: { base: BigNumber.from(5) },
@@ -230,10 +233,11 @@ describe('standard ERC20', () => {
       await testState.l2Signer.getAddress()
     )
     // 4 deposits above - increase this number if more deposit tests added
-    const startBalance = depositAmount.mul(4)
-    expect(l2BalanceStart.toNumber(), 'start balance').to.eq(
-      startBalance.toNumber()
-    )
+    const startBalance = depositAmount.mul(3)
+    expect(
+      l2BalanceStart.toNumber(),
+      'start balance not correct, if deposit tests have been added/removed above then they start balance here needs to be adjusted.'
+    ).to.eq(startBalance.toNumber())
 
     const l2GatewayAddr = await testState.erc20Bridger.getL2GatewayAddress(
       testState.l1Token.address,

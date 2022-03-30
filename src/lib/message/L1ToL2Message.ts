@@ -22,11 +22,9 @@ import { Signer } from '@ethersproject/abstract-signer'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
 import { keccak256 } from '@ethersproject/keccak256'
-import { concat, hexlify, zeroPad } from '@ethersproject/bytes'
+import { concat, zeroPad } from '@ethersproject/bytes'
 
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
-import { Inbox__factory } from '../abi/factories/Inbox__factory'
-import { InboxMessageDeliveredEvent } from '../abi/Inbox'
 import { ARB_RETRYABLE_TX_ADDRESS } from '../dataEntities/constants'
 import {
   SignerProviderUtils,
@@ -34,7 +32,6 @@ import {
 } from '../dataEntities/signerOrProvider'
 import { ArbTsError } from '../dataEntities/errors'
 import { ethers, Overrides } from 'ethers'
-import { Interface } from 'ethers/lib/utils'
 import * as arbLib from '../utils/lib'
 import { Address } from '../dataEntities/address'
 import { L2TransactionReceipt } from './L2Transaction'
@@ -102,13 +99,31 @@ export class L1ToL2Message {
     )
   }
 
-  // CHRIS: TODO: tidy args
+  
+  /**
+   * The submit retryable transactions use the typed transaction envelope 2718.
+   * The id of these transactions is the hash of the RLP encoded transaction.
+   * @param l2ChainId 
+   * @param fromAddress 
+   * @param messageNumber 
+   * @param l1BaseFee 
+   * @param destAddress 
+   * @param l2CallValue 
+   * @param l1Value 
+   * @param maxSubmissionCost 
+   * @param excessFeeRefundAddress 
+   * @param callValueRefundAddress 
+   * @param maxGas 
+   * @param gasPriceBid 
+   * @param data 
+   * @returns 
+   */
   public static calculateSubmitRetryableId(
     l2ChainId: BigNumber,
     fromAddress: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
-
+    
     destAddress: string,
     l2CallValue: BigNumber,
     l1Value: BigNumber,
@@ -353,14 +368,10 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       } else throw err
     }
 
-    // CHRIS: TODO: remove this wait - we shouldnt need it right? we could make a batch rpc request? - we shold probably do a waitfortransaction here actually
-    await arbLib.wait(1000)
-
     // 1. we;re getting the original submit retryable
     // 2. then we want to find all calls to redeem right? and return the last one
     const l2TxReceipt =
     (await this.getFirstRedeem(retryableCreationReceipt)) || undefined
-    console.log(retryableCreationReceipt, l2TxReceipt)
 
     const status = await this.receiptsToStatus(
       retryableCreationReceipt,
@@ -415,8 +426,6 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
     super(l2Signer.provider!, retryableCreationId, messageNumber)
     if (!l2Signer.provider) throw new Error('Signer not connected to provider.')
   }
-
-  // CHRIS: TODO: separate ticket - add the other arb retryable functionality
 
   /**
    * Manually redeem the retryable ticket.

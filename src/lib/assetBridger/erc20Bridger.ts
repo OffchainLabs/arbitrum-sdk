@@ -144,12 +144,10 @@ export class Erc20Bridger extends AssetBridger<
   ): Promise<string> {
     await this.checkL1Network(l1Provider)
 
-    const l1GatewayRouter = L1GatewayRouter__factory.connect(
+    return await L1GatewayRouter__factory.connect(
       this.l2Network.tokenBridge.l1GatewayRouter,
       l1Provider
-    )
-
-    return (await l1GatewayRouter.functions.getGateway(erc20L1Address)).gateway
+    ).getGateway(erc20L1Address)
   }
 
   /**
@@ -164,12 +162,10 @@ export class Erc20Bridger extends AssetBridger<
   ): Promise<string> {
     await this.checkL2Network(l2Provider)
 
-    const l2GatewayRouter = L2GatewayRouter__factory.connect(
+    return await L2GatewayRouter__factory.connect(
       this.l2Network.tokenBridge.l2GatewayRouter,
       l2Provider
-    )
-
-    return (await l2GatewayRouter.functions.getGateway(erc20L1Address)).gateway
+    ).getGateway(erc20L1Address)
   }
 
   /**
@@ -419,7 +415,7 @@ export class Erc20Bridger extends AssetBridger<
       amount,
       '0x'
     )
-    
+
     // The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
     // Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
     const estimateGasCallValue = (await this.isWethGateway(
@@ -431,7 +427,7 @@ export class Erc20Bridger extends AssetBridger<
 
     const l2Dest = await l1Gateway.counterpartGateway()
     const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
-    
+
     let tokenGasOverrides: GasOverrides | undefined = retryableGasOverrides
     if (!tokenGasOverrides) tokenGasOverrides = {}
     // we never send l2 call value from l1 for tokens
@@ -446,8 +442,7 @@ export class Erc20Bridger extends AssetBridger<
     }
 
     // 2. get the gas estimates
-    // CHRIS: TODO: should we do this? maybe a better way to get base fee?
-    const baseFee = await l1Signer.provider.getGasPrice()
+    const baseFee = await (await l1Signer.provider.getBlock("latest")).baseFeePerGas!
     const estimates = await gasEstimator.estimateMessage(
       l1GatewayAddress,
       l2Dest,
@@ -656,11 +651,10 @@ export class AdminErc20Bridger extends Erc20Bridger {
       [[l1TokenAddress], [l2TokenAddress]]
     )
 
-    // CHRIS: TODO: should we do this? maybe a better way to get base fee?
-    const baseFee = await l1Signer.provider.getGasPrice()
+    // CHRIS: TODO: is this really the best way to get base fee?
+    const baseFee = await (await l1Signer.provider.getBlock("latest")).baseFeePerGas!
     const setTokenEstimates = await gasPriceEstimator.estimateMessage(
       this.l2Network.tokenBridge.l1CustomGateway,
-      // l1SenderAddress,
       this.l2Network.tokenBridge.l2CustomGateway,
       l2SetTokenCallData,
       Zero,
@@ -673,8 +667,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
       'setGateway',
       [[l1TokenAddress], [this.l2Network.tokenBridge.l1CustomGateway]]
     )
-
-    
 
     const setGatwayEstimates = await gasPriceEstimator.estimateMessage(
       this.l2Network.tokenBridge.l1GatewayRouter,
@@ -779,8 +771,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
   public async setGateways(
     l1Signer: Signer,
     l2Provider: Provider,
-    tokenGateways: TokenAndGateway[],
-    maxGas: BigNumber = BigNumber.from(0)
+    tokenGateways: TokenAndGateway[]
   ): Promise<L1ContractCallTransaction> {
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
       throw new MissingProviderArbTsError('l1Signer')
@@ -788,28 +779,21 @@ export class AdminErc20Bridger extends Erc20Bridger {
     await this.checkL1Network(l1Signer)
     await this.checkL2Network(l2Provider)
 
-    const l2GasPrice = await l2Provider.getGasPrice()
-
     const estimator = new L1ToL2MessageGasEstimator(l2Provider)
-    // CHRIS: TODO: should we do this? maybe a better way to get base fee?
-    const baseFee = await l1Signer.provider.getGasPrice()
-    
+    const baseFee = await (await l1Signer.provider.getBlock("latest")).baseFeePerGas!
+
     const iL2GatewayRouter = L2GatewayRouter__factory.createInterface()
     const l2SetGatewaysCallData = iL2GatewayRouter.encodeFunctionData(
       'setGateway',
-      [tokenGateways.map(tG => tG.tokenAddr), tokenGateways.map(tG => tG.gatewayAddr)]
+      [
+        tokenGateways.map(tG => tG.tokenAddr),
+        tokenGateways.map(tG => tG.gatewayAddr),
+      ]
     )
-
-    // const { submissionPrice } = await estimator.estimateSubmissionPrice(
-    //   baseFee,
-    //   // 20 per address, 100 as buffer/ estimate for any additional calldata
-    //   300 + 20 * (tokenGateways.length * 2)
-    // )
 
     const estimates = await estimator.estimateMessage(
       this.l2Network.tokenBridge.l1GatewayRouter,
       this.l2Network.tokenBridge.l2GatewayRouter,
-
       l2SetGatewaysCallData,
       Zero,
       baseFee

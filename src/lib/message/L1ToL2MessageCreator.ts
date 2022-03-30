@@ -76,8 +76,7 @@ export class L1ToL2MessageCreator {
   ): Promise<L1TransactionReceipt> {
     const sender = await this.getSender()
     const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
-    // CHRIS: TODO: should we do this? maybe a better way to get base fee?
-    const baseFee = await this.l1Signer.provider!.getGasPrice();
+    const baseFee = (await this.l1Signer.provider!.getBlock("latest")).baseFeePerGas!    
     const gasParams = await gasEstimator.estimateMessage(
       sender,
       destAddr,

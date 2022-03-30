@@ -42,10 +42,10 @@ export interface GasOverrides {
 
 const defaultL1ToL2MessageEstimateOptions = {
   // CHRIS: TODO: reasses these defaults, shoud we still be using them?
-  maxSubmissionFeePercentIncrease: DEFAULT_SUBMISSION_PRICE_PERCENT_INCREASE,
+  maxSubmissionFeePercentIncrease: DEFAULT_SUBMISSION_PRICE_PERCENT_INCREASE, //  CHRIS: TODO: 340% seems high
   maxGasPercentIncrease: constants.Zero,
-  maxGasPricePercentIncrease: constants.Zero,
-  sendL2CallValueFromL1: true,
+  maxGasPricePercentIncrease: constants.Zero, // CHRIS: TODO: I think we want to increase this
+  sendL2CallValueFromL1: true, // CHRIS: TODO: remove this?
 }
 
 export interface L1toL2MessageGasValues {
@@ -88,9 +88,7 @@ export class L1ToL2MessageGasEstimator {
     }
   ): Promise<BigNumber> {
     const defaultedOptions = this.applySubmissionPriceDefaults(options)
-
-    const submissionGas = BigNumber.from(callDataSize).mul(6).add(1400).mul(l1BaseFee)
-    const submissionCost = l1BaseFee.mul(submissionGas)
+    const submissionCost = BigNumber.from(callDataSize).mul(6).add(1400).mul(l1BaseFee)
 
     const costWithPadding = this.percentIncrease(
       defaultedOptions.base || submissionCost,
@@ -211,6 +209,7 @@ export class L1ToL2MessageGasEstimator {
     // gas estimate - 114888 100000000 11488800000000
 
     const maxSubmissionPriceBid = await this.estimateSubmissionPrice(
+      // CHRIS: TODO: we defo want base fee here right?
       l1BaseFee,
       utils.hexDataLength(l2CallDataHex),
       options?.maxSubmissionPrice
@@ -234,8 +233,7 @@ export class L1ToL2MessageGasEstimator {
       defaultedOptions.maxGas.percentIncrease
     )
       // CHRIS: TODO: remove mul(2)
-      // .mul(1)
-      // .add(10)
+      .mul(2)
 
     // always ensure the max gas is greater than the min
     const maxGas = calculatedMaxGas.gt(defaultedOptions.maxGas.min)
