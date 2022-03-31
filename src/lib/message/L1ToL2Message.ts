@@ -99,31 +99,30 @@ export class L1ToL2Message {
     )
   }
 
-  
   /**
    * The submit retryable transactions use the typed transaction envelope 2718.
    * The id of these transactions is the hash of the RLP encoded transaction.
-   * @param l2ChainId 
-   * @param fromAddress 
-   * @param messageNumber 
-   * @param l1BaseFee 
-   * @param destAddress 
-   * @param l2CallValue 
-   * @param l1Value 
-   * @param maxSubmissionCost 
-   * @param excessFeeRefundAddress 
-   * @param callValueRefundAddress 
-   * @param maxGas 
-   * @param gasPriceBid 
-   * @param data 
-   * @returns 
+   * @param l2ChainId
+   * @param fromAddress
+   * @param messageNumber
+   * @param l1BaseFee
+   * @param destAddress
+   * @param l2CallValue
+   * @param l1Value
+   * @param maxSubmissionCost
+   * @param excessFeeRefundAddress
+   * @param callValueRefundAddress
+   * @param maxGas
+   * @param gasPriceBid
+   * @param data
+   * @returns
    */
   public static calculateSubmitRetryableId(
     l2ChainId: BigNumber,
     fromAddress: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
-    
+
     destAddress: string,
     l2CallValue: BigNumber,
     l1Value: BigNumber,
@@ -170,7 +169,6 @@ export class L1ToL2Message {
     return ethers.utils.keccak256(rlpEnc)
   }
 
-  
   public static fromRetryableCreationId<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
     retryableCreationId: string,
@@ -308,6 +306,12 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       return L1ToL2MessageStatus.REDEEMED
     }
 
+    // CHRIS: TODO:
+    // 1. we create a ticket with too low
+    // 2. then we redeem it
+    // 3. that means the ticket no longer exists, so a call to isExpired will fail
+    // 4. was the result successful? we know that based on the waitresult?
+
     // not redeemed, has it now expired
     if (await this.isExpired()) {
       return L1ToL2MessageStatus.EXPIRED
@@ -371,7 +375,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     // 1. we;re getting the original submit retryable
     // 2. then we want to find all calls to redeem right? and return the last one
     const l2TxReceipt =
-    (await this.getFirstRedeem(retryableCreationReceipt)) || undefined
+      (await this.getFirstRedeem(retryableCreationReceipt)) || undefined
 
     const status = await this.receiptsToStatus(
       retryableCreationReceipt,

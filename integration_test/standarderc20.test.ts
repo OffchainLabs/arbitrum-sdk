@@ -95,6 +95,7 @@ describe('standard ERC20', () => {
     // CHRIS: TODO: clean up this method
 
     // do a manual redeem - supply enough gas so that the redeem tx succeeds but l2 tx doesnt
+    // CHRIS: TODO: this below should be batched up into a `waitForRedeem`
     const manualRedeem = await message.redeem({ gasLimit })
     const rec = new L2TransactionReceipt(await manualRedeem.wait())
     const redeemScheduledEvents = await rec.getRedeemScheduledEvents()

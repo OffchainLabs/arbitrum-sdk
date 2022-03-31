@@ -41,6 +41,8 @@ describe('Ether', async () => {
     await skipIfMainnet(this)
   })
 
+  // CHRIS: TODO: test a high gas price, what's collected?
+
   // CHRIS: TODO: remove
   it('test call', async () => {
     const { l2Signer, l1Signer } = await testSetup()
