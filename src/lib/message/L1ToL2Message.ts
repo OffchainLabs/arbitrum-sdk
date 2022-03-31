@@ -35,6 +35,7 @@ import { ethers, Overrides } from 'ethers'
 import * as arbLib from '../utils/lib'
 import { Address } from '../dataEntities/address'
 import { L2TransactionReceipt } from './L2Transaction'
+import { Interface } from 'ethers/lib/utils'
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -245,17 +246,30 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     const creationReceipt =
       retryableCreationReceipt ||
       (await this.l2Provider.getTransactionReceipt(this.retryableCreationId))
-
-    if (creationReceipt) {
-      const l2Receipt = new L2TransactionReceipt(creationReceipt)
-      const redeemEvents = l2Receipt.getRedeemScheduledEvents()
+    if (creationReceipt){
+      const creationBlock = creationReceipt.blockNumber
+      const ticketId = creationReceipt.transactionHash
+      const iFace = new Interface([
+        'event RedeemScheduled(     bytes32 indexed ticketId,     bytes32 indexed retryTxHash,     uint64 indexed sequenceNum,     uint64 donatedGas,     address gasDonor )',
+      ])
+      const redeemTopic = iFace.getEventTopic('RedeemScheduled')
+      const redeemEventLogs = await this.l2Provider.getLogs( {fromBlock: creationBlock, toBlock: undefined, topics: [redeemTopic, ticketId]})
+      const redeemEvents = redeemEventLogs.map(
+        r =>
+          (iFace.parseLog(r).args as unknown) as {
+            ticketId: string
+            retryTxHash: string
+            sequenceNum: BigNumber
+            donatedGas: BigNumber
+            gasDonor: string
+          }
+      )
       if (redeemEvents.length === 1) {
         return await this.l2Provider.getTransactionReceipt(
           redeemEvents[0].retryTxHash
         )
       }
     }
-
     return null
   }
 

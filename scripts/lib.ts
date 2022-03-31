@@ -21,7 +21,7 @@ import { ContractReceipt } from '@ethersproject/contracts'
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 import { L1ToL2MessageStatus } from '../src/lib/message/L1ToL2Message'
 import { L1TransactionReceipt } from '../src/lib/message/L1Transaction'
-import { instantiateBridge } from './instantiate_bridge'
+import { testSetup } from '../scripts/testSetup'
 
 export const setStandardGateWays = async (
   tokens: string[]
@@ -40,7 +40,7 @@ export const setGateWays = async (
   overrideGateways: string[] = []
 ): Promise<ContractReceipt> => {
   const { adminErc20Bridger, l1Signer, l2Network, l2Signer } =
-    await instantiateBridge()
+    await testSetup()
   const l1Provider = l1Signer.provider!
   const l2Provider = l2Signer.provider!
   if (tokens.length === 0) {
@@ -123,7 +123,7 @@ export const setGateWays = async (
 }
 
 export const checkRetryableStatus = async (l1Hash: string): Promise<void> => {
-  const { l1Signer, l2Signer } = await instantiateBridge()
+  const { l1Signer, l2Signer } = await testSetup()
   const l1Provider = l1Signer.provider!
   const l2Provider = l2Signer.provider!
   const rec = await l1Provider.getTransactionReceipt(l1Hash)
@@ -134,26 +134,14 @@ export const checkRetryableStatus = async (l1Hash: string): Promise<void> => {
 
   if (!message) throw new Error('no seq nums')
 
-  const autoRedeemHash = message.autoRedeemId
-  const autoRedeemRec = await l2Provider.getTransactionReceipt(autoRedeemHash)
-
-  const redeemTxnHash = message.l2TxHash
-  const redeemTxnRec = await l2Provider.getTransactionReceipt(redeemTxnHash)
+  const redeemTxnRec = await message.getFirstRedeemAttempt()
+  const redeemTxnHash = redeemTxnRec ? redeemTxnRec.transactionHash : "null"
 
   const retryableTicketHash = message.retryableCreationId
 
   const retryableTicketRec = await l2Provider.getTransactionReceipt(
     retryableTicketHash
   )
-
-  console.log('*** autoRedeemHash', autoRedeemHash)
-  console.log(
-    '*** autoRedeem status',
-    autoRedeemRec ? autoRedeemRec.status : autoRedeemRec
-  )
-  if (autoRedeemRec && autoRedeemRec.status !== 1) {
-    console.log('**** autoredeem receipt', autoRedeemRec)
-  }
 
   console.log('*** redeemTxnHash', redeemTxnHash)
   console.log(

@@ -18,9 +18,10 @@
 
 import { ContractReceipt } from '@ethersproject/contracts'
 
-import { instantiateBridge } from './instantiate_bridge'
+import { testSetup } from '../scripts/testSetup'
 import args from './getCLargs'
 import { L1TransactionReceipt } from '../src/lib/message/L1Transaction'
+import { L1ToL2Message, L1ToL2MessageReader, L1ToL2MessageStatus, L1ToL2MessageWriter } from '../src'
 
 if (!args.txid) {
   throw new Error('Include txid (--txid 0xmytxid)')
@@ -33,14 +34,22 @@ if (!l1Txn) {
 }
 
 ;(async () => {
-  const { l1Signer, l2Signer } = await instantiateBridge()
+  const { l1Signer, l2Signer } = await testSetup()
   const l1Provider = l1Signer.provider!
   const l1Receipt = new L1TransactionReceipt(
     await l1Provider.getTransactionReceipt(l1Txn)
   )
-  const l1ToL2Message = await l1Receipt.getL1ToL2Message(l2Signer, l1Signer.provider!)
-  const res = await l1ToL2Message.redeem()
-  const rec = await res.wait()
-  console.log('done:', rec)
-  console.log(rec.status === 1 ? 'success!' : 'failed...')
+  const l1ToL2Message = await l1Receipt.getL1ToL2Message(l2Signer)
+  if (l1ToL2Message instanceof L1ToL2MessageWriter){
+    const redeemStatus = (await l1ToL2Message.waitForStatus()).status
+    if (redeemStatus == L1ToL2MessageStatus.REDEEMED){
+      const redeemTx = await l1ToL2Message.getFirstRedeemAttempt()
+      console.log(`Already redeemed ${redeemTx!.transactionHash}`)
+      return;
+    }
+    const res = await l1ToL2Message.redeem()
+    const rec = await res.wait()
+    console.log('done:', rec)
+    console.log(rec.status === 1 ? 'success!' : 'failed...')
+  }
 })()
