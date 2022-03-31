@@ -15,7 +15,8 @@
  */
 /* eslint-env node */
 'use strict'
-import chai from "chai";
+import '@nomiclabs/hardhat-ethers'
+import chai, { assert } from "chai";
 import { expect } from 'chai'
 import { Wallet } from '@ethersproject/wallet'
 import { ethers } from 'hardhat'
@@ -23,7 +24,7 @@ import { formatBytes32String } from 'ethers/lib/utils'
 import { solidity } from "ethereum-waffle";
 chai.use(solidity);
 
-describe('Ether', async () => {
+describe('Nitro', async () => {
   
     it('Can Deploy NitroTest', async () => {
       const [ signer ] = await ethers.getSigners();
@@ -61,4 +62,50 @@ describe('Ether', async () => {
       const tx = await contract.functions.create2(salt, {gasLimit: fnGasEstimate})
     })
 
+    it('Fail deploy with value refund', async () => {
+      const [ signer ] = await ethers.getSigners();
+      
+      const deploydata = "0x01"
+      const beforeBalance = await signer.getBalance()
+      const tx = await signer.sendTransaction({data: deploydata, gasLimit:"0x10000000", value: 1})
+      let receipt
+      try{ 
+        receipt = await tx.wait()
+        assert(false)
+      }catch(error: any){ 
+        receipt = error.receipt
+        expect(beforeBalance.sub(await signer.getBalance())).eq(receipt.gasUsed.mul(receipt.effectiveGasPrice))
+      }
+    })
+
+    it('StorageSpam', async () => {
+      const [ signer ] = await ethers.getSigners();
+      
+      const Factory = await ethers.getContractFactory('StorageSpam')
+      const deployGasEstimate = await ethers.provider.estimateGas(Factory.getDeployTransaction())
+      const contract = await Factory.deploy({gasLimit: deployGasEstimate})
+
+      const x = 888
+      const fnGasEstimate = await ethers.provider.estimateGas(await contract.populateTransaction.spam(x))
+      const tx = await contract.functions.spam(x)
+    })
+
+    it('ECRecover', async () => {
+      const [ signer ] = await ethers.getSigners();
+      const randomSigner = (new Wallet(formatBytes32String((Math.random()*10000).toString())))
+
+      const Factory = await ethers.getContractFactory('ECRecover')
+      const deployGasEstimate = await ethers.provider.estimateGas(Factory.getDeployTransaction())
+      const contract = await Factory.deploy({gasLimit: deployGasEstimate})
+
+      const test = 0x1234567890
+      const testBytes = ethers.utils.arrayify(test)
+      const messageHash = ethers.utils.hashMessage(testBytes)
+      const signature = await randomSigner.signMessage(testBytes)
+      const split = ethers.utils.splitSignature(signature)
+
+      const recoveredAddress = ethers.utils.verifyMessage(testBytes, signature)
+      expect(randomSigner.address).to.equal(recoveredAddress)
+      expect(await contract.callStatic.recover(messageHash, split.v, split.r, split.s)).to.equal(randomSigner.address)
+    })
 })

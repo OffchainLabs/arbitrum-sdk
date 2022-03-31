@@ -27,3 +27,22 @@ contract CreateTwo {
         require(address(newContract) == address(uint160(uint(hash))), "address unexpected");
     }
 }
+
+contract StorageSpam {
+    uint256[] public data;
+    function spam(uint x) external{
+        for(uint256 i; i < x;){
+            data.push(i);
+            unchecked {
+                ++i;
+            }    
+        }
+        
+    }
+}
+
+contract ECRecover {
+    function recover(bytes32 msgHash, uint8 v, bytes32 r, bytes32 s) external pure returns (address) {
+        return ecrecover(msgHash, v, r, s);
+    }
+}
