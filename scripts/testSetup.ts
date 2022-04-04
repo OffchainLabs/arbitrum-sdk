@@ -171,16 +171,21 @@ export const setupNetworks = async (
   // we add it here rather than in deployBridge because
   // we have access to an adminerc20bridger
   const adminErc20Bridger = new AdminErc20Bridger(l2Network)
-  await (
-    await (
-      await adminErc20Bridger.setGateways(l1Deployer, l2Deployer.provider!, [
-        {
-          gatewayAddr: l2Network.tokenBridge.l1WethGateway,
-          tokenAddr: l2Network.tokenBridge.l1Weth,
-        },
-      ])
-    ).wait()
-  ).waitForL2(l2Deployer)
+  const l1receipt = await (
+    await adminErc20Bridger.setGateways(l1Deployer, l2Deployer.provider!, [
+      {
+        gatewayAddr: l2Network.tokenBridge.l1WethGateway,
+        tokenAddr: l2Network.tokenBridge.l1Weth,
+      },
+    ])
+  ).wait()
+  // add a brief delay here to avoid a race condition that
+  // the retryable ticket is redeem right after the first checkk
+  // but before the `isExpired` check, so that the `isExpired`
+  // revert due to the ticket is already redeemed and removed
+  // TODO: pin block for all rpc call in waitForStatus check?
+  await new Promise(f => setTimeout(f, 2000));
+  await l1receipt.waitForL2(l2Deployer)
 
   return {
     l1Network,
