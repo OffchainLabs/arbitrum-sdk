@@ -26,6 +26,24 @@ chai.use(solidity);
 
 describe('Nitro', async () => {
   
+    it('Send a lot of Txs', async () => {
+      const [ signer ] = await ethers.getSigners()
+      const numAcct = 10
+      const numTx = 100
+      const signers = []
+      for (let i = 0; i < numAcct; i++) {
+        const randomSigner = Wallet.createRandom().connect(signer.provider!)
+        await signer.sendTransaction({to: randomSigner.address, value: ethers.utils.parseEther("0.01")})
+        signers.push(randomSigner)
+      }
+      for (let j = 0; j < numTx; j++) {
+        const tasks = signers.map(s=>s.sendTransaction({to: s.address}))
+        await Promise.all(tasks)
+        process.stdout.write(".")
+      }
+      console.log('')
+    })
+
     it('Can Deploy NitroTest', async () => {
       const [ signer ] = await ethers.getSigners();
       
