@@ -247,7 +247,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       retryableCreationReceipt ||
       (await this.l2Provider.getTransactionReceipt(this.retryableCreationId))
     if (creationReceipt){
-      const creationBlock = creationReceipt.blockNumber
+      const creationBlockNumber = creationReceipt.blockNumber
       const ticketId = creationReceipt.transactionHash
       const iFace = new Interface([
         'event RedeemScheduled(     bytes32 indexed ticketId,     bytes32 indexed retryTxHash,     uint64 indexed sequenceNum,     uint64 donatedGas,     address gasDonor )',
@@ -255,17 +255,17 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       const redeemTopic = iFace.getEventTopic('RedeemScheduled')
 
       let redeemEventLogs: ethers.providers.Log[] = []
-      let fromBlockNumber: number = creationBlock
+      let fromBlockNumber: number = creationBlockNumber
       let fromBlock = await this.l2Provider.getBlock(fromBlockNumber)
       let increment: number = 1000
-      const createBlock = await this.l2Provider.getBlock(creationBlock)
+      const creationBlock = await this.l2Provider.getBlock(creationBlockNumber)
       const maxBlock = await this.l2Provider.getBlockNumber()
       while(fromBlockNumber <= maxBlock) {
         const toBlockNumber = Math.min(fromBlockNumber + increment, maxBlock)
         redeemEventLogs = await this.l2Provider.getLogs( {fromBlock: fromBlockNumber, toBlock: toBlockNumber, topics: [redeemTopic, ticketId]})
         if (redeemEventLogs.length != 0) break
         const toBlock = await this.l2Provider.getBlock(toBlockNumber)
-        if ((toBlock.timestamp - createBlock.timestamp) > RETRYABLELIFETIMESECONDS) break
+        if ((toBlock.timestamp - creationBlock.timestamp) > RETRYABLELIFETIMESECONDS) break
         const processedSeconds = (toBlock.timestamp - fromBlock.timestamp)
         if (processedSeconds != 0) {
           // find the increment that cover ~ 1 day
