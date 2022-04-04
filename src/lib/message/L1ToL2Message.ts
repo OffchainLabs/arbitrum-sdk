@@ -25,7 +25,7 @@ import { keccak256 } from '@ethersproject/keccak256'
 import { concat, zeroPad } from '@ethersproject/bytes'
 
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
-import { ARB_RETRYABLE_TX_ADDRESS } from '../dataEntities/constants'
+import { ARB_RETRYABLE_TX_ADDRESS, RETRYABLELIFETIMESECONDS } from '../dataEntities/constants'
 import {
   SignerProviderUtils,
   SignerOrProvider,
@@ -253,7 +253,27 @@ export class L1ToL2MessageReader extends L1ToL2Message {
         'event RedeemScheduled(     bytes32 indexed ticketId,     bytes32 indexed retryTxHash,     uint64 indexed sequenceNum,     uint64 donatedGas,     address gasDonor )',
       ])
       const redeemTopic = iFace.getEventTopic('RedeemScheduled')
-      const redeemEventLogs = await this.l2Provider.getLogs( {fromBlock: creationBlock, toBlock: undefined, topics: [redeemTopic, ticketId]})
+
+      let redeemEventLogs: ethers.providers.Log[] = []
+      let fromBlockNumber: number = creationBlock
+      let fromBlock = await this.l2Provider.getBlock(fromBlockNumber)
+      let increment: number = 1000
+      const createBlock = await this.l2Provider.getBlock(creationBlock)
+      const maxBlock = await this.l2Provider.getBlockNumber()
+      while(fromBlockNumber <= maxBlock) {
+        const toBlockNumber = Math.min(fromBlockNumber + increment, maxBlock)
+        redeemEventLogs = await this.l2Provider.getLogs( {fromBlock: fromBlockNumber, toBlock: toBlockNumber, topics: [redeemTopic, ticketId]})
+        if (redeemEventLogs.length != 0) break
+        const toBlock = await this.l2Provider.getBlock(toBlockNumber)
+        if ((toBlock.timestamp - createBlock.timestamp) > RETRYABLELIFETIMESECONDS) break
+        const processedSeconds = (toBlock.timestamp - fromBlock.timestamp)
+        if (processedSeconds != 0) {
+          // find the increment that cover ~ 1 day
+          increment = increment * RETRYABLELIFETIMESECONDS / 7 / processedSeconds
+        }
+        fromBlockNumber = toBlockNumber + 1
+        fromBlock = toBlock
+      }
       const redeemEvents = redeemEventLogs.map(
         r =>
           (iFace.parseLog(r).args as unknown) as {
