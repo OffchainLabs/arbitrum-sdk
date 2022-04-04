@@ -22,6 +22,7 @@ import { testSetup } from '../scripts/testSetup'
 import args from './getCLargs'
 import { L1TransactionReceipt } from '../src/lib/message/L1Transaction'
 import { L1ToL2Message, L1ToL2MessageReader, L1ToL2MessageStatus, L1ToL2MessageWriter } from '../src'
+import { fundL2 } from '../integration_test/testHelpers'
 
 if (!args.txid) {
   throw new Error('Include txid (--txid 0xmytxid)')
@@ -35,6 +36,8 @@ if (!l1Txn) {
 
 ;(async () => {
   const { l1Signer, l2Signer } = await testSetup()
+  // TODO: Should use the PRIVKEY envvar signer directly
+  fundL2(l2Signer)
   const l1Provider = l1Signer.provider!
   const l1Receipt = new L1TransactionReceipt(
     await l1Provider.getTransactionReceipt(l1Txn)
