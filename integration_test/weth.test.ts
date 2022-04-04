@@ -22,12 +22,7 @@ import { parseEther } from '@ethersproject/units'
 
 import { AeWETH__factory } from '../src/lib/abi/factories/AeWETH__factory'
 
-import {
-  fundL1,
-  fundL2,
-  skipIfMainnet,
-  prettyLog,
-} from './testHelpers'
+import { fundL1, fundL2, skipIfMainnet, prettyLog } from './testHelpers'
 import { L2ToL1MessageStatus } from '../src/lib/message/L2ToL1Message'
 import { Erc20Bridger, L1ToL2MessageStatus } from '../src'
 import { Wallet } from 'ethers'
@@ -42,12 +37,7 @@ describe('WETH', async () => {
     const wethToWrap = parseEther('0.00001')
     const wethToWithdraw = parseEther('0.00000001')
 
-    const {
-      l2Network,
-      l1Signer,
-      l2Signer,
-      erc20Bridger,
-    } = await testSetup()
+    const { l2Network, l1Signer, l2Signer, erc20Bridger } = await testSetup()
     await fundL2(l2Signer)
 
     const l2Weth = AeWETH__factory.connect(
@@ -70,13 +60,13 @@ describe('WETH', async () => {
 
     const outgoingMessages = await withdrawRec.getL2ToL1Messages(
       l1Signer.provider!,
-      l2Signer.provider!
+      l2Network
     )
     const firstMessage = outgoingMessages[0]
     expect(firstMessage, 'getWithdrawalsInL2Transaction came back empty').to
       .exist
 
-    const messageStatus = await firstMessage.status()
+    const messageStatus = await firstMessage.status(l2Signer.provider!)
     expect(
       messageStatus === L2ToL1MessageStatus.UNCONFIRMED,
       `weth withdraw status returned ${messageStatus}`
@@ -126,12 +116,7 @@ describe('WETH', async () => {
   })
 
   it('deposits WETH', async () => {
-    const {
-      l2Network,
-      l1Signer,
-      l2Signer,
-      erc20Bridger,
-    } = await testSetup()
+    const { l2Network, l1Signer, l2Signer, erc20Bridger } = await testSetup()
 
     const l1WethAddress = l2Network.tokenBridge.l1Weth
 
@@ -204,18 +189,16 @@ describe('WETH', async () => {
     expect(
       testWalletL2Balance.eq(wethToDeposit),
       'ether balance not updated after deposit'
-    ).to.be.true 
-    
+    ).to.be.true
+
     await fundL2(l2Signer)
     const l2Weth = AeWETH__factory.connect(l2Token.address, l2Signer)
     const randomAddr = Wallet.createRandom().address
     await (
-      await l2Weth
-        .connect(l2Signer)
-        .withdrawTo(randomAddr, testWalletL2Balance)
+      await l2Weth.connect(l2Signer).withdrawTo(randomAddr, testWalletL2Balance)
     ).wait()
     const afterBalance = await l2Signer.provider!.getBalance(randomAddr)
-    
+
     expect(afterBalance.toString(), 'balance after').to.eq(
       wethToDeposit.toString()
     )

@@ -19,7 +19,7 @@
 import { JsonRpcProvider, TransactionReceipt } from '@ethersproject/providers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Log, Provider } from '@ethersproject/abstract-provider'
-import { ContractTransaction, providers } from 'ethers'
+import { Contract, ContractTransaction, providers } from 'ethers'
 import { getL2Network, L2Network } from '../dataEntities/networks'
 import { ArbTsError } from '../dataEntities/errors'
 import {
@@ -159,22 +159,14 @@ export class L2TransactionReceipt implements TransactionReceipt {
    */
   public async getL2ToL1Messages<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    l2Provider: Provider
+    l2Network: L2Network
   ): Promise<L2ToL1MessageReaderOrWriter<T>[]>
   public async getL2ToL1Messages<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    l2Provider: Provider
+    l2Network: L2Network
   ): Promise<L2ToL1MessageReader[] | L2ToL1MessageWriter[]> {
     const provider = SignerProviderUtils.getProvider(l1SignerOrProvider)
     if (!provider) throw new Error('Signer not connected to provider.')
-
-    const l2Network = await getL2Network(l2Provider)
-
-    // CHRIS: TODO: put this in the arb provider
-    const l2Block = await (l2Provider! as JsonRpcProvider).send(
-      'eth_getBlockByHash',
-      [this.blockHash, false]
-    )
 
     return this.getL2ToL1Events().map(log => {
       const outboxAddr = this.getOutboxAddr(
@@ -186,8 +178,6 @@ export class L2TransactionReceipt implements TransactionReceipt {
         l1SignerOrProvider,
         outboxAddr,
         log,
-        l2Block['sendRoot'],
-        BigNumber.from(l2Block['sendCount'])
       )
     })
   }

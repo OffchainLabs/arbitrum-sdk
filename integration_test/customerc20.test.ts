@@ -634,12 +634,12 @@ describe('Custom ERC20', () => {
     const message = (
       await withdrawRec.getL2ToL1Messages(
         testState.l1Signer.provider!,
-        testState.l2Signer.provider!
+        testState.l2Network
       )
     )[0]
     expect(message, 'withdrawEventData not found').to.exist
 
-    const messageStatus = await message.status()
+    const messageStatus = await message.status(testState.l2Signer.provider!)
     expect(
       messageStatus === L2ToL1MessageStatus.UNCONFIRMED,
       `custom token withdraw status returned ${messageStatus}`

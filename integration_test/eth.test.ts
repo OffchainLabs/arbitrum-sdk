@@ -268,7 +268,7 @@ describe('Ether', async () => {
     })
 
     const withdrawMessage = (
-      await withdrawEthRec.getL2ToL1Messages(l1Signer.provider!, l2Signer.provider!)
+      await withdrawEthRec.getL2ToL1Messages(l1Signer.provider!, l2Network)
     )[0]
     expect(
       withdrawMessage,
@@ -290,8 +290,7 @@ describe('Ether', async () => {
     return
     // CHRIS: TODO: below we need to look for the outbox entry
 
-    const messageStatus = await withdrawMessage.status(
-    )
+    const messageStatus = await withdrawMessage.status(l2Signer.provider!)
     expect(
       messageStatus,
       `eth withdraw status returned ${messageStatus}`

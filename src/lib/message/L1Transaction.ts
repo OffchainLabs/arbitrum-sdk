@@ -39,6 +39,7 @@ import { ArbTsError } from '../dataEntities/errors'
 import { ethers } from 'ethers'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { InboxMessageDeliveredEvent } from '../abi/Inbox'
+import { hexZeroPad } from '@ethersproject/bytes'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -57,8 +58,8 @@ export type L1ContractCallTransaction = L1ContractTransaction<
 // CHRIS: TODO: remove all console logging in these arbitrum-sdk
 interface TempMessageDeliveredEvent {
   messageIndex: BigNumber
-  sender: string,
-  baseFeeL1: BigNumber,
+  sender: string
+  baseFeeL1: BigNumber
 }
 
 export class L1TransactionReceipt implements TransactionReceipt {
@@ -116,7 +117,9 @@ export class L1TransactionReceipt implements TransactionReceipt {
     )
     return this.logs
       .filter(log => log.topics[0] === messageDeliveredTopic)
-      .map(l => iface.parseLog(l).args as unknown as TempMessageDeliveredEvent)
+      .map(
+        l => (iface.parseLog(l).args as unknown) as TempMessageDeliveredEvent
+      )
   }
 
   /**
@@ -194,19 +197,18 @@ export class L1TransactionReceipt implements TransactionReceipt {
       inboxMessageDeliveredEvent.data.substring(0, 64 * 9 + 2)
     )
 
-
     // CHRIS: TODO: we shouldnt decode addresses this way - since leading zeros get lost
     const destAddress = ethers.utils.getAddress(
-      (parsed[0] as BigNumber).toHexString()
+      hexZeroPad((parsed[0] as BigNumber).toHexString(), 20)
     )
     const l2CallValue = parsed[1] as BigNumber
     const l1Value = parsed[2] as BigNumber
     const maxSubmissionCost = parsed[3] as BigNumber
     const excessFeeRefundAddress = ethers.utils.getAddress(
-      (parsed[4] as BigNumber).toHexString()
+      hexZeroPad((parsed[4] as BigNumber).toHexString(), 20)
     )
     const callValueRefundAddress = ethers.utils.getAddress(
-      (parsed[5] as BigNumber).toHexString()
+      hexZeroPad((parsed[5] as BigNumber).toHexString(), 20)
     )
     const maxGas = parsed[6] as BigNumber
     const gasPriceBid = parsed[7] as BigNumber
@@ -230,17 +232,17 @@ export class L1TransactionReceipt implements TransactionReceipt {
    * @param l2SignerOrProvider
    */
   public async getL1ToL2Messages<T extends SignerOrProvider>(
-    l2SignerOrProvider: T,
+    l2SignerOrProvider: T
   ): Promise<L1ToL2MessageReaderOrWriter<T>[]>
   public async getL1ToL2Messages<T extends SignerOrProvider>(
-    l2SignerOrProvider: T,
+    l2SignerOrProvider: T
   ): Promise<L1ToL2MessageReader[] | L1ToL2MessageWriter[]> {
     const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
     const chainID = (await provider.getNetwork()).chainId.toString()
 
     const messages = this.getMessageEvents()
     if (!messages || messages.length === 0) return []
-    
+
     return messages.map(mn => {
       const inboxMessageData = this.parseInboxMessage(mn.inboxMessageEvent)
       console.log(inboxMessageData)
@@ -285,9 +287,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     l2SignerOrProvider: T,
     messageIndex?: number
   ): Promise<L1ToL2MessageReader | L1ToL2MessageWriter> {
-    const allL1ToL2Messages = await this.getL1ToL2Messages(
-      l2SignerOrProvider,
-    )
+    const allL1ToL2Messages = await this.getL1ToL2Messages(l2SignerOrProvider)
     const messageCount = allL1ToL2Messages.length
     if (!messageCount)
       throw new ArbTsError(
@@ -393,9 +393,7 @@ export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
       message: L1ToL2MessageReaderOrWriter<T>
     } & L1ToL2MessageWaitResult
   > {
-    const message = (
-      await this.getL1ToL2Messages(l2SignerOrProvider)
-    )[0]
+    const message = (await this.getL1ToL2Messages(l2SignerOrProvider))[0]
     const res = await message.waitForStatus(confirmations, timeout)
 
     return {
@@ -434,9 +432,7 @@ export class L1ContractCallTransactionReceipt extends L1TransactionReceipt {
       message: L1ToL2MessageReaderOrWriter<T>
     } & L1ToL2MessageWaitResult
   > {
-    const message = (
-      await this.getL1ToL2Messages(l2SignerOrProvider)
-    )[0]
+    const message = (await this.getL1ToL2Messages(l2SignerOrProvider))[0]
     const res = await message.waitForStatus(confirmations, timeout)
 
     return {

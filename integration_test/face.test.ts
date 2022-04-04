@@ -39,7 +39,7 @@ import { JsonRpcProvider } from '@ethersproject/providers'
 import { BigNumber, Contract } from 'ethers'
 import { testSetup } from '../scripts/testSetup'
 import { hexZeroPad } from '@ethersproject/bytes'
-import { L2TransactionReceipt } from '../src'
+import { L2Network, L2TransactionReceipt } from '../src'
 import { Interface, solidityKeccak256 } from 'ethers/lib/utils'
 dotenv.config()
 
@@ -338,7 +338,7 @@ describe('outbox proof', () => {
     // hash with each other? do i need to test that? would be nice?
   }
 
-  it('run withdrawal', async () => {
+  it.only('run withdrawal', async () => {
     const { l2Signer, ethBridger, l2Network, l1Signer } = await testSetup()
     const arbSysInterface = new Interface([
       'event L2ToL1Transaction(address caller, address indexed destination, uint256 indexed hash, uint256 indexed position, uint256 indexInBatch, uint256 arbBlockNum, uint256 ethBlockNum, uint256 timestamp, uint256 callvalue, bytes data)',
@@ -351,8 +351,9 @@ describe('outbox proof', () => {
     await fundL1(l1Signer)
 
     await fundL2(l2Signer)
+
     // const ethToWithdraw = parseEther('0.00000002')
-    // // let l2Tx: L2TransactionReceipt
+    let l2Tx: L2TransactionReceipt
     // for (let index = 0; index < 8; index++) {
     //   const withdrawEthRes = await ethBridger.withdraw({
     //     destinationAddress: await l1Signer.getAddress(),
@@ -361,30 +362,39 @@ describe('outbox proof', () => {
     //   })
     //   const withdrawEthRec = await withdrawEthRes.wait()
     //   const l2WithdrawRec = new L2TransactionReceipt(withdrawEthRec)
-    //   // l2Tx = l2WithdrawRec
+    //   l2Tx = l2WithdrawRec
 
     //   const events = l2WithdrawRec.getL2ToL1Events()
     //   console.log(
     //     'events',
+    //     l2WithdrawRec.blockHash,
     //     l2WithdrawRec.transactionHash,
     //     events.map(e => e.position.toHexString()),
     //     events.map(e => e.hash.toHexString())
     //   )
     // }
 
-    const txHash = "0x27279eba4dc77da7cc85b734c1b43107a42c61bf775459458aee889c722c3a3b";
-    const l2Tx = new L2TransactionReceipt(await l2Signer.provider!.getTransactionReceipt(txHash))
+    // return
 
-    const message = (
-      await l2Tx!.getL2ToL1Messages(l1Signer, l2Signer.provider!)
-    )[0]
-    console.log('waiting for ready', new Date(Date.now()).toUTCString())
-    await message.waitUntilReadyForExecute(5000)
-    console.log('ready executing')
+    const txHash =
+      '0x4b1f5ad2872e5ec83482c225c81d2ef2fd353bbb8de8eb9c24181b17ef792829'
+    // const txHash2 =
+    //   '0xd56349a32a62054b73ad02a8a430efe3bb3ac6c6c35791bd74e8468c21799009'
+    l2Tx = new L2TransactionReceipt(
+      await l2Signer.provider!.getTransactionReceipt(txHash)
+    )
+    // const l2Tx2 = new L2TransactionReceipt(
+    //   await l2Signer.provider!.getTransactionReceipt(txHash2)
+    // )
+
+    const message = (await l2Tx!.getL2ToL1Messages(l1Signer, l2Network!))[0]
+
+    await message.waitUntilReadyToExecute(5000, l2Signer.provider!)
+
     console.log('bal before', (await l1Signer.getBalance()).toString())
-    const tx = await message.execute()
+    const tx = await message.execute(l2Signer.provider!)
     const withdrawRec = await tx.wait()
-    console.log(withdrawRec)
+
     console.log('bal after', (await l1Signer.getBalance()).toString())
   })
 

@@ -39,6 +39,7 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { wait } from '../utils/lib'
+import { getL2Network, L2Network } from '../dataEntities/networks'
 
 export interface MessageBatchProofInfo {
   /**
@@ -134,41 +135,22 @@ export class L2ToL1Message {
   // CHRIS: TODO: docs on these - update the constructor
   protected constructor(
     // CHRIS: TODO: update these params
-    public readonly event: L2ToL1Event,
-    public readonly rootHash: string,
-    public readonly rootSize: BigNumber
+    public readonly event: L2ToL1Event
   ) {}
 
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
     outboxAddress: string,
-    event: L2ToL1Event,
-    rootHash: string,
-    rootSize: BigNumber
+    event: L2ToL1Event
   ): L2ToL1MessageReaderOrWriter<T>
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
     outboxAddress: string,
-    event: L2ToL1Event,
-    rootHash: string,
-    rootSize: BigNumber
+    event: L2ToL1Event
   ): L2ToL1MessageReader | L2ToL1MessageWriter {
     return SignerProviderUtils.isSigner(l1SignerOrProvider)
-      ? new L2ToL1MessageWriter(
-          l1SignerOrProvider,
-          outboxAddress,
-          event,
-          rootHash,
-          rootSize
-        )
-      : new L2ToL1MessageReader(
-          l1SignerOrProvider,
-          outboxAddress,
-          event,
-          rootHash,
-
-          rootSize
-        )
+      ? new L2ToL1MessageWriter(l1SignerOrProvider, outboxAddress, event)
+      : new L2ToL1MessageReader(l1SignerOrProvider, outboxAddress, event)
   }
 
   public static async getL2ToL1MessageLogs(
@@ -205,52 +187,41 @@ export class L2ToL1Message {
  * Provides read-only access for l2-to-l1-messages
  */
 export class L2ToL1MessageReader extends L2ToL1Message {
+  private sendRootHash?: string
+  private sendRootSize?: BigNumber
+
   constructor(
     protected readonly l1Provider: Provider,
     protected readonly outboxAddress: string,
-    event: L2ToL1Event,
-    rootHash: string,
-    rootSize: BigNumber
+    event: L2ToL1Event
   ) {
-    super(event, rootHash, rootSize)
+    super(event)
   }
 
-  public static async tryGetProof(
-    l2Provider: Provider,
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber
-  ): Promise<MessageBatchProofInfo | null> {
-    const nodeInterface = NodeInterface__factory.connect(
-      NODE_INTERFACE_ADDRESS,
-      l2Provider
-    )
-    try {
-      return nodeInterface.lookupMessageBatchProof(batchNumber, indexInBatch)
-    } catch (e) {
-      const expectedError = "batch doesn't exist"
-      const err = e as Error & { error: Error }
-      const actualError =
-        err && (err.message || (err.error && err.error.message))
-      if (actualError.includes(expectedError)) return null
-      else throw e
-    }
-  }
+  public async getOutboxProof(l2Provider: Provider) {
+    await this.updateSendRoot(this.l1Provider, l2Provider)
+    // CHRIS: TODO: update to proper error message
+    if (!this.sendRootSize)
+      throw new ArbTsError('Node not confirmed, cannot get proof.')
 
-  public async getOutboxProof() {
     // CHRIS: TODO: proper ABI
     const nodeInterface = new ethers.Contract(
       NODE_INTERFACE_ADDRESS,
       [
-        'function constructOutboxProof(bytes32 send, bytes32 root, uint64 size, uint64 leaf) external view',
+        'function constructOutboxProof(bytes32 send, bytes32 root, uint64 size, uint64 leaf) external view returns (bytes32 sendAtLeaf, bytes32 rootAtSize, bytes32[] memory proof)',
       ],
-      this.l1Provider
+      l2Provider
     )
 
     const outboxProofParams = await nodeInterface.callStatic[
       'constructOutboxProof'
-    ](constants.HashZero, constants.HashZero, this.rootSize.toNumber(), this.event.position.toNumber())
-
-    return outboxProofParams[2] as string[]
+    ](
+      constants.HashZero,
+      constants.HashZero,
+      this.sendRootSize.toNumber(),
+      this.event.position.toNumber()
+    )
+    return outboxProofParams['proof'] as string[]
   }
 
   /**
@@ -258,7 +229,11 @@ export class L2ToL1MessageReader extends L2ToL1Message {
    * In order to check if the message has been executed proof info must be provided.
    * @returns
    */
-  public async status(): Promise<L2ToL1MessageStatus> {
+  public async status(l2Provider: Provider): Promise<L2ToL1MessageStatus> {
+    // CHRIS: TODO: this is quite an ugly way to do this
+    await this.updateSendRoot(this.l1Provider, l2Provider)
+    if (!this.sendRootHash) return L2ToL1MessageStatus.UNCONFIRMED
+
     const outbox = new Contract(
       this.outboxAddress,
       [
@@ -269,14 +244,65 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       this.l1Provider
     )
 
-    const l2BlockHash = await outbox['roots'](this.rootHash)
-    // CHRIS: TODO: what to do with NOT_FOUND status?
-    if (l2BlockHash === constants.HashZero) {
-      return L2ToL1MessageStatus.UNCONFIRMED
-    }
-
     const spent = await outbox['spent'](this.event.position)
     return spent ? L2ToL1MessageStatus.EXECUTED : L2ToL1MessageStatus.CONFIRMED
+  }
+
+  // CHRIS: TODO: tidy up this function - it's also very inefficient
+  private async updateSendRoot(l1Provider: Provider, l2Provider: Provider) {
+    if (this.sendRootHash) return
+
+    const l2Network = await getL2Network(l2Provider)
+
+    const rollup = new Contract(
+      l2Network.ethBridge.rollup,
+      [
+        'function latestConfirmed() public view returns (uint64)',
+        'event NodeConfirmed(uint64 indexed nodeNum, bytes32 blockHash, bytes32 sendRoot)',
+      ],
+      l1Provider
+    )
+
+    // CHRIS: TODO: could confirm in between these calls
+    const latestConfirmedNode = await rollup['latestConfirmed']()
+    const currentBlock = await l1Provider.getBlockNumber()
+
+    // now get the block hash and sendroot for that node
+    const logs = await l1Provider.getLogs({
+      address: rollup.address,
+      fromBlock: Math.max(
+        currentBlock - Math.floor((4 * 7 * 24 * 60 * 60) / 14),
+        0
+      ),
+      toBlock: 'latest',
+      topics: rollup.interface.encodeFilterTopics(
+        rollup.interface.getEvent('NodeConfirmed'),
+        [latestConfirmedNode]
+      ),
+    })
+
+    if (logs.length !== 1) throw new Error('missing logs')
+
+    const parsedLog = (rollup.interface.parseLog(logs[0]).args as unknown) as {
+      nodeNum: BigNumber
+      sendRoot: string
+      blockHash: string
+    }
+    
+    const l2Block = await (l2Provider! as ethers.providers.JsonRpcProvider).send(
+      'eth_getBlockByHash',
+      [parsedLog.blockHash, false]
+    )
+    if (l2Block['sendRoot'] !== parsedLog.sendRoot) {
+      console.log(l2Block['sendRoot'], parsedLog.sendRoot)
+      throw new Error('send roots')
+    }
+
+    const sendRootSize = BigNumber.from(l2Block['sendCount'])
+    if (sendRootSize.gt(this.event.position)) {
+      this.sendRootSize = sendRootSize
+      this.sendRootHash = parsedLog.sendRoot
+    }
   }
 
   /**
@@ -286,8 +312,11 @@ export class L2ToL1MessageReader extends L2ToL1Message {
    * @param retryDelay
    * @returns
    */
-  public async waitUntilReadyForExecute(retryDelay = 500): Promise<void> {
-    const status = await this.status()
+  public async waitUntilReadyToExecute(
+    retryDelay = 500,
+    l2Provider: Provider
+  ): Promise<void> {
+    const status = await this.status(l2Provider)
     if (
       status === L2ToL1MessageStatus.CONFIRMED ||
       status === L2ToL1MessageStatus.EXECUTED
@@ -295,9 +324,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       return
     } else {
       await wait(retryDelay)
-      console.log("waiting for ready recurse", new Date(Date.now()).toUTCString())
-
-      await this.waitUntilReadyForExecute(retryDelay)
+      await this.waitUntilReadyToExecute(retryDelay, l2Provider)
     }
   }
 }
@@ -309,27 +336,10 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
   constructor(
     private readonly l1Signer: Signer,
     outboxAddress: string,
-    event: L2ToL1Event,
-    rootHash: string,
-    rootSize: BigNumber
+    event: L2ToL1Event
   ) {
-    super(l1Signer.provider!, outboxAddress, event, rootHash, rootSize)
+    super(l1Signer.provider!, outboxAddress, event)
   }
-
-  // CHRIS: TODO: do below
-  // 1. send the withdrawal transaction
-  // 2. look for the L2toL1Transaction event
-  // 3. this should contain the block hash - use this getBlock()
-  // 4. the mix hash of the block contains the the sendsRoot
-  // 5. Using the send root and the index, form the path? how is that done? need all the sends}
-
-  // CHRIS: TODO: update to below
-  // 1. we need to calculate the send root somehow
-  // 2. then check if that sendRoot has been populated
-  // 3. if it has then we can execute
-
-  // 4. unless the item has already been executed, this we can check
-  // by looking to see if the specified index was spent
 
   /**
    * Executes the L2ToL1Message on L1.
@@ -337,15 +347,14 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
    * corresponding assertion is confirmed.
    * @returns
    */
-  public async execute(): Promise<ContractTransaction> {
-    const status = await this.status()
+  public async execute(l2Provider: Provider): Promise<ContractTransaction> {
+    const status = await this.status(l2Provider)
     if (status !== L2ToL1MessageStatus.CONFIRMED) {
       throw new ArbTsError(
         `Cannot execute message. Status is: ${status} but must be ${L2ToL1MessageStatus.CONFIRMED}.`
       )
     }
-    const proof = await this.getOutboxProof()
-    console.log(proof)
+    const proof = await this.getOutboxProof(l2Provider)
 
     // CHRIS: TODO: proper ABI throughout this file - search for new Contract and new Interface?
     const outbox = new Contract(
@@ -358,7 +367,7 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
       this.l1Signer
     )
 
-    // CHRIS: TODO: gas overrides?
+    // CHRIS: TODO: provide gas override options?
     return await outbox['executeTransaction'](
       proof,
       this.event.position,

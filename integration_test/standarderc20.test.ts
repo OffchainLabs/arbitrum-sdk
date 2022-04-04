@@ -75,7 +75,7 @@ describe('standard ERC20', () => {
     testState = { ...setup, l1Token: testToken }
   })
 
-  it('deposits erc20 (with L2 Eth funding)', async () => {
+  it('deposits erc20', async () => {
     await depositToken(
       depositAmount,
       testState.l1Token.address,
@@ -270,13 +270,13 @@ describe('standard ERC20', () => {
 
     const outgoingMessages = await withdrawRec.getL2ToL1Messages(
       testState.l1Signer.provider!,
-      testState.l2Signer.provider!
+      testState.l2Network
     )
     const firstMessage = outgoingMessages[0]
     expect(firstMessage, 'getWithdrawalsInL2Transaction came back empty').to
       .exist
 
-    const messageStatus = await firstMessage.status()
+    const messageStatus = await firstMessage.status(testState.l2Signer.provider!)
 
     expect(
       messageStatus,
