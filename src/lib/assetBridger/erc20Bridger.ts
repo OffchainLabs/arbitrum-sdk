@@ -551,19 +551,11 @@ export class Erc20Bridger extends AssetBridger<
       this.l2Network.tokenBridge.l2GatewayRouter,
       params.l2Signer
     )
-
-    await l2GatewayRouter.callStatic[
-      'outboundTransfer(address,address,uint256,bytes)'
-    ](params.erc20l1Address, to, params.amount, '0x', {
-      ...(params.overrides || {}),
-      // gasLimit: 3000000,
-    })
-
+    
     return (estimate ? l2GatewayRouter.estimateGas : l2GatewayRouter.functions)[
       'outboundTransfer(address,address,uint256,bytes)'
     ](params.erc20l1Address, to, params.amount, '0x', {
       ...(params.overrides || {}),
-      // gasLimit: 3000000,
     })
   }
 
@@ -669,6 +661,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     )
 
     const setGatwayEstimates = await gasPriceEstimator.estimateMessage(
+      // these addresses are wrong? where the transaction actually coming from
       this.l2Network.tokenBridge.l1GatewayRouter,
       this.l2Network.tokenBridge.l2GatewayRouter,
       l2SetGatewaysCallData,
@@ -804,6 +797,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
       l1Signer
     )
 
+    // CHRIS: TODO: get rid of this
     await l1GatewayRouter.callStatic.setGateways(
       tokenGateways.map(tG => tG.tokenAddr),
       tokenGateways.map(tG => tG.gatewayAddr),

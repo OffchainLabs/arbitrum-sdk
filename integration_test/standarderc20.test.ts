@@ -112,48 +112,51 @@ describe('standard ERC20', () => {
       retryRec?.transactionHash,
     ])
 
-    const eg1 = BigNumber.from(rec1.effectiveGasPrice)
-    const l1GasUsed1 = BigNumber.from(rec1.l1GasUsed)
-    const totalGasUsed1 = BigNumber.from(rec1.gasUsed)
-    const eg2 = BigNumber.from(rec2.effectiveGasPrice)
-    const l1GasUsed2 = BigNumber.from(rec2.l1GasUsed)
-    const totalGasUsed2 = BigNumber.from(rec2.gasUsed)
+    console.log(rec2)
+    throw new Error("hello")
 
-    const feeData1 = await testState.l1Signer.provider!.getFeeData()
-    const feeData2 = await testState.l2Signer.provider!.getFeeData()
+    // const eg1 = BigNumber.from(rec1.effectiveGasPrice)
+    // const l1GasUsed1 = BigNumber.from(rec1.l1GasUsed)
+    // const totalGasUsed1 = BigNumber.from(rec1.gasUsed)
+    // const eg2 = BigNumber.from(rec2.effectiveGasPrice)
+    // const l1GasUsed2 = BigNumber.from(rec2.l1GasUsed)
+    // const totalGasUsed2 = BigNumber.from(rec2.gasUsed)
 
-    console.log(
-      'base fee l1',
-      (
-        await testState.l1Signer.provider!.getBlock('latest')
-      )?.baseFeePerGas?.toNumber()
-    )
-    console.log(
-      'base fee l2',
-      (
-        await testState.l2Signer.provider!.getBlock('latest')
-      )?.baseFeePerGas?.toNumber()
-    )
-    console.log(
-      'feedata 1',
-      feeData1.maxFeePerGas!.toString(),
-      feeData1.maxPriorityFeePerGas!.toString()
-    )
-    console.log(
-      'feedata 2',
-      feeData2.maxFeePerGas!.toString(),
-      feeData2.maxPriorityFeePerGas!.toString()
-    )
-    console.log(
-      eg1.toString(),
-      l1GasUsed1.toString(),
-      totalGasUsed1.sub(l1GasUsed1).toString(),
-      totalGasUsed1.mul(eg1).toString(),
-      eg2.toString(),
-      l1GasUsed2.toString(),
-      totalGasUsed2.sub(l1GasUsed2).toString(),
-      totalGasUsed2.mul(eg2).toString()
-    )
+    // const feeData1 = await testState.l1Signer.provider!.getFeeData()
+    // const feeData2 = await testState.l2Signer.provider!.getFeeData()
+
+    // console.log(
+    //   'base fee l1',
+    //   (
+    //     await testState.l1Signer.provider!.getBlock('latest')
+    //   )?.baseFeePerGas?.toNumber()
+    // )
+    // console.log(
+    //   'base fee l2',
+    //   (
+    //     await testState.l2Signer.provider!.getBlock('latest')
+    //   )?.baseFeePerGas?.toNumber()
+    // )
+    // console.log(
+    //   'feedata 1',
+    //   feeData1.maxFeePerGas!.toString(),
+    //   feeData1.maxPriorityFeePerGas!.toString()
+    // )
+    // console.log(
+    //   'feedata 2',
+    //   feeData2.maxFeePerGas!.toString(),
+    //   feeData2.maxPriorityFeePerGas!.toString()
+    // )
+    // console.log(
+    //   eg1.toString(),
+    //   l1GasUsed1.toString(),
+    //   totalGasUsed1.sub(l1GasUsed1).toString(),
+    //   totalGasUsed1.mul(eg1).toString(),
+    //   eg2.toString(),
+    //   l1GasUsed2.toString(),
+    //   totalGasUsed2.sub(l1GasUsed2).toString(),
+    //   totalGasUsed2.mul(eg2).toString()
+    // )
 
     expect(retryRec!.blockHash, 'redeemed in same block').to.eq(rec.blockHash)
     expect(retryRec!.to, 'redeemed in same block').to.eq(
@@ -199,7 +202,7 @@ describe('standard ERC20', () => {
   })
 
   // CHRIS: TODO: add this back in
-  it.skip('deposit with low funds, fails first redeem, succeeds seconds', async () => {
+  it('deposit with low funds, fails first redeem, succeeds seconds', async () => {
     const { waitRes } = await depositToken(
       depositAmount,
       testState.l1Token.address,
@@ -267,13 +270,13 @@ describe('standard ERC20', () => {
 
     const outgoingMessages = await withdrawRec.getL2ToL1Messages(
       testState.l1Signer.provider!,
-      testState.l2Network
+      testState.l2Signer.provider!
     )
     const firstMessage = outgoingMessages[0]
     expect(firstMessage, 'getWithdrawalsInL2Transaction came back empty').to
       .exist
 
-    const messageStatus = await firstMessage.status(null, withdrawRec.blockHash)
+    const messageStatus = await firstMessage.status()
 
     expect(
       messageStatus,

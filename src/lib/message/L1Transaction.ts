@@ -193,6 +193,9 @@ export class L1TransactionReceipt implements TransactionReceipt {
       ],
       inboxMessageDeliveredEvent.data.substring(0, 64 * 9 + 2)
     )
+
+
+    // CHRIS: TODO: we shouldnt decode addresses this way - since leading zeros get lost
     const destAddress = ethers.utils.getAddress(
       (parsed[0] as BigNumber).toHexString()
     )
@@ -240,6 +243,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     
     return messages.map(mn => {
       const inboxMessageData = this.parseInboxMessage(mn.inboxMessageEvent)
+      console.log(inboxMessageData)
 
       const ticketCreationHash = L1ToL2Message.calculateSubmitRetryableId(
         BigNumber.from(chainID),

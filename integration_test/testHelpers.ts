@@ -128,6 +128,7 @@ export const depositToken = async (
   ).to.eq(finalBridgeTokenBalance.toNumber())
 
   const waitRes = await depositRec.waitForL2(l2Signer)
+
   expect(waitRes.status, 'Unexpected status').to.eq(expectedStatus)
   if (!!retryableOverrides) {
     return {

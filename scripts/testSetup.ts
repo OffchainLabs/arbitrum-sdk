@@ -68,13 +68,6 @@ export const getCustomNetworks = async (
     Rollup: string
   }
 
-  // CHRIS: TODO: remove below
-  console.log(parsedDeploymentData)
-
-  const inbox = Inbox__factory.connect(parsedDeploymentData.Inbox, l1Provider)
-  const br1 = await inbox.bridge()
-  console.log(br1)
-
   const rollup = RollupAdminFacet__factory.connect(
     parsedDeploymentData.Rollup,
     l1Provider

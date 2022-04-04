@@ -245,7 +245,7 @@ describe('Ether', async () => {
   it('withdraw Ether transaction succeeds', async () => {
     const { l2Network, l2Signer, l1Signer, ethBridger } = await testSetup()
     await fundL2(l2Signer)
-    const ethToWithdraw = parseEther('0.00002')
+    const ethToWithdraw = parseEther('0.00000002')
     const initialBalance = await l2Signer.getBalance()
 
     const withdrawEthRes = await ethBridger.withdraw({
@@ -268,7 +268,7 @@ describe('Ether', async () => {
     })
 
     const withdrawMessage = (
-      await withdrawEthRec.getL2ToL1Messages(l1Signer.provider!, l2Network)
+      await withdrawEthRec.getL2ToL1Messages(l1Signer.provider!, l2Signer.provider!)
     )[0]
     expect(
       withdrawMessage,
@@ -291,8 +291,6 @@ describe('Ether', async () => {
     // CHRIS: TODO: below we need to look for the outbox entry
 
     const messageStatus = await withdrawMessage.status(
-      null,
-      withdrawEthRec.blockHash
     )
     expect(
       messageStatus,

@@ -16,13 +16,11 @@
 /* eslint-env node */
 'use strict'
 
-import { TransactionReceipt } from '@ethersproject/providers'
+import { JsonRpcProvider, TransactionReceipt } from '@ethersproject/providers'
 import { BigNumber } from '@ethersproject/bignumber'
-import { Log } from '@ethersproject/abstract-provider'
-import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
-import { L2ToL1TransactionEvent } from '../abi/ArbSys'
+import { Log, Provider } from '@ethersproject/abstract-provider'
 import { ContractTransaction, providers } from 'ethers'
-import { L2Network } from '../dataEntities/networks'
+import { getL2Network, L2Network } from '../dataEntities/networks'
 import { ArbTsError } from '../dataEntities/errors'
 import {
   SignerProviderUtils,
@@ -33,6 +31,7 @@ import {
   L2ToL1MessageReaderOrWriter,
   L2ToL1Message,
   L2ToL1MessageWriter,
+  L2ToL1Event,
 } from './L2ToL1Message'
 import { getRawArbTransactionReceipt } from '../..'
 import { Interface } from 'ethers/lib/utils'
@@ -84,15 +83,17 @@ export class L2TransactionReceipt implements TransactionReceipt {
    * Get an L2ToL1Transaction events created by this transaction
    * @returns
    */
-  public getL2ToL1Events(): L2ToL1TransactionEvent['args'][] {
-    const iface = ArbSys__factory.createInterface()
+  public getL2ToL1Events(): L2ToL1Event[] {
+    // CHRIS: TODO: use the proper event and ABI
+    // const iface = ArbSys__factory.createInterface()
+    const iface = new Interface([
+      'event L2ToL1Transaction( address caller, address indexed destination, uint256 indexed hash, uint256 indexed position, uint256 indexInBatch, uint256 arbBlockNum, uint256 ethBlockNum, uint256 timestamp, uint256 callvalue, bytes data    );',
+    ])
     const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
     const eventTopic = iface.getEventTopic(l2ToL1Event)
     const logs = this.logs.filter(log => log.topics[0] === eventTopic)
 
-    return logs.map(
-      log => iface.parseLog(log).args as L2ToL1TransactionEvent['args']
-    )
+    return logs.map(log => (iface.parseLog(log).args as unknown) as L2ToL1Event)
   }
 
   /**
@@ -158,23 +159,35 @@ export class L2TransactionReceipt implements TransactionReceipt {
    */
   public async getL2ToL1Messages<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    l2Network: L2Network
+    l2Provider: Provider
   ): Promise<L2ToL1MessageReaderOrWriter<T>[]>
   public async getL2ToL1Messages<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    l2Network: L2Network
+    l2Provider: Provider
   ): Promise<L2ToL1MessageReader[] | L2ToL1MessageWriter[]> {
     const provider = SignerProviderUtils.getProvider(l1SignerOrProvider)
     if (!provider) throw new Error('Signer not connected to provider.')
 
-    return this.getL2ToL1Events().map(log => {
-      const outboxAddr = this.getOutboxAddr(l2Network, log.batchNumber)
+    const l2Network = await getL2Network(l2Provider)
 
-      return L2ToL1Message.fromBatchNumber(
+    // CHRIS: TODO: put this in the arb provider
+    const l2Block = await (l2Provider! as JsonRpcProvider).send(
+      'eth_getBlockByHash',
+      [this.blockHash, false]
+    )
+
+    return this.getL2ToL1Events().map(log => {
+      const outboxAddr = this.getOutboxAddr(
+        l2Network,
+        BigNumber.from(1) // log.batchNumber, CHRIS: TODO: broken
+      )
+
+      return L2ToL1Message.fromEvent(
         l1SignerOrProvider,
         outboxAddr,
-        log.batchNumber,
-        log.indexInBatch
+        log,
+        l2Block['sendRoot'],
+        BigNumber.from(l2Block['sendCount'])
       )
     })
   }

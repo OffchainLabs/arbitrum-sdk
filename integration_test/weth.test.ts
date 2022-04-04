@@ -70,13 +70,13 @@ describe('WETH', async () => {
 
     const outgoingMessages = await withdrawRec.getL2ToL1Messages(
       l1Signer.provider!,
-      l2Network
+      l2Signer.provider!
     )
     const firstMessage = outgoingMessages[0]
     expect(firstMessage, 'getWithdrawalsInL2Transaction came back empty').to
       .exist
 
-    const messageStatus = await firstMessage.status(null, withdrawRec.blockHash)
+    const messageStatus = await firstMessage.status()
     expect(
       messageStatus === L2ToL1MessageStatus.UNCONFIRMED,
       `weth withdraw status returned ${messageStatus}`

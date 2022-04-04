@@ -31,7 +31,7 @@ import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
-import { ContractTransaction, ethers } from 'ethers'
+import { constants, Contract, ContractTransaction, ethers } from 'ethers'
 import { EventFetcher } from '../utils/eventFetcher'
 import { ArbTsError } from '../dataEntities/errors'
 import {
@@ -106,6 +106,20 @@ export enum L2ToL1MessageStatus {
   EXECUTED,
 }
 
+// CHRIS: TODO: delete later when we have the proper event
+export type L2ToL1Event = {
+  caller: string
+  destination: string
+  hash: BigNumber
+  position: BigNumber
+  indexInBatch: BigNumber
+  arbBlockNum: BigNumber
+  ethBlockNum: BigNumber
+  timestamp: BigNumber
+  callvalue: BigNumber
+  data: string
+}
+
 /**
  * Conditional type for Signer or Provider. If T is of type Provider
  * then L2ToL1MessageReaderOrWriter<T> will be of type L2ToL1MessageReader.
@@ -117,45 +131,43 @@ export type L2ToL1MessageReaderOrWriter<
 > = T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
 
 export class L2ToL1Message {
-  /**
-   * The number of the batch this message is part of
-   */
-  public readonly batchNumber: BigNumber
+  // CHRIS: TODO: docs on these - update the constructor
+  protected constructor(
+    // CHRIS: TODO: update these params
+    public readonly event: L2ToL1Event,
+    public readonly rootHash: string,
+    public readonly rootSize: BigNumber
+  ) {}
 
-  /**
-   * The index of this message in the batch
-   */
-  public readonly indexInBatch: BigNumber
-
-  protected constructor(batchNumber: BigNumber, indexInBatch: BigNumber) {
-    this.batchNumber = batchNumber
-    this.indexInBatch = indexInBatch
-  }
-
-  public static fromBatchNumber<T extends SignerOrProvider>(
+  public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
     outboxAddress: string,
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber
+    event: L2ToL1Event,
+    rootHash: string,
+    rootSize: BigNumber
   ): L2ToL1MessageReaderOrWriter<T>
-  public static fromBatchNumber<T extends SignerOrProvider>(
+  public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
     outboxAddress: string,
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber
+    event: L2ToL1Event,
+    rootHash: string,
+    rootSize: BigNumber
   ): L2ToL1MessageReader | L2ToL1MessageWriter {
     return SignerProviderUtils.isSigner(l1SignerOrProvider)
       ? new L2ToL1MessageWriter(
           l1SignerOrProvider,
           outboxAddress,
-          batchNumber,
-          indexInBatch
+          event,
+          rootHash,
+          rootSize
         )
       : new L2ToL1MessageReader(
           l1SignerOrProvider,
           outboxAddress,
-          batchNumber,
-          indexInBatch
+          event,
+          rootHash,
+
+          rootSize
         )
   }
 
@@ -196,15 +208,11 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   constructor(
     protected readonly l1Provider: Provider,
     protected readonly outboxAddress: string,
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber
+    event: L2ToL1Event,
+    rootHash: string,
+    rootSize: BigNumber
   ) {
-    super(batchNumber, indexInBatch)
-  }
-
-  private async outboxEntryExists() {
-    const outbox = IOutbox__factory.connect(this.outboxAddress, this.l1Provider)
-    return await outbox.outboxEntryExists(this.batchNumber)
+    super(event, rootHash, rootSize)
   }
 
   public static async tryGetProof(
@@ -228,93 +236,47 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     }
   }
 
-  /**
-   * Get the execution proof for this message. Returns null if the batch does not exist yet.
-   * @param l2Provider
-   * @returns
-   */
-  public async tryGetProof(
-    l2Provider: Provider
-  ): Promise<MessageBatchProofInfo | null> {
-    return await L2ToL1MessageReader.tryGetProof(
-      l2Provider,
-      this.batchNumber,
-      this.indexInBatch
+  public async getOutboxProof() {
+    // CHRIS: TODO: proper ABI
+    const nodeInterface = new ethers.Contract(
+      NODE_INTERFACE_ADDRESS,
+      [
+        'function constructOutboxProof(bytes32 send, bytes32 root, uint64 size, uint64 leaf) external view',
+      ],
+      this.l1Provider
     )
-  }
 
-  /**
-   * Check if given outbox message has already been executed
-   */
-  public async hasExecuted(proofInfo: MessageBatchProofInfo): Promise<boolean> {
-    const outbox = Outbox__factory.connect(this.outboxAddress, this.l1Provider)
-    try {
-      await outbox.callStatic.executeTransaction(
-        this.batchNumber,
-        proofInfo.proof,
-        proofInfo.path,
-        proofInfo.l2Sender,
-        proofInfo.l1Dest,
-        proofInfo.l2Block,
-        proofInfo.l1Block,
-        proofInfo.timestamp,
-        proofInfo.amount,
-        proofInfo.calldataForL1
-      )
-      return false
-    } catch (err) {
-      const e = err as Error
-      if (e?.message?.toString().includes('ALREADY_SPENT')) return true
-      if (e?.message?.toString().includes('NO_OUTBOX_ENTRY')) return false
-      throw e
-    }
-  }
+    const outboxProofParams = await nodeInterface.callStatic[
+      'constructOutboxProof'
+    ](constants.HashZero, constants.HashZero, this.rootSize.toNumber(), this.event.position.toNumber())
 
-  // CHRIS: TODO: blockhash should already be in this hash
-  public async tryGetSendRoot(l2BlockHash: string): Promise<string | null> {
-    // CHRIS: TODO: do this properly
-    const outboxIface = new ethers.utils.Interface([
-      'event SendRootUpdated(bytes32 indexed blockHash, bytes32 indexed outputRoot)',
-    ])
-    const topics = outboxIface.encodeFilterTopics(
-      outboxIface.getEvent('SendRootUpdated'),
-      [l2BlockHash]
-    )
-    const logs = await this.l1Provider.getLogs({
-      address: this.outboxAddress,
-      topics: topics,
-    })
-    if (logs.length === 1) {
-      const parsedLog = (outboxIface.parseLog(logs[0]).args as unknown) as {
-        blockHash: string
-        outputRoot: string
-      }
-      return parsedLog.outputRoot
-    } else return null
+    return outboxProofParams[2] as string[]
   }
 
   /**
    * Get the status of this message
    * In order to check if the message has been executed proof info must be provided.
-   * @param proofInfo
    * @returns
    */
-  public async status(
-    proofInfo: MessageBatchProofInfo | null,
-    l2BlockHash: string
-  ): Promise<L2ToL1MessageStatus> {
-    if (proofInfo) {
-      const messageExecuted = await this.hasExecuted(proofInfo)
-      if (messageExecuted) {
-        return L2ToL1MessageStatus.EXECUTED
-      }
+  public async status(): Promise<L2ToL1MessageStatus> {
+    const outbox = new Contract(
+      this.outboxAddress,
+      [
+        'function executeTransaction(bytes32[] calldata proof, uint256 index, address l2Sender, address to, uint256 l2Block, uint256 l1Block, uint256 l2Timestamp, uint256 value, bytes calldata data) public',
+        'function spent(uint256) public view returns(bool)',
+        'function roots(bytes32) public view returns(bytes32)',
+      ],
+      this.l1Provider
+    )
+
+    const l2BlockHash = await outbox['roots'](this.rootHash)
+    // CHRIS: TODO: what to do with NOT_FOUND status?
+    if (l2BlockHash === constants.HashZero) {
+      return L2ToL1MessageStatus.UNCONFIRMED
     }
 
-    const sendRootExists = await this.tryGetSendRoot(l2BlockHash)
-
-    return sendRootExists
-      ? L2ToL1MessageStatus.CONFIRMED
-      : L2ToL1MessageStatus.UNCONFIRMED
+    const spent = await outbox['spent'](this.event.position)
+    return spent ? L2ToL1MessageStatus.EXECUTED : L2ToL1MessageStatus.CONFIRMED
   }
 
   /**
@@ -324,13 +286,18 @@ export class L2ToL1MessageReader extends L2ToL1Message {
    * @param retryDelay
    * @returns
    */
-  public async waitUntilOutboxEntryCreated(retryDelay = 500): Promise<void> {
-    const exists = await this.outboxEntryExists()
-    if (exists) {
+  public async waitUntilReadyForExecute(retryDelay = 500): Promise<void> {
+    const status = await this.status()
+    if (
+      status === L2ToL1MessageStatus.CONFIRMED ||
+      status === L2ToL1MessageStatus.EXECUTED
+    ) {
       return
     } else {
       await wait(retryDelay)
-      await this.waitUntilOutboxEntryCreated(retryDelay)
+      console.log("waiting for ready recurse", new Date(Date.now()).toUTCString())
+
+      await this.waitUntilReadyForExecute(retryDelay)
     }
   }
 }
@@ -342,10 +309,11 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
   constructor(
     private readonly l1Signer: Signer,
     outboxAddress: string,
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber
+    event: L2ToL1Event,
+    rootHash: string,
+    rootSize: BigNumber
   ) {
-    super(l1Signer.provider!, outboxAddress, batchNumber, indexInBatch)
+    super(l1Signer.provider!, outboxAddress, event, rootHash, rootSize)
   }
 
   // CHRIS: TODO: do below
@@ -363,40 +331,44 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
   // 4. unless the item has already been executed, this we can check
   // by looking to see if the specified index was spent
 
-  
-
   /**
    * Executes the L2ToL1Message on L1.
    * Will throw an error if the outbox entry has not been created, which happens when the
    * corresponding assertion is confirmed.
    * @returns
    */
-  public async execute(
-    proofInfo: MessageBatchProofInfo,
-    // CHRIS: TODO: remove
-    blockHash: string
-  ): Promise<ContractTransaction> {
-    const status = await this.status(proofInfo, blockHash)
+  public async execute(): Promise<ContractTransaction> {
+    const status = await this.status()
     if (status !== L2ToL1MessageStatus.CONFIRMED) {
       throw new ArbTsError(
         `Cannot execute message. Status is: ${status} but must be ${L2ToL1MessageStatus.CONFIRMED}.`
       )
     }
+    const proof = await this.getOutboxProof()
+    console.log(proof)
 
-    const outbox = Outbox__factory.connect(this.outboxAddress, this.l1Signer)
-    // We can predict and print number of missing blocks
-    // if not challenged
-    return await outbox.functions.executeTransaction(
-      this.batchNumber,
-      proofInfo.proof,
-      proofInfo.path,
-      proofInfo.l2Sender,
-      proofInfo.l1Dest,
-      proofInfo.l2Block,
-      proofInfo.l1Block,
-      proofInfo.timestamp,
-      proofInfo.amount,
-      proofInfo.calldataForL1
+    // CHRIS: TODO: proper ABI throughout this file - search for new Contract and new Interface?
+    const outbox = new Contract(
+      this.outboxAddress,
+      [
+        'function executeTransaction(   bytes32[] calldata proof,   uint256 index,   address l2Sender,   address to,   uint256 l2Block,   uint256 l1Block,   uint256 l2Timestamp,   uint256 value,   bytes calldata data) public',
+        'function spent(uint256) public view returns(bool)',
+        'function roots(bytes32) public view returns(bytes32)',
+      ],
+      this.l1Signer
+    )
+
+    // CHRIS: TODO: gas overrides?
+    return await outbox['executeTransaction'](
+      proof,
+      this.event.position,
+      this.event.caller,
+      this.event.destination,
+      this.event.arbBlockNum,
+      this.event.ethBlockNum,
+      this.event.timestamp,
+      this.event.callvalue,
+      this.event.data
     )
   }
 }

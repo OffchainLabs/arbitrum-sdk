@@ -13,7 +13,7 @@ async function main() {
   const { l1Network, l2Network } = await setupNetworks(
     ethDeployer,
     arbDeployer,
-    config.arbUrl,
+    config.ethUrl,
     config.arbUrl
   )
 

@@ -43,7 +43,7 @@ export interface GasOverrides {
 const defaultL1ToL2MessageEstimateOptions = {
   // CHRIS: TODO: reasses these defaults, shoud we still be using them?
   maxSubmissionFeePercentIncrease: DEFAULT_SUBMISSION_PRICE_PERCENT_INCREASE, //  CHRIS: TODO: 340% seems high
-  maxGasPercentIncrease: constants.Zero,
+  maxGasPercentIncrease: BigNumber.from(50), // CHRIS: TODO: back to zero after bug fixed
   maxGasPricePercentIncrease: constants.Zero, // CHRIS: TODO: I think we want to increase this
   sendL2CallValueFromL1: true, // CHRIS: TODO: remove this?
 }
@@ -88,13 +88,20 @@ export class L1ToL2MessageGasEstimator {
     }
   ): Promise<BigNumber> {
     const defaultedOptions = this.applySubmissionPriceDefaults(options)
-    const submissionCost = BigNumber.from(callDataSize).mul(6).add(1400).mul(l1BaseFee)
+    const submissionCost = BigNumber.from(callDataSize)
+      .mul(6)
+      .add(1400)
+      .mul(l1BaseFee)
 
     const costWithPadding = this.percentIncrease(
       defaultedOptions.base || submissionCost,
       defaultedOptions.percentIncrease
     )
-    console.log("submission cost", l1BaseFee.toString(), costWithPadding.toString())
+    console.log(
+      'submission cost',
+      l1BaseFee.toString(),
+      costWithPadding.toString()
+    )
     return costWithPadding
   }
 
@@ -130,6 +137,16 @@ export class L1ToL2MessageGasEstimator {
     const iface = new Interface([
       'function estimateRetryableTicket(address sender,uint256 deposit,address to,uint256 l2CallValue,address excessFeeRefundAddress,address callValueRefundAddress,bytes calldata data)',
     ])
+
+    console.log(
+      sender,
+      senderDeposit,
+      destAddr,
+      l2CallValue,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
+      calldata
+    )
 
     return await this.l2Provider.estimateGas({
       to: NODE_INTERFACE_ADDRESS,
@@ -167,6 +184,8 @@ export class L1ToL2MessageGasEstimator {
     }
   }
 
+  // CHRIS: TODO: in general this class is a bit messy, maybe we should pass in the percentage increases when we instantiate
+
   /**
    * Get gas limit, gas price and submission price estimates for sending an L2 message
    * @param sender Sender of the L1 to L2 transaction
@@ -197,14 +216,14 @@ export class L1ToL2MessageGasEstimator {
       defaultedOptions.maxGasPrice.percentIncrease
     )
 
-    // submit retry - 
+    // submit retry -
     // effective gas price 0x05f5e100 - 100000000
     // gas used 0x01c0c8 - 114888              ( / 2 = 57444)    0x01bf12 (114450) 0xe064 (57444)
 
-    // retry attempt - 
+    // retry attempt -
     // effective gas price 0x05f5e100 - 100000000
     //                   57454
-    // gas used 0xdee3 - 57059 -                                 0xde00 (56832) 0xded8 (57048) 
+    // gas used 0xdee3 - 57059 -                                 0xde00 (56832) 0xded8 (57048)
 
     // gas estimate - 114888 100000000 11488800000000
 
@@ -219,14 +238,12 @@ export class L1ToL2MessageGasEstimator {
       defaultedOptions.maxGas.base ||
         (await this.estimateRetryableTicketMaxGas(
           sender,
-          utils
-            .parseEther('1')
-            .add(
-              l2CallValue
-            ) /** we add a 1 ether "deposit" buffer to pay for execution in the gas estimation  */,
+          utils.parseEther('1').add(
+            l2CallValue // CHRIS: TODO: get to the bottom of this, do we actually need it?
+          ) /** we add a 1 ether "deposit" buffer to pay for execution in the gas estimation  */,
           destAddr,
           l2CallValue,
-          sender,
+          sender, // CHRIS: TODO: it could be the difference between aliasing or not aliasing
           sender,
           l2CallDataHex
         )),
