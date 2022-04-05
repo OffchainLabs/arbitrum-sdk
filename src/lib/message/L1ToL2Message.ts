@@ -25,7 +25,7 @@ import { keccak256 } from '@ethersproject/keccak256'
 import { concat, zeroPad } from '@ethersproject/bytes'
 
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
-import { ARB_RETRYABLE_TX_ADDRESS, RETRYABLELIFETIMESECONDS } from '../dataEntities/constants'
+import { ARB_RETRYABLE_TX_ADDRESS } from '../dataEntities/constants'
 import {
   SignerProviderUtils,
   SignerOrProvider,
@@ -36,6 +36,7 @@ import * as arbLib from '../utils/lib'
 import { Address } from '../dataEntities/address'
 import { L2TransactionReceipt } from './L2Transaction'
 import { Interface } from 'ethers/lib/utils'
+import { getL2Network } from '../../lib/dataEntities/networks'
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -287,6 +288,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     includeFail?: boolean
   ): Promise<TransactionReceipt | null> {
     includeFail = includeFail || false
+    const l2Network = await getL2Network(this.l2Provider)
     const creationReceipt =
       retryableCreationReceipt ||
       (await this.l2Provider.getTransactionReceipt(this.retryableCreationId))
@@ -330,11 +332,11 @@ export class L1ToL2MessageReader extends L1ToL2Message {
           if (successfulRedeem.length == 1) return successfulRedeem[0]
         }
         const toBlock = await this.l2Provider.getBlock(toBlockNumber)
-        if ((toBlock.timestamp - creationBlock.timestamp) > RETRYABLELIFETIMESECONDS) break
+        if ((toBlock.timestamp - creationBlock.timestamp) > l2Network.retryableLifetimeSeconds) break
         const processedSeconds = (toBlock.timestamp - fromBlock.timestamp)
         if (processedSeconds != 0) {
           // find the increment that cover ~ 1 day
-          increment = increment * RETRYABLELIFETIMESECONDS / 7 / processedSeconds
+          increment = increment * l2Network.retryableLifetimeSeconds / 7 / processedSeconds
         }
         fromBlockNumber = toBlockNumber + 1
         fromBlock = toBlock

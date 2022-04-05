@@ -46,6 +46,3 @@ export const DISABLED_GATEWAY = '0x0000000000000000000000000000000000000001'
  * isArbitrumEnabled which returns this value. Intger: 0xa4b1
  */
 export const CUSTOM_TOKEN_IS_ENABLED = 42161
-
-// https://github.com/OffchainLabs/nitro/blob/e16d52d4702b73d3fd105ba7b570d1d082a4ad74/arbos/retryables/retryable.go#L21
-export const RETRYABLELIFETIMESECONDS = 7 * 24 * 60 * 60
