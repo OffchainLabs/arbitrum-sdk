@@ -1,0 +1,48 @@
+{
+  "l1Network": {
+    "blockTime": 10,
+    "chainID": 1337,
+    "explorerUrl": "",
+    "isCustom": true,
+    "name": "EthLocal",
+    "partnerChainIDs": [
+      421612
+    ],
+    "rpcURL": "http://localhost:8545"
+  },
+  "l2Network": {
+    "chainID": 421612,
+    "confirmPeriodBlocks": 20,
+    "ethBridge": {
+      "bridge": "0xc226f7c46b3d9e7f8431831d3f7cb4418626f2a8",
+      "inbox": "0x2fdf8f89f44191ca82a88d08be1b7bfef80cf202",
+      "outboxes": {
+        "0x45a65D66e80Ba5FFf542A4Ec22964Be918e8D09D": 0
+      },
+      "rollup": "0x18e03d71b57e214861beb5411b5e22be621f5ae7",
+      "sequencerInbox": "0x237d69a96505dba9f62b0b68fcbb6ec0ea3c70d2"
+    },
+    "explorerUrl": "",
+    "isArbitrum": true,
+    "isCustom": true,
+    "name": "ArbLocal",
+    "partnerChainID": 1337,
+    "rpcURL": "http://localhost:7545",
+    "tokenBridge": {
+      "l1CustomGateway": "0xFb9d427F048676563CFa57651803587c4bC9D699",
+      "l1ERC20Gateway": "0x76998688606cBDBaaeC22f45AF549e7519Fa642D",
+      "l1GatewayRouter": "0x90619A5690CEA8514b0CebB8B3c004Cb2Bc15d6e",
+      "l1MultiCall": "0x7EAd6E97d51a59440151315EF0C66a67Cd1869Bf",
+      "l1ProxyAdmin": "0x81039eC38BeaED77cceBF5cA7bf1bA4C981c0Ca1",
+      "l1Weth": "0x7b8d467503B2B0511b63dbc0d9C21b7fbC2DAce0",
+      "l1WethGateway": "0x11d254AecDf974036De9E06e2ef7905c95e6C25C",
+      "l2CustomGateway": "0x11d254AecDf974036De9E06e2ef7905c95e6C25C",
+      "l2ERC20Gateway": "0xFb9d427F048676563CFa57651803587c4bC9D699",
+      "l2GatewayRouter": "0x76998688606cBDBaaeC22f45AF549e7519Fa642D",
+      "l2Multicall": "0xf83B24fB757eFeb2F326117663B408E8Cf1F4A45",
+      "l2ProxyAdmin": "0x90619A5690CEA8514b0CebB8B3c004Cb2Bc15d6e",
+      "l2Weth": "0x6f16f9544C53D56a4fA66e5A6fC90259b01f29Db",
+      "l2WethGateway": "0x7EAd6E97d51a59440151315EF0C66a67Cd1869Bf"
+    }
+  }
+}
