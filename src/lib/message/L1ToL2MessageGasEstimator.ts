@@ -155,7 +155,7 @@ export class L1ToL2MessageGasEstimator {
   private applyDefaults(options?: GasOverrides) {
     return {
       maxGas: {
-        base: options?.maxGasPrice?.base,
+        base: options?.maxGas?.base,
         percentIncrease:
           options?.maxGas?.percentIncrease ||
           defaultL1ToL2MessageEstimateOptions.maxGasPercentIncrease,
