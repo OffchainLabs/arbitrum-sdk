@@ -28,6 +28,8 @@ import { BlockTag } from '@ethersproject/abstract-provider'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { IOutbox__factory } from '../abi/factories/IOutbox__factory'
 import { Outbox__factory } from '../abi/factories/Outbox__factory'
+import { RollupUserFacet__factory } from '../abi/factories/RollupUserFacet__factory'
+import { Node__factory } from '../abi/factories/Node__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
@@ -38,6 +40,7 @@ import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
+import { l1Networks, l2Networks } from '../dataEntities/networks'
 import { wait } from '../utils/lib'
 
 export interface MessageBatchProofInfo {
@@ -310,6 +313,72 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     } else {
       await wait(retryDelay)
       await this.waitUntilOutboxEntryCreated(retryDelay)
+    }
+  }
+
+  // TODO: create version that queries multiple L2 to L1 txs, so a single multicall can make all requests
+  public async getExpectedNodeDeadline(
+    l2Provider: Provider
+  ): Promise<BigNumber> {
+    // this.indexInBatch
+    const outbox = Outbox__factory.connect(this.outboxAddress, this.l1Provider)
+
+    const network = l2Networks[(await l2Provider.getNetwork()).chainId]
+    const maxTime = BigNumber.from(network.confirmPeriodBlocks).mul(
+      BigNumber.from(l1Networks[network.partnerChainID].blockTime)
+    )
+
+    // TODO: use IRollupUser interface instead
+    const rollup = RollupUserFacet__factory.connect(
+      network.ethBridge.rollup,
+      this.l1Provider
+    )
+
+    try {
+      const proof = await this.tryGetProof(l2Provider)
+      // here we assume the L2 to L1 tx is actually valid, so the user needs to wait the max time.
+      // we could check that on the constructor that the L2 to L1 msg is valid
+      if (proof === null) return maxTime
+      // we can't check if the L2 to L1 tx isSpent on the outbox, so we instead try executing it
+      if (await this.hasExecuted(proof)) return BigNumber.from(0)
+      // 60seconds * 60 minutes * 24hrs * 8 days
+      const EIGHT_DAYS_IN_BLOCKS =
+        (60 * 60 * 24 * 8) / l1Networks[network.partnerChainID].blockTime
+      const latestBlock = await this.l1Provider.getBlockNumber()
+
+      const eventFetcher = new EventFetcher(this.l1Provider)
+
+      const events = (
+        await eventFetcher.getEvents(
+          network.ethBridge.rollup,
+          RollupUserFacet__factory,
+          t => t.filters.NodeCreated(),
+          {
+            fromBlock: latestBlock - EIGHT_DAYS_IN_BLOCKS,
+            toBlock: latestBlock,
+          }
+        )
+      )
+        .map(e => e.event)
+        .filter(e => {
+          const afterSendCount = e.assertionBytes32Fields[1][2]
+          return BigNumber.from(afterSendCount).gte(this.batchNumber)
+        })
+        .sort((a, b) => {
+          return (
+            BigNumber.from(a.assertionBytes32Fields[1][2]).toNumber() -
+            BigNumber.from(b.assertionBytes32Fields[1][2]).toNumber()
+          )
+        })
+
+      if (events.length > 0) throw new Error('Expected at least one event')
+      const rollupNode = await rollup.callStatic.getNode(events[0].nodeNum)
+      const node = Node__factory.connect(rollupNode, this.l1Provider)
+      return node.deadlineBlock()
+    } catch (e) {
+      console.error("getExpectedNodeDeadline: this shouldn't have reverted")
+      console.error(e)
+      throw e
     }
   }
 }
