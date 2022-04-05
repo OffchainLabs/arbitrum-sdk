@@ -119,7 +119,10 @@ const main = async () => {
   /* set allowance */
   const amount = BigNumber.from(0)
   const approveAmount = BigNumber.from(1000)
-  if (l1TokenData.allowance?.lt(approveAmount)) {
+  if (!l1TokenData.allowance) {
+    throw new Error(`unable to fetch allowance of ${l1TokenAddress}`)
+  }
+  if (l1TokenData.allowance.lt(approveAmount)) {
     console.log('Setting allowance on gateway')
 
     const res = await erc20Bridger.approveToken({
