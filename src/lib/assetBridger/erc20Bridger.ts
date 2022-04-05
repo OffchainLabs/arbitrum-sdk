@@ -214,7 +214,7 @@ export class Erc20Bridger extends AssetBridger<
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     l1TokenAddress?: string,
     fromAddress?: string
-  ): Promise<WithdrawalInitiatedEvent['args'][]> {
+  ): Promise<(WithdrawalInitiatedEvent['args'] & { txHash: string })[]> {
     await this.checkL2Network(l2Provider)
 
     const eventFetcher = new EventFetcher(l2Provider)
@@ -226,7 +226,7 @@ export class Erc20Bridger extends AssetBridger<
           contract.filters.WithdrawalInitiated(null, fromAddress || null),
         filter
       )
-    ).map(a => a.event)
+    ).map(a => ({ txHash: a.transactionHash, ...a.event }))
 
     return l1TokenAddress
       ? events.filter(
@@ -257,7 +257,7 @@ export class Erc20Bridger extends AssetBridger<
     } catch (err) {
       if (
         err instanceof Error &&
-        (err as unknown as { code: ErrorCode }).code ===
+        ((err as unknown) as { code: ErrorCode }).code ===
           Logger.errors.CALL_EXCEPTION
       ) {
         return false
@@ -375,7 +375,9 @@ export class Erc20Bridger extends AssetBridger<
     )
   }
 
-  private async getDepositParams(params: TokenDepositParams): Promise<{
+  private async getDepositParams(
+    params: TokenDepositParams
+  ): Promise<{
     erc20L1Address: string
     amount: BigNumber
     l1CallValue: BigNumber
@@ -384,8 +386,13 @@ export class Erc20Bridger extends AssetBridger<
     maxGasPrice: BigNumber
     destinationAddress: string
   }> {
-    const { erc20L1Address, amount, l2Provider, l1Signer, destinationAddress } =
-      params
+    const {
+      erc20L1Address,
+      amount,
+      l2Provider,
+      l1Signer,
+      destinationAddress,
+    } = params
     const { retryableGasOverrides } = params
 
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
