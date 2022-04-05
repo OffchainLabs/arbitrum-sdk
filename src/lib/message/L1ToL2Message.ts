@@ -327,7 +327,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
             async e => await this.l2Provider.getTransactionReceipt(e.retryTxHash)))).filter(
               r => r.status === 1)
           if (successfulRedeem.length > 1) throw new Error("More than 1 successful redeem?")
-          return successfulRedeem[0]
+          if (successfulRedeem.length == 1) return successfulRedeem[0]
         }
         const toBlock = await this.l2Provider.getBlock(toBlockNumber)
         if ((toBlock.timestamp - creationBlock.timestamp) > RETRYABLELIFETIMESECONDS) break
