@@ -93,9 +93,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
     const eventTopic = iface.getEventTopic(l2ToL1Event)
     const logs = this.logs.filter(log => log.topics[0] === eventTopic)
 
-    const l = logs.map(log => (iface.parseLog(log).args as unknown) as L2ToL1Event)
-    console.log(l, logs)
-    return l;
+    return logs.map(log => (iface.parseLog(log).args as unknown) as L2ToL1Event)
   }
 
   /**

@@ -444,64 +444,14 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
         ARB_RETRYABLE_TX_ADDRESS,
         this.l2Signer
       )
-
-      // why does it want so much?
-      // have  100000000000164688
-      // want  175058751000000000
-      // total   2278692500000000
-
       const feeData = await this.l2Provider.getFeeData()
-      const estimateGas = await arbRetryableTx.estimateGas.redeem(
-        this.retryableCreationId,
-        {
-          maxFeePerGas: feeData.maxFeePerGas!,
-          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas!,
-          from: await this.l2Signer.getAddress(),
-        }
-      )
 
-      // effecttivel1GasUsed = (actualL1 gas used * l1 base fee / l2 gas price)
-
-      // actual execution is:
-
-      // 1700000000
-      // 1500000000
-      console.log(
-        'fee data',
-        feeData.maxFeePerGas!.toString(),
-        feeData.maxPriorityFeePerGas!.toString(),
-        estimateGas.toString(),
-        estimateGas.mul(BigNumber.from(feeData.maxFeePerGas)).toString()
-      )
-      console.log('suupllied gas', overrides?.gasLimit?.toString())
-
-      await arbRetryableTx.callStatic.redeem(this.retryableCreationId, {
+      // CHRIS: TODO: check what the default behaviour is for gasprice
+      return await arbRetryableTx.redeem(this.retryableCreationId, {
         maxFeePerGas: feeData.maxFeePerGas!,
         maxPriorityFeePerGas: feeData.maxPriorityFeePerGas!,
-        from: await this.l2Signer.getAddress(),
         ...overrides,
       })
-
-      console.log('next')
-
-      try {
-        // CHRIS: TODO: check what the default behaviour is for gasprice
-        return await arbRetryableTx.redeem(this.retryableCreationId, {
-          maxFeePerGas: feeData.maxFeePerGas!,
-          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas!,
-          ...overrides,
-        })
-      } catch (err) {
-        throw err
-        console.log('failed with params')
-        console.log(err)
-        const tx = await arbRetryableTx.redeem(this.retryableCreationId)
-
-        console.log(tx)
-        return tx
-
-        console.log('failed with params but succeeded without')
-      }
     } else {
       throw new ArbTsError(
         `Cannot redeem. Message status: ${status} must be: ${L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2}.`

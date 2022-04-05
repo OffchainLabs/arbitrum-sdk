@@ -97,11 +97,6 @@ export class L1ToL2MessageGasEstimator {
       defaultedOptions.base || submissionCost,
       defaultedOptions.percentIncrease
     )
-    console.log(
-      'submission cost',
-      l1BaseFee.toString(),
-      costWithPadding.toString()
-    )
     return costWithPadding
   }
 
@@ -137,16 +132,6 @@ export class L1ToL2MessageGasEstimator {
     const iface = new Interface([
       'function estimateRetryableTicket(address sender,uint256 deposit,address to,uint256 l2CallValue,address excessFeeRefundAddress,address callValueRefundAddress,bytes calldata data)',
     ])
-
-    console.log(
-      sender,
-      senderDeposit,
-      destAddr,
-      l2CallValue,
-      excessFeeRefundAddress,
-      callValueRefundAddress,
-      calldata
-    )
 
     return await this.l2Provider.estimateGas({
       to: NODE_INTERFACE_ADDRESS,
@@ -259,13 +244,6 @@ export class L1ToL2MessageGasEstimator {
 
     let totalDepositValue = maxSubmissionPriceBid.add(
       maxGasPriceBid.mul(maxGas)
-    )
-
-    console.log(
-      'gas estimate',
-      maxGas.toString(),
-      maxGasPriceBid.toString(),
-      maxGasPriceBid.mul(maxGas).toString()
     )
 
     if (defaultedOptions.sendL2CallValueFromL1) {

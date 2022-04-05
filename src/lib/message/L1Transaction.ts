@@ -245,7 +245,6 @@ export class L1TransactionReceipt implements TransactionReceipt {
 
     return messages.map(mn => {
       const inboxMessageData = this.parseInboxMessage(mn.inboxMessageEvent)
-      console.log(inboxMessageData)
 
       const ticketCreationHash = L1ToL2Message.calculateSubmitRetryableId(
         BigNumber.from(chainID),

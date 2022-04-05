@@ -368,7 +368,6 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
         `Cannot execute message. Status is: ${status} but must be ${L2ToL1MessageStatus.CONFIRMED}.`
       )
     }
-    console.log("outbox proof")
     const proof = await this.getOutboxProof(l2Provider)
 
     // CHRIS: TODO: proper ABI throughout this file - search for new Contract and new Interface?
@@ -387,65 +386,6 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
         'function calculateItemHash(    address l2Sender,    address to,    uint256 l2Block,    uint256 l1Block,    uint256 l2Timestamp,    uint256 value,    bytes calldata data) public pure returns (bytes32)',
       ],
       this.l1Signer
-    )
-
-    console.log(
-      proof,
-      this.event.position.toString(),
-      this.event.caller,
-      this.event.destination,
-      this.event.arbBlockNum.toString(),
-      this.event.ethBlockNum.toString(),
-      this.event.timestamp.toString(),
-      this.event.callvalue.toString(),
-      this.event.data,
-      this.sendRootHash
-    )
-
-
-    // console.log("hi")
-    // const cd = await this.l1Provider.call({
-    //   to: this.outboxAddress,
-    //   data: callData
-    // })
-    // console.log("ho")
-    // console.log(cd);
-    // const decoded = defaultAbiCoder.decode(["string"], cd)
-    // console.log(decoded)
-    const itemHash = await outbox.callStatic['calculateItemHash'](
-      this.event.caller,
-      this.event.destination,
-      this.event.arbBlockNum,
-      this.event.ethBlockNum,
-      this.event.timestamp,
-      this.event.callvalue,
-      this.event.data
-    )
-    console.log(
-      'item hash',
-      itemHash,
-      this.event.hash.toHexString(),
-      keccak256(itemHash)
-    )
-
-    const merkle = await outbox.callStatic['calculateMerkleRoot'](
-      proof,
-      this.event.position,
-      itemHash
-    )
-    console.log('merkle', merkle, this.sendRootHash)
-
-    // CHRIS: TODO: remove
-    await outbox.callStatic['executeTransaction'](
-      proof,
-      this.event.position,
-      this.event.caller,
-      this.event.destination,
-      this.event.arbBlockNum,
-      this.event.ethBlockNum,
-      this.event.timestamp,
-      this.event.callvalue,
-      this.event.data
     )
 
     // CHRIS: TODO: provide gas override options?
