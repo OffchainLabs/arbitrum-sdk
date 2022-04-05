@@ -46,7 +46,7 @@ if (!l1Txn) {
   if (l1ToL2Message instanceof L1ToL2MessageWriter){
     const redeemStatus = (await l1ToL2Message.waitForStatus()).status
     if (redeemStatus == L1ToL2MessageStatus.REDEEMED){
-      const redeemTx = await l1ToL2Message.getFirstRedeemAttempt()
+      const redeemTx = await l1ToL2Message.getSuccessfulRedeem()
       console.log(`Already redeemed ${redeemTx!.transactionHash}`)
       return;
     }

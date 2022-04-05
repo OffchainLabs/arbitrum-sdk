@@ -240,24 +240,14 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   }
 
   // CHRIS: TODO: update these docs
-  /**
-   * Receipt for the first l2 transaction created by this message. See L1ToL2Message.l2TxHash
-   * May throw an error if the l2 transaction has yet to be executed, which is the case if
-   * the retryable ticket has not been created and redeemed.
-   * @returns TransactionReceipt of the first redeem attempt if exists, otherwise null
-   */
-  public async getFirstRedeemAttempt(): Promise<TransactionReceipt | null> {
-    return await this.getFirstRedeem(true)
-  }
-
     /**
    * Receipt for the successful l2 transaction created by this message. See L1ToL2Message.l2TxHash
    * May throw an error if the l2 transaction has yet to be executed, which is the case if
    * the retryable ticket has not been created and redeemed.
    * @returns TransactionReceipt of the first successful redeem if exists, otherwise null
    */
-  public async getSuccessfulRedeemAttempt(): Promise<TransactionReceipt | null> {
-    return await this.getFirstRedeem()
+  public async getSuccessfulRedeem(): Promise<TransactionReceipt | null> {
+    return await this.getFirstSuccessfulRedeem()
   }
 
     /**
@@ -294,13 +284,11 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     return null
   }
 
-  private async getFirstRedeem(
-    includeFail = false
-  ): Promise<TransactionReceipt | null> {
+  private async getFirstSuccessfulRedeem(): Promise<TransactionReceipt | null> {
     const l2Network = await getL2Network(this.l2Provider)
     const creationReceipt = await this.getRetryableCreationReceipt()
     const autoRedeem = await this.getAutoRedeem(creationReceipt)
-    if (autoRedeem && (includeFail || autoRedeem.status === 1)) return autoRedeem
+    if (autoRedeem && autoRedeem.status === 1) return autoRedeem
     if (creationReceipt){
       const creationBlockNumber = creationReceipt.blockNumber
       const ticketId = this.retryableCreationId
@@ -328,9 +316,6 @@ export class L1ToL2MessageReader extends L1ToL2Message {
                 gasDonor: string
               }
           )
-          if(includeFail) {
-            return await this.l2Provider.getTransactionReceipt(redeemEvents[0].retryTxHash)
-          }
           const successfulRedeem = (await Promise.all(redeemEvents.map(
             async e => await this.l2Provider.getTransactionReceipt(e.retryTxHash)))).filter(
               r => r.status === 1)
@@ -427,7 +412,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   protected async status(): Promise<L1ToL2MessageStatus> {
     return this.receiptsToStatus(
       await this.getRetryableCreationReceipt(),
-      await this.getFirstRedeem()
+      await this.getFirstSuccessfulRedeem()
     )
   }
 
@@ -465,7 +450,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
     // 1. we;re getting the original submit retryable
     // 2. then we want to find all calls to redeem right? and return the last one
-    const l2TxReceipt = (await this.getFirstRedeem()) || undefined
+    const l2TxReceipt = await this.getFirstSuccessfulRedeem()
 
     const status = await this.receiptsToStatus(
       retryableCreationReceipt,

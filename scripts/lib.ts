@@ -134,7 +134,7 @@ export const checkRetryableStatus = async (l1Hash: string): Promise<void> => {
 
   if (!message) throw new Error('no seq nums')
 
-  const redeemTxnRec = await message.getFirstRedeemAttempt()
+  const redeemTxnRec = await message.getAutoRedeemAttempt()
   const redeemTxnHash = redeemTxnRec ? redeemTxnRec.transactionHash : "null"
 
   const retryableTicketHash = message.retryableCreationId
