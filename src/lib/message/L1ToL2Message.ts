@@ -229,23 +229,69 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
   // CHRIS: TODO: update these docs
   /**
-   * Receipt for the l2 transaction created by this message. See L1ToL2Message.l2TxHash
+   * Receipt for the first l2 transaction created by this message. See L1ToL2Message.l2TxHash
    * May throw an error if the l2 transaction has yet to be executed, which is the case if
    * the retryable ticket has not been created and redeemed.
-   * @returns
+   * @returns TransactionReceipt of the first redeem attempt if exists, otherwise null
    */
   public async getFirstRedeemAttempt(): Promise<TransactionReceipt | null> {
+    return await this.getFirstRedeem(undefined, true)
+  }
+
+    /**
+   * Receipt for the successful l2 transaction created by this message. See L1ToL2Message.l2TxHash
+   * May throw an error if the l2 transaction has yet to be executed, which is the case if
+   * the retryable ticket has not been created and redeemed.
+   * @returns TransactionReceipt of the first successful redeem if exists, otherwise null
+   */
+  public async getSuccessfulRedeemAttempt(): Promise<TransactionReceipt | null> {
     return await this.getFirstRedeem()
+  }
+
+    /**
+   * Receipt for the auto-redeem l2 transaction created by this message. See L1ToL2Message.l2TxHash
+   * May throw an error if the l2 transaction has yet to be executed, which is the case if
+   * the retryable ticket has not been created and redeemed.
+   * @returns TransactionReceipt of the auto redeem attempt if exists, otherwise null
+   */
+  public async getAutoRedeemAttempt(): Promise<TransactionReceipt | null> {
+    return await this.getAutoRedeem()
   }
 
   // CHRIS: TODO: read ALL the comments in arbitrum sdk and check for accuracy with nitro
 
-  private async getFirstRedeem(
+  private async getAutoRedeem(
     retryableCreationReceipt?: TransactionReceipt
   ): Promise<TransactionReceipt | null> {
     const creationReceipt =
       retryableCreationReceipt ||
       (await this.l2Provider.getTransactionReceipt(this.retryableCreationId))
+
+    if (creationReceipt) {
+      const l2Receipt = new L2TransactionReceipt(creationReceipt)
+      const redeemEvents = l2Receipt.getRedeemScheduledEvents()
+      if (redeemEvents.length === 1) {
+        // CHRIS: TODO: this seems weird that we should only return if there was one redeem event?
+        // CHRIS: TODO: throw an error if this is unexpected
+        return await this.l2Provider.getTransactionReceipt(
+          redeemEvents[0].retryTxHash
+        )
+      }
+    }
+
+    return null
+  }
+
+  private async getFirstRedeem(
+    retryableCreationReceipt?: TransactionReceipt,
+    includeFail?: boolean
+  ): Promise<TransactionReceipt | null> {
+    includeFail = includeFail || false
+    const creationReceipt =
+      retryableCreationReceipt ||
+      (await this.l2Provider.getTransactionReceipt(this.retryableCreationId))
+    const autoRedeem = await this.getAutoRedeem(creationReceipt)
+    if (autoRedeem && (includeFail || autoRedeem.status === 1)) return autoRedeem
     if (creationReceipt){
       const creationBlockNumber = creationReceipt.blockNumber
       const ticketId = creationReceipt.transactionHash
@@ -263,7 +309,26 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       while(fromBlockNumber <= maxBlock) {
         const toBlockNumber = Math.min(fromBlockNumber + increment, maxBlock)
         redeemEventLogs = await this.l2Provider.getLogs( {fromBlock: fromBlockNumber, toBlock: toBlockNumber, topics: [redeemTopic, ticketId]})
-        if (redeemEventLogs.length != 0) break
+        if (redeemEventLogs.length != 0) {
+          const redeemEvents = redeemEventLogs.map(
+            r =>
+              (iFace.parseLog(r).args as unknown) as {
+                ticketId: string
+                retryTxHash: string
+                sequenceNum: BigNumber
+                donatedGas: BigNumber
+                gasDonor: string
+              }
+          )
+          if(includeFail) {
+            return await this.l2Provider.getTransactionReceipt(redeemEvents[0].retryTxHash)
+          }
+          const successfulRedeem = (await Promise.all(redeemEvents.map(
+            async e => await this.l2Provider.getTransactionReceipt(e.retryTxHash)))).filter(
+              r => r.status === 1)
+          if (successfulRedeem.length > 1) throw new Error("More than 1 successful redeem?")
+          return successfulRedeem[0]
+        }
         const toBlock = await this.l2Provider.getBlock(toBlockNumber)
         if ((toBlock.timestamp - creationBlock.timestamp) > RETRYABLELIFETIMESECONDS) break
         const processedSeconds = (toBlock.timestamp - fromBlock.timestamp)
@@ -273,21 +338,6 @@ export class L1ToL2MessageReader extends L1ToL2Message {
         }
         fromBlockNumber = toBlockNumber + 1
         fromBlock = toBlock
-      }
-      const redeemEvents = redeemEventLogs.map(
-        r =>
-          (iFace.parseLog(r).args as unknown) as {
-            ticketId: string
-            retryTxHash: string
-            sequenceNum: BigNumber
-            donatedGas: BigNumber
-            gasDonor: string
-          }
-      )
-      if (redeemEvents.length === 1) {
-        return await this.l2Provider.getTransactionReceipt(
-          redeemEvents[0].retryTxHash
-        )
       }
     }
     return null
