@@ -208,7 +208,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     const nodeInterface = new ethers.Contract(
       NODE_INTERFACE_ADDRESS,
       [
-        'function constructOutboxProof(bytes32 send, bytes32 root, uint64 size, uint64 leaf) external view returns (bytes32 sendAtLeaf, bytes32 rootAtSize, bytes32[] memory proof)',
+        'function constructOutboxProof(uint64 size, uint64 leaf) external view returns (bytes32 sendAtLeaf, bytes32 rootAtSize, bytes32[] memory proof)',
       ],
       l2Provider
     )
@@ -216,8 +216,6 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     const outboxProofParams = await nodeInterface.callStatic[
       'constructOutboxProof'
     ](
-      constants.HashZero,
-      constants.HashZero,
       this.sendRootSize.toNumber(),
       this.event.position.toNumber()
     )
