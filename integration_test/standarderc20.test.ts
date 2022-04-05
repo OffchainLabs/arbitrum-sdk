@@ -204,7 +204,7 @@ describe('standard ERC20', () => {
   })
 
   // CHRIS: TODO: add this back in
-  it('deposit with low funds, fails first redeem, succeeds seconds', async () => {
+  it.only('deposit with low funds, fails first redeem, succeeds seconds', async () => {
     const { waitRes } = await depositToken(
       depositAmount,
       testState.l1Token.address,
@@ -221,8 +221,7 @@ describe('standard ERC20', () => {
 
     // not enough gas
     // CHRIS:TODO: remvoe console.logs
-    await redeemAndTest(waitRes.message, 0, BigNumber.from(1250000))
-    console.log('a')
+    await redeemAndTest(waitRes.message, 0, BigNumber.from(100000))
     await redeemAndTest(waitRes.message, 1)
   })
 

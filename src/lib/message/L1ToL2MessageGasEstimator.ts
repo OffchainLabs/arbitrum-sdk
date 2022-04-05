@@ -133,6 +133,18 @@ export class L1ToL2MessageGasEstimator {
       'function estimateRetryableTicket(address sender,uint256 deposit,address to,uint256 l2CallValue,address excessFeeRefundAddress,address callValueRefundAddress,bytes calldata data)',
     ])
 
+    // CHRIS: TODO: find the difference between the actual retryable that's created and the one we use for estimating
+    console.log(
+      'estimate params',
+      sender,
+      senderDeposit.toString(),
+      destAddr,
+      l2CallValue.toString(),
+      excessFeeRefundAddress,
+      callValueRefundAddress,
+      calldata
+    )
+
     return await this.l2Provider.estimateGas({
       to: NODE_INTERFACE_ADDRESS,
       data: iface.encodeFunctionData('estimateRetryableTicket', [
@@ -200,17 +212,6 @@ export class L1ToL2MessageGasEstimator {
         (await this.l2Provider.getGasPrice()),
       defaultedOptions.maxGasPrice.percentIncrease
     )
-
-    // submit retry -
-    // effective gas price 0x05f5e100 - 100000000
-    // gas used 0x01c0c8 - 114888              ( / 2 = 57444)    0x01bf12 (114450) 0xe064 (57444)
-
-    // retry attempt -
-    // effective gas price 0x05f5e100 - 100000000
-    //                   57454
-    // gas used 0xdee3 - 57059 -                                 0xde00 (56832) 0xded8 (57048)
-
-    // gas estimate - 114888 100000000 11488800000000
 
     const maxSubmissionPriceBid = await this.estimateSubmissionPrice(
       // CHRIS: TODO: we defo want base fee here right?
