@@ -22,8 +22,7 @@ import { Log } from '@ethersproject/abstract-provider'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
 import { ContractTransaction, providers } from 'ethers'
-import { L2Network } from '../dataEntities/networks'
-import { ArbTsError } from '../dataEntities/errors'
+import { getOutboxAddr, L2Network } from '../dataEntities/networks'
 import {
   SignerProviderUtils,
   SignerOrProvider,
@@ -94,31 +93,6 @@ export class L2TransactionReceipt implements TransactionReceipt {
     )
   }
 
-  private getOutboxAddr(network: L2Network, batchNumber: BigNumber) {
-    // find the outbox where the activation batch number of the next outbox
-    // is greater than the supplied batch
-    const res = Object.entries(network.ethBridge.outboxes)
-      .sort((a, b) => {
-        if (a[1].lt(b[1])) return -1
-        else if (a[1].eq(b[1])) return 0
-        else return 1
-      })
-      .find(
-        (_, index, array) =>
-          array[index + 1] === undefined || array[index + 1][1].gt(batchNumber)
-      )
-
-    if (!res) {
-      throw new ArbTsError(
-        `No outbox found for batch number: ${batchNumber.toString()} on network: ${
-          network.chainID
-        }.`
-      )
-    }
-
-    return res[0]
-  }
-
   /**
    * Get any l2-to-l1-messages created by this transaction
    * @param l2SignerOrProvider
@@ -135,7 +109,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
     if (!provider) throw new Error('Signer not connected to provider.')
 
     return this.getL2ToL1Events().map(log => {
-      const outboxAddr = this.getOutboxAddr(l2Network, log.batchNumber)
+      const outboxAddr = getOutboxAddr(l2Network, log.batchNumber)
 
       return L2ToL1Message.fromBatchNumber(
         l1SignerOrProvider,

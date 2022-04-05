@@ -267,6 +267,31 @@ const addCustomNetwork = ({
   l1PartnerChain.partnerChainIDs.push(customL2Network.chainID)
 }
 
+export const getOutboxAddr = (network: L2Network, batchNumber: BigNumber) => {
+  // find the outbox where the activation batch number of the next outbox
+  // is greater than the supplied batch
+  const res = Object.entries(network.ethBridge.outboxes)
+    .sort((a, b) => {
+      if (a[1].lt(b[1])) return -1
+      else if (a[1].eq(b[1])) return 0
+      else return 1
+    })
+    .find(
+      (_, index, array) =>
+        array[index + 1] === undefined || array[index + 1][1].gt(batchNumber)
+    )
+
+  if (!res) {
+    throw new ArbTsError(
+      `No outbox found for batch number: ${batchNumber.toString()} on network: ${
+        network.chainID
+      }.`
+    )
+  }
+
+  return res[0]
+}
+
 export const isL1Network = (
   network: L1Network | L2Network
 ): network is L1Network => {
