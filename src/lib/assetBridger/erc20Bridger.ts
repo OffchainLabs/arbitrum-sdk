@@ -214,7 +214,7 @@ export class Erc20Bridger extends AssetBridger<
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     l1TokenAddress?: string,
     fromAddress?: string
-  ): Promise<WithdrawalInitiatedEvent['args'][]> {
+  ): Promise<(WithdrawalInitiatedEvent['args'] & { txHash: string })[]> {
     await this.checkL2Network(l2Provider)
 
     const eventFetcher = new EventFetcher(l2Provider)
@@ -226,7 +226,7 @@ export class Erc20Bridger extends AssetBridger<
           contract.filters.WithdrawalInitiated(null, fromAddress || null),
         filter
       )
-    ).map(a => a.event)
+    ).map(a => ({ txHash: a.transactionHash, ...a.event }))
 
     return l1TokenAddress
       ? events.filter(
