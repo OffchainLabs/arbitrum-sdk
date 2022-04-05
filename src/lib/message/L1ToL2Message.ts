@@ -32,9 +32,9 @@ import {
 } from '../dataEntities/signerOrProvider'
 import { ArbTsError } from '../dataEntities/errors'
 import { ethers, Overrides } from 'ethers'
-import * as arbLib from '../utils/lib'
 import { Address } from '../dataEntities/address'
 import { L2TransactionReceipt } from './L2Transaction'
+import { hexDataSlice, defaultAbiCoder } from 'ethers/lib/utils'
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -67,6 +67,41 @@ export enum L1ToL2MessageStatus {
    * The message has either expired or has been canceled. It can no longer be redeemed.
    */
   EXPIRED = 5,
+}
+
+export interface L1toL2MessageInputs {
+  /**
+   * Destination address for L2 message
+   */
+  destinationAddress: string
+  /**
+   * Call value in L2 message
+   */
+  l2CallValue: BigNumber
+  /**
+   * Max gas deducted from L2 balance to cover base submission fee
+   */
+  maxSubmissionCost: BigNumber
+  /**
+   * L2 address address to credit (maxgas x gasprice - execution cost)
+   */
+  excessFeeRefundAddress: string
+  /**
+   *  Address to credit l2Callvalue on L2 if retryable txn times out or gets cancelled
+   */
+  callValueRefundAddress: string
+  /**
+   * Max gas deducted from user's L2 balance to cover L2 execution
+   */
+  maxGas: BigNumber
+  /**
+   * Gas price bid for L2 execution
+   */
+  gasPriceBid: BigNumber
+  /**
+   * Length in bytes calldata of L2 message
+   */
+  callDataLength: BigNumber
 }
 
 /**
@@ -275,6 +310,56 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     // it can also return 0 if the ticket l2Tx does not exist
     return currentTimestamp.gte(timeoutTimestamp)
   }
+  
+  /**
+   * Parse the calldata of the retryable transaction associated with this L1ToL2Message
+   */
+  public async getInputs(): Promise<L1toL2MessageInputs> {
+    const txData = (
+      await this.l2Provider.getTransaction(this.retryableCreationId)
+    ).data
+    // Ignore first 4 bytes: message ID
+    const inputsData = hexDataSlice(txData, 4)
+    const [
+      destinationAddress,
+      l2CallValue,
+      maxSubmissionCost,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
+      maxGas,
+      gasPriceBid,
+      _sizeOfCallDataLength, //** Specifies encoding for dynamic length arrays */
+      callDataLength,
+    ] = defaultAbiCoder.decode(
+      [
+        'address',
+        'uint256',
+        'uint256',
+        'address',
+        'address',
+        'uint256',
+        'uint256',
+        'uint256',
+        'uint256',
+      ],
+      inputsData
+    )
+    // sanity check
+    if (_sizeOfCallDataLength.toNumber() !== 256)
+      throw new ArbTsError(
+        `Error getting Msg inputs data; unrecognized encoding. Execpeted ${_sizeOfCallDataLength.toNumber()} to be 256 `
+      )
+    return {
+      destinationAddress,
+      l2CallValue,
+      maxSubmissionCost,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
+      maxGas,
+      gasPriceBid,
+      callDataLength,
+    }
+  }
 
   protected async receiptsToStatus(
     retryableCreationReceipt: TransactionReceipt | null | undefined,
@@ -334,7 +419,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     return L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
   }
 
-  protected async status(): Promise<L1ToL2MessageStatus> {
+  public async status(): Promise<L1ToL2MessageStatus> {
     return this.receiptsToStatus(
       await this.getRetryableCreationReceipt(),
       await this.getFirstRedeem()
