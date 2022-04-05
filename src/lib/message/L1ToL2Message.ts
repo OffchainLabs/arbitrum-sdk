@@ -290,21 +290,20 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     const autoRedeem = await this.getAutoRedeem(creationReceipt)
     if (autoRedeem && autoRedeem.status === 1) return autoRedeem
     if (creationReceipt){
-      const creationBlockNumber = creationReceipt.blockNumber
       const ticketId = this.retryableCreationId
       const iFace = new Interface([
         'event RedeemScheduled(     bytes32 indexed ticketId,     bytes32 indexed retryTxHash,     uint64 indexed sequenceNum,     uint64 donatedGas,     address gasDonor )',
       ])
       const redeemTopic = iFace.getEventTopic('RedeemScheduled')
 
-      let fromBlockNumber: number = creationBlockNumber
-      let fromBlock = await this.l2Provider.getBlock(fromBlockNumber)
       let increment: number = 1000
-      const creationBlock = await this.l2Provider.getBlock(creationBlockNumber)
+      let fromBlock = await this.l2Provider.getBlock(creationReceipt.blockNumber)
+      const creationBlock = await this.l2Provider.getBlock(creationReceipt.blockNumber)
       const maxBlock = await this.l2Provider.getBlockNumber()
-      while(fromBlockNumber <= maxBlock) {
-        const toBlockNumber = Math.min(fromBlockNumber + increment, maxBlock)
-        const redeemEventLogs = await this.l2Provider.getLogs( {fromBlock: fromBlockNumber, toBlock: toBlockNumber, topics: [redeemTopic, ticketId]})
+      while(fromBlock.number < maxBlock) {
+        const toBlockNumber = Math.min(fromBlock.number + increment, maxBlock)
+        // We can skip creationBlock because it is covered by `getAutoRedeem` shortcut
+        const redeemEventLogs = await this.l2Provider.getLogs({fromBlock: fromBlock.number + 1, toBlock: toBlockNumber, topics: [redeemTopic, ticketId]})
         if (redeemEventLogs.length != 0) {
           const redeemEvents = redeemEventLogs.map(
             r =>
@@ -329,7 +328,6 @@ export class L1ToL2MessageReader extends L1ToL2Message {
           // find the increment that cover ~ 1 day
           increment *= Math.ceil(86400 / processedSeconds)
         }
-        fromBlockNumber = toBlockNumber + 1
         fromBlock = toBlock
       }
     }
