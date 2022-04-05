@@ -250,6 +250,8 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       const l2Receipt = new L2TransactionReceipt(creationReceipt)
       const redeemEvents = l2Receipt.getRedeemScheduledEvents()
       if (redeemEvents.length === 1) {
+        // CHRIS: TODO: this seems weird that we should only return if there was one redeem event?
+        // CHRIS: TODO: throw an error if this is unexpected
         return await this.l2Provider.getTransactionReceipt(
           redeemEvents[0].retryTxHash
         )

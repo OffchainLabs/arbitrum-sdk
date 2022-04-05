@@ -112,9 +112,17 @@ describe('standard ERC20', () => {
       retryRec?.transactionHash,
     ])
 
-    console.log(rec2)
-    throw new Error("hello")
+    expect(retryRec!.blockHash, 'redeemed in same block').to.eq(rec.blockHash)
+    expect(retryRec!.to, 'redeemed in same block').to.eq(
+      testState.l2Network.tokenBridge.l2ERC20Gateway
+    )
+    expect(retryRec!.status, 'tx didnt fail').to.eq(expectedStatus)
+    return
 
+    console.log(rec2)
+    throw new Error('hello')
+
+    // CHRIS: TODO: below
     // const eg1 = BigNumber.from(rec1.effectiveGasPrice)
     // const l1GasUsed1 = BigNumber.from(rec1.l1GasUsed)
     // const totalGasUsed1 = BigNumber.from(rec1.gasUsed)
@@ -157,12 +165,6 @@ describe('standard ERC20', () => {
     //   totalGasUsed2.sub(l1GasUsed2).toString(),
     //   totalGasUsed2.mul(eg2).toString()
     // )
-
-    expect(retryRec!.blockHash, 'redeemed in same block').to.eq(rec.blockHash)
-    expect(retryRec!.to, 'redeemed in same block').to.eq(
-      testState.l2Network.tokenBridge.l2ERC20Gateway
-    )
-    expect(retryRec!.status, 'tx didnt fail').to.eq(expectedStatus)
   }
 
   it('deposit with no funds, manual redeem', async () => {
@@ -237,7 +239,7 @@ describe('standard ERC20', () => {
       await testState.l2Signer.getAddress()
     )
     // 4 deposits above - increase this number if more deposit tests added
-    const startBalance = depositAmount.mul(3)
+    const startBalance = depositAmount.mul(4)
     expect(
       l2BalanceStart.toNumber(),
       'start balance not correct, if deposit tests have been added/removed above then they start balance here needs to be adjusted.'
@@ -269,14 +271,16 @@ describe('standard ERC20', () => {
     )
 
     const outgoingMessages = await withdrawRec.getL2ToL1Messages(
-      testState.l1Signer.provider!,
+      testState.l1Signer,
       testState.l2Network
     )
     const firstMessage = outgoingMessages[0]
     expect(firstMessage, 'getWithdrawalsInL2Transaction came back empty').to
       .exist
 
-    const messageStatus = await firstMessage.status(testState.l2Signer.provider!)
+    const messageStatus = await firstMessage.status(
+      testState.l2Signer.provider!
+    )
 
     expect(
       messageStatus,
@@ -314,6 +318,31 @@ describe('standard ERC20', () => {
     expect(tokenWithdrawEvents.length).to.equal(
       1,
       'token filtered query failed'
+    )
+
+    const balBefore = await testState.l1Token.balanceOf(
+      await testState.l1Signer.getAddress()
+    )
+
+    // CHRIS: TODO: tidy up this withdrawal stuff above and here
+    await firstMessage.waitUntilReadyToExecute(testState.l2Signer.provider!)
+    expect(
+      await firstMessage.status(testState.l2Signer.provider!),
+      'confirmed status'
+    ).to.eq(L2ToL1MessageStatus.CONFIRMED)
+
+    const execTx = await firstMessage.execute(testState.l2Signer.provider!)
+    await execTx.wait()
+    expect(
+      await firstMessage.status(testState.l2Signer.provider!),
+      'executed status'
+    ).to.eq(L2ToL1MessageStatus.EXECUTED)
+
+    const balAfter = await testState.l1Token.balanceOf(
+      await testState.l1Signer.getAddress()
+    )
+    expect(balBefore.add(withdrawalAmount).toString(), 'Not withdrawn').to.eq(
+      balAfter.toString()
     )
   })
 })
