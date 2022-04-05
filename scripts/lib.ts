@@ -134,30 +134,29 @@ export const checkRetryableStatus = async (l1Hash: string): Promise<void> => {
 
   if (!message) throw new Error('no seq nums')
 
-  const redeemTxnRec = await message.getAutoRedeemAttempt()
-  const redeemTxnHash = redeemTxnRec ? redeemTxnRec.transactionHash : "null"
+  const messageStatus = await message.waitForStatus()
 
-  const retryableTicketHash = message.retryableCreationId
+  const autoRedeemTxnRec = await message.getAutoRedeemAttempt()
+  const autoRedeemTxnHash = autoRedeemTxnRec ? autoRedeemTxnRec.transactionHash : null
 
-  const retryableTicketRec = await l2Provider.getTransactionReceipt(
-    retryableTicketHash
-  )
+  const retryableTicketId = message.retryableCreationId
+  const retryableTicketRec = messageStatus.status === L1ToL2MessageStatus.REDEEMED ? messageStatus.l2TxReceipt : null
 
-  console.log('*** redeemTxnHash', redeemTxnHash)
+  console.log('*** autoRedeemTxnHash', autoRedeemTxnHash)
   console.log(
-    '*** redeemTxnHash status',
-    redeemTxnRec ? redeemTxnRec.status : redeemTxnRec
+    '*** autoRedeemTxn status',
+    autoRedeemTxnRec ? autoRedeemTxnRec.status : autoRedeemTxnRec
   )
-  if (redeemTxnRec && redeemTxnRec.status !== 1) {
-    console.log('**** redeemTxnHash receipt', redeemTxnHash)
+  if (autoRedeemTxnRec && autoRedeemTxnRec.status !== 1) {
+    console.log('**** autoRedeemTxn receipt', autoRedeemTxnHash)
   }
 
-  console.log('*** retryableTicketHash', retryableTicketHash)
+  console.log('*** retryableTicketId', retryableTicketId)
   console.log(
     '*** retryableTicket status',
-    retryableTicketRec ? retryableTicketRec.status : retryableTicketRec
+    retryableTicketRec ? retryableTicketRec.status : messageStatus.status
   )
-  if (retryableTicketRec && retryableTicketRec.status !== 1) {
-    console.log('**** retryableTicket receipt', retryableTicketHash)
+  if (retryableTicketRec) {
+    console.log('**** retryableTicket receipt', retryableTicketRec.transactionHash)
   }
 }
