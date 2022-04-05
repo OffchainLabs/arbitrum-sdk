@@ -320,7 +320,6 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   public async getExpectedNodeDeadline(
     l2Provider: Provider
   ): Promise<BigNumber> {
-    // this.indexInBatch
     const outbox = Outbox__factory.connect(this.outboxAddress, this.l1Provider)
 
     const network = l2Networks[(await l2Provider.getNetwork()).chainId]
