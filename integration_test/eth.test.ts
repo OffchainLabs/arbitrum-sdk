@@ -206,7 +206,7 @@ describe('Ether', async () => {
     )
   })
 
-  it('deposits ether', async () => {
+  it.only('deposits ether', async () => {
     const { ethBridger, l1Signer, l2Signer } = await testSetup()
 
     await fundL1(l1Signer)
@@ -236,28 +236,24 @@ describe('Ether', async () => {
     expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
     const l1ToL2Message = l1ToL2Messages[0]
 
-    const {
-      destinationAddress,
-      l2CallValue,
-      excessFeeRefundAddress,
-      callValueRefundAddress,
-      maxGas,
-      gasPriceBid,
-      callDataLength,
-    } = await l1ToL2Message.getInputs()
     const walletAddress = await l1Signer.getAddress()
 
     for (const addr of [
-      destinationAddress,
-      excessFeeRefundAddress,
-      callValueRefundAddress,
+      l1ToL2Message.messageData.destAddress,
+      l1ToL2Message.messageData.excessFeeRefundAddress,
+      l1ToL2Message.messageData.callValueRefundAddress,
     ]) {
       expect(addr).to.eq(walletAddress, 'message inputs value error')
     }
 
-    for (const value of [l2CallValue, maxGas, gasPriceBid, callDataLength]) {
+    for (const value of [
+      l1ToL2Message.messageData.l2CallValue,
+      l1ToL2Message.messageData.maxGas,
+      l1ToL2Message.messageData.gasPriceBid,
+    ]) {
       expect(value.isZero(), 'message inputs value error').to.be.true
     }
+    expect(l1ToL2Message.messageData.data, "empty call data").to.eq("0x")
 
     prettyLog('l2TxHash: ' + waitResult.message.retryableCreationId)
     prettyLog('l2 transaction found!')

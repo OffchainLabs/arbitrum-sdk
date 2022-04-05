@@ -40,6 +40,7 @@ import { ethers } from 'ethers'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { InboxMessageDeliveredEvent } from '../abi/Inbox'
 import { hexZeroPad } from '@ethersproject/bytes'
+import { SubmitRetryableMessage } from '../dataEntities/message'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -126,9 +127,9 @@ export class L1TransactionReceipt implements TransactionReceipt {
    * Get the numbers of any messages created by this transaction
    * @returns
    */
-  // TODO: CHRIS: we need to get the sender from the message delivered event
-  // TODO: CHRIS: we should make sure that we dont use any non general stuff here
-  // TOOD: CHRIS: we also need inbox message from origin event
+  // CHRIS: TODO:  we need to get the sender from the message delivered event
+  // we should make sure that we dont use any non general stuff here
+  // we also need inbox message from origin event
   public getInboxMessageDeliveredEvent(): InboxMessageDeliveredEvent['args'][] {
     const iFace = Inbox__factory.createInterface()
     const inboxMessageDeliveredTopic = iFace.getEventTopic(
@@ -180,7 +181,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
 
   private parseInboxMessage(
     inboxMessageDeliveredEvent: InboxMessageDeliveredEvent['args']
-  ) {
+  ): SubmitRetryableMessage {
     // decode the data field - is been packed so we cant decode the bytes field this way
     const parsed = ethers.utils.defaultAbiCoder.decode(
       [
@@ -245,28 +246,13 @@ export class L1TransactionReceipt implements TransactionReceipt {
 
     return messages.map(mn => {
       const inboxMessageData = this.parseInboxMessage(mn.inboxMessageEvent)
-
-      const ticketCreationHash = L1ToL2Message.calculateSubmitRetryableId(
+      return L1ToL2Message.fromRetryableCreationId(
+        l2SignerOrProvider,
         BigNumber.from(chainID),
-
         mn.bridgeMessageEvent.sender,
         mn.inboxMessageEvent.messageNum,
         mn.bridgeMessageEvent.baseFeeL1,
-
-        inboxMessageData.destAddress,
-        inboxMessageData.l2CallValue,
-        inboxMessageData.l1Value,
-        inboxMessageData.maxSubmissionCost,
-        inboxMessageData.excessFeeRefundAddress,
-        inboxMessageData.callValueRefundAddress,
-        inboxMessageData.maxGas,
-        inboxMessageData.gasPriceBid,
-        inboxMessageData.data
-      )
-      return L1ToL2Message.fromRetryableCreationId(
-        l2SignerOrProvider,
-        ticketCreationHash,
-        mn.inboxMessageEvent.messageNum
+        inboxMessageData
       )
     })
   }

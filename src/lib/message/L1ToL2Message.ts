@@ -35,6 +35,8 @@ import { ethers, Overrides } from 'ethers'
 import { Address } from '../dataEntities/address'
 import { L2TransactionReceipt } from './L2Transaction'
 import { hexDataSlice, defaultAbiCoder } from 'ethers/lib/utils'
+import { InboxMessageDeliveredEvent } from '../abi/Inbox'
+import { SubmitRetryableMessage } from '../dataEntities/message'
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -69,41 +71,6 @@ export enum L1ToL2MessageStatus {
   EXPIRED = 5,
 }
 
-export interface L1toL2MessageInputs {
-  /**
-   * Destination address for L2 message
-   */
-  destinationAddress: string
-  /**
-   * Call value in L2 message
-   */
-  l2CallValue: BigNumber
-  /**
-   * Max gas deducted from L2 balance to cover base submission fee
-   */
-  maxSubmissionCost: BigNumber
-  /**
-   * L2 address address to credit (maxgas x gasprice - execution cost)
-   */
-  excessFeeRefundAddress: string
-  /**
-   *  Address to credit l2Callvalue on L2 if retryable txn times out or gets cancelled
-   */
-  callValueRefundAddress: string
-  /**
-   * Max gas deducted from user's L2 balance to cover L2 execution
-   */
-  maxGas: BigNumber
-  /**
-   * Gas price bid for L2 execution
-   */
-  gasPriceBid: BigNumber
-  /**
-   * Length in bytes calldata of L2 message
-   */
-  callDataLength: BigNumber
-}
-
 /**
  * Conditional type for Signer or Provider. If T is of type Provider
  * then L1ToL2MessageReaderOrWriter<T> will be of type L1ToL2MessageReader.
@@ -114,7 +81,7 @@ export type L1ToL2MessageReaderOrWriter<
   T extends SignerOrProvider
 > = T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
 
-export class L1ToL2Message {
+export abstract class L1ToL2Message {
   /**
    * When messages are sent from L1 to L2 a retryable ticket is created on L2.
    * The retryableCreationId can be used to retrieve information about the success or failure of the
@@ -122,6 +89,7 @@ export class L1ToL2Message {
    */
   public readonly retryableCreationId: string
 
+  // CHRIS: TODO: remove
   private static calculateL2DerivedHash(
     retryableCreationId: string,
     l2TxnType: L2TxnType
@@ -152,7 +120,7 @@ export class L1ToL2Message {
    * @param data
    * @returns
    */
-  public static calculateSubmitRetryableId(
+  public calculateSubmitRetryableId(
     l2ChainId: BigNumber,
     fromAddress: string,
     messageNumber: BigNumber,
@@ -206,32 +174,63 @@ export class L1ToL2Message {
 
   public static fromRetryableCreationId<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
-    retryableCreationId: string,
-    messageNumber: BigNumber
+    chainId: BigNumber,
+    sender: string,
+    messageNumber: BigNumber,
+    l1BaseFee: BigNumber,
+    messageData: SubmitRetryableMessage
   ): L1ToL2MessageReaderOrWriter<T>
   public static fromRetryableCreationId<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
-    retryableCreationId: string,
-    messageNumber: BigNumber
+    chainId: BigNumber,
+    sender: string,
+    messageNumber: BigNumber,
+    l1BaseFee: BigNumber,
+    messageData: SubmitRetryableMessage
   ): L1ToL2MessageReader | L1ToL2MessageWriter {
     return SignerProviderUtils.isSigner(l2SignerOrProvider)
       ? new L1ToL2MessageWriter(
           l2SignerOrProvider,
-          retryableCreationId,
-          messageNumber
+          chainId,
+          sender,
+          messageNumber,
+          l1BaseFee,
+          messageData
         )
       : new L1ToL2MessageReader(
           l2SignerOrProvider,
-          retryableCreationId,
-          messageNumber
+          chainId,
+          sender,
+          messageNumber,
+          l1BaseFee,
+          messageData
         )
   }
 
-  public constructor(
-    retryableCreationId: string,
-    public readonly messageNumber: BigNumber
+  // CHRIS: TODO: convert params to nitro names eg maxGas vs gasLimit
+
+  protected constructor(
+    public readonly chainId: BigNumber,
+    public readonly sender: string,
+    public readonly messageNumber: BigNumber,
+    public readonly l1BaseFee: BigNumber,
+    public readonly messageData: SubmitRetryableMessage
   ) {
-    this.retryableCreationId = retryableCreationId
+    this.retryableCreationId = this.calculateSubmitRetryableId(
+      chainId,
+      sender,
+      messageNumber,
+      l1BaseFee,
+      messageData.destAddress,
+      messageData.l2CallValue,
+      messageData.l1Value,
+      messageData.maxSubmissionCost,
+      messageData.excessFeeRefundAddress,
+      messageData.callValueRefundAddress,
+      messageData.maxGas,
+      messageData.gasPriceBid,
+      messageData.data
+    )
   }
 }
 
@@ -246,10 +245,13 @@ export type L1ToL2MessageWaitResult =
 export class L1ToL2MessageReader extends L1ToL2Message {
   public constructor(
     public readonly l2Provider: Provider,
-    retryableCreationId: string,
-    messageNumber: BigNumber
+    chainId: BigNumber,
+    sender: string,
+    messageNumber: BigNumber,
+    l1BaseFee: BigNumber,
+    messageData: SubmitRetryableMessage
   ) {
-    super(retryableCreationId, messageNumber)
+    super(chainId, sender, messageNumber, l1BaseFee, messageData)
   }
 
   /**
@@ -309,56 +311,6 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     // timeoutTimestamp returns the timestamp at which the retryable ticket expires
     // it can also return 0 if the ticket l2Tx does not exist
     return currentTimestamp.gte(timeoutTimestamp)
-  }
-  
-  /**
-   * Parse the calldata of the retryable transaction associated with this L1ToL2Message
-   */
-  public async getInputs(): Promise<L1toL2MessageInputs> {
-    const txData = (
-      await this.l2Provider.getTransaction(this.retryableCreationId)
-    ).data
-    // Ignore first 4 bytes: message ID
-    const inputsData = hexDataSlice(txData, 4)
-    const [
-      destinationAddress,
-      l2CallValue,
-      maxSubmissionCost,
-      excessFeeRefundAddress,
-      callValueRefundAddress,
-      maxGas,
-      gasPriceBid,
-      _sizeOfCallDataLength, //** Specifies encoding for dynamic length arrays */
-      callDataLength,
-    ] = defaultAbiCoder.decode(
-      [
-        'address',
-        'uint256',
-        'uint256',
-        'address',
-        'address',
-        'uint256',
-        'uint256',
-        'uint256',
-        'uint256',
-      ],
-      inputsData
-    )
-    // sanity check
-    if (_sizeOfCallDataLength.toNumber() !== 256)
-      throw new ArbTsError(
-        `Error getting Msg inputs data; unrecognized encoding. Execpeted ${_sizeOfCallDataLength.toNumber()} to be 256 `
-      )
-    return {
-      destinationAddress,
-      l2CallValue,
-      maxSubmissionCost,
-      excessFeeRefundAddress,
-      callValueRefundAddress,
-      maxGas,
-      gasPriceBid,
-      callDataLength,
-    }
   }
 
   protected async receiptsToStatus(
@@ -511,10 +463,20 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 export class L1ToL2MessageWriter extends L1ToL2MessageReader {
   public constructor(
     public readonly l2Signer: Signer,
-    retryableCreationId: string,
-    messageNumber: BigNumber
+    chainId: BigNumber,
+    sender: string,
+    messageNumber: BigNumber,
+    l1BaseFee: BigNumber,
+    messageData: SubmitRetryableMessage
   ) {
-    super(l2Signer.provider!, retryableCreationId, messageNumber)
+    super(
+      l2Signer.provider!,
+      chainId,
+      sender,
+      messageNumber,
+      l1BaseFee,
+      messageData
+    )
     if (!l2Signer.provider) throw new Error('Signer not connected to provider.')
   }
 
