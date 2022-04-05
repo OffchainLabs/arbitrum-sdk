@@ -27,7 +27,6 @@ import { ArbGasInfo__factory } from '../src/lib/abi/factories/ArbGasInfo__factor
 import {
   instantiateBridgeWithRandomWallet,
   fundL1,
-  wait,
   fundL2,
   prettyLog,
   skipIfMainnet,

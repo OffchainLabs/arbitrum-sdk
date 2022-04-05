@@ -226,7 +226,7 @@ export class Erc20Bridger extends AssetBridger<
           contract.filters.WithdrawalInitiated(null, fromAddress || null),
         filter
       )
-    ).map(a => ({ txHash: a.transactionHash, ...a.event}))
+    ).map(a => ({ txHash: a.transactionHash, ...a.event }))
 
     return l1TokenAddress
       ? events.filter(
