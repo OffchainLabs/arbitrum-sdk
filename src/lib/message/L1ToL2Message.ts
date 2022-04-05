@@ -211,6 +211,7 @@ export type L1ToL2MessageWaitResult =
   | { status: Exclude<L1ToL2MessageStatus, L1ToL2MessageStatus.REDEEMED> }
 
 export class L1ToL2MessageReader extends L1ToL2Message {
+  retryableCreationReceipt: TransactionReceipt | undefined
   public constructor(
     public readonly l2Provider: Provider,
     retryableCreationId: string,
@@ -224,8 +225,18 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    * May throw an error if retryable ticket has yet to be created
    * @returns
    */
-  public getRetryableCreationReceipt(): Promise<TransactionReceipt> {
-    return this.l2Provider.getTransactionReceipt(this.retryableCreationId)
+  public async getRetryableCreationReceipt(    
+    confirmations?: number,
+    timeout?: number
+  ): Promise<TransactionReceipt> {
+    if (!this.retryableCreationReceipt){
+      if (timeout){
+        this.retryableCreationReceipt = await this.l2Provider.waitForTransaction(this.retryableCreationId, confirmations, timeout)
+      } else {
+        this.retryableCreationReceipt = await this.l2Provider.getTransactionReceipt(this.retryableCreationId)
+      }
+    }
+    return this.retryableCreationReceipt
   }
 
   // CHRIS: TODO: update these docs
@@ -236,7 +247,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    * @returns TransactionReceipt of the first redeem attempt if exists, otherwise null
    */
   public async getFirstRedeemAttempt(): Promise<TransactionReceipt | null> {
-    return await this.getFirstRedeem(undefined, true)
+    return await this.getFirstRedeem(true)
   }
 
     /**
@@ -284,25 +295,20 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   }
 
   private async getFirstRedeem(
-    retryableCreationReceipt?: TransactionReceipt,
-    includeFail?: boolean
+    includeFail = false
   ): Promise<TransactionReceipt | null> {
-    includeFail = includeFail || false
     const l2Network = await getL2Network(this.l2Provider)
-    const creationReceipt =
-      retryableCreationReceipt ||
-      (await this.l2Provider.getTransactionReceipt(this.retryableCreationId))
+    const creationReceipt = await this.getRetryableCreationReceipt()
     const autoRedeem = await this.getAutoRedeem(creationReceipt)
     if (autoRedeem && (includeFail || autoRedeem.status === 1)) return autoRedeem
     if (creationReceipt){
       const creationBlockNumber = creationReceipt.blockNumber
-      const ticketId = creationReceipt.transactionHash
+      const ticketId = this.retryableCreationId
       const iFace = new Interface([
         'event RedeemScheduled(     bytes32 indexed ticketId,     bytes32 indexed retryTxHash,     uint64 indexed sequenceNum,     uint64 donatedGas,     address gasDonor )',
       ])
       const redeemTopic = iFace.getEventTopic('RedeemScheduled')
 
-      let redeemEventLogs: ethers.providers.Log[] = []
       let fromBlockNumber: number = creationBlockNumber
       let fromBlock = await this.l2Provider.getBlock(fromBlockNumber)
       let increment: number = 1000
@@ -310,7 +316,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       const maxBlock = await this.l2Provider.getBlockNumber()
       while(fromBlockNumber <= maxBlock) {
         const toBlockNumber = Math.min(fromBlockNumber + increment, maxBlock)
-        redeemEventLogs = await this.l2Provider.getLogs( {fromBlock: fromBlockNumber, toBlock: toBlockNumber, topics: [redeemTopic, ticketId]})
+        const redeemEventLogs = await this.l2Provider.getLogs( {fromBlock: fromBlockNumber, toBlock: toBlockNumber, topics: [redeemTopic, ticketId]})
         if (redeemEventLogs.length != 0) {
           const redeemEvents = redeemEventLogs.map(
             r =>
@@ -328,7 +334,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
           const successfulRedeem = (await Promise.all(redeemEvents.map(
             async e => await this.l2Provider.getTransactionReceipt(e.retryTxHash)))).filter(
               r => r.status === 1)
-          if (successfulRedeem.length > 1) throw new Error("More than 1 successful redeem?")
+          if (successfulRedeem.length > 1) throw new ArbTsError(`Unexpected number of successful redeems. Expected only one redeem for ticket ${ticketId}, but found ${successfulRedeem.length}.`)
           if (successfulRedeem.length == 1) return successfulRedeem[0]
         }
         const toBlock = await this.l2Provider.getBlock(toBlockNumber)
@@ -336,7 +342,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
         const processedSeconds = (toBlock.timestamp - fromBlock.timestamp)
         if (processedSeconds != 0) {
           // find the increment that cover ~ 1 day
-          increment = increment * l2Network.retryableLifetimeSeconds / 7 / processedSeconds
+          increment *= Math.ceil(86400 / processedSeconds)
         }
         fromBlockNumber = toBlockNumber + 1
         fromBlock = toBlock
@@ -447,8 +453,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     // try to wait for the retryable ticket to be created
     let retryableCreationReceipt: TransactionReceipt | undefined
     try {
-      retryableCreationReceipt = await this.l2Provider.waitForTransaction(
-        this.retryableCreationId,
+      retryableCreationReceipt = await this.getRetryableCreationReceipt(
         confirmations,
         timeout
       )
@@ -460,8 +465,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
     // 1. we;re getting the original submit retryable
     // 2. then we want to find all calls to redeem right? and return the last one
-    const l2TxReceipt =
-      (await this.getFirstRedeem(retryableCreationReceipt)) || undefined
+    const l2TxReceipt = (await this.getFirstRedeem()) || undefined
 
     const status = await this.receiptsToStatus(
       retryableCreationReceipt,
