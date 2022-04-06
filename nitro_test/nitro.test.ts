@@ -26,7 +26,7 @@ chai.use(solidity);
 
 describe('Nitro', async () => {
   
-    it('Send a lot of Txs', async () => {
+    it.skip('Send a lot of Txs', async () => {
       const [ signer ] = await ethers.getSigners()
       const numAcct = 10
       const numTx = 100
