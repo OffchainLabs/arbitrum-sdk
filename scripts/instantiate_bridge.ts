@@ -23,10 +23,10 @@ import dotenv from 'dotenv'
 import args from './getCLargs'
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
-  L1Network,
   l1Networks,
-  L2Network,
   l2Networks,
+  L1Network,
+  L2Network,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'

@@ -229,7 +229,7 @@ export const getL2Network = (
   return getNetwork(signerOrProviderOrChainID, 2) as Promise<L2Network>
 }
 
-const addCustomNetwork = ({
+export const addCustomNetwork = ({
   customL1Network,
   customL2Network,
 }: {
@@ -298,5 +298,3 @@ export const isL1Network = (
   if ((network as L1Network).partnerChainIDs) return true
   else return false
 }
-
-export default { l1Networks, l2Networks, addCustomNetwork, isL1Network }
