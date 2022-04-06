@@ -223,6 +223,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   /**
    * Try to get the receipt for the retryable ticket. See L1ToL2Message.retryableCreationId
    * May throw an error if retryable ticket has yet to be created
+   * If confirmations or timeout is provided, this will wait for the ticket to be created
    * @returns
    */
   public async getRetryableCreationReceipt(    
@@ -230,7 +231,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     timeout?: number
   ): Promise<TransactionReceipt> {
     if (!this.retryableCreationReceipt){
-      if (timeout){
+      if (confirmations || timeout){
         this.retryableCreationReceipt = await this.l2Provider.waitForTransaction(this.retryableCreationId, confirmations, timeout)
       } else {
         this.retryableCreationReceipt = await this.l2Provider.getTransactionReceipt(this.retryableCreationId)
@@ -240,15 +241,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   }
 
   // CHRIS: TODO: update these docs
-    /**
-   * Receipt for the successful l2 transaction created by this message. See L1ToL2Message.l2TxHash
-   * May throw an error if the l2 transaction has yet to be executed, which is the case if
-   * the retryable ticket has not been created and redeemed.
-   * @returns TransactionReceipt of the first successful redeem if exists, otherwise null
-   */
-  public async getSuccessfulRedeem(): Promise<TransactionReceipt | null> {
-    return await this.getFirstSuccessfulRedeem()
-  }
+  // CHRIS: TODO: read ALL the comments in arbitrum sdk and check for accuracy with nitro
 
     /**
    * Receipt for the auto-redeem l2 transaction created by this message. See L1ToL2Message.l2TxHash
@@ -257,17 +250,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    * @returns TransactionReceipt of the auto redeem attempt if exists, otherwise null
    */
   public async getAutoRedeemAttempt(): Promise<TransactionReceipt | null> {
-    return await this.getAutoRedeem()
-  }
-
-  // CHRIS: TODO: read ALL the comments in arbitrum sdk and check for accuracy with nitro
-
-  private async getAutoRedeem(
-    retryableCreationReceipt?: TransactionReceipt
-  ): Promise<TransactionReceipt | null> {
-    const creationReceipt =
-      retryableCreationReceipt ||
-      (await this.l2Provider.getTransactionReceipt(this.retryableCreationId))
+    const creationReceipt = await this.getRetryableCreationReceipt()
 
     if (creationReceipt) {
       const l2Receipt = new L2TransactionReceipt(creationReceipt)
@@ -284,10 +267,16 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     return null
   }
 
-  private async getFirstSuccessfulRedeem(): Promise<TransactionReceipt | null> {
+    /**
+   * Receipt for the successful l2 transaction created by this message. See L1ToL2Message.l2TxHash
+   * May throw an error if the l2 transaction has yet to be executed, which is the case if
+   * the retryable ticket has not been created and redeemed.
+   * @returns TransactionReceipt of the first successful redeem if exists, otherwise null
+   */
+  public async getSuccessfulRedeem(): Promise<TransactionReceipt | null> {
     const l2Network = await getL2Network(this.l2Provider)
     const creationReceipt = await this.getRetryableCreationReceipt()
-    const autoRedeem = await this.getAutoRedeem(creationReceipt)
+    const autoRedeem = await this.getAutoRedeemAttempt()
     if (autoRedeem && autoRedeem.status === 1) return autoRedeem
     if (creationReceipt){
       const ticketId = this.retryableCreationId
@@ -410,7 +399,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   protected async status(): Promise<L1ToL2MessageStatus> {
     return this.receiptsToStatus(
       await this.getRetryableCreationReceipt(),
-      await this.getFirstSuccessfulRedeem()
+      await this.getSuccessfulRedeem()
     )
   }
 
@@ -448,7 +437,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
     // 1. we;re getting the original submit retryable
     // 2. then we want to find all calls to redeem right? and return the last one
-    const l2TxReceipt = await this.getFirstSuccessfulRedeem()
+    const l2TxReceipt = await this.getSuccessfulRedeem()
 
     const status = await this.receiptsToStatus(
       retryableCreationReceipt,
