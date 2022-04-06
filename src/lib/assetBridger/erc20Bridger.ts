@@ -250,7 +250,7 @@ export class Erc20Bridger extends AssetBridger<
         potentialWethGatewayAddress,
         l1Provider
       )
-      await potentialWethGateway.l1Weth()
+      await potentialWethGateway.callStatic.l1Weth()
       return true
     } catch (err) {
       if (
