@@ -19,6 +19,7 @@
 import dotenv from 'dotenv'
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbTsError } from '../dataEntities/errors'
+import { SEVEN_DAYS_IN_SECONDS } from './constants'
 import { BigNumber } from "@ethersproject/bignumber";
 
 dotenv.config()
@@ -34,6 +35,7 @@ export interface L2Network extends Network {
   partnerChainID: number
   isArbitrum: true
   confirmPeriodBlocks: number
+  retryableLifetimeSeconds: number
 }
 export interface Network {
   chainID: number
@@ -179,6 +181,7 @@ export const l2Networks: L2Networks = {
     confirmPeriodBlocks: 45818,
     rpcURL: process.env['ARB_ONE_RPC'] || 'https://arb1.arbitrum.io/rpc',
     isCustom: false,
+    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS
   },
   421611: {
     chainID: 421611,
@@ -191,6 +194,7 @@ export const l2Networks: L2Networks = {
     confirmPeriodBlocks: 6545, // TODO
     rpcURL: process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc',
     isCustom: false,
+    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS
   }
 }
 
