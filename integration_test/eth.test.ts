@@ -34,6 +34,7 @@ import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { BigNumber } from 'ethers'
 import { testSetup } from '../scripts/testSetup'
+import { L2TransactionReceipt } from '../src'
 dotenv.config()
 
 describe('Ether', async () => {
@@ -44,7 +45,7 @@ describe('Ether', async () => {
   // CHRIS: TODO: test a high gas price, what's collected?
 
   // CHRIS: TODO: remove
-  it('test call', async () => {
+  it.skip('test call', async () => {
     const { l2Signer, l1Signer } = await testSetup()
 
     const afeeData1 = await l1Signer.getFeeData()
@@ -204,7 +205,8 @@ describe('Ether', async () => {
         .toString()
     )
   })
-  it('deposits ether', async () => {
+
+  it.only('deposits ether', async () => {
     const { ethBridger, l1Signer, l2Signer } = await testSetup()
 
     await fundL1(l1Signer)
@@ -230,6 +232,29 @@ describe('Ether', async () => {
 
     const waitResult = await rec.waitForL2(l2Signer.provider!)
 
+    const l1ToL2Messages = await rec.getL1ToL2Messages(l2Signer)
+    expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
+    const l1ToL2Message = l1ToL2Messages[0]
+
+    const walletAddress = await l1Signer.getAddress()
+
+    for (const addr of [
+      l1ToL2Message.messageData.destAddress,
+      l1ToL2Message.messageData.excessFeeRefundAddress,
+      l1ToL2Message.messageData.callValueRefundAddress,
+    ]) {
+      expect(addr).to.eq(walletAddress, 'message inputs value error')
+    }
+
+    for (const value of [
+      l1ToL2Message.messageData.l2CallValue,
+      l1ToL2Message.messageData.maxGas,
+      l1ToL2Message.messageData.gasPriceBid,
+    ]) {
+      expect(value.isZero(), 'message inputs value error').to.be.true
+    }
+    expect(l1ToL2Message.messageData.data, "empty call data").to.eq("0x")
+
     prettyLog('l2TxHash: ' + waitResult.message.retryableCreationId)
     prettyLog('l2 transaction found!')
     expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
@@ -245,6 +270,7 @@ describe('Ether', async () => {
   it('withdraw Ether transaction succeeds', async () => {
     const { l2Network, l2Signer, l1Signer, ethBridger } = await testSetup()
     await fundL2(l2Signer)
+    await fundL1(l1Signer)
     const ethToWithdraw = parseEther('0.00000002')
     const initialBalance = await l2Signer.getBalance()
 
@@ -268,7 +294,7 @@ describe('Ether', async () => {
     })
 
     const withdrawMessage = (
-      await withdrawEthRec.getL2ToL1Messages(l1Signer.provider!, l2Network)
+      await withdrawEthRec.getL2ToL1Messages(l1Signer, l2Network)
     )[0]
     expect(
       withdrawMessage,
@@ -287,8 +313,6 @@ describe('Ether', async () => {
       1,
       'eth withdraw getL2ToL1EventData failed'
     )
-    return
-    // CHRIS: TODO: below we need to look for the outbox entry
 
     const messageStatus = await withdrawMessage.status(l2Signer.provider!)
     expect(
@@ -301,7 +325,22 @@ describe('Ether', async () => {
       .add(ethToWithdraw)
       .add(withdrawEthRec.gasUsed.mul(inWei[5]))
 
-    // TODO
+    await withdrawMessage.waitUntilReadyToExecute(l2Signer.provider!)
+    expect(
+      await withdrawMessage.status(l2Signer.provider!),
+      'confirmed status'
+    ).to.eq(L2ToL1MessageStatus.CONFIRMED)
+
+    const execTx = await withdrawMessage.execute(l2Signer.provider!)
+    await execTx.wait()
+    expect(
+      await withdrawMessage.status(l2Signer.provider!),
+      'executed status'
+    ).to.eq(L2ToL1MessageStatus.EXECUTED)
+
+    // CHRIS: TODO: check balances and check withdrawal event logs
+
+    // CHRIS: TODO: should calc this
     console.log(
       `This number should be zero...? ${initialBalance
         .sub(totalEth)

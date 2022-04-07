@@ -16,12 +16,11 @@
 /* eslint-env node */
 'use strict'
 
-import { JsonRpcProvider, TransactionReceipt } from '@ethersproject/providers'
+import { TransactionReceipt } from '@ethersproject/providers'
 import { BigNumber } from '@ethersproject/bignumber'
-import { Log, Provider } from '@ethersproject/abstract-provider'
-import { Contract, ContractTransaction, providers } from 'ethers'
-import { getL2Network, L2Network } from '../dataEntities/networks'
-import { ArbTsError } from '../dataEntities/errors'
+import { Log, } from '@ethersproject/abstract-provider'
+import { ContractTransaction, providers } from 'ethers'
+import { getOutboxAddr, L2Network } from '../dataEntities/networks'
 import {
   SignerProviderUtils,
   SignerOrProvider,
@@ -127,32 +126,6 @@ export class L2TransactionReceipt implements TransactionReceipt {
     )
   }
 
-  private getOutboxAddr(network: L2Network, batchNumber: BigNumber) {
-    // find the outbox where the activation batch number of the next outbox
-    // is greater than the supplied batch
-    const res = Object.entries(network.ethBridge.outboxes)
-      .sort((a, b) => {
-        if (a[1] < b[1]) return -1
-        else if (a[1] === b[1]) return 0
-        else return 1
-      })
-      .find(
-        (_, index, array) =>
-          array[index + 1] === undefined ||
-          array[index + 1][1] > batchNumber.toNumber()
-      )
-
-    if (!res) {
-      throw new ArbTsError(
-        `No outbox found for batch number: ${batchNumber.toString()} on network: ${
-          network.chainID
-        }.`
-      )
-    }
-
-    return res[0]
-  }
-
   /**
    * Get any l2-to-l1-messages created by this transaction
    * @param l2SignerOrProvider
@@ -169,7 +142,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
     if (!provider) throw new Error('Signer not connected to provider.')
 
     return this.getL2ToL1Events().map(log => {
-      const outboxAddr = this.getOutboxAddr(
+      const outboxAddr = getOutboxAddr(
         l2Network,
         BigNumber.from(1) // log.batchNumber, CHRIS: TODO: broken
       )

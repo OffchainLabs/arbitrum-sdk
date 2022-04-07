@@ -609,7 +609,7 @@ describe('Custom ERC20', () => {
       testState.l1Signer,
       testState.l2Signer,
       L1ToL2MessageStatus.REDEEMED,
-      ExpectedGatewayType.CUSTOM  
+      ExpectedGatewayType.CUSTOM
     )
   })
 
@@ -633,7 +633,7 @@ describe('Custom ERC20', () => {
 
     const message = (
       await withdrawRec.getL2ToL1Messages(
-        testState.l1Signer.provider!,
+        testState.l1Signer,
         testState.l2Network
       )
     )[0]
@@ -672,6 +672,31 @@ describe('Custom ERC20', () => {
     expect(gatewayWithdrawEvents.length).to.equal(
       1,
       'token custom gateway query failed'
+    )
+
+    const balBefore = await testState.l1CustomToken.balanceOf(
+      await testState.l1Signer.getAddress()
+    )
+
+    // CHRIS: TODO: tidy up this withdrawal stuff above and here
+    await message.waitUntilReadyToExecute(testState.l2Signer.provider!)
+    expect(
+      await message.status(testState.l2Signer.provider!),
+      'confirmed status'
+    ).to.eq(L2ToL1MessageStatus.CONFIRMED)
+
+    const execTx = await message.execute(testState.l2Signer.provider!)
+    await execTx.wait()
+    expect(
+      await message.status(testState.l2Signer.provider!),
+      'executed status'
+    ).to.eq(L2ToL1MessageStatus.EXECUTED)
+
+    const balAfter = await testState.l1CustomToken.balanceOf(
+      await testState.l1Signer.getAddress()
+    )
+    expect(balBefore.add(withdrawalAmount).toString(), 'Not withdrawn').to.eq(
+      balAfter.toString()
     )
   })
 })
@@ -775,7 +800,7 @@ const registerCustomToken = async (
     endL1GatewayAddress,
     'End l1GatewayAddress not equal to l1 custom gateway'
   ).to.eq(l2Network.tokenBridge.l1CustomGateway)
-  
+
   const endL2GatewayAddress = await l2GatewayRouter.l1TokenToGateway(
     l1CustomToken.address
   )

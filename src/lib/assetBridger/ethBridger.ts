@@ -135,9 +135,19 @@ export class EthBridger extends AssetBridger<
       params.l1Signer
     )
 
+
+    // CHRIS: TODO: remove
+    inbox.callStatic.depositEth(submissionCost, {
+      value: params.amount.add(submissionCost),
+      ...(params.overrides || {}),
+    })
+
     return (estimate ? inbox.estimateGas : inbox.functions).depositEth(
       submissionCost,
-      { value: params.amount.add(submissionCost), ...(params.overrides || {}) }
+      {
+        value: params.amount.add(submissionCost),
+        ...(params.overrides || {}),
+      }
     )
   }
 

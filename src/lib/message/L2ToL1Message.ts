@@ -40,6 +40,12 @@ import {
 } from '../dataEntities/signerOrProvider'
 import { wait } from '../utils/lib'
 import { getL2Network, L2Network } from '../dataEntities/networks'
+import {
+  AbiCoder,
+  defaultAbiCoder,
+  keccak256,
+  solidityKeccak256,
+} from 'ethers/lib/utils'
 
 export interface MessageBatchProofInfo {
   /**
@@ -187,8 +193,9 @@ export class L2ToL1Message {
  * Provides read-only access for l2-to-l1-messages
  */
 export class L2ToL1MessageReader extends L2ToL1Message {
-  private sendRootHash?: string
-  private sendRootSize?: BigNumber
+  // CHRIS: TODO: shouldnt be public
+  public sendRootHash?: string
+  public sendRootSize?: BigNumber
 
   constructor(
     protected readonly l1Provider: Provider,
@@ -208,7 +215,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     const nodeInterface = new ethers.Contract(
       NODE_INTERFACE_ADDRESS,
       [
-        'function constructOutboxProof(bytes32 send, bytes32 root, uint64 size, uint64 leaf) external view returns (bytes32 sendAtLeaf, bytes32 rootAtSize, bytes32[] memory proof)',
+        'function constructOutboxProof(uint64 size, uint64 leaf) external view returns (bytes32 sendAtLeaf, bytes32 rootAtSize, bytes32[] memory proof)',
       ],
       l2Provider
     )
@@ -216,11 +223,17 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     const outboxProofParams = await nodeInterface.callStatic[
       'constructOutboxProof'
     ](
-      constants.HashZero,
-      constants.HashZero,
+      
       this.sendRootSize.toNumber(),
       this.event.position.toNumber()
     )
+
+
+    // CHRIS: TODO: check these from the return vals
+    // this.event.hash,
+    //   this.sendRootHash,
+    // console.log(outboxProofParams)
+
     return outboxProofParams['proof'] as string[]
   }
 
@@ -271,6 +284,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     const logs = await l1Provider.getLogs({
       address: rollup.address,
       fromBlock: Math.max(
+        // CHRIS: TODO: either a constant or think about removing this -it's 4 weeks
         currentBlock - Math.floor((4 * 7 * 24 * 60 * 60) / 14),
         0
       ),
@@ -288,7 +302,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       sendRoot: string
       blockHash: string
     }
-    
+
     const l2Block = await (l2Provider! as ethers.providers.JsonRpcProvider).send(
       'eth_getBlockByHash',
       [parsedLog.blockHash, false]
@@ -313,8 +327,8 @@ export class L2ToL1MessageReader extends L2ToL1Message {
    * @returns
    */
   public async waitUntilReadyToExecute(
-    retryDelay = 500,
-    l2Provider: Provider
+    l2Provider: Provider,
+    retryDelay = 500
   ): Promise<void> {
     const status = await this.status(l2Provider)
     if (
@@ -324,7 +338,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       return
     } else {
       await wait(retryDelay)
-      await this.waitUntilReadyToExecute(retryDelay, l2Provider)
+      await this.waitUntilReadyToExecute(l2Provider, retryDelay)
     }
   }
 }
@@ -360,9 +374,16 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
     const outbox = new Contract(
       this.outboxAddress,
       [
-        'function executeTransaction(   bytes32[] calldata proof,   uint256 index,   address l2Sender,   address to,   uint256 l2Block,   uint256 l1Block,   uint256 l2Timestamp,   uint256 value,   bytes calldata data) public',
+        'function executeTransaction(bytes32[] calldata proof,   uint256 index,   address l2Sender,   address to,   uint256 l2Block,   uint256 l1Block,   uint256 l2Timestamp,   uint256 value,   bytes calldata data) public',
         'function spent(uint256) public view returns(bool)',
         'function roots(bytes32) public view returns(bytes32)',
+        'function calculateMerkleRoot(    bytes32[] memory proof,    uint256 path,    bytes32 item) public pure returns (bytes32)',
+        'error ProofTooLong(uint256 proofLength)',
+        'error PathNotMinimal(uint256 index, uint256 maxIndex)',
+        'error UnknownRoot(bytes32 root)',
+        'error AlreadySpent(uint256 index)',
+        'error BridgeCallFailed()',
+        'function calculateItemHash(    address l2Sender,    address to,    uint256 l2Block,    uint256 l1Block,    uint256 l2Timestamp,    uint256 value,    bytes calldata data) public pure returns (bytes32)',
       ],
       this.l1Signer
     )

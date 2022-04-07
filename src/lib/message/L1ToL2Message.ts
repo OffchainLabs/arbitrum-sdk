@@ -32,11 +32,13 @@ import {
 } from '../dataEntities/signerOrProvider'
 import { ArbTsError } from '../dataEntities/errors'
 import { ethers, Overrides } from 'ethers'
-import * as arbLib from '../utils/lib'
 import { Address } from '../dataEntities/address'
 import { L2TransactionReceipt } from './L2Transaction'
 import { Interface } from 'ethers/lib/utils'
 import { getL2Network } from '../../lib/dataEntities/networks'
+import { hexDataSlice, defaultAbiCoder } from 'ethers/lib/utils'
+import { InboxMessageDeliveredEvent } from '../abi/Inbox'
+import { SubmitRetryableMessage } from '../dataEntities/message'
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -81,7 +83,7 @@ export type L1ToL2MessageReaderOrWriter<
   T extends SignerOrProvider
 > = T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
 
-export class L1ToL2Message {
+export abstract class L1ToL2Message {
   /**
    * When messages are sent from L1 to L2 a retryable ticket is created on L2.
    * The retryableCreationId can be used to retrieve information about the success or failure of the
@@ -89,6 +91,7 @@ export class L1ToL2Message {
    */
   public readonly retryableCreationId: string
 
+  // CHRIS: TODO: remove
   private static calculateL2DerivedHash(
     retryableCreationId: string,
     l2TxnType: L2TxnType
@@ -119,7 +122,7 @@ export class L1ToL2Message {
    * @param data
    * @returns
    */
-  public static calculateSubmitRetryableId(
+  public calculateSubmitRetryableId(
     l2ChainId: BigNumber,
     fromAddress: string,
     messageNumber: BigNumber,
@@ -173,32 +176,63 @@ export class L1ToL2Message {
 
   public static fromRetryableCreationId<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
-    retryableCreationId: string,
-    messageNumber: BigNumber
+    chainId: BigNumber,
+    sender: string,
+    messageNumber: BigNumber,
+    l1BaseFee: BigNumber,
+    messageData: SubmitRetryableMessage
   ): L1ToL2MessageReaderOrWriter<T>
   public static fromRetryableCreationId<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
-    retryableCreationId: string,
-    messageNumber: BigNumber
+    chainId: BigNumber,
+    sender: string,
+    messageNumber: BigNumber,
+    l1BaseFee: BigNumber,
+    messageData: SubmitRetryableMessage
   ): L1ToL2MessageReader | L1ToL2MessageWriter {
     return SignerProviderUtils.isSigner(l2SignerOrProvider)
       ? new L1ToL2MessageWriter(
           l2SignerOrProvider,
-          retryableCreationId,
-          messageNumber
+          chainId,
+          sender,
+          messageNumber,
+          l1BaseFee,
+          messageData
         )
       : new L1ToL2MessageReader(
           l2SignerOrProvider,
-          retryableCreationId,
-          messageNumber
+          chainId,
+          sender,
+          messageNumber,
+          l1BaseFee,
+          messageData
         )
   }
 
-  public constructor(
-    retryableCreationId: string,
-    public readonly messageNumber: BigNumber
+  // CHRIS: TODO: convert params to nitro names eg maxGas vs gasLimit
+
+  protected constructor(
+    public readonly chainId: BigNumber,
+    public readonly sender: string,
+    public readonly messageNumber: BigNumber,
+    public readonly l1BaseFee: BigNumber,
+    public readonly messageData: SubmitRetryableMessage
   ) {
-    this.retryableCreationId = retryableCreationId
+    this.retryableCreationId = this.calculateSubmitRetryableId(
+      chainId,
+      sender,
+      messageNumber,
+      l1BaseFee,
+      messageData.destAddress,
+      messageData.l2CallValue,
+      messageData.l1Value,
+      messageData.maxSubmissionCost,
+      messageData.excessFeeRefundAddress,
+      messageData.callValueRefundAddress,
+      messageData.maxGas,
+      messageData.gasPriceBid,
+      messageData.data
+    )
   }
 }
 
@@ -214,10 +248,13 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   retryableCreationReceipt: TransactionReceipt | undefined
   public constructor(
     public readonly l2Provider: Provider,
-    retryableCreationId: string,
-    messageNumber: BigNumber
+    chainId: BigNumber,
+    sender: string,
+    messageNumber: BigNumber,
+    l1BaseFee: BigNumber,
+    messageData: SubmitRetryableMessage
   ) {
-    super(retryableCreationId, messageNumber)
+    super(chainId, sender, messageNumber, l1BaseFee, messageData)
   }
 
   /**
@@ -396,7 +433,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     return L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
   }
 
-  protected async status(): Promise<L1ToL2MessageStatus> {
+  public async status(): Promise<L1ToL2MessageStatus> {
     return this.receiptsToStatus(
       await this.getRetryableCreationReceipt(),
       await this.getSuccessfulRedeem()
@@ -486,10 +523,20 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 export class L1ToL2MessageWriter extends L1ToL2MessageReader {
   public constructor(
     public readonly l2Signer: Signer,
-    retryableCreationId: string,
-    messageNumber: BigNumber
+    chainId: BigNumber,
+    sender: string,
+    messageNumber: BigNumber,
+    l1BaseFee: BigNumber,
+    messageData: SubmitRetryableMessage
   ) {
-    super(l2Signer.provider!, retryableCreationId, messageNumber)
+    super(
+      l2Signer.provider!,
+      chainId,
+      sender,
+      messageNumber,
+      l1BaseFee,
+      messageData
+    )
     if (!l2Signer.provider) throw new Error('Signer not connected to provider.')
   }
 
@@ -504,64 +551,14 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
         ARB_RETRYABLE_TX_ADDRESS,
         this.l2Signer
       )
-
-      // why does it want so much?
-      // have  100000000000164688
-      // want  175058751000000000
-      // total   2278692500000000
-
       const feeData = await this.l2Provider.getFeeData()
-      const estimateGas = await arbRetryableTx.estimateGas.redeem(
-        this.retryableCreationId,
-        {
-          maxFeePerGas: feeData.maxFeePerGas!,
-          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas!,
-          from: await this.l2Signer.getAddress(),
-        }
-      )
 
-      // effecttivel1GasUsed = (actualL1 gas used * l1 base fee / l2 gas price)
-
-      // actual execution is:
-
-      // 1700000000
-      // 1500000000
-      console.log(
-        'fee data',
-        feeData.maxFeePerGas!.toString(),
-        feeData.maxPriorityFeePerGas!.toString(),
-        estimateGas.toString(),
-        estimateGas.mul(BigNumber.from(feeData.maxFeePerGas)).toString()
-      )
-      console.log('suupllied gas', overrides?.gasLimit?.toString())
-
-      await arbRetryableTx.callStatic.redeem(this.retryableCreationId, {
+      // CHRIS: TODO: check what the default behaviour is for gasprice
+      return await arbRetryableTx.redeem(this.retryableCreationId, {
         maxFeePerGas: feeData.maxFeePerGas!,
         maxPriorityFeePerGas: feeData.maxPriorityFeePerGas!,
-        from: await this.l2Signer.getAddress(),
         ...overrides,
       })
-
-      console.log('next')
-
-      try {
-        // CHRIS: TODO: check what the default behaviour is for gasprice
-        return await arbRetryableTx.redeem(this.retryableCreationId, {
-          maxFeePerGas: feeData.maxFeePerGas!,
-          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas!,
-          ...overrides,
-        })
-      } catch (err) {
-        throw err
-        console.log('failed with params')
-        console.log(err)
-        const tx = await arbRetryableTx.redeem(this.retryableCreationId)
-
-        console.log(tx)
-        return tx
-
-        console.log('failed with params but succeeded without')
-      }
     } else {
       throw new ArbTsError(
         `Cannot redeem. Message status: ${status} must be: ${L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2}.`

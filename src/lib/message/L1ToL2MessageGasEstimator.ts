@@ -97,11 +97,6 @@ export class L1ToL2MessageGasEstimator {
       defaultedOptions.base || submissionCost,
       defaultedOptions.percentIncrease
     )
-    console.log(
-      'submission cost',
-      l1BaseFee.toString(),
-      costWithPadding.toString()
-    )
     return costWithPadding
   }
 
@@ -138,11 +133,13 @@ export class L1ToL2MessageGasEstimator {
       'function estimateRetryableTicket(address sender,uint256 deposit,address to,uint256 l2CallValue,address excessFeeRefundAddress,address callValueRefundAddress,bytes calldata data)',
     ])
 
+    // CHRIS: TODO: find the difference between the actual retryable that's created and the one we use for estimating
     console.log(
+      'estimate params',
       sender,
-      senderDeposit,
+      senderDeposit.toString(),
       destAddr,
-      l2CallValue,
+      l2CallValue.toString(),
       excessFeeRefundAddress,
       callValueRefundAddress,
       calldata
@@ -165,7 +162,7 @@ export class L1ToL2MessageGasEstimator {
   private applyDefaults(options?: GasOverrides) {
     return {
       maxGas: {
-        base: options?.maxGasPrice?.base,
+        base: options?.maxGas?.base,
         percentIncrease:
           options?.maxGas?.percentIncrease ||
           defaultL1ToL2MessageEstimateOptions.maxGasPercentIncrease,
@@ -216,17 +213,6 @@ export class L1ToL2MessageGasEstimator {
       defaultedOptions.maxGasPrice.percentIncrease
     )
 
-    // submit retry -
-    // effective gas price 0x05f5e100 - 100000000
-    // gas used 0x01c0c8 - 114888              ( / 2 = 57444)    0x01bf12 (114450) 0xe064 (57444)
-
-    // retry attempt -
-    // effective gas price 0x05f5e100 - 100000000
-    //                   57454
-    // gas used 0xdee3 - 57059 -                                 0xde00 (56832) 0xded8 (57048)
-
-    // gas estimate - 114888 100000000 11488800000000
-
     const maxSubmissionPriceBid = await this.estimateSubmissionPrice(
       // CHRIS: TODO: we defo want base fee here right?
       l1BaseFee,
@@ -259,13 +245,6 @@ export class L1ToL2MessageGasEstimator {
 
     let totalDepositValue = maxSubmissionPriceBid.add(
       maxGasPriceBid.mul(maxGas)
-    )
-
-    console.log(
-      'gas estimate',
-      maxGas.toString(),
-      maxGasPriceBid.toString(),
-      maxGasPriceBid.mul(maxGas).toString()
     )
 
     if (defaultedOptions.sendL2CallValueFromL1) {
