@@ -16,7 +16,7 @@
   "homepage": "https://offchainlabs.com",
   "scripts": {
     "audit:ci": "audit-ci -l -a 1067409 1067487 1067486",
-    "postinstall": "cd node_modules/@arbitrum/nitro-contracts && yarn install --production && cd ../../.. && node ./scripts/genAbi.js",
+    "postinstall": "node ./scripts/genAbi.js",
     "gen:abi": "node ./scripts/genAbi.js",
     "gen:network": "ts-node ./scripts/genNetwork.ts",
     "prepublishOnly": "yarn build && yarn format",
@@ -40,7 +40,7 @@
     "bridgeStandardToken": "ts-node scripts/deployStandard.ts"
   },
   "dependencies": {
-    "@arbitrum/nitro-contracts": "https://gitpkg.now.sh/OffchainLabs/nitro/contracts?master",
+    "@arbitrum/nitro-contracts": "^1.0.0-beta.1",
     "@ethersproject/address": "^5.0.8",
     "@ethersproject/bignumber": "^5.1.1",
     "@ethersproject/bytes": "^5.0.8",
