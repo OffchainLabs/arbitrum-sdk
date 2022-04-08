@@ -354,9 +354,6 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   ): Promise<BigNumber> {
     throw new ArbTsError("getFirstExecutableBlock not implemented")
     /*
-    // 60seconds * 60 minutes * 24hrs * 8 days
-    const EIGHT_DAYS_IN_BLOCKS =
-      (60 * 60 * 24 * 8) / (await getL1Network(this.l1Provider)).blockTime
     // expected number of L1 blocks that it takes for an L2 tx to be included in a L1 assertion
     const ASSERTION_CREATED_PADDING = 50
     // expected number of L1 blocks that it takes for a validator to confirm an L1 block after the node deadline is passed
@@ -390,8 +387,12 @@ export class L2ToL1MessageReader extends L2ToL1Message {
         RollupUserFacet__factory,
         t => t.filters.NodeCreated(),
         {
-          // ~40k blocks with a 15sec blocktime
-          fromBlock: latestBlock - EIGHT_DAYS_IN_BLOCKS,
+          // ~40k blocks with a 15sec blocktime and 8days confirmPeriodBlocks
+          fromBlock:
+            latestBlock -
+            BigNumber.from(network.confirmPeriodBlocks)
+              .add(ASSERTION_CONFIRMED_PADDING)
+              .toNumber(),
           toBlock: latestBlock,
         }
       )
