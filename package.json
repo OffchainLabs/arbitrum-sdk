@@ -1,6 +1,6 @@
 {
   "name": "@arbitrum/sdk",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -15,7 +15,7 @@
   },
   "homepage": "https://offchainlabs.com",
   "scripts": {
-    "audit:ci": "audit-ci -l -a 1006805 1006806 1006865 1006896 1006899",
+    "audit:ci": "audit-ci -l -a 1067409 1067487 1067486",
     "postinstall": "node ./scripts/genAbi.js",
     "gen:abi": "node ./scripts/genAbi.js",
     "gen:network": "ts-node ./scripts/genNetwork.ts",
