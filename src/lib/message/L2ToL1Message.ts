@@ -379,7 +379,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
         )
       })
 
-    if (events.length > 0) throw new ArbTsError('No NodeCreated events found')
+    if (events.length === 0) throw new ArbTsError('No NodeCreated events found')
     const rollupNode = await rollup.callStatic.getNode(events[0].nodeNum)
     const node = Node__factory.connect(rollupNode, this.l1Provider)
     return node
