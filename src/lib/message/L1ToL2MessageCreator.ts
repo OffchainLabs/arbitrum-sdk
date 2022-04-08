@@ -40,7 +40,7 @@ export class L1ToL2MessageCreator {
       maxGasPriceBid,
       maxSubmissionPriceBid,
       maxGasBid,
-      totalDepositValue,
+      totalL2GasCosts,
       l2CallValue,
     } = gasParams
     const sender = await this.getSender()
@@ -59,7 +59,7 @@ export class L1ToL2MessageCreator {
       maxGasBid,
       maxGasPriceBid,
       callDataHex,
-      { value: totalDepositValue, ...overrides }
+      { value: totalL2GasCosts.add(l2CallValue), ...overrides }
     )
     return res.wait()
   }
@@ -76,13 +76,16 @@ export class L1ToL2MessageCreator {
   ): Promise<L1TransactionReceipt> {
     const sender = await this.getSender()
     const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
-    const baseFee = (await this.l1Signer.provider!.getBlock("latest")).baseFeePerGas!    
+    const baseFee = (await this.l1Signer.provider!.getBlock('latest'))
+      .baseFeePerGas!
     const gasParams = await gasEstimator.estimateMessage(
       sender,
       destAddr,
       callDataHex,
       l2CallValue,
-      baseFee
+      baseFee,
+      sender,
+      sender
     )
     const l2ChainID = (await l2Provider.getNetwork()).chainId
     const rec = await this.createRetryableTicketFromGasParams(

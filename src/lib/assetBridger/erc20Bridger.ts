@@ -100,7 +100,7 @@ export interface TokenDepositParams extends EthDepositBase {
   /**
    * Overrides for the retryable ticket parameters
    */
-  retryableGasOverrides?: Omit<GasOverrides, 'sendL2CallValueFromL1'>
+  retryableGasOverrides?: GasOverrides
 
   /**
    * Transaction overrides
@@ -378,7 +378,7 @@ export class Erc20Bridger extends AssetBridger<
   ): Promise<{
     erc20L1Address: string
     amount: BigNumber
-    l1CallValue: BigNumber
+    depositCallValue: BigNumber
     maxSubmissionCost: BigNumber
     maxGas: BigNumber
     maxGasPrice: BigNumber
@@ -418,37 +418,32 @@ export class Erc20Bridger extends AssetBridger<
 
     // The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
     // Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
-    const estimateGasCallValue = (await this.isWethGateway(
-      l1GatewayAddress,
-      l1Signer.provider
-    ))
-      ? amount
-      : Zero
+    const isWeth = await this.isWethGateway(l1GatewayAddress, l1Signer.provider)
+    const estimateGasCallValue = isWeth ? amount : Zero
 
     const l2Dest = await l1Gateway.counterpartGateway()
     const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
 
     let tokenGasOverrides: GasOverrides | undefined = retryableGasOverrides
-    if (!tokenGasOverrides) tokenGasOverrides = {}
-    // we never send l2 call value from l1 for tokens
-    // since we check in the router that the value is submission cost
-    // + gas price * gas
-    tokenGasOverrides.sendL2CallValueFromL1 = false
-
+    
     // we also add a hardcoded minimum maxgas for custom gateway deposits
     if (l1GatewayAddress === this.l2Network.tokenBridge.l1CustomGateway) {
+      if (!tokenGasOverrides) tokenGasOverrides = {}
       if (!tokenGasOverrides.maxGas) tokenGasOverrides.maxGas = {}
       tokenGasOverrides.maxGas.min = Erc20Bridger.MIN_CUSTOM_DEPOSIT_MAXGAS
     }
 
     // 2. get the gas estimates
-    const baseFee = await (await l1Signer.provider.getBlock("latest")).baseFeePerGas!
+    const baseFee = await (await l1Signer.provider.getBlock('latest'))
+      .baseFeePerGas!
     const estimates = await gasEstimator.estimateMessage(
       l1GatewayAddress,
       l2Dest,
       depositCalldata,
       estimateGasCallValue,
       baseFee,
+      sender,
+      sender,
       tokenGasOverrides
     )
 
@@ -456,7 +451,7 @@ export class Erc20Bridger extends AssetBridger<
       maxGas: estimates.maxGasBid,
       maxSubmissionCost: estimates.maxSubmissionPriceBid,
       maxGasPrice: estimates.maxGasPriceBid,
-      l1CallValue: estimates.totalDepositValue,
+      depositCallValue: estimates.totalL2GasCosts,
       destinationAddress: to,
       amount,
       erc20L1Address,
@@ -503,7 +498,7 @@ export class Erc20Bridger extends AssetBridger<
       data,
       {
         ...(params.overrides || {}),
-        value: depositParams.l1CallValue,
+        value: depositParams.depositCallValue,
         gasLimit: 3000000,
       }
     )
@@ -551,7 +546,7 @@ export class Erc20Bridger extends AssetBridger<
       this.l2Network.tokenBridge.l2GatewayRouter,
       params.l2Signer
     )
-    
+
     return (estimate ? l2GatewayRouter.estimateGas : l2GatewayRouter.functions)[
       'outboundTransfer(address,address,uint256,bytes)'
     ](params.erc20l1Address, to, params.amount, '0x', {
@@ -644,13 +639,17 @@ export class AdminErc20Bridger extends Erc20Bridger {
     )
 
     // CHRIS: TODO: is this really the best way to get base fee?
-    const baseFee = await (await l1Signer.provider.getBlock("latest")).baseFeePerGas!
+    const l1SignerAddr = await l1Signer.getAddress()
+    const baseFee = await (await l1Signer.provider.getBlock('latest'))
+      .baseFeePerGas!
     const setTokenEstimates = await gasPriceEstimator.estimateMessage(
       this.l2Network.tokenBridge.l1CustomGateway,
       this.l2Network.tokenBridge.l2CustomGateway,
       l2SetTokenCallData,
       Zero,
-      baseFee
+      baseFee,
+      l1SignerAddr,
+      l1SignerAddr
     )
 
     // 2. setGateway
@@ -666,7 +665,9 @@ export class AdminErc20Bridger extends Erc20Bridger {
       this.l2Network.tokenBridge.l2GatewayRouter,
       l2SetGatewaysCallData,
       Zero,
-      baseFee
+      baseFee,
+      l1SignerAddr,
+      l1SignerAddr
     )
 
     // now execute the registration
@@ -677,12 +678,12 @@ export class AdminErc20Bridger extends Erc20Bridger {
       setTokenEstimates.maxGasBid,
       setGatwayEstimates.maxGasBid,
       setGatwayEstimates.maxGasPriceBid,
-      setTokenEstimates.totalDepositValue,
-      setGatwayEstimates.totalDepositValue,
+      setTokenEstimates.totalL2GasCosts,
+      setGatwayEstimates.totalL2GasCosts,
       l1SenderAddress,
       {
-        value: setTokenEstimates.totalDepositValue.add(
-          setGatwayEstimates.totalDepositValue
+        value: setTokenEstimates.totalL2GasCosts.add(
+          setGatwayEstimates.totalL2GasCosts
         ),
       }
     )
@@ -773,7 +774,8 @@ export class AdminErc20Bridger extends Erc20Bridger {
     await this.checkL2Network(l2Provider)
 
     const estimator = new L1ToL2MessageGasEstimator(l2Provider)
-    const baseFee = await (await l1Signer.provider.getBlock("latest")).baseFeePerGas!
+    const baseFee = await (await l1Signer.provider.getBlock('latest'))
+      .baseFeePerGas!
 
     const iL2GatewayRouter = L2GatewayRouter__factory.createInterface()
     const l2SetGatewaysCallData = iL2GatewayRouter.encodeFunctionData(
@@ -784,12 +786,15 @@ export class AdminErc20Bridger extends Erc20Bridger {
       ]
     )
 
+    const l1SignerAddr = await l1Signer.getAddress()
     const estimates = await estimator.estimateMessage(
       this.l2Network.tokenBridge.l1GatewayRouter,
       this.l2Network.tokenBridge.l2GatewayRouter,
       l2SetGatewaysCallData,
       Zero,
-      baseFee
+      baseFee,
+      l1SignerAddr,
+      l1SignerAddr
     )
 
     const l1GatewayRouter = L1GatewayRouter__factory.connect(
@@ -804,7 +809,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
       estimates.maxGasBid,
       estimates.maxGasPriceBid,
       estimates.maxSubmissionPriceBid,
-      { value: estimates.totalDepositValue }
+      { value: estimates.totalL2GasCosts }
     )
 
     const res = await l1GatewayRouter.functions.setGateways(
@@ -813,7 +818,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
       estimates.maxGasBid,
       estimates.maxGasPriceBid,
       estimates.maxSubmissionPriceBid,
-      { value: estimates.totalDepositValue }
+      { value: estimates.totalL2GasCosts }
     )
 
     return L1TransactionReceipt.monkeyPatchContractCallWait(res)

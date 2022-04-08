@@ -246,7 +246,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
 
     return messages.map(mn => {
       const inboxMessageData = this.parseInboxMessage(mn.inboxMessageEvent)
-      return L1ToL2Message.fromRetryableCreationId(
+      return L1ToL2Message.fromTxComponents(
         l2SignerOrProvider,
         BigNumber.from(chainID),
         mn.bridgeMessageEvent.sender,

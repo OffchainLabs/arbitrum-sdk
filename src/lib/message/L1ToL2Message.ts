@@ -172,7 +172,7 @@ export abstract class L1ToL2Message {
     return ethers.utils.keccak256(rlpEnc)
   }
 
-  public static fromRetryableCreationId<T extends SignerOrProvider>(
+  public static fromTxComponents<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
     chainId: BigNumber,
     sender: string,
@@ -180,7 +180,7 @@ export abstract class L1ToL2Message {
     l1BaseFee: BigNumber,
     messageData: SubmitRetryableMessage
   ): L1ToL2MessageReaderOrWriter<T>
-  public static fromRetryableCreationId<T extends SignerOrProvider>(
+  public static fromTxComponents<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
     chainId: BigNumber,
     sender: string,
@@ -492,8 +492,9 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
         this.l2Signer
       )
       const feeData = await this.l2Provider.getFeeData()
-
+      
       // CHRIS: TODO: check what the default behaviour is for gasprice
+      // CHRIS: TODO: why are we using 1559 here, but not elsewhere? All tx should be - in many cases it may be ignored though/depend on the wallet
       return await arbRetryableTx.redeem(this.retryableCreationId, {
         maxFeePerGas: feeData.maxFeePerGas!,
         maxPriorityFeePerGas: feeData.maxPriorityFeePerGas!,

@@ -79,6 +79,8 @@ export class L2TransactionReceipt implements TransactionReceipt {
     this.status = tx.status
   }
 
+  // CHRIS: TODO: check all uses of find logs to see if we're using proper abi
+
   /**
    * Get an L2ToL1Transaction events created by this transaction
    * @returns
@@ -159,6 +161,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
    */
   public async getL2ToL1Messages<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
+    // CHRIS: TODO: would be nice to not require this
     l2Network: L2Network
   ): Promise<L2ToL1MessageReaderOrWriter<T>[]>
   public async getL2ToL1Messages<T extends SignerOrProvider>(

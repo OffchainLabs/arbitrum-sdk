@@ -116,6 +116,7 @@ export class EthBridger extends AssetBridger<
 
     const gasEstimator = new L1ToL2MessageGasEstimator(params.l2Provider)
 
+    // CHRIS: TODO: look for all usages of base fee, and have think about them
     const baseFee = (await params.l1Signer.provider.getBlock('latest'))
       .baseFeePerGas
     if (!baseFee) {
@@ -134,13 +135,6 @@ export class EthBridger extends AssetBridger<
       this.l2Network.ethBridge.inbox,
       params.l1Signer
     )
-
-
-    // CHRIS: TODO: remove
-    inbox.callStatic.depositEth(submissionCost, {
-      value: params.amount.add(submissionCost),
-      ...(params.overrides || {}),
-    })
 
     return (estimate ? inbox.estimateGas : inbox.functions).depositEth(
       submissionCost,

@@ -24,19 +24,20 @@ import { L1CustomGateway__factory } from '../src/lib/abi/factories/L1CustomGatew
 import { L1GatewayRouter__factory } from '../src/lib/abi/factories/L1GatewayRouter__factory'
 import { L2GatewayRouter__factory } from '../src/lib/abi/factories/L2GatewayRouter__factory'
 import { TestArbCustomToken__factory } from '../src/lib/abi/factories/TestArbCustomToken__factory'
-import { L2ToL1MessageStatus } from '../src/lib/message/L2ToL1Message'
 import {
   fundL1,
   fundL2,
   skipIfMainnet,
   depositToken,
-  ExpectedGatewayType,
+  GatewayType,
+  withdrawToken,
 } from './testHelpers'
 import { L1ToL2MessageStatus, L2Network } from '../src'
 import { Signer, constants, ContractFactory } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { TestCustomTokenL1 } from '../src/lib/abi/TestCustomTokenL1'
 import { testSetup } from '../scripts/testSetup'
+import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 
 const testCustomTokenAbi = [
   {
@@ -609,95 +610,22 @@ describe('Custom ERC20', () => {
       testState.l1Signer,
       testState.l2Signer,
       L1ToL2MessageStatus.REDEEMED,
-      ExpectedGatewayType.CUSTOM
+      GatewayType.CUSTOM
     )
   })
 
   it('withdraws erc20', async function () {
-    const l2Token = testState.adminErc20Bridger.getL2TokenContract(
-      testState.l2Signer.provider!,
-      await testState.adminErc20Bridger.getL2ERC20Address(
+    await withdrawToken({
+      ...testState,
+      erc20Bridger: testState.adminErc20Bridger,
+      amount: withdrawalAmount,
+      gatewayType: GatewayType.CUSTOM,
+      startBalance: depositAmount,
+      l1Token: ERC20__factory.connect(
         testState.l1CustomToken.address,
         testState.l1Signer.provider!
-      )
-    )
-
-    const withdrawRes = await testState.adminErc20Bridger.withdraw({
-      amount: withdrawalAmount,
-      erc20l1Address: testState.l1CustomToken.address,
-      l2Signer: testState.l2Signer,
+      ),
     })
-    const withdrawRec = await withdrawRes.wait()
-
-    expect(withdrawRec.status).to.equal(1, 'initiate token withdraw txn failed')
-
-    const message = (
-      await withdrawRec.getL2ToL1Messages(
-        testState.l1Signer,
-        testState.l2Network
-      )
-    )[0]
-    expect(message, 'withdrawEventData not found').to.exist
-
-    const messageStatus = await message.status(testState.l2Signer.provider!)
-    expect(
-      messageStatus === L2ToL1MessageStatus.UNCONFIRMED,
-      `custom token withdraw status returned ${messageStatus}`
-    ).to.be.true
-
-    const testWalletL2Balance = await l2Token.balanceOf(
-      await testState.l2Signer.getAddress()
-    )
-    expect(
-      testWalletL2Balance.toNumber(),
-      'token withdraw balance not deducted'
-    ).to.eq(depositAmount.sub(withdrawalAmount).toNumber())
-    const walletAddress = await testState.l1Signer.getAddress()
-
-    const gatewayAddress = await testState.adminErc20Bridger.getL2GatewayAddress(
-      testState.l1CustomToken.address,
-      testState.l2Signer.provider!
-    )
-    expect(gatewayAddress, 'Gateway is not custom gateway').to.eq(
-      testState.adminErc20Bridger.l2Network.tokenBridge.l2CustomGateway
-    )
-
-    const gatewayWithdrawEvents = await testState.adminErc20Bridger.getL2WithdrawalEvents(
-      testState.l2Signer.provider!,
-      gatewayAddress,
-      { fromBlock: withdrawRec.blockNumber, toBlock: 'latest' },
-      testState.l1CustomToken.address,
-      walletAddress
-    )
-    expect(gatewayWithdrawEvents.length).to.equal(
-      1,
-      'token custom gateway query failed'
-    )
-
-    const balBefore = await testState.l1CustomToken.balanceOf(
-      await testState.l1Signer.getAddress()
-    )
-
-    // CHRIS: TODO: tidy up this withdrawal stuff above and here
-    await message.waitUntilReadyToExecute(testState.l2Signer.provider!)
-    expect(
-      await message.status(testState.l2Signer.provider!),
-      'confirmed status'
-    ).to.eq(L2ToL1MessageStatus.CONFIRMED)
-
-    const execTx = await message.execute(testState.l2Signer.provider!)
-    await execTx.wait()
-    expect(
-      await message.status(testState.l2Signer.provider!),
-      'executed status'
-    ).to.eq(L2ToL1MessageStatus.EXECUTED)
-
-    const balAfter = await testState.l1CustomToken.balanceOf(
-      await testState.l1Signer.getAddress()
-    )
-    expect(balBefore.add(withdrawalAmount).toString(), 'Not withdrawn').to.eq(
-      balAfter.toString()
-    )
   })
 })
 
