@@ -28,6 +28,8 @@ import { BlockTag } from '@ethersproject/abstract-provider'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { IOutbox__factory } from '../abi/factories/IOutbox__factory'
 import { Outbox__factory } from '../abi/factories/Outbox__factory'
+import { RollupUserFacet__factory } from '../abi/factories/RollupUserFacet__factory'
+import { Node__factory } from '../abi/factories/Node__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
@@ -38,6 +40,7 @@ import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
+import { getL1Network, getL2Network } from '../dataEntities/networks'
 import { wait } from '../utils/lib'
 
 export interface MessageBatchProofInfo {
@@ -311,6 +314,76 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       await wait(retryDelay)
       await this.waitUntilOutboxEntryCreated(retryDelay)
     }
+  }
+
+  /**
+   * Estimates the L1 block number in which this L2 to L1 tx will be available for execution
+   * @param l2Provider
+   * @returns expected L1 block number where the L2 to L1 message will be executable
+   */
+  public async getFirstExecutableBlock(
+    l2Provider: Provider
+  ): Promise<BigNumber> {
+    // 60seconds * 60 minutes * 24hrs * 8 days
+    const EIGHT_DAYS_IN_BLOCKS =
+      (60 * 60 * 24 * 8) / (await getL1Network(this.l1Provider)).blockTime
+    // expected number of L1 blocks that it takes for an L2 tx to be included in a L1 assertion
+    const ASSERTION_CREATED_PADDING = 50
+    // expected number of L1 blocks that it takes for a validator to confirm an L1 block after the node deadline is passed
+    const ASSERTION_CONFIRMED_PADDING = 20
+
+    // TODO: create version that queries multiple L2 to L1 txs, so a single multicall can make all requests
+    // we assume the L2 to L1 tx is valid, but we could check that on the constructor that the L2 to L1 msg is valid
+    const network = await getL2Network(l2Provider)
+
+    // TODO: use IRollupUser interface instead
+    const rollup = RollupUserFacet__factory.connect(
+      network.ethBridge.rollup,
+      this.l1Provider
+    )
+
+    const proof = await this.tryGetProof(l2Provider)
+    // here we assume the L2 to L1 tx is actually valid, so the user needs to wait the max time.
+    if (proof === null)
+      return BigNumber.from(network.confirmPeriodBlocks)
+        .add(ASSERTION_CREATED_PADDING)
+        .add(ASSERTION_CONFIRMED_PADDING)
+    // we can't check if the L2 to L1 tx isSpent on the outbox, so we instead try executing it
+    if (await this.hasExecuted(proof)) return BigNumber.from(0)
+    const latestBlock = await this.l1Provider.getBlockNumber()
+
+    const eventFetcher = new EventFetcher(this.l1Provider)
+
+    const events = (
+      await eventFetcher.getEvents(
+        network.ethBridge.rollup,
+        RollupUserFacet__factory,
+        t => t.filters.NodeCreated(),
+        {
+          // ~40k blocks with a 15sec blocktime
+          fromBlock: latestBlock - EIGHT_DAYS_IN_BLOCKS,
+          toBlock: latestBlock,
+        }
+      )
+    )
+      .map(e => e.event)
+      .filter(e => {
+        const afterSendCount = e.assertionIntFields[1][2]
+        return BigNumber.from(afterSendCount).gte(this.batchNumber)
+      })
+      .sort((a, b) => {
+        return (
+          BigNumber.from(a.assertionIntFields[1][2]).toNumber() -
+          BigNumber.from(b.assertionIntFields[1][2]).toNumber()
+        )
+      })
+
+    if (events.length > 0) throw new ArbTsError('No NodeCreated events found')
+    const rollupNode = await rollup.callStatic.getNode(events[0].nodeNum)
+    const node = Node__factory.connect(rollupNode, this.l1Provider)
+    return node
+      .deadlineBlock()
+      .then(blockNum => blockNum.add(ASSERTION_CONFIRMED_PADDING))
   }
 }
 
