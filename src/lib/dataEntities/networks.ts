@@ -19,6 +19,8 @@
 import dotenv from 'dotenv'
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbTsError } from '../dataEntities/errors'
+import { SEVEN_DAYS_IN_SECONDS } from './constants'
+import { BigNumber } from "@ethersproject/bignumber";
 
 dotenv.config()
 
@@ -33,6 +35,7 @@ export interface L2Network extends Network {
   partnerChainID: number
   isArbitrum: true
   confirmPeriodBlocks: number
+  retryableLifetimeSeconds: number
 }
 export interface Network {
   chainID: number
@@ -178,6 +181,7 @@ export const l2Networks: L2Networks = {
     confirmPeriodBlocks: 45818,
     rpcURL: process.env['ARB_ONE_RPC'] || 'https://arb1.arbitrum.io/rpc',
     isCustom: false,
+    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS
   },
   421611: {
     chainID: 421611,
@@ -190,6 +194,7 @@ export const l2Networks: L2Networks = {
     confirmPeriodBlocks: 6545, // TODO
     rpcURL: process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc',
     isCustom: false,
+    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS
   }
 }
 
@@ -266,6 +271,32 @@ export const addCustomNetwork = ({
   if (!l1PartnerChain.partnerChainIDs.includes(customL2Network.chainID)) {
     l1PartnerChain.partnerChainIDs.push(customL2Network.chainID)
   }
+}
+
+export const getOutboxAddr = (network: L2Network, batchNumber: BigNumber) => {
+  // find the outbox where the activation batch number of the next outbox
+    // is greater than the supplied batch
+    const res = Object.entries(network.ethBridge.outboxes)
+      .sort((a, b) => {
+        if (a[1] < b[1]) return -1
+        else if (a[1] === b[1]) return 0
+        else return 1
+      })
+      .find(
+        (_, index, array) =>
+          array[index + 1] === undefined ||
+          array[index + 1][1] > batchNumber.toNumber()
+      )
+
+    if (!res) {
+      throw new ArbTsError(
+        `No outbox found for batch number: ${batchNumber.toString()} on network: ${
+          network.chainID
+        }.`
+      )
+    }
+
+    return res[0]
 }
 
 export const isL1Network = (
