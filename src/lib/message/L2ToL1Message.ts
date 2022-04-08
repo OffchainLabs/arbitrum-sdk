@@ -293,10 +293,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       address: rollup.address,
       fromBlock: Math.max(
         // CHRIS: TODO: either a constant or think about removing this -it's 4 weeks
-        currentBlock -
-          BigNumber.from(l2Network.confirmPeriodBlocks)
-            .add(ASSERTION_CONFIRMED_PADDING)
-            .toNumber(),
+        currentBlock - Math.floor((4 * 7 * 24 * 60 * 60) / 14),
         0
       ),
       toBlock: 'latest',
