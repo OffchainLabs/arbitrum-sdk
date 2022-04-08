@@ -336,52 +336,46 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       this.l1Provider
     )
 
-    try {
-      const proof = await this.tryGetProof(l2Provider)
-      // here we assume the L2 to L1 tx is actually valid, so the user needs to wait the max time.
-      if (proof === null) return BigNumber.from(network.confirmPeriodBlocks)
-      // we can't check if the L2 to L1 tx isSpent on the outbox, so we instead try executing it
-      if (await this.hasExecuted(proof)) return BigNumber.from(0)
-      // 60seconds * 60 minutes * 24hrs * 8 days
-      const EIGHT_DAYS_IN_BLOCKS =
-        (60 * 60 * 24 * 8) / (await getL1Network(this.l1Provider)).blockTime
-      const latestBlock = await this.l1Provider.getBlockNumber()
+    const proof = await this.tryGetProof(l2Provider)
+    // here we assume the L2 to L1 tx is actually valid, so the user needs to wait the max time.
+    if (proof === null) return BigNumber.from(network.confirmPeriodBlocks)
+    // we can't check if the L2 to L1 tx isSpent on the outbox, so we instead try executing it
+    if (await this.hasExecuted(proof)) return BigNumber.from(0)
+    // 60seconds * 60 minutes * 24hrs * 8 days
+    const EIGHT_DAYS_IN_BLOCKS =
+      (60 * 60 * 24 * 8) / (await getL1Network(this.l1Provider)).blockTime
+    const latestBlock = await this.l1Provider.getBlockNumber()
 
-      const eventFetcher = new EventFetcher(this.l1Provider)
+    const eventFetcher = new EventFetcher(this.l1Provider)
 
-      const events = (
-        await eventFetcher.getEvents(
-          network.ethBridge.rollup,
-          RollupUserFacet__factory,
-          t => t.filters.NodeCreated(),
-          {
-            // ~40k blocks with a 15sec blocktime
-            fromBlock: latestBlock - EIGHT_DAYS_IN_BLOCKS,
-            toBlock: latestBlock,
-          }
-        )
+    const events = (
+      await eventFetcher.getEvents(
+        network.ethBridge.rollup,
+        RollupUserFacet__factory,
+        t => t.filters.NodeCreated(),
+        {
+          // ~40k blocks with a 15sec blocktime
+          fromBlock: latestBlock - EIGHT_DAYS_IN_BLOCKS,
+          toBlock: latestBlock,
+        }
       )
-        .map(e => e.event)
-        .filter(e => {
-          const afterSendCount = e.assertionIntFields[1][2]
-          return BigNumber.from(afterSendCount).gte(this.batchNumber)
-        })
-        .sort((a, b) => {
-          return (
-            BigNumber.from(a.assertionIntFields[1][2]).toNumber() -
-            BigNumber.from(b.assertionIntFields[1][2]).toNumber()
-          )
-        })
+    )
+      .map(e => e.event)
+      .filter(e => {
+        const afterSendCount = e.assertionIntFields[1][2]
+        return BigNumber.from(afterSendCount).gte(this.batchNumber)
+      })
+      .sort((a, b) => {
+        return (
+          BigNumber.from(a.assertionIntFields[1][2]).toNumber() -
+          BigNumber.from(b.assertionIntFields[1][2]).toNumber()
+        )
+      })
 
-      if (events.length > 0) throw new ArbTsError('No NodeCreated events found')
-      const rollupNode = await rollup.callStatic.getNode(events[0].nodeNum)
-      const node = Node__factory.connect(rollupNode, this.l1Provider)
-      return node.deadlineBlock()
-    } catch (e) {
-      console.error("getExpectedNodeDeadline: this shouldn't have reverted")
-      console.error(e)
-      throw e
-    }
+    if (events.length > 0) throw new ArbTsError('No NodeCreated events found')
+    const rollupNode = await rollup.callStatic.getNode(events[0].nodeNum)
+    const node = Node__factory.connect(rollupNode, this.l1Provider)
+    return node.deadlineBlock()
   }
 }
 
