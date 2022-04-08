@@ -40,9 +40,8 @@ import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
-import { getL1Network, getL2Network } from '../dataEntities/networks'
 import { wait } from '../utils/lib'
-import { getL2Network, L2Network } from '../dataEntities/networks'
+import { getL2Network } from '../dataEntities/networks'
 import {
   AbiCoder,
   defaultAbiCoder,
@@ -353,6 +352,8 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   public async getFirstExecutableBlock(
     l2Provider: Provider
   ): Promise<BigNumber> {
+    throw new ArbTsError("getFirstExecutableBlock not implemented")
+    /*
     // 60seconds * 60 minutes * 24hrs * 8 days
     const EIGHT_DAYS_IN_BLOCKS =
       (60 * 60 * 24 * 8) / (await getL1Network(this.l1Provider)).blockTime
@@ -413,6 +414,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     return node
       .deadlineBlock()
       .then(blockNum => blockNum.add(ASSERTION_CONFIRMED_PADDING))
+    */
   }
 }
 
