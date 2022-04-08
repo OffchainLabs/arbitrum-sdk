@@ -135,9 +135,13 @@ export type L2ToL1Event = {
  * If T is of type Signer then L2ToL1MessageReaderOrWriter<T> will be of
  * type L2ToL1MessageWriter.
  */
-export type L2ToL1MessageReaderOrWriter<
-  T extends SignerOrProvider
-> = T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
+export type L2ToL1MessageReaderOrWriter<T extends SignerOrProvider> =
+  T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
+
+// expected number of L1 blocks that it takes for an L2 tx to be included in a L1 assertion
+const ASSERTION_CREATED_PADDING = 50
+// expected number of L1 blocks that it takes for a validator to confirm an L1 block after the node deadline is passed
+const ASSERTION_CONFIRMED_PADDING = 20
 
 export class L2ToL1Message {
   // CHRIS: TODO: docs on these - update the constructor
@@ -224,12 +228,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
     const outboxProofParams = await nodeInterface.callStatic[
       'constructOutboxProof'
-    ](
-      
-      this.sendRootSize.toNumber(),
-      this.event.position.toNumber()
-    )
-
+    ](this.sendRootSize.toNumber(), this.event.position.toNumber())
 
     // CHRIS: TODO: check these from the return vals
     // this.event.hash,
@@ -237,6 +236,23 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     // console.log(outboxProofParams)
 
     return outboxProofParams['proof'] as string[]
+  }
+
+  /**
+   * Check if this message has already been executed in the Outbox
+   */
+  private async hasExecuted(): Promise<boolean> {
+    const outbox = new Contract(
+      this.outboxAddress,
+      [
+        'function executeTransaction(bytes32[] calldata proof, uint256 index, address l2Sender, address to, uint256 l2Block, uint256 l1Block, uint256 l2Timestamp, uint256 value, bytes calldata data) public',
+        'function spent(uint256) public view returns(bool)',
+        'function roots(bytes32) public view returns(bytes32)',
+      ],
+      this.l1Provider
+    )
+
+    return outbox['spent'](this.event.position)
   }
 
   /**
@@ -248,19 +264,9 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     // CHRIS: TODO: this is quite an ugly way to do this
     await this.updateSendRoot(this.l1Provider, l2Provider)
     if (!this.sendRootHash) return L2ToL1MessageStatus.UNCONFIRMED
-
-    const outbox = new Contract(
-      this.outboxAddress,
-      [
-        'function executeTransaction(bytes32[] calldata proof, uint256 index, address l2Sender, address to, uint256 l2Block, uint256 l1Block, uint256 l2Timestamp, uint256 value, bytes calldata data) public',
-        'function spent(uint256) public view returns(bool)',
-        'function roots(bytes32) public view returns(bytes32)',
-      ],
-      this.l1Provider
-    )
-
-    const spent = await outbox['spent'](this.event.position)
-    return spent ? L2ToL1MessageStatus.EXECUTED : L2ToL1MessageStatus.CONFIRMED
+    return (await this.hasExecuted())
+      ? L2ToL1MessageStatus.EXECUTED
+      : L2ToL1MessageStatus.CONFIRMED
   }
 
   // CHRIS: TODO: tidy up this function - it's also very inefficient
@@ -287,7 +293,10 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       address: rollup.address,
       fromBlock: Math.max(
         // CHRIS: TODO: either a constant or think about removing this -it's 4 weeks
-        currentBlock - Math.floor((4 * 7 * 24 * 60 * 60) / 14),
+        currentBlock -
+          BigNumber.from(l2Network.confirmPeriodBlocks)
+            .add(ASSERTION_CONFIRMED_PADDING)
+            .toNumber(),
         0
       ),
       toBlock: 'latest',
@@ -297,21 +306,21 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       ),
     })
 
-    if (logs.length !== 1) throw new Error('missing logs')
+    if (logs.length !== 1) throw new ArbTsError('No NodeCreated events found')
 
-    const parsedLog = (rollup.interface.parseLog(logs[0]).args as unknown) as {
+    const parsedLog = rollup.interface.parseLog(logs[0]).args as unknown as {
       nodeNum: BigNumber
       sendRoot: string
       blockHash: string
     }
 
-    const l2Block = await (l2Provider! as ethers.providers.JsonRpcProvider).send(
-      'eth_getBlockByHash',
-      [parsedLog.blockHash, false]
-    )
+    const l2Block = await (
+      l2Provider! as ethers.providers.JsonRpcProvider
+    ).send('eth_getBlockByHash', [parsedLog.blockHash, false])
     if (l2Block['sendRoot'] !== parsedLog.sendRoot) {
+      // CHRIS: TODO: handle this case
       console.log(l2Block['sendRoot'], parsedLog.sendRoot)
-      throw new Error('send roots')
+      throw new ArbTsError("L2 block send root doesn't match parsed log")
     }
 
     const sendRootSize = BigNumber.from(l2Block['sendCount'])
@@ -352,75 +361,85 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   public async getFirstExecutableBlock(
     l2Provider: Provider
   ): Promise<BigNumber> {
-    throw new ArbTsError("getFirstExecutableBlock not implemented")
-    /*
-    // expected number of L1 blocks that it takes for an L2 tx to be included in a L1 assertion
-    const ASSERTION_CREATED_PADDING = 50
-    // expected number of L1 blocks that it takes for a validator to confirm an L1 block after the node deadline is passed
-    const ASSERTION_CONFIRMED_PADDING = 20
-
     // TODO: create version that queries multiple L2 to L1 txs, so a single multicall can make all requests
     // we assume the L2 to L1 tx is valid, but we could check that on the constructor that the L2 to L1 msg is valid
-    const network = await getL2Network(l2Provider)
+    const l2Network = await getL2Network(l2Provider)
 
-    // TODO: use IRollupUser interface instead
-    const rollup = RollupUserFacet__factory.connect(
-      network.ethBridge.rollup,
+    const rollup = new Contract(
+      l2Network.ethBridge.rollup,
+      [
+        'function getNode(uint64 nodeNum) public view override returns (tuple(bytes32 stateHash, bytes32 challengeHash, bytes32 confirmData, uint64 prevNum, uint64 deadlineBlock, uint64 noChildConfirmedBeforeBlock, uint64 stakerCount, uint64 childStakerCount, uint64 firstChildBlock, uint64 latestChildNumber, uint64 createdAtBlock, bytes32 nodeHash) node)',
+        'event NodeConfirmed(uint64 indexed nodeNum, bytes32 blockHash, bytes32 sendRoot)',
+      ],
       this.l1Provider
     )
 
-    const proof = await this.tryGetProof(l2Provider)
+    const proof = await this.getOutboxProof(l2Provider)
     // here we assume the L2 to L1 tx is actually valid, so the user needs to wait the max time.
     if (proof === null)
-      return BigNumber.from(network.confirmPeriodBlocks)
+      return BigNumber.from(l2Network.confirmPeriodBlocks)
         .add(ASSERTION_CREATED_PADDING)
         .add(ASSERTION_CONFIRMED_PADDING)
     // we can't check if the L2 to L1 tx isSpent on the outbox, so we instead try executing it
-    if (await this.hasExecuted(proof)) return BigNumber.from(0)
+    if (await this.hasExecuted()) return BigNumber.from(0)
+
     const latestBlock = await this.l1Provider.getBlockNumber()
 
-    const eventFetcher = new EventFetcher(this.l1Provider)
-
-    const events = (
-      await eventFetcher.getEvents(
-        network.ethBridge.rollup,
-        RollupUserFacet__factory,
-        t => t.filters.NodeCreated(),
-        {
-          // ~40k blocks with a 15sec blocktime and 8days confirmPeriodBlocks
-          fromBlock:
-            latestBlock -
-            BigNumber.from(network.confirmPeriodBlocks)
+    const logs = (
+      await this.l1Provider.getLogs({
+        address: rollup.address,
+        fromBlock: Math.max(
+          latestBlock -
+            BigNumber.from(l2Network.confirmPeriodBlocks)
               .add(ASSERTION_CONFIRMED_PADDING)
               .toNumber(),
-          toBlock: latestBlock,
-        }
-      )
-    )
-      .map(e => e.event)
-      .filter(e => {
-        const afterSendCount = e.assertionIntFields[1][2]
-        return BigNumber.from(afterSendCount).gte(this.batchNumber)
+          0
+        ),
+        toBlock: 'latest',
+        topics: rollup.interface.encodeFilterTopics(
+          rollup.interface.getEvent('NodeConfirmed'),
+          []
+        ),
       })
+    )
+      .map(
+        log =>
+          rollup.interface.parseLog(log).args as unknown as {
+            nodeNum: BigNumber
+            sendRoot: string
+            blockHash: string
+          }
+      )
       .sort((a, b) => {
         return (
-          BigNumber.from(a.assertionIntFields[1][2]).toNumber() -
-          BigNumber.from(b.assertionIntFields[1][2]).toNumber()
+          BigNumber.from(a.nodeNum).toNumber() -
+          BigNumber.from(b.nodeNum).toNumber()
         )
       })
 
-    // a node that covers this tx still has not been created
-    if (events.length === 0)
-      return BigNumber.from(network.confirmPeriodBlocks)
-        .add(ASSERTION_CREATED_PADDING)
-        .add(ASSERTION_CONFIRMED_PADDING)
+    let found = false
+    let logIndex = 0
+    while (!found) {
+      const log = logs[logIndex]
+      const l2Block = await (
+        l2Provider! as ethers.providers.JsonRpcProvider
+      ).send('eth_getBlockByHash', [log.blockHash, false])
 
-    const rollupNode = await rollup.callStatic.getNode(events[0].nodeNum)
-    const node = Node__factory.connect(rollupNode, this.l1Provider)
-    return node
-      .deadlineBlock()
-      .then(blockNum => blockNum.add(ASSERTION_CONFIRMED_PADDING))
-    */
+      const sendCount = BigNumber.from(l2Block['sendCount'])
+
+      if (sendCount.gte(this.event.position)) {
+        found = true
+      } else {
+        // TODO: optimise with a binary search
+        logIndex++
+      }
+    }
+    if (!found)
+      throw new ArbTsError("Can't find block with withdrawal sendCount")
+
+    const earliestNodeWithExit = logs[logIndex].nodeNum
+    const node = await rollup.getNode(earliestNodeWithExit)
+    return node.deadlineBlock.add(ASSERTION_CONFIRMED_PADDING)
   }
 }
 
