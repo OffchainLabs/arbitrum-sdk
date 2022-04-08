@@ -409,7 +409,12 @@ export class L2ToL1MessageReader extends L2ToL1Message {
         )
       })
 
-    if (events.length > 0) throw new ArbTsError('No NodeCreated events found')
+    // a node that covers this tx still has not been created
+    if (events.length === 0)
+      return BigNumber.from(network.confirmPeriodBlocks)
+        .add(ASSERTION_CREATED_PADDING)
+        .add(ASSERTION_CONFIRMED_PADDING)
+
     const rollupNode = await rollup.callStatic.getNode(events[0].nodeNum)
     const node = Node__factory.connect(rollupNode, this.l1Provider)
     return node
