@@ -317,8 +317,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   }
 
   /**
-   * Estimates the L1 block number in which a particular L2 to L1 tx will be
-   * available for execution
+   * Estimates the L1 block number in which this L2 to L1 tx will be available for execution
    * @param l2Provider
    * @returns expected L1 block number where the L2 to L1 message will be executable
    */
