@@ -174,7 +174,7 @@ export class L2ToL1Message {
       ? L2ToL1Event[]
       : Array<L2ToL1TransactionEvent['args']>
   >
-  public static async getL2ToL1MessageLogs<TReturnAsClass extends boolean>(
+  public static async getL2ToL1MessageLogs(
     l2Provider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     batchNumber?: BigNumber,
@@ -191,7 +191,7 @@ export class L2ToL1Message {
         t.filters.L2ToL1Transaction(null, destination, uniqueId, batchNumber),
       filter
     )
-    if (returnAsClass === true)
+    if (returnAsClass === true) {
       return Promise.all(
         events.map(e =>
           l2Provider
@@ -201,6 +201,7 @@ export class L2ToL1Message {
             )
         )
       ).then(res => res.flat())
+    }
 
     if (indexInBatch) {
       const indexItems = events.filter(b =>
