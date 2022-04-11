@@ -161,7 +161,7 @@ export class L2ToL1Message {
       : new L2ToL1MessageReader(l1SignerOrProvider, outboxAddress, event)
   }
 
-  public static async getL2ToL1MessageLogs<TReturnAsClass extends boolean>(
+  public static async getL2ToL1MessageLogs<TReturnAsClass extends boolean = false>(
     l2Provider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     batchNumber?: BigNumber,
