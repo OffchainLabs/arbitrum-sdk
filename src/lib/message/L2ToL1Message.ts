@@ -48,6 +48,7 @@ import {
   keccak256,
   solidityKeccak256,
 } from 'ethers/lib/utils'
+import { L2TransactionReceipt } from './L2Transaction'
 
 export interface MessageBatchProofInfo {
   /**
@@ -135,9 +136,8 @@ export type L2ToL1Event = {
  * If T is of type Signer then L2ToL1MessageReaderOrWriter<T> will be of
  * type L2ToL1MessageWriter.
  */
-export type L2ToL1MessageReaderOrWriter<
-  T extends SignerOrProvider
-> = T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
+export type L2ToL1MessageReaderOrWriter<T extends SignerOrProvider> =
+  T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
 
 export class L2ToL1Message {
   // CHRIS: TODO: docs on these - update the constructor
@@ -161,33 +161,57 @@ export class L2ToL1Message {
       : new L2ToL1MessageReader(l1SignerOrProvider, outboxAddress, event)
   }
 
-  public static async getL2ToL1MessageLogs(
+  public static async getL2ToL1MessageLogs<TReturnAsClass extends boolean>(
     l2Provider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     batchNumber?: BigNumber,
     destination?: string,
     uniqueId?: BigNumber,
-    indexInBatch?: BigNumber
-  ): Promise<L2ToL1TransactionEvent['args'][]> {
+    indexInBatch?: BigNumber,
+    returnAsClass?: TReturnAsClass
+  ): Promise<
+    TReturnAsClass extends true
+      ? L2ToL1Event[]
+      : Array<L2ToL1TransactionEvent['args']>
+  >
+  public static async getL2ToL1MessageLogs<TReturnAsClass extends boolean>(
+    l2Provider: Provider,
+    filter: { fromBlock: BlockTag; toBlock: BlockTag },
+    batchNumber?: BigNumber,
+    destination?: string,
+    uniqueId?: BigNumber,
+    indexInBatch?: BigNumber,
+    returnAsClass = false
+  ): Promise<L2ToL1Event[] | Array<L2ToL1TransactionEvent['args']>> {
     const eventFetcher = new EventFetcher(l2Provider)
-    const events = (
-      await eventFetcher.getEvents(
-        ARB_SYS_ADDRESS,
-        ArbSys__factory,
-        t =>
-          t.filters.L2ToL1Transaction(null, destination, uniqueId, batchNumber),
-        filter
-      )
-    ).map(l => l.event)
+    const events = await eventFetcher.getEvents(
+      ARB_SYS_ADDRESS,
+      ArbSys__factory,
+      t =>
+        t.filters.L2ToL1Transaction(null, destination, uniqueId, batchNumber),
+      filter
+    )
+    if (returnAsClass === true)
+      return Promise.all(
+        events.map(e =>
+          l2Provider
+            .getTransactionReceipt(e.transactionHash)
+            .then(receipt =>
+              new L2TransactionReceipt(receipt).getL2ToL1Events()
+            )
+        )
+      ).then(res => res.flat())
 
     if (indexInBatch) {
-      const indexItems = events.filter(b => b.indexInBatch.eq(indexInBatch))
+      const indexItems = events.filter(b =>
+        b.event.indexInBatch.eq(indexInBatch)
+      )
       if (indexItems.length === 1) {
-        return indexItems
+        return indexItems.map(e => e.event)
       } else if (indexItems.length > 1) {
         throw new ArbTsError('More than one indexed item found in batch.')
       } else return []
-    } else return events
+    } else return events.map(e => e.event)
   }
 }
 
@@ -224,12 +248,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
     const outboxProofParams = await nodeInterface.callStatic[
       'constructOutboxProof'
-    ](
-      
-      this.sendRootSize.toNumber(),
-      this.event.position.toNumber()
-    )
-
+    ](this.sendRootSize.toNumber(), this.event.position.toNumber())
 
     // CHRIS: TODO: check these from the return vals
     // this.event.hash,
@@ -299,16 +318,15 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
     if (logs.length !== 1) throw new Error('missing logs')
 
-    const parsedLog = (rollup.interface.parseLog(logs[0]).args as unknown) as {
+    const parsedLog = rollup.interface.parseLog(logs[0]).args as unknown as {
       nodeNum: BigNumber
       sendRoot: string
       blockHash: string
     }
 
-    const l2Block = await (l2Provider! as ethers.providers.JsonRpcProvider).send(
-      'eth_getBlockByHash',
-      [parsedLog.blockHash, false]
-    )
+    const l2Block = await (
+      l2Provider! as ethers.providers.JsonRpcProvider
+    ).send('eth_getBlockByHash', [parsedLog.blockHash, false])
     if (l2Block['sendRoot'] !== parsedLog.sendRoot) {
       console.log(l2Block['sendRoot'], parsedLog.sendRoot)
       throw new Error('send roots')
@@ -352,7 +370,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   public async getFirstExecutableBlock(
     l2Provider: Provider
   ): Promise<BigNumber> {
-    throw new ArbTsError("getFirstExecutableBlock not implemented")
+    throw new ArbTsError('getFirstExecutableBlock not implemented')
     /*
     // expected number of L1 blocks that it takes for an L2 tx to be included in a L1 assertion
     const ASSERTION_CREATED_PADDING = 50
