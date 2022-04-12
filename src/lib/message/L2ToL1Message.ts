@@ -358,37 +358,30 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
     const latestBlock = await this.l1Provider.getBlockNumber()
 
+    const eventFetcher = new EventFetcher(this.l1Provider)
+
     const logs = (
-      await this.l1Provider.getLogs({
-        address: rollup.address,
-        fromBlock: Math.max(
-          latestBlock -
-            BigNumber.from(l2Network.confirmPeriodBlocks)
-              .add(ASSERTION_CONFIRMED_PADDING)
-              .toNumber(),
-          0
-        ),
-        toBlock: 'latest',
-        topics: rollup.interface.encodeFilterTopics(
-          rollup.interface.getEvent('NodeConfirmed'),
-          []
-        ),
-      })
-    )
-      .map(
-        log =>
-          rollup.interface.parseLog(log).args as unknown as {
-            nodeNum: BigNumber
-            sendRoot: string
-            blockHash: string
-          }
+      await eventFetcher.getEvents(
+        rollup.address,
+        RollupUserLogic__factory,
+        t => t.filters.NodeCreated(),
+        {
+          fromBlock: Math.max(
+            latestBlock -
+              BigNumber.from(l2Network.confirmPeriodBlocks)
+                .add(ASSERTION_CONFIRMED_PADDING)
+                .toNumber(),
+            0
+          ),
+          toBlock: 'latest',
+        }
       )
-      .sort((a, b) => {
-        return (
-          BigNumber.from(a.nodeNum).toNumber() -
-          BigNumber.from(b.nodeNum).toNumber()
-        )
-      })
+    ).sort((a, b) => {
+      return (
+        BigNumber.from(a.event.nodeNum).toNumber() -
+        BigNumber.from(b.event.nodeNum).toNumber()
+      )
+    })
 
     let found = false
     let logIndex = 0
@@ -410,7 +403,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     if (!found)
       throw new ArbTsError("Can't find block with withdrawal sendCount")
 
-    const earliestNodeWithExit = logs[logIndex].nodeNum
+    const earliestNodeWithExit = logs[logIndex].event.nodeNum
     const node = await rollup.getNode(earliestNodeWithExit)
     return node.deadlineBlock.add(ASSERTION_CONFIRMED_PADDING)
   }
