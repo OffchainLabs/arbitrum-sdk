@@ -32,7 +32,7 @@ import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
 import { constants, ContractTransaction, ethers } from 'ethers'
-import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
+import { EventFetcher } from '../utils/eventFetcher'
 import { ArbTsError } from '../dataEntities/errors'
 import {
   SignerProviderUtils,
@@ -40,13 +40,6 @@ import {
 } from '../dataEntities/signerOrProvider'
 import { wait } from '../utils/lib'
 import { getL2Network } from '../dataEntities/networks'
-import {
-  AbiCoder,
-  defaultAbiCoder,
-  keccak256,
-  solidityKeccak256,
-} from 'ethers/lib/utils'
-import { NodeCreatedEvent } from '../abi/RollupUserLogic'
 
 export interface MessageBatchProofInfo {
   /**
@@ -266,34 +259,34 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
     const l2Network = await getL2Network(l2Provider)
 
-    const rollup = RollupUserLogic__factory.connect(l2Network.ethBridge.rollup, this.l1Provider)
+    const rollup = RollupUserLogic__factory.connect(
+      l2Network.ethBridge.rollup,
+      this.l1Provider
+    )
 
     // CHRIS: TODO: could confirm in between these calls
     const latestConfirmedNode = await rollup['latestConfirmed']()
     const currentBlock = await l1Provider.getBlockNumber()
 
     // now get the block hash and sendroot for that node
-    const logs = await l1Provider.getLogs({
-      address: rollup.address,
-      fromBlock: Math.max(
-        // CHRIS: TODO: either a constant or think about removing this -it's 4 weeks
-        currentBlock - Math.floor((4 * 7 * 24 * 60 * 60) / 14),
-        0
-      ),
-      toBlock: 'latest',
-      topics: rollup.interface.encodeFilterTopics(
-        rollup.interface.getEvent('NodeConfirmed'),
-        [latestConfirmedNode]
-      ),
-    })
+    const eventFetcher = new EventFetcher(l1Provider)
+    const logs = await eventFetcher.getEvents(
+      rollup.address,
+      RollupUserLogic__factory,
+      t => t.filters.NodeConfirmed(latestConfirmedNode),
+      {
+        fromBlock: Math.max(
+          // CHRIS: TODO: either a constant or think about removing this -it's 4 weeks
+          currentBlock - Math.floor((4 * 7 * 24 * 60 * 60) / 14),
+          0
+        ),
+        toBlock: 'latest',
+      }
+    )
 
-    if (logs.length !== 1) throw new ArbTsError('No NodeCreated events found')
+    if (logs.length !== 1) throw new ArbTsError('No NodeConfirmed events found')
 
-    const parsedLog = rollup.interface.parseLog(logs[0]).args as unknown as {
-      nodeNum: BigNumber
-      sendRoot: string
-      blockHash: string
-    }
+    const parsedLog = logs[0].event
 
     const l2Block = await (
       l2Provider! as ethers.providers.JsonRpcProvider
@@ -385,12 +378,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
           toBlock: 'latest',
         }
       )
-    ).sort((a, b) => {
-      return (
-        BigNumber.from(a.event.nodeNum).toNumber() -
-        BigNumber.from(b.event.nodeNum).toNumber()
-      )
-    })
+    ).sort((a, b) => a.event.nodeNum.toNumber() - b.event.nodeNum.toNumber())
 
     const getBlockHashFromEvent = (event: typeof logs[number]) =>
       event.event.assertion.afterState.globalState.bytes32Vals[0]
@@ -399,7 +387,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     let logIndex = 0
     while (!found) {
       const log = logs[logIndex]
-      const l2Block = await(
+      const l2Block = await (
         l2Provider! as ethers.providers.JsonRpcProvider
       ).send('eth_getBlockByHash', [getBlockHashFromEvent(log), false])
 
