@@ -26,12 +26,12 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { BlockTag } from '@ethersproject/abstract-provider'
 
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
-import { IOutbox__factory } from '../abi/factories/IOutbox__factory'
+import { RollupUserLogic__factory } from '../abi/factories/RollupUserLogic__factory'
 import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
-import { constants, Contract, ContractTransaction, ethers } from 'ethers'
+import { constants, ContractTransaction, ethers } from 'ethers'
 import { EventFetcher } from '../utils/eventFetcher'
 import { ArbTsError } from '../dataEntities/errors'
 import {
@@ -240,15 +240,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
    * Check if this message has already been executed in the Outbox
    */
   private async hasExecuted(): Promise<boolean> {
-    const outbox = new Contract(
-      this.outboxAddress,
-      [
-        'function executeTransaction(bytes32[] calldata proof, uint256 index, address l2Sender, address to, uint256 l2Block, uint256 l1Block, uint256 l2Timestamp, uint256 value, bytes calldata data) public',
-        'function spent(uint256) public view returns(bool)',
-        'function roots(bytes32) public view returns(bytes32)',
-      ],
-      this.l1Provider
-    )
+    const outbox = Outbox__factory.connect(this.outboxAddress, this.l1Provider)
 
     return outbox['spent'](this.event.position)
   }
@@ -273,14 +265,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
     const l2Network = await getL2Network(l2Provider)
 
-    const rollup = new Contract(
-      l2Network.ethBridge.rollup,
-      [
-        'function latestConfirmed() public view returns (uint64)',
-        'event NodeConfirmed(uint64 indexed nodeNum, bytes32 blockHash, bytes32 sendRoot)',
-      ],
-      l1Provider
-    )
+    const rollup = RollupUserLogic__factory.connect(l2Network.ethBridge.rollup, this.l1Provider)
 
     // CHRIS: TODO: could confirm in between these calls
     const latestConfirmedNode = await rollup['latestConfirmed']()
@@ -360,14 +345,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     // we assume the L2 to L1 tx is valid, but we could check that on the constructor that the L2 to L1 msg is valid
     const l2Network = await getL2Network(l2Provider)
 
-    const rollup = new Contract(
-      l2Network.ethBridge.rollup,
-      [
-        'function getNode(uint64 nodeNum) public view override returns (tuple(bytes32 stateHash, bytes32 challengeHash, bytes32 confirmData, uint64 prevNum, uint64 deadlineBlock, uint64 noChildConfirmedBeforeBlock, uint64 stakerCount, uint64 childStakerCount, uint64 firstChildBlock, uint64 latestChildNumber, uint64 createdAtBlock, bytes32 nodeHash) node)',
-        'event NodeConfirmed(uint64 indexed nodeNum, bytes32 blockHash, bytes32 sendRoot)',
-      ],
-      this.l1Provider
-    )
+    const rollup = RollupUserLogic__factory.connect(l2Network.ethBridge.rollup, this.l1Provider)
 
     const proof = await this.getOutboxProof(l2Provider)
     // here we assume the L2 to L1 tx is actually valid, so the user needs to wait the max time.
@@ -465,23 +443,7 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
     }
     const proof = await this.getOutboxProof(l2Provider)
 
-    // CHRIS: TODO: proper ABI throughout this file - search for new Contract and new Interface?
-    const outbox = new Contract(
-      this.outboxAddress,
-      [
-        'function executeTransaction(bytes32[] calldata proof,   uint256 index,   address l2Sender,   address to,   uint256 l2Block,   uint256 l1Block,   uint256 l2Timestamp,   uint256 value,   bytes calldata data) public',
-        'function spent(uint256) public view returns(bool)',
-        'function roots(bytes32) public view returns(bytes32)',
-        'function calculateMerkleRoot(    bytes32[] memory proof,    uint256 path,    bytes32 item) public pure returns (bytes32)',
-        'error ProofTooLong(uint256 proofLength)',
-        'error PathNotMinimal(uint256 index, uint256 maxIndex)',
-        'error UnknownRoot(bytes32 root)',
-        'error AlreadySpent(uint256 index)',
-        'error BridgeCallFailed()',
-        'function calculateItemHash(    address l2Sender,    address to,    uint256 l2Block,    uint256 l1Block,    uint256 l2Timestamp,    uint256 value,    bytes calldata data) public pure returns (bytes32)',
-      ],
-      this.l1Signer
-    )
+    const outbox = Outbox__factory.connect(this.outboxAddress, this.l1Signer)
 
     // CHRIS: TODO: provide gas override options?
     return await outbox['executeTransaction'](
