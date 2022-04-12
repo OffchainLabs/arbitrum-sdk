@@ -10,8 +10,7 @@ const getPackagePath = packageName => {
 async function main() {
   const cwd = process.cwd()
 
-  const arbosPath = getPackagePath('arbos-precompiles')
-  const ethBridgePath = getPackagePath('arb-bridge-eth')
+  const nitroPath = getPackagePath('@arbitrum/nitro-contracts')
   const peripheralsPath = getPackagePath('arb-bridge-peripherals')
 
   console.log('Compiling paths.')
@@ -28,15 +27,9 @@ async function main() {
   // https://yarnpkg.com/advanced/rulebook#packages-should-never-write-inside-their-own-folder-outside-of-postinstall
   // instead of writing in postinstall in each of those packages, we should target a local folder in sdk's postinstall
 
-  console.log('building arbos')
-  console.log(`${cwd}/contract-artifacts/arbos/`)
+  console.log('building nitro')
   execSync(`${npmExec} run hardhat:prod compile`, {
-    cwd: arbosPath,
-  })
-
-  console.log('building ethbridge')
-  execSync(`${npmExec} run hardhat:prod compile`, {
-    cwd: ethBridgePath,
+    cwd: nitroPath,
   })
 
   console.log('building peripherals')
@@ -47,8 +40,7 @@ async function main() {
   console.log('Done compiling')
 
   const allFiles = glob(cwd, [
-    `${arbosPath}/artifacts/!(build-info)/**/builtin/**/+([a-zA-Z0-9_]).json`,
-    `${ethBridgePath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
+    `${nitroPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
     `${peripheralsPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
   ])
 

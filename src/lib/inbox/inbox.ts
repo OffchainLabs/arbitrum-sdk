@@ -95,28 +95,17 @@ export class InboxTools {
 
     const multicall = await MultiCaller.fromProvider(this.l1Provider)
     const multicallInput: [
-      CallInput<Awaited<ReturnType<SequencerInbox['maxDelayBlocks']>>>,
-      CallInput<Awaited<ReturnType<SequencerInbox['maxDelaySeconds']>>>,
+      CallInput<Awaited<ReturnType<SequencerInbox['maxTimeVariation']>>>,
       ReturnType<MultiCaller['getBlockNumberInput']>,
       ReturnType<MultiCaller['getCurrentBlockTimestampInput']>
     ] = [
       {
         targetAddr: sequencerInbox.address,
         encoder: () =>
-          sequencerInbox.interface.encodeFunctionData('maxDelayBlocks'),
+          sequencerInbox.interface.encodeFunctionData('maxTimeVariation'),
         decoder: (returnData: string) =>
           sequencerInbox.interface.decodeFunctionResult(
-            'maxDelayBlocks',
-            returnData
-          )[0],
-      },
-      {
-        targetAddr: sequencerInbox.address,
-        encoder: () =>
-          sequencerInbox.interface.encodeFunctionData('maxDelaySeconds'),
-        decoder: (returnData: string) =>
-          sequencerInbox.interface.decodeFunctionResult(
-            'maxDelaySeconds',
+            'maxTimeVariation',
             returnData
           )[0],
       },
@@ -125,16 +114,15 @@ export class InboxTools {
     ]
 
     const [
-      maxDelayBlocks,
-      maxDelaySeconds,
+      maxTimeVariation,
       currentBlockNumber,
       currentBlockTimestamp,
     ] = await multicall.multiCall(multicallInput, true)
 
     const firstEligibleBlockNumber =
-      currentBlockNumber.toNumber() - maxDelayBlocks.toNumber()
+      currentBlockNumber.toNumber() - maxTimeVariation.delayBlocks.toNumber()
     const firstEligibleTimestamp =
-      currentBlockTimestamp.toNumber() - maxDelaySeconds.toNumber()
+      currentBlockTimestamp.toNumber() - maxTimeVariation.delaySeconds.toNumber()
 
     const firstEligibleBlock = await this.findFirstBlockBelow(
       firstEligibleBlockNumber,
@@ -278,18 +266,13 @@ export class InboxTools {
     if (!eventInfo) return null
     const block = await this.l1Provider.getBlock(eventInfo.blockHash)
 
-    const transactionReceipt = await this.l1Provider.getTransactionReceipt(
-      eventInfo.transactionHash
-    )
     return await sequencerInbox.functions.forceInclusion(
       eventInfo.event.messageIndex.add(1),
       eventInfo.event.kind,
       [eventInfo.blockNumber, block.timestamp],
-      eventInfo.event.messageIndex,
-      transactionReceipt.effectiveGasPrice,
+      eventInfo.event.baseFeeL1,
       eventInfo.event.sender,
       eventInfo.event.messageDataHash,
-      eventInfo.delayedAcc,
       // we need to pass in {} because if overrides is undefined it thinks we've provided too many params
       overrides || {}
     )

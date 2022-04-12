@@ -13,9 +13,8 @@ import { getL1Network, getL2Network, L2Network } from '../..'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factory'
 import {
-  DelayedInboxForcedEvent,
   SequencerBatchDeliveredEvent,
-  SequencerBatchDeliveredFromOriginEvent,
+  SequencerBatchDataEvent,
 } from '../abi/ISequencerInbox'
 import { EventFetcher } from './eventFetcher'
 import { TypedEventFilter } from '../abi/common'
@@ -60,8 +59,6 @@ class ArbFormatter extends Formatter {
     // missing: l1SequenceNumber, l1BlockNumber
 
     const arbReceiptFormat = {
-
-
       ...superFormats.receipt,
       returnData: Formatter.allowNull(data),
       returnCode: returnCode,
@@ -145,50 +142,10 @@ const getBatch = async (
   endBlock: number,
   eventTypes: 'sequencer' | 'delayed'
 ): Promise<Omit<BatchInfo, 'confirmations'> | null> => {
-  const batchEvents = new EventFetcher(l1Provider)
-
-  const events = await batchEvents.getEvents(
-    l2Network.ethBridge.sequencerInbox,
-    SequencerInbox__factory,
-    c => {
-      const eventTopics =
-        eventTypes === 'sequencer'
-          ? [
-              c.interface.getEventTopic(
-                c.interface.getEvent('SequencerBatchDelivered')
-              ),
-              c.interface.getEventTopic(
-                c.interface.getEvent('SequencerBatchDeliveredFromOrigin')
-              ),
-            ]
-          : [
-              c.interface.getEventTopic(
-                c.interface.getEvent('DelayedInboxForced')
-              ),
-            ]
-
-      return { topics: [eventTopics] } as TypedEventFilter<
-        | DelayedInboxForcedEvent
-        | SequencerBatchDeliveredEvent
-        | SequencerBatchDeliveredFromOriginEvent
-      >
-    },
-    { fromBlock: startBlock, toBlock: endBlock }
-  )
-
-  // find the batch containing the seq number
-  const batch = events.filter(
-    b => b.event.firstMessageNum <= seqNum && b.event.newMessageCount > seqNum
-  )[0]
-
-  if (!batch) return null
-
-  return {
-    blockNumber: batch.blockNumber,
-    logAddress: batch.address,
-    logData: batch.data,
-    logTopics: batch.topics,
-  }
+  // TODO: reimplement with nitro inbox logic
+  // https://github.com/OffchainLabs/nitro/pull/505
+  // this should also include delayed messages
+  throw new Error("sdk getBatch not implemented")
 }
 
 /**
@@ -211,7 +168,7 @@ const getSequencerBatch = async (
     l1Provider
   )
 
-  const delayBlocks = (await inbox.maxDelayBlocks()).toNumber()
+  const delayBlocks = (await inbox.callStatic.maxTimeVariation()).delayBlocks.toNumber()
 
   const startBlock = l2Txl1BlockNumber
   const delayedBlockMax = l2Txl1BlockNumber + delayBlocks
@@ -248,7 +205,7 @@ const getDelayedBatch = async (
     l2Network.ethBridge.sequencerInbox,
     l1Provider
   )
-  const delayBlocks = (await inbox.maxDelayBlocks()).toNumber()
+  const delayBlocks = (await inbox.callStatic.maxTimeVariation()).delayBlocks.toNumber()
   const delayedBlockMax = l2Txl1BlockNumber + delayBlocks
   const currentBlock = await l1Provider.getBlockNumber()
   const startBlock = Math.min(delayedBlockMax, currentBlock)
@@ -312,8 +269,8 @@ export const getRawArbTransactionReceipt = async (
           l2Network.ethBridge.sequencerInbox,
           l1ProviderForBatch
         )
-        const delayBlocks = (await inbox.maxDelayBlocks()).toNumber()
-        const delaySeconds = (await inbox.maxDelaySeconds()).toNumber()
+        const delayBlocks = (await inbox.callStatic.maxTimeVariation()).delayBlocks.toNumber()
+        const delaySeconds = (await inbox.callStatic.maxTimeVariation()).delaySeconds.toNumber()
         const l1Timestamp = (
           await l1ProviderForBatch.getBlock(tx.l1BlockNumber)
         ).timestamp
