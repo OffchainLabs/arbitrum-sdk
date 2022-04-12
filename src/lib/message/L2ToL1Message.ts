@@ -32,7 +32,7 @@ import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
 import { constants, ContractTransaction, ethers } from 'ethers'
-import { EventFetcher } from '../utils/eventFetcher'
+import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { ArbTsError } from '../dataEntities/errors'
 import {
   SignerProviderUtils,
@@ -46,6 +46,7 @@ import {
   keccak256,
   solidityKeccak256,
 } from 'ethers/lib/utils'
+import { NodeCreatedEvent } from '../abi/RollupUserLogic'
 
 export interface MessageBatchProofInfo {
   /**
@@ -336,11 +337,11 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   /**
    * Estimates the L1 block number in which this L2 to L1 tx will be available for execution
    * @param l2Provider
-   * @returns expected L1 block number where the L2 to L1 message will be executable
+   * @returns expected L1 block number where the L2 to L1 message will be executable. Returns null if already executed
    */
   public async getFirstExecutableBlock(
     l2Provider: Provider
-  ): Promise<BigNumber> {
+  ): Promise<BigNumber | null> {
     // TODO: create version that queries multiple L2 to L1 txs, so a single multicall can make all requests
     // we assume the L2 to L1 tx is valid, but we could check that on the constructor that the L2 to L1 msg is valid
     const l2Network = await getL2Network(l2Provider)
@@ -354,7 +355,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
         .add(ASSERTION_CREATED_PADDING)
         .add(ASSERTION_CONFIRMED_PADDING)
     // we can't check if the L2 to L1 tx isSpent on the outbox, so we instead try executing it
-    if (await this.hasExecuted()) return BigNumber.from(0)
+    if (await this.hasExecuted()) return null
 
     const latestBlock = await this.l1Provider.getBlockNumber()
 
@@ -383,13 +384,16 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       )
     })
 
+    const getBlockHashFromEvent = (event: typeof logs[number]) =>
+      event.event.assertion.afterState.globalState.bytes32Vals[0]
+
     let found = false
     let logIndex = 0
     while (!found) {
       const log = logs[logIndex]
-      const l2Block = await (
+      const l2Block = await(
         l2Provider! as ethers.providers.JsonRpcProvider
-      ).send('eth_getBlockByHash', [log.blockHash, false])
+      ).send('eth_getBlockByHash', [getBlockHashFromEvent(log), false])
 
       const sendCount = BigNumber.from(l2Block['sendCount'])
 
@@ -400,8 +404,40 @@ export class L2ToL1MessageReader extends L2ToL1Message {
         logIndex++
       }
     }
-    if (!found)
-      throw new ArbTsError("Can't find block with withdrawal sendCount")
+
+    if (!found) {
+      const latestConfirmed = await rollup.callStatic.latestConfirmed()
+      const node = await rollup.getNode(latestConfirmed)
+
+      const latestConfirmedLog = (
+        await eventFetcher.getEvents(
+          rollup.address,
+          RollupUserLogic__factory,
+          t => t.filters.NodeCreated(),
+          {
+            fromBlock: node.createdAtBlock.toNumber(),
+            toBlock: node.createdAtBlock.toNumber(),
+          }
+        )
+      ).filter(a => a.event.nodeNum === latestConfirmed)
+
+      if (latestConfirmedLog.length !== 1)
+        throw new ArbTsError("Can't find block with latest confirmed")
+
+      const l2Block = await(
+        l2Provider! as ethers.providers.JsonRpcProvider
+      ).send('eth_getBlockByHash', [
+        getBlockHashFromEvent(latestConfirmedLog[0]),
+        false,
+      ])
+
+      const sendCount = BigNumber.from(l2Block['sendCount'])
+      if (sendCount.gte(this.event.position)) {
+        return node.deadlineBlock
+      } else {
+        throw new ArbTsError("Can't find block with withdrawal sendCount")
+      }
+    }
 
     const earliestNodeWithExit = logs[logIndex].event.nodeNum
     const node = await rollup.getNode(earliestNodeWithExit)
