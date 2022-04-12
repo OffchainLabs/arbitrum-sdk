@@ -217,14 +217,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     if (!this.sendRootSize)
       throw new ArbTsError('Node not confirmed, cannot get proof.')
 
-    // CHRIS: TODO: proper ABI
-    const nodeInterface = new ethers.Contract(
-      NODE_INTERFACE_ADDRESS,
-      [
-        'function constructOutboxProof(uint64 size, uint64 leaf) external view returns (bytes32 sendAtLeaf, bytes32 rootAtSize, bytes32[] memory proof)',
-      ],
-      l2Provider
-    )
+    const nodeInterface = NodeInterface__factory.connect(NODE_INTERFACE_ADDRESS, l2Provider)
 
     const outboxProofParams = await nodeInterface.callStatic[
       'constructOutboxProof'
@@ -235,7 +228,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     //   this.sendRootHash,
     // console.log(outboxProofParams)
 
-    return outboxProofParams['proof'] as string[]
+    return outboxProofParams['proof']
   }
 
   /**
