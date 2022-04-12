@@ -32,7 +32,7 @@ import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
 import { constants, ContractTransaction, ethers } from 'ethers'
-import { EventFetcher } from '../utils/eventFetcher'
+import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { ArbTsError } from '../dataEntities/errors'
 import {
   SignerProviderUtils,
@@ -40,6 +40,7 @@ import {
 } from '../dataEntities/signerOrProvider'
 import { wait } from '../utils/lib'
 import { getL2Network } from '../dataEntities/networks'
+import { NodeCreatedEvent } from '../abi/RollupUserLogic'
 
 export interface MessageBatchProofInfo {
   /**
@@ -134,6 +135,13 @@ export type L2ToL1MessageReaderOrWriter<T extends SignerOrProvider> =
 const ASSERTION_CREATED_PADDING = 50
 // expected number of L1 blocks that it takes for a validator to confirm an L1 block after the node deadline is passed
 const ASSERTION_CONFIRMED_PADDING = 20
+
+const parseNodeCreatedAssertion = (event: FetchedEvent<NodeCreatedEvent>) => ({
+  afterState: {
+    blockHash: event.event.assertion.afterState.globalState.bytes32Vals[0],
+    sendRoot: event.event.assertion.afterState.globalState.bytes32Vals[1],
+  },
+})
 
 export class L2ToL1Message {
   // CHRIS: TODO: docs on these - update the constructor
@@ -265,42 +273,38 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     )
 
     // CHRIS: TODO: could confirm in between these calls
-    const latestConfirmedNode = await rollup['latestConfirmed']()
-    const currentBlock = await l1Provider.getBlockNumber()
+    const latestConfirmedNodeNum = await rollup['latestConfirmed']()
+    const latestConfirmedNode = await rollup.getNode(latestConfirmedNodeNum)
 
     // now get the block hash and sendroot for that node
     const eventFetcher = new EventFetcher(l1Provider)
     const logs = await eventFetcher.getEvents(
       rollup.address,
       RollupUserLogic__factory,
-      t => t.filters.NodeConfirmed(latestConfirmedNode),
+      t => t.filters.NodeCreated(latestConfirmedNodeNum),
       {
-        fromBlock: Math.max(
-          // CHRIS: TODO: either a constant or think about removing this -it's 4 weeks
-          currentBlock - Math.floor((4 * 7 * 24 * 60 * 60) / 14),
-          0
-        ),
-        toBlock: 'latest',
+        fromBlock: latestConfirmedNode.createdAtBlock.toNumber(),
+        toBlock: latestConfirmedNode.createdAtBlock.toNumber(),
       }
     )
 
     if (logs.length !== 1) throw new ArbTsError('No NodeConfirmed events found')
 
-    const parsedLog = logs[0].event
+    const parsedLog = parseNodeCreatedAssertion(logs[0])
 
     const l2Block = await (
       l2Provider! as ethers.providers.JsonRpcProvider
-    ).send('eth_getBlockByHash', [parsedLog.blockHash, false])
-    if (l2Block['sendRoot'] !== parsedLog.sendRoot) {
+    ).send('eth_getBlockByHash', [parsedLog.afterState.blockHash, false])
+    if (l2Block['sendRoot'] !== parsedLog.afterState.sendRoot) {
       // CHRIS: TODO: handle this case
-      console.log(l2Block['sendRoot'], parsedLog.sendRoot)
+      console.log(l2Block['sendRoot'], parsedLog.afterState.sendRoot)
       throw new ArbTsError("L2 block send root doesn't match parsed log")
     }
 
     const sendRootSize = BigNumber.from(l2Block['sendCount'])
     if (sendRootSize.gt(this.event.position)) {
       this.sendRootSize = sendRootSize
-      this.sendRootHash = parsedLog.sendRoot
+      this.sendRootHash = parsedLog.afterState.sendRoot
     }
   }
 
@@ -380,16 +384,16 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       )
     ).sort((a, b) => a.event.nodeNum.toNumber() - b.event.nodeNum.toNumber())
 
-    const getBlockHashFromEvent = (event: typeof logs[number]) =>
-      event.event.assertion.afterState.globalState.bytes32Vals[0]
-
     let found = false
     let logIndex = 0
     while (!found) {
       const log = logs[logIndex]
       const l2Block = await (
         l2Provider! as ethers.providers.JsonRpcProvider
-      ).send('eth_getBlockByHash', [getBlockHashFromEvent(log), false])
+      ).send('eth_getBlockByHash', [
+        parseNodeCreatedAssertion(log).afterState.blockHash,
+        false,
+      ])
 
       const sendCount = BigNumber.from(l2Block['sendCount'])
 
