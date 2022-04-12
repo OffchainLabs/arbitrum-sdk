@@ -142,30 +142,10 @@ const getBatch = async (
   endBlock: number,
   eventTypes: 'sequencer' | 'delayed'
 ): Promise<Omit<BatchInfo, 'confirmations'> | null> => {
-  const batchEvents = new EventFetcher(l1Provider)
-
-  const events = await batchEvents.getEvents(
-    l2Network.ethBridge.sequencerInbox,
-    SequencerInbox__factory,
-    c => c.filters.SequencerBatchDelivered(),
-    { fromBlock: startBlock, toBlock: endBlock }
-  )
-
   // TODO: reimplement with nitro inbox logic
+  // https://github.com/OffchainLabs/nitro/pull/505
+  // this should also include delayed messages
   throw new Error("sdk getBatch not implemented")
-  // find the batch containing the seq number
-  // const batch = events.filter(
-  //   b => b.event.firstMessageNum <= seqNum && b.event.newMessageCount > seqNum
-  // )[0]
-
-  // if (!batch) return null
-
-  // return {
-  //   blockNumber: batch.blockNumber,
-  //   logAddress: batch.address,
-  //   logData: batch.data,
-  //   logTopics: batch.topics,
-  // }
 }
 
 /**
