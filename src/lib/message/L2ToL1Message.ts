@@ -346,11 +346,14 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     // we assume the L2 to L1 tx is valid, but we could check that on the constructor that the L2 to L1 msg is valid
     const l2Network = await getL2Network(l2Provider)
 
-    const rollup = RollupUserLogic__factory.connect(l2Network.ethBridge.rollup, this.l1Provider)
+    const rollup = RollupUserLogic__factory.connect(
+      l2Network.ethBridge.rollup,
+      this.l1Provider
+    )
 
     const status = await this.status(l2Provider)
-    if(status === L2ToL1MessageStatus.EXECUTED) return null
-    if(status === L2ToL1MessageStatus.CONFIRMED) {
+    if (status === L2ToL1MessageStatus.EXECUTED) return null
+    if (status === L2ToL1MessageStatus.CONFIRMED) {
       const latestConfirmed = await rollup.callStatic.latestConfirmed()
       const node = await rollup.getNode(latestConfirmed)
       return node.deadlineBlock
@@ -359,14 +362,8 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       throw new ArbTsError('L2ToL1Msg not found')
 
     // consistency check in case we change the enum in the future
-    if(status !== L2ToL1MessageStatus.UNCONFIRMED) throw new ArbTsError("L2ToL1Msg expected to be unconfirmed")
-
-    const proof = await this.getOutboxProof(l2Provider)
-    // here we assume the L2 to L1 tx is actually valid, so the user needs to wait the max time.
-    if (proof === null)
-      return BigNumber.from(l2Network.confirmPeriodBlocks)
-        .add(ASSERTION_CREATED_PADDING)
-        .add(ASSERTION_CONFIRMED_PADDING)
+    if (status !== L2ToL1MessageStatus.UNCONFIRMED)
+      throw new ArbTsError('L2ToL1Msg expected to be unconfirmed')
 
     const latestBlock = await this.l1Provider.getBlockNumber()
 
@@ -416,8 +413,13 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       }
     }
 
+    // here we assume the L2 to L1 tx is actually valid, so the user needs to wait the max time
+    // since there isn't a pending node that includes this message yet
     if (!found)
-      throw new ArbTsError("Can't find block with withdrawal sendCount")
+      return BigNumber.from(l2Network.confirmPeriodBlocks)
+        .add(ASSERTION_CREATED_PADDING)
+        .add(ASSERTION_CONFIRMED_PADDING)
+        .add(latestBlock)
 
     const earliestNodeWithExit = logs[logIndex].event.nodeNum
     const node = await rollup.getNode(earliestNodeWithExit)
