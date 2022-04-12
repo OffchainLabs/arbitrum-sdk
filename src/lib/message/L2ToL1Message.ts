@@ -28,8 +28,6 @@ import { BlockTag } from '@ethersproject/abstract-provider'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { IOutbox__factory } from '../abi/factories/IOutbox__factory'
 import { Outbox__factory } from '../abi/factories/Outbox__factory'
-import { RollupUserFacet__factory } from '../abi/factories/RollupUserFacet__factory'
-import { Node__factory } from '../abi/factories/Node__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
