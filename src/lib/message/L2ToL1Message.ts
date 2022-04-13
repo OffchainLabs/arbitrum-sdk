@@ -41,6 +41,7 @@ import {
 import { wait } from '../utils/lib'
 import { getL2Network } from '../dataEntities/networks'
 import { NodeCreatedEvent } from '../abi/RollupUserLogic'
+import { L2TransactionReceipt } from './L2Transaction'
 
 export interface MessageBatchProofInfo {
   /**
@@ -192,6 +193,45 @@ export class L2ToL1Message {
         throw new ArbTsError('More than one indexed item found in batch.')
       } else return []
     } else return events
+  }
+
+  public static async getL2ToL1Events(
+    l2Provider: Provider,
+    filter: { fromBlock: BlockTag; toBlock: BlockTag },
+    batchNumber?: BigNumber,
+    destination?: string,
+    uniqueId?: BigNumber,
+    indexInBatch?: BigNumber
+  ): Promise<L2ToL1Event[]> {
+    const eventFetcher = new EventFetcher(l2Provider)
+    const events = await eventFetcher.getEvents(
+      ARB_SYS_ADDRESS,
+      ArbSys__factory,
+      t =>
+        t.filters.L2ToL1Transaction(null, destination, uniqueId, batchNumber),
+      filter
+    )
+
+    const l2ToL1Events = await Promise.all(
+      events.map(e =>
+        l2Provider
+          .getTransactionReceipt(e.transactionHash)
+          .then(receipt => new L2TransactionReceipt(receipt).getL2ToL1Events())
+      )
+    ).then(res => res.flat())
+
+    if (indexInBatch) {
+      const indexItems = l2ToL1Events.filter(b =>
+        b.indexInBatch.eq(indexInBatch)
+      )
+      if (indexItems.length === 1) {
+        return indexItems
+      } else if (indexItems.length > 1) {
+        throw new ArbTsError('More than one indexed item found in batch.')
+      } else return []
+    }
+
+    return l2ToL1Events
   }
 }
 
