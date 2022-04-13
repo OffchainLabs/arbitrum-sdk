@@ -366,9 +366,9 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
   /**
    * Estimates the L1 block number in which this L2 to L1 tx will be available for execution.
-   * Not the actual first block in which it can be executed, but a given block that can be executed after.
+   * If the message can or already has been executed, this returns null
    * @param l2Provider
-   * @returns expected L1 block number where the L2 to L1 message will be executable. Returns null if already executed
+   * @returns expected L1 block number where the L2 to L1 message will be executable. Returns null if the message can or already has been executed
    */
   public async getFirstExecutableBlock(
     l2Provider: Provider
@@ -384,11 +384,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
     const status = await this.status(l2Provider)
     if (status === L2ToL1MessageStatus.EXECUTED) return null
-    if (status === L2ToL1MessageStatus.CONFIRMED) {
-      const latestConfirmed = await rollup.callStatic.latestConfirmed()
-      const node = await rollup.getNode(latestConfirmed)
-      return node.deadlineBlock
-    }
+    if (status === L2ToL1MessageStatus.CONFIRMED) return null
     if (status === L2ToL1MessageStatus.NOT_FOUND)
       throw new ArbTsError('L2ToL1Msg not found')
 
