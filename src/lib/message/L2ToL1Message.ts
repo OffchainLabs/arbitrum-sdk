@@ -395,6 +395,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       } else {
         // TODO: optimise with a binary search
         logIndex++
+        if(logIndex >= logs.length) break;
       }
     }
 
