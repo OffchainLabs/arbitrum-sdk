@@ -266,7 +266,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     )
 
     // CHRIS: TODO: could confirm in between these calls
-    const latestConfirmedNodeNum = await rollup['latestConfirmed']()
+    const latestConfirmedNodeNum = await rollup.callStatic.latestConfirmed()
     const latestConfirmedNode = await rollup.getNode(latestConfirmedNodeNum)
 
     // now get the block hash and sendroot for that node
