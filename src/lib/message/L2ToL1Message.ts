@@ -365,7 +365,8 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   }
 
   /**
-   * Estimates the L1 block number in which this L2 to L1 tx will be available for execution
+   * Estimates the L1 block number in which this L2 to L1 tx will be available for execution.
+   * Not the actual first block in which it can be executed, but a given block that can be executed after.
    * @param l2Provider
    * @returns expected L1 block number where the L2 to L1 message will be executable. Returns null if already executed
    */
