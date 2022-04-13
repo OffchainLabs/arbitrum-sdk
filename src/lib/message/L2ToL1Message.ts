@@ -414,11 +414,19 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       )
     ).sort((a, b) => a.event.nodeNum.toNumber() - b.event.nodeNum.toNumber())
 
+    // here we assume the L2 to L1 tx is actually valid, so the user needs to wait the max time
+    // since there isn't a pending node that includes this message yet
+    if (logs.length === 0)
+      return BigNumber.from(l2Network.confirmPeriodBlocks)
+        .add(ASSERTION_CREATED_PADDING)
+        .add(ASSERTION_CONFIRMED_PADDING)
+        .add(latestBlock)
+
     let found = false
     let logIndex = 0
     while (!found) {
       const log = logs[logIndex]
-      const l2Block = await (
+      const l2Block = await(
         l2Provider! as ethers.providers.JsonRpcProvider
       ).send('eth_getBlockByHash', [
         parseNodeCreatedAssertion(log).afterState.blockHash,
@@ -432,7 +440,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       } else {
         // TODO: optimise with a binary search
         logIndex++
-        if(logIndex >= logs.length) break;
+        if (logIndex >= logs.length) break
       }
     }
 
