@@ -237,7 +237,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   private async hasExecuted(): Promise<boolean> {
     const outbox = Outbox__factory.connect(this.outboxAddress, this.l1Provider)
 
-    return outbox['spent'](this.event.position)
+    return outbox.callStatic.spent(this.event.position)
   }
 
   /**
