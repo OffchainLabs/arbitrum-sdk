@@ -10,6 +10,10 @@
     "type": "git",
     "url": "git+https://github.com/offchainlabs/arbitrum-sdk.git"
   },
+  "engines": {
+    "node": ">=v16.14.2",
+    "yarn": ">=1 <2"
+  },
   "bugs": {
     "url": "https://github.com/offchainlabs/arbitrum-sdk/issues"
   },
