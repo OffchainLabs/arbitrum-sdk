@@ -471,6 +471,20 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
   }
 
   /**
+   * Instantiate a new L1ToL2MessageWriter from a L1ToL2MessageReader instance
+   */
+  public static fromL1ToL2MessagReader(
+    l2Signer: Signer,
+    l1ToL2MessageReader: L1ToL2MessageReader
+  ): L1ToL2MessageReader {
+    return new L1ToL2MessageWriter(
+      l2Signer,
+      l1ToL2MessageReader.retryableCreationId,
+      l1ToL2MessageReader.messageNumber
+    )
+  }
+
+  /**
    * Manually redeem the retryable ticket.
    * Throws if message status is not L1ToL2MessageStatus.NOT_YET_REDEEMED
    */

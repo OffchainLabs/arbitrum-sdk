@@ -197,7 +197,7 @@ export class L2ToL1Message {
 export class L2ToL1MessageReader extends L2ToL1Message {
   constructor(
     protected readonly l1Provider: Provider,
-    protected readonly outboxAddress: string,
+    readonly outboxAddress: string,
     batchNumber: BigNumber,
     indexInBatch: BigNumber
   ) {
@@ -404,6 +404,21 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
     indexInBatch: BigNumber
   ) {
     super(l1Signer.provider!, outboxAddress, batchNumber, indexInBatch)
+  }
+
+  /**
+   * Instantiate a new L2ToL1MessageWriter from a L2ToL1MessageReader instance
+   */
+  public static fromL2ToL1MessageReader(
+    l2ToL2MessageReader: L2ToL1MessageReader,
+    l1Signer: Signer
+  ): L2ToL1MessageWriter {
+    return new L2ToL1MessageWriter(
+      l1Signer,
+      l2ToL2MessageReader.outboxAddress,
+      l2ToL2MessageReader.batchNumber,
+      l2ToL2MessageReader.indexInBatch
+    )
   }
 
   /**
