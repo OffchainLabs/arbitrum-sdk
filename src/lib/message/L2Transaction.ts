@@ -18,7 +18,7 @@
 
 import { TransactionReceipt } from '@ethersproject/providers'
 import { BigNumber } from '@ethersproject/bignumber'
-import { Log, } from '@ethersproject/abstract-provider'
+import { Log } from '@ethersproject/abstract-provider'
 import { ContractTransaction, providers } from 'ethers'
 import { getOutboxAddr, L2Network } from '../dataEntities/networks'
 import {
@@ -30,10 +30,12 @@ import {
   L2ToL1MessageReaderOrWriter,
   L2ToL1Message,
   L2ToL1MessageWriter,
-  L2ToL1Event,
 } from './L2ToL1Message'
 import { getRawArbTransactionReceipt } from '../..'
-import { Interface } from 'ethers/lib/utils'
+import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
+import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
+import {  RedeemScheduledEvent } from '../abi/ArbRetryableTx'
+import { L2ToL1TransactionEvent } from '../abi/ArbSys'
 
 export interface L2ContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<L2TransactionReceipt>
@@ -84,47 +86,27 @@ export class L2TransactionReceipt implements TransactionReceipt {
    * Get an L2ToL1Transaction events created by this transaction
    * @returns
    */
-  public getL2ToL1Events(): L2ToL1Event[] {
-    // CHRIS: TODO: use the proper event and ABI
-    // const iface = ArbSys__factory.createInterface()
-    const iface = new Interface([
-      'event L2ToL1Transaction( address caller, address indexed destination, uint256 indexed hash, uint256 indexed position, uint256 indexInBatch, uint256 arbBlockNum, uint256 ethBlockNum, uint256 timestamp, uint256 callvalue, bytes data    );',
-    ])
+  public getL2ToL1Events(): L2ToL1TransactionEvent["args"][] {
+    const iface = ArbSys__factory.createInterface()
     const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
     const eventTopic = iface.getEventTopic(l2ToL1Event)
     const logs = this.logs.filter(log => log.topics[0] === eventTopic)
 
-    return logs.map(log => (iface.parseLog(log).args as unknown) as L2ToL1Event)
+    return logs.map(log => iface.parseLog(log).args as L2ToL1TransactionEvent["args"])
   }
 
   /**
    * Get event data for any redeems that were scheduled in this transaction
    * @returns
    */
-  public getRedeemScheduledEvents(): {
-    ticketId: string
-    retryTxHash: string
-    sequenceNum: BigNumber
-    donatedGas: BigNumber
-    gasDonor: string
-  }[] {
-    // CHRIS: TODO: use the proper ABI here and in the return sig of this function
-    const iFace = new Interface([
-      'event RedeemScheduled(     bytes32 indexed ticketId,     bytes32 indexed retryTxHash,     uint64 indexed sequenceNum,     uint64 donatedGas,     address gasDonor )',
-    ])
+  public getRedeemScheduledEvents(): RedeemScheduledEvent['args'][] {
+    const iFace = ArbRetryableTx__factory.createInterface()
     const redeemTopic = iFace.getEventTopic('RedeemScheduled')
     const redeemScheduledEvents = this.logs.filter(
       l => l.topics[0] === redeemTopic
     )
     return redeemScheduledEvents.map(
-      r =>
-        (iFace.parseLog(r).args as unknown) as {
-          ticketId: string
-          retryTxHash: string
-          sequenceNum: BigNumber
-          donatedGas: BigNumber
-          gasDonor: string
-        }
+      r => iFace.parseLog(r).args as RedeemScheduledEvent['args']
     )
   }
 
@@ -150,11 +132,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
         BigNumber.from(1) // log.batchNumber, CHRIS: TODO: broken
       )
 
-      return L2ToL1Message.fromEvent(
-        l1SignerOrProvider,
-        outboxAddr,
-        log,
-      )
+      return L2ToL1Message.fromEvent(l1SignerOrProvider, outboxAddr, log)
     })
   }
 

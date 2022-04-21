@@ -34,11 +34,10 @@ import { ArbTsError } from '../dataEntities/errors'
 import { ethers, Overrides } from 'ethers'
 import { Address } from '../dataEntities/address'
 import { L2TransactionReceipt } from './L2Transaction'
-import { Interface } from 'ethers/lib/utils'
 import { getL2Network } from '../../lib/dataEntities/networks'
-import { hexDataSlice, defaultAbiCoder } from 'ethers/lib/utils'
-import { InboxMessageDeliveredEvent } from '../abi/Inbox'
-import { SubmitRetryableMessage } from '../dataEntities/message'
+import { RetryableMessageParams } from '../dataEntities/message'
+import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
+// CHRIS: TODO: after linting go through the tops of all the files and check for unused imports
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -91,19 +90,6 @@ export abstract class L1ToL2Message {
    */
   public readonly retryableCreationId: string
 
-  // CHRIS: TODO: remove
-  private static calculateL2DerivedHash(
-    retryableCreationId: string,
-    l2TxnType: L2TxnType
-  ): string {
-    return keccak256(
-      concat([
-        zeroPad(retryableCreationId, 32),
-        zeroPad(BigNumber.from(l2TxnType).toHexString(), 32),
-      ])
-    )
-  }
-
   /**
    * The submit retryable transactions use the typed transaction envelope 2718.
    * The id of these transactions is the hash of the RLP encoded transaction.
@@ -114,11 +100,11 @@ export abstract class L1ToL2Message {
    * @param destAddress
    * @param l2CallValue
    * @param l1Value
-   * @param maxSubmissionCost
+   * @param maxSubmissionFee
    * @param excessFeeRefundAddress
    * @param callValueRefundAddress
-   * @param maxGas
-   * @param gasPriceBid
+   * @param gasLimit
+   * @param maxFeePerGas
    * @param data
    * @returns
    */
@@ -131,11 +117,11 @@ export abstract class L1ToL2Message {
     destAddress: string,
     l2CallValue: BigNumber,
     l1Value: BigNumber,
-    maxSubmissionCost: BigNumber,
+    maxSubmissionFee: BigNumber,
     excessFeeRefundAddress: string,
     callValueRefundAddress: string,
-    maxGas: BigNumber,
-    gasPriceBid: BigNumber,
+    gasLimit: BigNumber,
+    maxFeePerGas: BigNumber,
     data: string
   ): string {
     const formatNumber = (value: BigNumber): Uint8Array => {
@@ -155,12 +141,12 @@ export abstract class L1ToL2Message {
       formatNumber(l1BaseFee),
 
       formatNumber(l1Value),
-      formatNumber(gasPriceBid),
-      formatNumber(maxGas),
+      formatNumber(maxFeePerGas),
+      formatNumber(gasLimit),
       destAddress,
       formatNumber(l2CallValue),
       callValueRefundAddress,
-      formatNumber(maxSubmissionCost),
+      formatNumber(maxSubmissionFee),
       excessFeeRefundAddress,
       data,
     ]
@@ -180,7 +166,7 @@ export abstract class L1ToL2Message {
     sender: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
-    messageData: SubmitRetryableMessage
+    messageData: RetryableMessageParams
   ): L1ToL2MessageReaderOrWriter<T>
   public static fromTxComponents<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
@@ -188,7 +174,7 @@ export abstract class L1ToL2Message {
     sender: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
-    messageData: SubmitRetryableMessage
+    messageData: RetryableMessageParams
   ): L1ToL2MessageReader | L1ToL2MessageWriter {
     return SignerProviderUtils.isSigner(l2SignerOrProvider)
       ? new L1ToL2MessageWriter(
@@ -209,14 +195,12 @@ export abstract class L1ToL2Message {
         )
   }
 
-  // CHRIS: TODO: convert params to nitro names eg maxGas vs gasLimit
-
   protected constructor(
     public readonly chainId: BigNumber,
     public readonly sender: string,
     public readonly messageNumber: BigNumber,
     public readonly l1BaseFee: BigNumber,
-    public readonly messageData: SubmitRetryableMessage
+    public readonly messageData: RetryableMessageParams
   ) {
     this.retryableCreationId = this.calculateSubmitRetryableId(
       chainId,
@@ -226,11 +210,11 @@ export abstract class L1ToL2Message {
       messageData.destAddress,
       messageData.l2CallValue,
       messageData.l1Value,
-      messageData.maxSubmissionCost,
+      messageData.maxSubmissionFee,
       messageData.excessFeeRefundAddress,
       messageData.callValueRefundAddress,
-      messageData.maxGas,
-      messageData.gasPriceBid,
+      messageData.gasLimit,
+      messageData.maxFeePerGas,
       messageData.data
     )
   }
@@ -252,7 +236,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     sender: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
-    messageData: SubmitRetryableMessage
+    messageData: RetryableMessageParams
   ) {
     super(chainId, sender, messageNumber, l1BaseFee, messageData)
   }
@@ -263,15 +247,21 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    * If confirmations or timeout is provided, this will wait for the ticket to be created
    * @returns
    */
-  public async getRetryableCreationReceipt(    
+  public async getRetryableCreationReceipt(
     confirmations?: number,
     timeout?: number
   ): Promise<TransactionReceipt> {
-    if (!this.retryableCreationReceipt){
-      if (confirmations || timeout){
-        this.retryableCreationReceipt = await this.l2Provider.waitForTransaction(this.retryableCreationId, confirmations, timeout)
+    if (!this.retryableCreationReceipt) {
+      if (confirmations || timeout) {
+        this.retryableCreationReceipt = await this.l2Provider.waitForTransaction(
+          this.retryableCreationId,
+          confirmations,
+          timeout
+        )
       } else {
-        this.retryableCreationReceipt = await this.l2Provider.getTransactionReceipt(this.retryableCreationId)
+        this.retryableCreationReceipt = await this.l2Provider.getTransactionReceipt(
+          this.retryableCreationId
+        )
       }
     }
     return this.retryableCreationReceipt
@@ -280,7 +270,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   // CHRIS: TODO: update these docs
   // CHRIS: TODO: read ALL the comments in arbitrum sdk and check for accuracy with nitro
 
-    /**
+  /**
    * Receipt for the auto-redeem l2 transaction created by this message. See L1ToL2Message.l2TxHash
    * May throw an error if the l2 transaction has yet to be executed, which is the case if
    * the retryable ticket has not been created and redeemed.
@@ -292,6 +282,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     if (creationReceipt) {
       const l2Receipt = new L2TransactionReceipt(creationReceipt)
       const redeemEvents = l2Receipt.getRedeemScheduledEvents()
+
       if (redeemEvents.length === 1) {
         // CHRIS: TODO: this seems weird that we should only return if there was one redeem event?
         // CHRIS: TODO: throw an error if this is unexpected
@@ -304,7 +295,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     return null
   }
 
-    /**
+  /**
    * Receipt for the successful l2 transaction created by this message. See L1ToL2Message.l2TxHash
    * May throw an error if the l2 transaction has yet to be executed, which is the case if
    * the retryable ticket has not been created and redeemed.
@@ -315,41 +306,52 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     const creationReceipt = await this.getRetryableCreationReceipt()
     const autoRedeem = await this.getAutoRedeemAttempt()
     if (autoRedeem && autoRedeem.status === 1) return autoRedeem
-    if (creationReceipt){
+    if (creationReceipt) {
       const ticketId = this.retryableCreationId
-      const iFace = new Interface([
-        'event RedeemScheduled(     bytes32 indexed ticketId,     bytes32 indexed retryTxHash,     uint64 indexed sequenceNum,     uint64 donatedGas,     address gasDonor )',
-      ])
+      const iFace = ArbRetryableTx__factory.createInterface()
       const redeemTopic = iFace.getEventTopic('RedeemScheduled')
 
       let increment: number = 1000
-      let fromBlock = await this.l2Provider.getBlock(creationReceipt.blockNumber)
-      const creationBlock = await this.l2Provider.getBlock(creationReceipt.blockNumber)
+      let fromBlock = await this.l2Provider.getBlock(
+        creationReceipt.blockNumber
+      )
+      const creationBlock = await this.l2Provider.getBlock(
+        creationReceipt.blockNumber
+      )
       const maxBlock = await this.l2Provider.getBlockNumber()
-      while(fromBlock.number < maxBlock) {
+      while (fromBlock.number < maxBlock) {
         const toBlockNumber = Math.min(fromBlock.number + increment, maxBlock)
         // We can skip creationBlock because it is covered by `getAutoRedeem` shortcut
-        const redeemEventLogs = await this.l2Provider.getLogs({fromBlock: fromBlock.number + 1, toBlock: toBlockNumber, topics: [redeemTopic, ticketId]})
+        const redeemEventLogs = await this.l2Provider.getLogs({
+          fromBlock: fromBlock.number + 1,
+          toBlock: toBlockNumber,
+          topics: [redeemTopic, ticketId],
+        })
         if (redeemEventLogs.length != 0) {
           const redeemEvents = redeemEventLogs.map(
-            r =>
-              (iFace.parseLog(r).args as unknown) as {
-                ticketId: string
-                retryTxHash: string
-                sequenceNum: BigNumber
-                donatedGas: BigNumber
-                gasDonor: string
-              }
+            r => iFace.parseLog(r).args as RedeemScheduledEvent['args']
           )
-          const successfulRedeem = (await Promise.all(redeemEvents.map(
-            async e => await this.l2Provider.getTransactionReceipt(e.retryTxHash)))).filter(
-              r => r.status === 1)
-          if (successfulRedeem.length > 1) throw new ArbTsError(`Unexpected number of successful redeems. Expected only one redeem for ticket ${ticketId}, but found ${successfulRedeem.length}.`)
+          const successfulRedeem = (
+            await Promise.all(
+              redeemEvents.map(
+                async e =>
+                  await this.l2Provider.getTransactionReceipt(e.retryTxHash)
+              )
+            )
+          ).filter(r => r.status === 1)
+          if (successfulRedeem.length > 1)
+            throw new ArbTsError(
+              `Unexpected number of successful redeems. Expected only one redeem for ticket ${ticketId}, but found ${successfulRedeem.length}.`
+            )
           if (successfulRedeem.length == 1) return successfulRedeem[0]
         }
         const toBlock = await this.l2Provider.getBlock(toBlockNumber)
-        if ((toBlock.timestamp - creationBlock.timestamp) > l2Network.retryableLifetimeSeconds) break
-        const processedSeconds = (toBlock.timestamp - fromBlock.timestamp)
+        if (
+          toBlock.timestamp - creationBlock.timestamp >
+          l2Network.retryableLifetimeSeconds
+        )
+          break
+        const processedSeconds = toBlock.timestamp - fromBlock.timestamp
         if (processedSeconds != 0) {
           // find the increment that cover ~ 1 day
           increment *= Math.ceil(86400 / processedSeconds)
@@ -412,6 +414,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     // 2. then we redeem it
     // 3. that means the ticket no longer exists, so a call to isExpired will fail
     // 4. was the result successful? we know that based on the waitresult?
+    // QQQ: we need a test for this too 
 
     // not redeemed, has it now expired
     if (await this.isExpired()) {
@@ -527,7 +530,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
     sender: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
-    messageData: SubmitRetryableMessage
+    messageData: RetryableMessageParams
   ) {
     super(
       l2Signer.provider!,
@@ -552,7 +555,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
         this.l2Signer
       )
       const feeData = await this.l2Provider.getFeeData()
-      
+
       // CHRIS: TODO: check what the default behaviour is for gasprice
       // CHRIS: TODO: why are we using 1559 here, but not elsewhere? All tx should be - in many cases it may be ignored though/depend on the wallet
       return await arbRetryableTx.redeem(this.retryableCreationId, {

@@ -121,8 +121,8 @@ describe('standard ERC20', () => {
       L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
       GatewayType.STANDARD,
       {
-        maxGas: { base: BigNumber.from(0) },
-        maxGasPrice: { base: BigNumber.from(0) },
+        gasLimit: { base: BigNumber.from(0) },
+        maxFeePerGas: { base: BigNumber.from(0) },
       }
     )
 
@@ -139,8 +139,8 @@ describe('standard ERC20', () => {
       L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
       GatewayType.STANDARD,
       {
-        maxGas: { base: BigNumber.from(5) },
-        maxGasPrice: { base: BigNumber.from(5) },
+        gasLimit: { base: BigNumber.from(5) },
+        maxFeePerGas: { base: BigNumber.from(5) },
       }
     )
 
@@ -157,8 +157,8 @@ describe('standard ERC20', () => {
       L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
       GatewayType.STANDARD,
       {
-        maxGas: { base: BigNumber.from(5) },
-        maxGasPrice: { base: BigNumber.from(5) },
+        gasLimit: { base: BigNumber.from(5) },
+        maxFeePerGas: { base: BigNumber.from(5) },
       }
     )
 

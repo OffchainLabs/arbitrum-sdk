@@ -125,7 +125,7 @@ export class EthBridger extends AssetBridger<
       )
     }
 
-    const submissionCost = await gasEstimator.estimateSubmissionPrice(
+    const submissionCost = await gasEstimator.estimateSubmissionFee(
       baseFee,
       0,
       params.retryableGasOverrides?.maxSubmissionPrice

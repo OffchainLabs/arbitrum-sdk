@@ -32,12 +32,12 @@ import { Wallet } from 'ethers'
 import { testSetup } from '../scripts/testSetup'
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 
-describe('WETH', async () => {
+describe.only('WETH', async () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
 
-  it('deposit2 WETH', async () => {
+  it('deposit WETH', async () => {
     const { l2Network, l1Signer, l2Signer, erc20Bridger } = await testSetup()
 
     const l1WethAddress = l2Network.tokenBridge.l1Weth
@@ -98,12 +98,12 @@ describe('WETH', async () => {
     )
   })
 
-  it('withdraw2 WETH', async () => {
+  it.only('withdraw WETH', async () => {
     const wethToWrap = parseEther('0.00001')
     const wethToWithdraw = parseEther('0.00000001')
 
     const { l2Network, l1Signer, l2Signer, erc20Bridger } = await testSetup()
-    // await fundL1(l1Signer)
+    await fundL1(l1Signer)
     await fundL2(l2Signer)
 
     const l2Weth = AeWETH__factory.connect(

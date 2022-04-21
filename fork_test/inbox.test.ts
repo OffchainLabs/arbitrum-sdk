@@ -40,7 +40,7 @@ const submitL2Tx = async (
     value?: BigNumber
     data?: string
     nonce: number
-    gasPriceBid: BigNumber
+    maxFeePerGas: BigNumber
     gasLimit: BigNumber
   },
   l2Network: L2Network,
@@ -50,7 +50,7 @@ const submitL2Tx = async (
 
   return await inbox.sendUnsignedTransaction(
     tx.gasLimit,
-    tx.gasPriceBid,
+    tx.maxFeePerGas,
     tx.nonce,
     tx.to,
     tx.value || BigNumber.from(0),
@@ -116,7 +116,7 @@ describe('Inbox tools', () => {
         to: await l1Signer.getAddress(),
         value: BigNumber.from(0),
         gasLimit: BigNumber.from(100000),
-        gasPriceBid: BigNumber.from(21000000000),
+        maxFeePerGas: BigNumber.from(21000000000),
         nonce: 0,
       },
       l2Network,
@@ -148,7 +148,7 @@ describe('Inbox tools', () => {
         to: await l1Signer.getAddress(),
         value: BigNumber.from(0),
         gasLimit: BigNumber.from(100000),
-        gasPriceBid: BigNumber.from(21000000000),
+        maxFeePerGas: BigNumber.from(21000000000),
         nonce: 0,
       },
       l2Network,
@@ -161,7 +161,7 @@ describe('Inbox tools', () => {
         to: await l1Signer.getAddress(),
         value: BigNumber.from(10),
         gasLimit: BigNumber.from(100000),
-        gasPriceBid: BigNumber.from(21000000000),
+        maxFeePerGas: BigNumber.from(21000000000),
         nonce: 1,
       },
       l2Network,
@@ -193,7 +193,7 @@ describe('Inbox tools', () => {
         to: await l1Signer.getAddress(),
         value: BigNumber.from(5),
         gasLimit: BigNumber.from(100000),
-        gasPriceBid: BigNumber.from(21000000000),
+        maxFeePerGas: BigNumber.from(21000000000),
         nonce: 0,
       },
       l2Network,
@@ -204,7 +204,7 @@ describe('Inbox tools', () => {
       to: await l1Signer.getAddress(),
       value: BigNumber.from(10),
       gasLimit: BigNumber.from(100000),
-      gasPriceBid: BigNumber.from(21000000000),
+      maxFeePerGas: BigNumber.from(21000000000),
       nonce: 1,
     }
     const messageDataHash = solidityKeccak256(
@@ -212,7 +212,7 @@ describe('Inbox tools', () => {
       [
         0,
         txParams.gasLimit,
-        txParams.gasPriceBid,
+        txParams.maxFeePerGas,
         txParams.nonce,
         hexZeroPad(txParams.to, 32),
         txParams.value,

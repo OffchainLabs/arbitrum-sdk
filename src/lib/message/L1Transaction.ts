@@ -40,7 +40,9 @@ import { ethers } from 'ethers'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { InboxMessageDeliveredEvent } from '../abi/Inbox'
 import { hexZeroPad } from '@ethersproject/bytes'
-import { SubmitRetryableMessage } from '../dataEntities/message'
+import { RetryableMessageParams } from '../dataEntities/message'
+import { Bridge__factory } from '../abi/factories/Bridge__factory'
+import { MessageDeliveredEvent } from '../abi/Bridge'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -54,14 +56,6 @@ export type L1EthDepositTransaction = L1ContractTransaction<
 export type L1ContractCallTransaction = L1ContractTransaction<
   L1ContractCallTransactionReceipt
 >
-
-// CHRIS: TODO: remove and use proper abi
-// CHRIS: TODO: remove all console logging in these arbitrum-sdk
-interface TempMessageDeliveredEvent {
-  messageIndex: BigNumber
-  sender: string
-  baseFeeL1: BigNumber
-}
 
 export class L1TransactionReceipt implements TransactionReceipt {
   public readonly to: string
@@ -106,30 +100,21 @@ export class L1TransactionReceipt implements TransactionReceipt {
    * Get the numbers of any messages created by this transaction
    * @returns
    */
-  public getMessageDeliveredEvents(): TempMessageDeliveredEvent[] {
-    // CHRIS: TODO: this will work when we have the proper abis
-    // const iface = Bridge__factory.createInterface()
-    const iface = new ethers.utils.Interface([
-      'event MessageDelivered(      uint256 indexed messageIndex,      bytes32 indexed beforeInboxAcc,      address inbox,      uint8 kind,      address sender,      bytes32 messageDataHash,      uint256 baseFeeL1,      uint64 timestamp  )',
-    ])
-
+  public getMessageDeliveredEvents(): MessageDeliveredEvent['args'][] {
+    const iface = Bridge__factory.createInterface()
     const messageDeliveredTopic = iface.getEventTopic(
       iface.getEvent('MessageDelivered')
     )
     return this.logs
       .filter(log => log.topics[0] === messageDeliveredTopic)
-      .map(
-        l => (iface.parseLog(l).args as unknown) as TempMessageDeliveredEvent
-      )
+      .map(l => iface.parseLog(l).args as MessageDeliveredEvent['args'])
   }
 
   /**
    * Get the numbers of any messages created by this transaction
    * @returns
    */
-  // CHRIS: TODO:  we need to get the sender from the message delivered event
-  // we should make sure that we dont use any non general stuff here
-  // we also need inbox message from origin event
+  // CHRIS: TODO: we also need inbox message from origin event
   public getInboxMessageDeliveredEvent(): InboxMessageDeliveredEvent['args'][] {
     const iFace = Inbox__factory.createInterface()
     const inboxMessageDeliveredTopic = iFace.getEventTopic(
@@ -142,7 +127,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
 
   public getMessageEvents(): {
     inboxMessageEvent: InboxMessageDeliveredEvent['args']
-    bridgeMessageEvent: TempMessageDeliveredEvent
+    bridgeMessageEvent: MessageDeliveredEvent['args']
   }[] {
     const bridgeMessages = this.getMessageDeliveredEvents()
     const inboxMessages = this.getInboxMessageDeliveredEvent()
@@ -159,7 +144,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
 
     const messages: {
       inboxMessageEvent: InboxMessageDeliveredEvent['args']
-      bridgeMessageEvent: TempMessageDeliveredEvent
+      bridgeMessageEvent: MessageDeliveredEvent['args']
     }[] = []
     for (const bm of bridgeMessages) {
       const im = inboxMessages.filter(i => i.messageNum.eq(bm.messageIndex))[0]
@@ -181,11 +166,11 @@ export class L1TransactionReceipt implements TransactionReceipt {
 
   private parseInboxMessage(
     inboxMessageDeliveredEvent: InboxMessageDeliveredEvent['args']
-  ): SubmitRetryableMessage {
+  ): RetryableMessageParams {
     // decode the data field - is been packed so we cant decode the bytes field this way
     const parsed = ethers.utils.defaultAbiCoder.decode(
       [
-        'uint256', // dest // CHRIS: TODO: why dont we just encode these as addresses?
+        'uint256', // dest
         'uint256', // l2 call balue
         'uint256', // msg val
         'uint256', // max submission
@@ -195,35 +180,32 @@ export class L1TransactionReceipt implements TransactionReceipt {
         'uint256', // gas price bid
         'uint256', // data length
       ],
+      // decode from the first 9 words
       inboxMessageDeliveredEvent.data.substring(0, 64 * 9 + 2)
-    )
+    ) as BigNumber[]
 
-    // CHRIS: TODO: we shouldnt decode addresses this way - since leading zeros get lost
-    const destAddress = ethers.utils.getAddress(
-      hexZeroPad((parsed[0] as BigNumber).toHexString(), 20)
-    )
-    const l2CallValue = parsed[1] as BigNumber
-    const l1Value = parsed[2] as BigNumber
-    const maxSubmissionCost = parsed[3] as BigNumber
-    const excessFeeRefundAddress = ethers.utils.getAddress(
-      hexZeroPad((parsed[4] as BigNumber).toHexString(), 20)
-    )
-    const callValueRefundAddress = ethers.utils.getAddress(
-      hexZeroPad((parsed[5] as BigNumber).toHexString(), 20)
-    )
-    const maxGas = parsed[6] as BigNumber
-    const gasPriceBid = parsed[7] as BigNumber
+    const addressFromBigNumber = (bn: BigNumber) =>
+      ethers.utils.getAddress(hexZeroPad(bn.toHexString(), 20))
+
+    const destAddress = addressFromBigNumber(parsed[0])
+    const l2CallValue = parsed[1]
+    const l1Value = parsed[2]
+    const maxSubmissionFee = parsed[3]
+    const excessFeeRefundAddress = addressFromBigNumber(parsed[4])
+    const callValueRefundAddress = addressFromBigNumber(parsed[5])
+    const gasLimit = parsed[6]
+    const maxFeePerGas = parsed[7]
     const data = '0x' + inboxMessageDeliveredEvent.data.substring(64 * 9 + 2)
 
     return {
       destAddress,
       l2CallValue,
       l1Value,
-      maxSubmissionCost,
+      maxSubmissionFee: maxSubmissionFee,
       excessFeeRefundAddress,
       callValueRefundAddress,
-      maxGas,
-      gasPriceBid,
+      gasLimit,
+      maxFeePerGas,
       data,
     }
   }

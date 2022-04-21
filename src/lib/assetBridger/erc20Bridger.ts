@@ -123,7 +123,7 @@ export class Erc20Bridger extends AssetBridger<
   TokenWithdrawParams
 > {
   public static MAX_APPROVAL = MaxUint256
-  public static MIN_CUSTOM_DEPOSIT_MAXGAS = BigNumber.from(275000)
+  public static MIN_CUSTOM_DEPOSIT_GAS_LIMIT = BigNumber.from(275000)
 
   /**
    * Bridger for moving ERC20 tokens back and forth betwen L1 to L2
@@ -379,9 +379,9 @@ export class Erc20Bridger extends AssetBridger<
     erc20L1Address: string
     amount: BigNumber
     depositCallValue: BigNumber
-    maxSubmissionCost: BigNumber
-    maxGas: BigNumber
-    maxGasPrice: BigNumber
+    maxSubmissionFee: BigNumber
+    l2GasLimit: BigNumber
+    l2MaxFeePerGas: BigNumber
     destinationAddress: string
   }> {
     const {
@@ -426,11 +426,11 @@ export class Erc20Bridger extends AssetBridger<
 
     let tokenGasOverrides: GasOverrides | undefined = retryableGasOverrides
     
-    // we also add a hardcoded minimum maxgas for custom gateway deposits
+    // we also add a hardcoded minimum gas limit for custom gateway deposits
     if (l1GatewayAddress === this.l2Network.tokenBridge.l1CustomGateway) {
       if (!tokenGasOverrides) tokenGasOverrides = {}
-      if (!tokenGasOverrides.maxGas) tokenGasOverrides.maxGas = {}
-      tokenGasOverrides.maxGas.min = Erc20Bridger.MIN_CUSTOM_DEPOSIT_MAXGAS
+      if (!tokenGasOverrides.gasLimit) tokenGasOverrides.gasLimit = {}
+      tokenGasOverrides.gasLimit.min = Erc20Bridger.MIN_CUSTOM_DEPOSIT_GAS_LIMIT
     }
 
     // 2. get the gas estimates
@@ -448,9 +448,9 @@ export class Erc20Bridger extends AssetBridger<
     )
 
     return {
-      maxGas: estimates.maxGasBid,
-      maxSubmissionCost: estimates.maxSubmissionPriceBid,
-      maxGasPrice: estimates.maxGasPriceBid,
+      l2GasLimit: estimates.gasLimit,
+      maxSubmissionFee: estimates.maxSubmissionFee,
+      l2MaxFeePerGas: estimates.maxFeePerGas,
       depositCallValue: estimates.totalL2GasCosts,
       destinationAddress: to,
       amount,
@@ -478,7 +478,7 @@ export class Erc20Bridger extends AssetBridger<
     const depositParams = await this.getDepositParams(params)
     const data = defaultAbiCoder.encode(
       ['uint256', 'bytes'],
-      [depositParams.maxSubmissionCost, '0x']
+      [depositParams.maxSubmissionFee, '0x']
     )
 
     const l1GatewayRouter = L1GatewayRouter__factory.connect(
@@ -493,8 +493,8 @@ export class Erc20Bridger extends AssetBridger<
       depositParams.erc20L1Address,
       depositParams.destinationAddress,
       depositParams.amount,
-      depositParams.maxGas,
-      depositParams.maxGasPrice,
+      depositParams.l2GasLimit,
+      depositParams.l2MaxFeePerGas,
       data,
       {
         ...(params.overrides || {}),
@@ -673,11 +673,11 @@ export class AdminErc20Bridger extends Erc20Bridger {
     // now execute the registration
     const customRegistrationTx = await l1Token.registerTokenOnL2(
       l2TokenAddress,
-      setTokenEstimates.maxSubmissionPriceBid,
-      setGatwayEstimates.maxSubmissionPriceBid,
-      setTokenEstimates.maxGasBid,
-      setGatwayEstimates.maxGasBid,
-      setGatwayEstimates.maxGasPriceBid,
+      setTokenEstimates.maxSubmissionFee,
+      setGatwayEstimates.maxSubmissionFee,
+      setTokenEstimates.gasLimit,
+      setGatwayEstimates.gasLimit,
+      setGatwayEstimates.maxFeePerGas,
       setTokenEstimates.totalL2GasCosts,
       setGatwayEstimates.totalL2GasCosts,
       l1SenderAddress,
@@ -802,22 +802,12 @@ export class AdminErc20Bridger extends Erc20Bridger {
       l1Signer
     )
 
-    // CHRIS: TODO: get rid of this
-    await l1GatewayRouter.callStatic.setGateways(
-      tokenGateways.map(tG => tG.tokenAddr),
-      tokenGateways.map(tG => tG.gatewayAddr),
-      estimates.maxGasBid,
-      estimates.maxGasPriceBid,
-      estimates.maxSubmissionPriceBid,
-      { value: estimates.totalL2GasCosts }
-    )
-
     const res = await l1GatewayRouter.functions.setGateways(
       tokenGateways.map(tG => tG.tokenAddr),
       tokenGateways.map(tG => tG.gatewayAddr),
-      estimates.maxGasBid,
-      estimates.maxGasPriceBid,
-      estimates.maxSubmissionPriceBid,
+      estimates.gasLimit,
+      estimates.maxFeePerGas,
+      estimates.maxSubmissionFee,
       { value: estimates.totalL2GasCosts }
     )
 

@@ -1,17 +1,12 @@
 import { Provider } from '@ethersproject/abstract-provider'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
-import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
-
-import {
-  ARB_RETRYABLE_TX_ADDRESS,
-  NODE_INTERFACE_ADDRESS,
-} from '../dataEntities/constants'
+import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { BigNumber } from '@ethersproject/bignumber'
 import { constants } from 'ethers'
 import { utils } from 'ethers'
 import { Interface } from 'ethers/lib/utils'
 
-const DEFAULT_SUBMISSION_PRICE_PERCENT_INCREASE = BigNumber.from(340)
+const DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE = BigNumber.from(340)
 
 /**
  * An optional big number percentage increase
@@ -29,27 +24,27 @@ export type PercentIncrease = {
 }
 
 export interface GasOverrides {
-  maxGas?: PercentIncrease & {
+  gasLimit?: PercentIncrease & {
     /**
      * Set a minimum max gas
      */
     min?: BigNumber
   }
-  maxSubmissionPrice?: PercentIncrease
-  maxGasPrice?: PercentIncrease
+  maxSubmissionFee?: PercentIncrease
+  maxFeePerGas?: PercentIncrease
 }
 
 const defaultL1ToL2MessageEstimateOptions = {
   // CHRIS: TODO: reasses these defaults, shoud we still be using them?
-  maxSubmissionFeePercentIncrease: DEFAULT_SUBMISSION_PRICE_PERCENT_INCREASE, //  CHRIS: TODO: 340% seems high
-  maxGasPercentIncrease: constants.Zero, // CHRIS: TODO: back to zero after bug fixed
-  maxGasPricePercentIncrease: constants.Zero, // CHRIS: TODO: I think we want to increase this
+  maxSubmissionFeePercentIncrease: DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE, //  CHRIS: TODO: 340% seems high
+  gasLimitPercentIncrease: constants.Zero, // CHRIS: TODO: back to zero after bug fixed
+  maxFeePerGasPercentIncrease: constants.Zero, // CHRIS: TODO: I think we want to increase this
 }
 
 export interface L1toL2MessageGasValues {
-  maxGasPriceBid: BigNumber
-  maxSubmissionPriceBid: BigNumber
-  maxGasBid: BigNumber
+  maxFeePerGas: BigNumber
+  maxSubmissionFee: BigNumber
+  gasLimit: BigNumber
 
   totalL2GasCosts: BigNumber
   l2CallValue: BigNumber
@@ -62,22 +57,22 @@ export class L1ToL2MessageGasEstimator {
     return num.add(num.mul(increase).div(100))
   }
 
-  private applySubmissionPriceDefaults(maxSubmissionPrice?: PercentIncrease) {
+  private applySubmissionPriceDefaults(maxSubmissionFee?: PercentIncrease) {
     return {
-      base: maxSubmissionPrice?.base,
+      base: maxSubmissionFee?.base,
       percentIncrease:
-        maxSubmissionPrice?.percentIncrease ||
+        maxSubmissionFee?.percentIncrease ||
         defaultL1ToL2MessageEstimateOptions.maxSubmissionFeePercentIncrease,
     }
   }
 
   /**
-   * Return the price, in wei, of submitting a new retryable tx with a given calldata size.
+   * Return the fee, in wei, of submitting a new retryable tx with a given calldata size.
    * @param callDataSize
    * @param options
    * @returns
    */
-  public async estimateSubmissionPrice(
+  public async estimateSubmissionFee(
     l1BaseFee: BigNumber,
     callDataSize: BigNumber | number,
     options?: {
@@ -104,15 +99,12 @@ export class L1ToL2MessageGasEstimator {
    * @param senderDeposit
    * @param destAddr
    * @param l2CallValue
-   * @param maxSubmissionCost
    * @param excessFeeRefundAddress
    * @param callValueRefundAddress
-   * @param maxGas
-   * @param gasPriceBid
    * @param calldata
    * @returns
    */
-  public async estimateRetryableTicketMaxGas(
+  public async estimateRetryableTicketGasLimit(
     sender: string,
     senderDeposit: BigNumber,
     destAddr: string,
@@ -126,39 +118,31 @@ export class L1ToL2MessageGasEstimator {
       this.l2Provider
     )
 
-    // CHRIS: TODO: put this back - use the new abis
-    const iface = new Interface([
-      'function estimateRetryableTicket(address sender,uint256 deposit,address to,uint256 l2CallValue,address excessFeeRefundAddress,address callValueRefundAddress,bytes calldata data)',
-    ])
-
-    return await this.l2Provider.estimateGas({
-      to: NODE_INTERFACE_ADDRESS,
-      data: iface.encodeFunctionData('estimateRetryableTicket', [
-        sender,
-        senderDeposit,
-        destAddr,
-        l2CallValue,
-        excessFeeRefundAddress,
-        callValueRefundAddress,
-        calldata,
-      ]),
-    })
+    return await nodeInterface.estimateGas.estimateRetryableTicket(
+      sender,
+      senderDeposit,
+      destAddr,
+      l2CallValue,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
+      calldata
+    )
   }
 
   private applyDefaults(options?: GasOverrides) {
     return {
-      maxGas: {
-        base: options?.maxGas?.base,
+      gasLimit: {
+        base: options?.gasLimit?.base,
         percentIncrease:
-          options?.maxGas?.percentIncrease ||
-          defaultL1ToL2MessageEstimateOptions.maxGasPercentIncrease,
-        min: options?.maxGas?.min || constants.Zero,
+          options?.gasLimit?.percentIncrease ||
+          defaultL1ToL2MessageEstimateOptions.gasLimitPercentIncrease,
+        min: options?.gasLimit?.min || constants.Zero,
       },
-      maxGasPrice: {
-        base: options?.maxGasPrice?.base,
+      maxFeePerGas: {
+        base: options?.maxFeePerGas?.base,
         percentIncrease:
-          options?.maxGasPrice?.percentIncrease ||
-          defaultL1ToL2MessageEstimateOptions.maxGasPricePercentIncrease,
+          options?.maxFeePerGas?.percentIncrease ||
+          defaultL1ToL2MessageEstimateOptions.maxFeePerGasPercentIncrease,
       },
     }
   }
@@ -171,6 +155,9 @@ export class L1ToL2MessageGasEstimator {
    * @param destAddr Destination L2 contract address
    * @param l2CallDataHex The call data to be sent in the request
    * @param l2CallValue The value to be sent on L2 as part of the L2 transaction
+   * @param l1BaseFee Current l1 base fee
+   * @param excessFeeRefundAddress The address to send excess fee refunds too
+   * @param callValueRefundAddress The address to send the call value
    * @param options
    * @returns
    */
@@ -184,55 +171,52 @@ export class L1ToL2MessageGasEstimator {
     callValueRefundAddress: string,
     options?: GasOverrides
   ): Promise<{
-    maxGasBid: BigNumber
-    maxSubmissionPriceBid: BigNumber
-    maxGasPriceBid: BigNumber
+    gasLimit: BigNumber
+    maxSubmissionFee: BigNumber
+    maxFeePerGas: BigNumber
     totalL2GasCosts: BigNumber
   }> {
     const defaultedOptions = this.applyDefaults(options)
 
-    const maxGasPriceBid = this.percentIncrease(
-      defaultedOptions.maxGasPrice.base ||
-        (await this.l2Provider.getGasPrice()),
-      defaultedOptions.maxGasPrice.percentIncrease
+    const maxFeePerGas = this.percentIncrease(
+      defaultedOptions.maxFeePerGas.base || (await this.l2Provider.getGasPrice()),
+      defaultedOptions.maxFeePerGas.percentIncrease
     )
 
-    const maxSubmissionPriceBid = await this.estimateSubmissionPrice(
+    const maxSubmissionFee = await this.estimateSubmissionFee(
       // CHRIS: TODO: we defo want base fee here right?
       l1BaseFee,
       utils.hexDataLength(l2CallDataHex),
-      options?.maxSubmissionPrice
+      options?.maxSubmissionFee
     )
 
-    const calculatedMaxGas = this.percentIncrease(
-      defaultedOptions.maxGas.base ||
-        (await this.estimateRetryableTicketMaxGas(
+    const calculatedGasLimit = this.percentIncrease(
+      defaultedOptions.gasLimit.base ||
+        (await this.estimateRetryableTicketGasLimit(
           sender,
-          utils.parseEther('1').add(
-            l2CallValue // CHRIS: TODO: get to the bottom of this, do we actually need it?
-          ) /** we add a 1 ether "deposit" buffer to pay for execution in the gas estimation  */,
+          // we dont know how much gas the transaction will use when executing
+          // so we supply a dummy amount of call value that will definately be more than we need
+          utils.parseEther('1').add(l2CallValue),
           destAddr,
           l2CallValue,
           excessFeeRefundAddress,
           callValueRefundAddress,
           l2CallDataHex
         )),
-      defaultedOptions.maxGas.percentIncrease
+      defaultedOptions.gasLimit.percentIncrease
     )
 
     // always ensure the max gas is greater than the min
-    const maxGas = calculatedMaxGas.gt(defaultedOptions.maxGas.min)
-      ? calculatedMaxGas
-      : defaultedOptions.maxGas.min
+    const gasLimit = calculatedGasLimit.gt(defaultedOptions.gasLimit.min)
+      ? calculatedGasLimit
+      : defaultedOptions.gasLimit.min
 
-    let totalL2GasCosts = maxSubmissionPriceBid.add(
-      maxGasPriceBid.mul(maxGas)
-    )
+    let totalL2GasCosts = maxSubmissionFee.add(maxFeePerGas.mul(gasLimit))
 
     return {
-      maxGasBid: maxGas,
-      maxSubmissionPriceBid,
-      maxGasPriceBid,
+      gasLimit,
+      maxSubmissionFee,
+      maxFeePerGas: maxFeePerGas,
       totalL2GasCosts,
     }
   }

@@ -13,6 +13,7 @@ export interface ArbTransactionResponse extends TransactionResponse {
    */
   l1SequenceNumber: BigNumber
 
+  // CHRIS: TODO: still relevant for nitro? we need to review all these things Arb** things
   // These fields are commented out for now
   // we can add them in as we need them and are able to document
   // them properly
@@ -98,10 +99,9 @@ export enum ReturnCode {
    */
   TooCongested = 2,
   /**
-   * Not enough balance to pay for maxGas at gasPrice (for retryables: not enough to cover base submission cost)
+   * Not enough balance to pay for gas limit at gasPrice (for retryables: not enough to cover base submission cost)
    */
-  InsufficientBalanceForMaxGas = 3,
-
+  InsufficientBalanceForGasLimit = 3,
   /**
    * Not enough balance for execution (for retryables: not enough to cover callvalue + base submission cost)
    */

@@ -120,8 +120,8 @@ describe('Ether', async () => {
 
     for (const value of [
       l1ToL2Message.messageData.l2CallValue,
-      l1ToL2Message.messageData.maxGas,
-      l1ToL2Message.messageData.gasPriceBid,
+      l1ToL2Message.messageData.gasLimit,
+      l1ToL2Message.messageData.maxFeePerGas,
     ]) {
       expect(value.isZero(), 'message inputs value error').to.be.true
     }

@@ -62,20 +62,20 @@ export const getCustomNetworks = async (
     'docker exec nitro_sequencer_1 cat /config/deployment.json'
   ).toString()
   const parsedDeploymentData = JSON.parse(deploymentData) as {
-    Bridge: string
-    Inbox: string
-    SequencerInbox: string
-    Rollup: string
+    bridge: string
+    inbox: string
+    ["sequencer-inbox"]: string
+    rollup: string
   }
 
   const rollup = RollupAdminFacet__factory.connect(
-    parsedDeploymentData.Rollup,
+    parsedDeploymentData.rollup,
     l1Provider
   )
   const confirmPeriodBlocks = await rollup.confirmPeriodBlocks()
 
   const bridge = Bridge__factory.connect(
-    parsedDeploymentData.Bridge,
+    parsedDeploymentData.bridge,
     l1Provider
   )
   const outboxAddr = await bridge.allowedOutboxList(0)
@@ -97,13 +97,13 @@ export const getCustomNetworks = async (
     chainID: l2NetworkInfo.chainId,
     confirmPeriodBlocks: confirmPeriodBlocks.toNumber(),
     ethBridge: {
-      bridge: parsedDeploymentData.Bridge,
-      inbox: parsedDeploymentData.Inbox,
+      bridge: parsedDeploymentData.bridge,
+      inbox: parsedDeploymentData.inbox,
       outboxes: {
         [outboxAddr]: 0,
       },
-      rollup: parsedDeploymentData.Rollup,
-      sequencerInbox: parsedDeploymentData.SequencerInbox,
+      rollup: parsedDeploymentData.rollup,
+      sequencerInbox: parsedDeploymentData['sequencer-inbox'],
     },
     explorerUrl: '',
     isArbitrum: true,

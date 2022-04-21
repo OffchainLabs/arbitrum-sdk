@@ -37,9 +37,9 @@ export class L1ToL2MessageCreator {
     overrides: PayableOverrides = {}
   ): Promise<ContractReceipt> {
     const {
-      maxGasPriceBid,
-      maxSubmissionPriceBid,
-      maxGasBid,
+      maxFeePerGas,
+      maxSubmissionFee,
+      gasLimit,
       totalL2GasCosts,
       l2CallValue,
     } = gasParams
@@ -53,11 +53,11 @@ export class L1ToL2MessageCreator {
     const res = await inbox.createRetryableTicket(
       destAddr,
       l2CallValue,
-      maxSubmissionPriceBid,
+      maxSubmissionFee,
       excessFeeRefundAddress,
       callValueRefundAddress,
-      maxGasBid,
-      maxGasPriceBid,
+      gasLimit,
+      maxFeePerGas,
       callDataHex,
       { value: totalL2GasCosts.add(l2CallValue), ...overrides }
     )

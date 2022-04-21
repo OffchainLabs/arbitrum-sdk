@@ -126,6 +126,11 @@ class ArbFormatter extends Formatter {
   public receipt(value: any): ArbTransactionReceipt {
     return super.receipt(value) as ArbTransactionReceipt
   }
+
+  public block(block: any): ArbBlock {
+    return super.block(block) as ArbBlock
+
+  }
 }
 
 /**
@@ -145,7 +150,7 @@ const getBatch = async (
   // TODO: reimplement with nitro inbox logic
   // https://github.com/OffchainLabs/nitro/pull/505
   // this should also include delayed messages
-  throw new Error("sdk getBatch not implemented")
+  throw new Error('sdk getBatch not implemented')
 }
 
 /**
@@ -168,7 +173,9 @@ const getSequencerBatch = async (
     l1Provider
   )
 
-  const delayBlocks = (await inbox.callStatic.maxTimeVariation()).delayBlocks.toNumber()
+  const delayBlocks = (
+    await inbox.callStatic.maxTimeVariation()
+  ).delayBlocks.toNumber()
 
   const startBlock = l2Txl1BlockNumber
   const delayedBlockMax = l2Txl1BlockNumber + delayBlocks
@@ -205,7 +212,9 @@ const getDelayedBatch = async (
     l2Network.ethBridge.sequencerInbox,
     l1Provider
   )
-  const delayBlocks = (await inbox.callStatic.maxTimeVariation()).delayBlocks.toNumber()
+  const delayBlocks = (
+    await inbox.callStatic.maxTimeVariation()
+  ).delayBlocks.toNumber()
   const delayedBlockMax = l2Txl1BlockNumber + delayBlocks
   const currentBlock = await l1Provider.getBlockNumber()
   const startBlock = Math.min(delayedBlockMax, currentBlock)
@@ -269,8 +278,12 @@ export const getRawArbTransactionReceipt = async (
           l2Network.ethBridge.sequencerInbox,
           l1ProviderForBatch
         )
-        const delayBlocks = (await inbox.callStatic.maxTimeVariation()).delayBlocks.toNumber()
-        const delaySeconds = (await inbox.callStatic.maxTimeVariation()).delaySeconds.toNumber()
+        const delayBlocks = (
+          await inbox.callStatic.maxTimeVariation()
+        ).delayBlocks.toNumber()
+        const delaySeconds = (
+          await inbox.callStatic.maxTimeVariation()
+        ).delaySeconds.toNumber()
         const l1Timestamp = (
           await l1ProviderForBatch.getBlock(tx.l1BlockNumber)
         ).timestamp
@@ -311,4 +324,18 @@ export const getTransaction = async (
   const arbFormatter = new ArbFormatter()
   // CHRIS: TODO: check what a transaction looks like these days
   return arbFormatter.transactionResponse(tx)
+}
+
+export const getBlockByHash = async (
+  l2Provider: JsonRpcProvider,
+  blockHash: string
+) => {
+  const l2Block = await l2Provider.send('eth_getBlockByHash', [
+    blockHash,
+    false,
+  ])
+  if (l2Block === null) return null
+  const arbFormatter = new ArbFormatter()
+
+  return arbFormatter.block(l2Block)
 }

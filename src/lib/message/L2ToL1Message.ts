@@ -31,7 +31,7 @@ import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
-import { constants, ContractTransaction, ethers } from 'ethers'
+import { constants, ContractTransaction, ethers, Overrides } from 'ethers'
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { ArbTsError } from '../dataEntities/errors'
 import {
@@ -109,28 +109,15 @@ export enum L2ToL1MessageStatus {
   EXECUTED,
 }
 
-// CHRIS: TODO: delete later when we have the proper event
-export type L2ToL1Event = {
-  caller: string
-  destination: string
-  hash: BigNumber
-  position: BigNumber
-  indexInBatch: BigNumber
-  arbBlockNum: BigNumber
-  ethBlockNum: BigNumber
-  timestamp: BigNumber
-  callvalue: BigNumber
-  data: string
-}
-
 /**
  * Conditional type for Signer or Provider. If T is of type Provider
  * then L2ToL1MessageReaderOrWriter<T> will be of type L2ToL1MessageReader.
  * If T is of type Signer then L2ToL1MessageReaderOrWriter<T> will be of
  * type L2ToL1MessageWriter.
  */
-export type L2ToL1MessageReaderOrWriter<T extends SignerOrProvider> =
-  T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
+export type L2ToL1MessageReaderOrWriter<
+  T extends SignerOrProvider
+> = T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
 
 // expected number of L1 blocks that it takes for an L2 tx to be included in a L1 assertion
 const ASSERTION_CREATED_PADDING = 50
@@ -147,19 +134,18 @@ const parseNodeCreatedAssertion = (event: FetchedEvent<NodeCreatedEvent>) => ({
 export class L2ToL1Message {
   // CHRIS: TODO: docs on these - update the constructor
   protected constructor(
-    // CHRIS: TODO: update these params
-    public readonly event: L2ToL1Event
+    public readonly event: L2ToL1TransactionEvent['args']
   ) {}
 
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
     outboxAddress: string,
-    event: L2ToL1Event
+    event: L2ToL1TransactionEvent['args']
   ): L2ToL1MessageReaderOrWriter<T>
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
     outboxAddress: string,
-    event: L2ToL1Event
+    event: L2ToL1TransactionEvent['args']
   ): L2ToL1MessageReader | L2ToL1MessageWriter {
     return SignerProviderUtils.isSigner(l1SignerOrProvider)
       ? new L2ToL1MessageWriter(l1SignerOrProvider, outboxAddress, event)
@@ -202,7 +188,7 @@ export class L2ToL1Message {
     destination?: string,
     uniqueId?: BigNumber,
     indexInBatch?: BigNumber
-  ): Promise<L2ToL1Event[]> {
+  ): Promise<L2ToL1TransactionEvent['args'][]> {
     const eventFetcher = new EventFetcher(l2Provider)
     const events = await eventFetcher.getEvents(
       ARB_SYS_ADDRESS,
@@ -246,29 +232,32 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   constructor(
     protected readonly l1Provider: Provider,
     protected readonly outboxAddress: string,
-    event: L2ToL1Event
+    event: L2ToL1TransactionEvent['args']
   ) {
     super(event)
   }
 
   public async getOutboxProof(l2Provider: Provider) {
     await this.updateSendRoot(this.l1Provider, l2Provider)
-    // CHRIS: TODO: update to proper error message
     if (!this.sendRootSize)
-      throw new ArbTsError('Node not confirmed, cannot get proof.')
+      throw new ArbTsError('Node not yet confirmed, cannot get proof.')
 
-    const nodeInterface = NodeInterface__factory.connect(NODE_INTERFACE_ADDRESS, l2Provider)
+    const nodeInterface = NodeInterface__factory.connect(
+      NODE_INTERFACE_ADDRESS,
+      l2Provider
+    )
 
-    const outboxProofParams = await nodeInterface.callStatic[
-      'constructOutboxProof'
-    ](this.sendRootSize.toNumber(), this.event.position.toNumber())
+    const outboxProofParams = await nodeInterface.callStatic.constructOutboxProof(
+      this.sendRootSize.toNumber(),
+      this.event.position.toNumber()
+    )
 
-    // CHRIS: TODO: check these from the return vals
+    // CHRIS: TODO: check these from the return vals to make sure they're expected ones
     // this.event.hash,
     //   this.sendRootHash,
     // console.log(outboxProofParams)
 
-    return outboxProofParams['proof']
+    return outboxProofParams.proof
   }
 
   /**
@@ -325,13 +314,13 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
     const parsedLog = parseNodeCreatedAssertion(logs[0])
 
-    const l2Block = await (
-      l2Provider! as ethers.providers.JsonRpcProvider
-    ).send('eth_getBlockByHash', [parsedLog.afterState.blockHash, false])
+    // CHRIS: TODO: look for all .send(
+    const l2Block = await (l2Provider! as ethers.providers.JsonRpcProvider).send(
+      'eth_getBlockByHash',
+      [parsedLog.afterState.blockHash, false]
+    )
     if (l2Block['sendRoot'] !== parsedLog.afterState.sendRoot) {
-      // CHRIS: TODO: handle this case
-      console.log(l2Block['sendRoot'], parsedLog.afterState.sendRoot)
-      throw new ArbTsError("L2 block send root doesn't match parsed log")
+      throw new ArbTsError(`L2 block send root doesn't match parsed log. ${l2Block['sendRoot']} ${parsedLog.afterState.sendRoot}`)
     }
 
     const sendRootSize = BigNumber.from(l2Block['sendCount'])
@@ -426,12 +415,10 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     let logIndex = 0
     while (!found) {
       const log = logs[logIndex]
-      const l2Block = await(
-        l2Provider! as ethers.providers.JsonRpcProvider
-      ).send('eth_getBlockByHash', [
-        parseNodeCreatedAssertion(log).afterState.blockHash,
-        false,
-      ])
+      const l2Block = await (l2Provider! as ethers.providers.JsonRpcProvider).send(
+        'eth_getBlockByHash',
+        [parseNodeCreatedAssertion(log).afterState.blockHash, false]
+      )
 
       const sendCount = BigNumber.from(l2Block['sendCount'])
 
@@ -465,7 +452,7 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
   constructor(
     private readonly l1Signer: Signer,
     outboxAddress: string,
-    event: L2ToL1Event
+    event: L2ToL1TransactionEvent['args']
   ) {
     super(l1Signer.provider!, outboxAddress, event)
   }
@@ -476,7 +463,11 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
    * corresponding assertion is confirmed.
    * @returns
    */
-  public async execute(l2Provider: Provider): Promise<ContractTransaction> {
+  // CHRIS: TODO: provide gas override options?
+  public async execute(
+    l2Provider: Provider,
+    overrides?: Overrides
+  ): Promise<ContractTransaction> {
     const status = await this.status(l2Provider)
     if (status !== L2ToL1MessageStatus.CONFIRMED) {
       throw new ArbTsError(
@@ -484,11 +475,13 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
       )
     }
     const proof = await this.getOutboxProof(l2Provider)
-
     const outbox = Outbox__factory.connect(this.outboxAddress, this.l1Signer)
 
-    // CHRIS: TODO: provide gas override options?
-    return await outbox['executeTransaction'](
+    // CHRIS: TODO: ethers errors
+    // 1. when I dont have enough funds here - can test by not funding on L1 in the weth withdraw test - we get a horrible error
+    // 2. check out all the horrible errors in populate transaction, all the unawaited errors in there
+
+    return await outbox.executeTransaction(
       proof,
       this.event.position,
       this.event.caller,
@@ -497,7 +490,8 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
       this.event.ethBlockNum,
       this.event.timestamp,
       this.event.callvalue,
-      this.event.data
+      this.event.data,
+      overrides || {}
     )
   }
 }
