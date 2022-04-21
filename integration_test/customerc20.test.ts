@@ -24,6 +24,8 @@ import { L1CustomGateway__factory } from '../src/lib/abi/factories/L1CustomGatew
 import { L1GatewayRouter__factory } from '../src/lib/abi/factories/L1GatewayRouter__factory'
 import { L2GatewayRouter__factory } from '../src/lib/abi/factories/L2GatewayRouter__factory'
 import { TestArbCustomToken__factory } from '../src/lib/abi/factories/TestArbCustomToken__factory'
+import { TestCustomTokenL1 } from '../src/lib/abi/TestCustomTokenL1'
+
 import {
   fundL1,
   fundL2,
@@ -35,7 +37,6 @@ import {
 import { L1ToL2MessageStatus, L2Network } from '../src'
 import { Signer, constants, ContractFactory } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
-import { TestCustomTokenL1 } from '../src/lib/abi/TestCustomTokenL1'
 import { testSetup } from '../scripts/testSetup'
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 
@@ -635,6 +636,7 @@ const registerCustomToken = async (
   l2Signer: Signer,
   adminErc20Bridger: AdminErc20Bridger
 ) => {
+  
   // create a custom token on L1 and L2
   // CHRIS: TODO: use the proper abi here
   const l1CustomTokenFac = new ContractFactory(

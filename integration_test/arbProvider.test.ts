@@ -29,25 +29,6 @@ describe('ArbProvider', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
-
-  // it.only('does find l1 batch info', async () => { 
-  //   const { l2Signer, l1Signer } = await testSetup()
-  //   const l2Provider = l2Signer.provider! as JsonRpcProvider
-  //   const txHash = "0x14c4dcf435888db8f0cfc82736d7b815e7bb299645c5da338cd5758703a05a29"
-
-  //   const raw = await l2Provider.send("eth_getRawTransactionByHash", [txHash])
-  //   console.log(raw)
-
-  //   const tx2 = await l2Provider.send("eth_getTransactionByHash", [txHash])
-  //   console.log(tx2)
-
-  //   const txrec = await l2Provider.send("eth_getTransactionReceipt", [txHash])
-  //   console.log(txrec)
-
-  //   const tx = await l2Provider.getTransaction("0x14c4dcf435888db8f0cfc82736d7b815e7bb299645c5da338cd5758703a05a29")
-  //   // const arbReceipt = await getArbTransactionReceipt(l2Provider, "0x14c4dcf435888db8f0cfc82736d7b815e7bb299645c5da338cd5758703a05a29")
-  //   console.log(tx)
-  // })
  
   // CHRIS: TODO: update this test
   it.skip('does find l1 batch info', async () => {
