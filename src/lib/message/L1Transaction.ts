@@ -230,7 +230,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
       const inboxMessageData = this.parseInboxMessage(mn.inboxMessageEvent)
       return L1ToL2Message.fromTxComponents(
         l2SignerOrProvider,
-        BigNumber.from(chainID),
+        BigNumber.from(chainID).toNumber(),
         mn.bridgeMessageEvent.sender,
         mn.inboxMessageEvent.messageNum,
         mn.bridgeMessageEvent.baseFeeL1,

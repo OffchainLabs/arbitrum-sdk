@@ -19,7 +19,7 @@
 import { expect } from 'chai'
 
 import { fundL2, skipIfMainnet } from './testHelpers'
-import { getRawArbTransactionReceipt } from '../src'
+import { getArbTransactionReceipt } from '../src'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { Wallet } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
@@ -30,6 +30,25 @@ describe('ArbProvider', () => {
     await skipIfMainnet(this)
   })
 
+  // it.only('does find l1 batch info', async () => { 
+  //   const { l2Signer, l1Signer } = await testSetup()
+  //   const l2Provider = l2Signer.provider! as JsonRpcProvider
+  //   const txHash = "0x14c4dcf435888db8f0cfc82736d7b815e7bb299645c5da338cd5758703a05a29"
+
+  //   const raw = await l2Provider.send("eth_getRawTransactionByHash", [txHash])
+  //   console.log(raw)
+
+  //   const tx2 = await l2Provider.send("eth_getTransactionByHash", [txHash])
+  //   console.log(tx2)
+
+  //   const txrec = await l2Provider.send("eth_getTransactionReceipt", [txHash])
+  //   console.log(txrec)
+
+  //   const tx = await l2Provider.getTransaction("0x14c4dcf435888db8f0cfc82736d7b815e7bb299645c5da338cd5758703a05a29")
+  //   // const arbReceipt = await getArbTransactionReceipt(l2Provider, "0x14c4dcf435888db8f0cfc82736d7b815e7bb299645c5da338cd5758703a05a29")
+  //   console.log(tx)
+  // })
+ 
   // CHRIS: TODO: update this test
   it.skip('does find l1 batch info', async () => {
     const { l2Signer, l1Signer } = await testSetup()
@@ -42,23 +61,27 @@ describe('ArbProvider', () => {
 
     // send an l2 transaction, and get the receipt
     const tx = await l2Signer.sendTransaction({
-       to: randomAddress, value: amountToSend
+      to: randomAddress,
+      value: amountToSend,
     })
-    const rec = await tx.wait();
-    const testTxHash = rec.transactionHash;
+    const rec = await tx.wait()
+    const testTxHash = rec.transactionHash
 
-
-    const receipt = await l2Provider.send("eth_getTransactionReceipt", [testTxHash])
-    console.log("receipt", receipt)
-    const transaction = await l2Provider.send("eth_getTransactionByHash", [testTxHash])
-    console.log("transaction", transaction)
+    const receipt = await l2Provider.send('eth_getTransactionReceipt', [
+      testTxHash,
+    ])
+    console.log('receipt', receipt)
+    const transaction = await l2Provider.send('eth_getTransactionByHash', [
+      testTxHash,
+    ])
+    console.log('transaction', transaction)
 
     return
 
     // const testTxHash =
     //   '0x4ab7b21ebb243a4eec8a5e08f9190e0c1c116363b165f15cc60aa9c247e530ca'
 
-    const arbReceipt = await getRawArbTransactionReceipt(
+    const arbReceipt = await getArbTransactionReceipt(
       l2Provider,
       testTxHash,
       l1Provider

@@ -21,8 +21,7 @@ import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
-import { keccak256 } from '@ethersproject/keccak256'
-import { concat, zeroPad } from '@ethersproject/bytes'
+import { zeroPad } from '@ethersproject/bytes'
 
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
 import { ARB_RETRYABLE_TX_ADDRESS } from '../dataEntities/constants'
@@ -109,7 +108,7 @@ export abstract class L1ToL2Message {
    * @returns
    */
   public calculateSubmitRetryableId(
-    l2ChainId: BigNumber,
+    l2ChainId: number,
     fromAddress: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
@@ -162,7 +161,7 @@ export abstract class L1ToL2Message {
 
   public static fromTxComponents<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
-    chainId: BigNumber,
+    chainId: number,
     sender: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
@@ -170,7 +169,7 @@ export abstract class L1ToL2Message {
   ): L1ToL2MessageReaderOrWriter<T>
   public static fromTxComponents<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
-    chainId: BigNumber,
+    chainId: number,
     sender: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
@@ -196,7 +195,7 @@ export abstract class L1ToL2Message {
   }
 
   protected constructor(
-    public readonly chainId: BigNumber,
+    public readonly chainId: number,
     public readonly sender: string,
     public readonly messageNumber: BigNumber,
     public readonly l1BaseFee: BigNumber,
@@ -232,7 +231,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   retryableCreationReceipt: TransactionReceipt | undefined
   public constructor(
     public readonly l2Provider: Provider,
-    chainId: BigNumber,
+    chainId: number,
     sender: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
@@ -280,7 +279,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     const creationReceipt = await this.getRetryableCreationReceipt()
 
     if (creationReceipt) {
-      const l2Receipt = new L2TransactionReceipt(creationReceipt)
+      const l2Receipt = new L2TransactionReceipt(creationReceipt, this.chainId)
       const redeemEvents = l2Receipt.getRedeemScheduledEvents()
 
       if (redeemEvents.length === 1) {
@@ -302,6 +301,8 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    * @returns TransactionReceipt of the first successful redeem if exists, otherwise null
    */
   public async getSuccessfulRedeem(): Promise<TransactionReceipt | null> {
+
+    // CHRIS: TODO: tidy up below?
     const l2Network = await getL2Network(this.l2Provider)
     const creationReceipt = await this.getRetryableCreationReceipt()
     const autoRedeem = await this.getAutoRedeemAttempt()
@@ -526,7 +527,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 export class L1ToL2MessageWriter extends L1ToL2MessageReader {
   public constructor(
     public readonly l2Signer: Signer,
-    chainId: BigNumber,
+    chainId: number,
     sender: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,

@@ -74,7 +74,6 @@ interface WithdrawalParams {
   l1Token: ERC20
   l2Signer: Signer
   l1Signer: Signer
-  l2Network: L2Network
   gatewayType: GatewayType
 }
 
@@ -92,7 +91,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   expect(withdrawRec.status).to.equal(1, 'initiate token withdraw txn failed')
 
   const message = (
-    await withdrawRec.getL2ToL1Messages(params.l1Signer, params.l2Network)
+    await withdrawRec.getL2ToL1Messages(params.l1Signer)
   )[0]
   expect(message, 'withdraw message not found').to.exist
 

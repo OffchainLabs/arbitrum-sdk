@@ -4,7 +4,6 @@ import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { BigNumber } from '@ethersproject/bignumber'
 import { constants } from 'ethers'
 import { utils } from 'ethers'
-import { Interface } from 'ethers/lib/utils'
 
 const DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE = BigNumber.from(340)
 

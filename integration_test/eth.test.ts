@@ -166,7 +166,7 @@ describe('Ether', async () => {
     })
 
     const withdrawMessage = (
-      await withdrawEthRec.getL2ToL1Messages(l1Signer, l2Network)
+      await withdrawEthRec.getL2ToL1Messages(l1Signer)
     )[0]
     expect(
       withdrawMessage,

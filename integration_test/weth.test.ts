@@ -32,7 +32,7 @@ import { Wallet } from 'ethers'
 import { testSetup } from '../scripts/testSetup'
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 
-describe.only('WETH', async () => {
+describe('WETH', async () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
@@ -98,7 +98,7 @@ describe.only('WETH', async () => {
     )
   })
 
-  it.only('withdraw WETH', async () => {
+  it('withdraw WETH', async () => {
     const wethToWrap = parseEther('0.00001')
     const wethToWithdraw = parseEther('0.00000001')
 
@@ -125,7 +125,6 @@ describe.only('WETH', async () => {
         l2Network.tokenBridge.l1Weth,
         l1Signer.provider!
       ),
-      l2Network: l2Network,
       l2Signer: l2Signer,
       startBalance: wethToWrap,
     })

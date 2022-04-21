@@ -20,7 +20,11 @@ import { TransactionReceipt } from '@ethersproject/providers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Log } from '@ethersproject/abstract-provider'
 import { ContractTransaction, providers } from 'ethers'
-import { getOutboxAddr, L2Network } from '../dataEntities/networks'
+import {
+  getL2Network,
+  getOutboxAddr,
+  L2Network,
+} from '../dataEntities/networks'
 import {
   SignerProviderUtils,
   SignerOrProvider,
@@ -31,10 +35,10 @@ import {
   L2ToL1Message,
   L2ToL1MessageWriter,
 } from './L2ToL1Message'
-import { getRawArbTransactionReceipt } from '../..'
+import { getArbTransactionReceipt } from '../..'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
-import {  RedeemScheduledEvent } from '../abi/ArbRetryableTx'
+import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
 
 export interface L2ContractTransaction extends ContractTransaction {
@@ -60,7 +64,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
   public readonly type: number
   public readonly status?: number
 
-  constructor(tx: TransactionReceipt) {
+  constructor(tx: TransactionReceipt, public readonly chainId: number) {
     this.to = tx.to
     this.from = tx.from
     this.contractAddress = tx.contractAddress
@@ -80,19 +84,19 @@ export class L2TransactionReceipt implements TransactionReceipt {
     this.status = tx.status
   }
 
-  // CHRIS: TODO: check all uses of find logs to see if we're using proper abi
-
   /**
    * Get an L2ToL1Transaction events created by this transaction
    * @returns
    */
-  public getL2ToL1Events(): L2ToL1TransactionEvent["args"][] {
+  public getL2ToL1Events(): L2ToL1TransactionEvent['args'][] {
     const iface = ArbSys__factory.createInterface()
     const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
     const eventTopic = iface.getEventTopic(l2ToL1Event)
     const logs = this.logs.filter(log => log.topics[0] === eventTopic)
 
-    return logs.map(log => iface.parseLog(log).args as L2ToL1TransactionEvent["args"])
+    return logs.map(
+      log => iface.parseLog(log).args as L2ToL1TransactionEvent['args']
+    )
   }
 
   /**
@@ -115,16 +119,15 @@ export class L2TransactionReceipt implements TransactionReceipt {
    * @param l2SignerOrProvider
    */
   public async getL2ToL1Messages<T extends SignerOrProvider>(
-    l1SignerOrProvider: T,
-    // CHRIS: TODO: would be nice to not require this
-    l2Network: L2Network
+    l1SignerOrProvider: T
   ): Promise<L2ToL1MessageReaderOrWriter<T>[]>
   public async getL2ToL1Messages<T extends SignerOrProvider>(
-    l1SignerOrProvider: T,
-    l2Network: L2Network
+    l1SignerOrProvider: T
   ): Promise<L2ToL1MessageReader[] | L2ToL1MessageWriter[]> {
     const provider = SignerProviderUtils.getProvider(l1SignerOrProvider)
     if (!provider) throw new Error('Signer not connected to provider.')
+
+    const l2Network = await getL2Network(this.chainId)
 
     return this.getL2ToL1Events().map(log => {
       const outboxAddr = getOutboxAddr(
@@ -144,7 +147,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
     l2Provider: providers.JsonRpcProvider,
     l1Provider: providers.JsonRpcProvider
   ): Promise<boolean> {
-    const arbReceipt = await getRawArbTransactionReceipt(
+    const arbReceipt = await getArbTransactionReceipt(
       l2Provider,
       this.transactionHash,
       l1Provider
@@ -170,7 +173,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
       // an l2 transaction - check if a batch is on L1, if an assertion has been made, and if
       // it has been confirmed.
       const result = await wait()
-      return new L2TransactionReceipt(result)
+      return new L2TransactionReceipt(result, contractTransaction.chainId)
     }
     return contractTransaction as L2ContractTransaction
   }

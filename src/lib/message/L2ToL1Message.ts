@@ -40,8 +40,11 @@ import {
 } from '../dataEntities/signerOrProvider'
 import { wait } from '../utils/lib'
 import { getL2Network } from '../dataEntities/networks'
-import { NodeCreatedEvent } from '../abi/RollupUserLogic'
+import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
 import { L2TransactionReceipt } from './L2Transaction'
+import { getArbBlockByHash } from '../utils/arbProvider'
+import { ArbBlock } from '../dataEntities/rpc'
+import { JsonRpcProvider } from '@ethersproject/providers'
 
 export interface MessageBatchProofInfo {
   /**
@@ -92,21 +95,17 @@ export interface MessageBatchProofInfo {
 
 export enum L2ToL1MessageStatus {
   /**
-   * No corresponding L2ToL1Event emitted
-   */
-  NOT_FOUND,
-  /**
    * ArbSys.sendTxToL1 called, but assertion not yet confirmed
    */
-  UNCONFIRMED,
+  UNCONFIRMED = 1,
   /**
    * Assertion for outgoing message confirmed, but message not yet executed
    */
-  CONFIRMED,
+  CONFIRMED = 2,
   /**
    * Outgoing message executed (terminal state)
    */
-  EXECUTED,
+  EXECUTED = 3,
 }
 
 /**
@@ -123,13 +122,6 @@ export type L2ToL1MessageReaderOrWriter<
 const ASSERTION_CREATED_PADDING = 50
 // expected number of L1 blocks that it takes for a validator to confirm an L1 block after the node deadline is passed
 const ASSERTION_CONFIRMED_PADDING = 20
-
-const parseNodeCreatedAssertion = (event: FetchedEvent<NodeCreatedEvent>) => ({
-  afterState: {
-    blockHash: event.event.assertion.afterState.globalState.bytes32Vals[0],
-    sendRoot: event.event.assertion.afterState.globalState.bytes32Vals[1],
-  },
-})
 
 export class L2ToL1Message {
   // CHRIS: TODO: docs on these - update the constructor
@@ -198,11 +190,14 @@ export class L2ToL1Message {
       filter
     )
 
+    const chainId = (await l2Provider.getNetwork()).chainId
     const l2ToL1Events = await Promise.all(
       events.map(e =>
         l2Provider
           .getTransactionReceipt(e.transactionHash)
-          .then(receipt => new L2TransactionReceipt(receipt).getL2ToL1Events())
+          .then(receipt =>
+            new L2TransactionReceipt(receipt, chainId).getL2ToL1Events()
+          )
       )
     ).then(res => res.flat())
 
@@ -225,9 +220,8 @@ export class L2ToL1Message {
  * Provides read-only access for l2-to-l1-messages
  */
 export class L2ToL1MessageReader extends L2ToL1Message {
-  // CHRIS: TODO: shouldnt be public
-  public sendRootHash?: string
-  public sendRootSize?: BigNumber
+  private sendRootHash?: string
+  private sendRootSize?: BigNumber
 
   constructor(
     protected readonly l1Provider: Provider,
@@ -238,8 +232,8 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   }
 
   public async getOutboxProof(l2Provider: Provider) {
-    await this.updateSendRoot(this.l1Provider, l2Provider)
-    if (!this.sendRootSize)
+    const { sendRootSize } = await this.getSendProps(l2Provider)
+    if (!sendRootSize)
       throw new ArbTsError('Node not yet confirmed, cannot get proof.')
 
     const nodeInterface = NodeInterface__factory.connect(
@@ -248,7 +242,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     )
 
     const outboxProofParams = await nodeInterface.callStatic.constructOutboxProof(
-      this.sendRootSize.toNumber(),
+      sendRootSize.toNumber(),
       this.event.position.toNumber()
     )
 
@@ -275,58 +269,93 @@ export class L2ToL1MessageReader extends L2ToL1Message {
    * @returns
    */
   public async status(l2Provider: Provider): Promise<L2ToL1MessageStatus> {
-    // CHRIS: TODO: this is quite an ugly way to do this
-    await this.updateSendRoot(this.l1Provider, l2Provider)
-    if (!this.sendRootHash) return L2ToL1MessageStatus.UNCONFIRMED
+    const { sendRootHash } = await this.getSendProps(l2Provider)
+    if (!sendRootHash) return L2ToL1MessageStatus.UNCONFIRMED
     return (await this.hasExecuted())
       ? L2ToL1MessageStatus.EXECUTED
       : L2ToL1MessageStatus.CONFIRMED
   }
 
-  // CHRIS: TODO: tidy up this function - it's also very inefficient
-  private async updateSendRoot(l1Provider: Provider, l2Provider: Provider) {
-    if (this.sendRootHash) return
+  private parseNodeCreatedAssertion(event: FetchedEvent<NodeCreatedEvent>) {
+    return {
+      afterState: {
+        blockHash: event.event.assertion.afterState.globalState.bytes32Vals[0],
+        sendRoot: event.event.assertion.afterState.globalState.bytes32Vals[1],
+      },
+    }
+  }
 
-    const l2Network = await getL2Network(l2Provider)
-
-    const rollup = RollupUserLogic__factory.connect(
-      l2Network.ethBridge.rollup,
-      this.l1Provider
+  private async getBlockFromNodeLog(
+    l2Provider: JsonRpcProvider,
+    log: FetchedEvent<NodeCreatedEvent>
+  ) {
+    const parsedLog = this.parseNodeCreatedAssertion(log)
+    const l2Block = await getArbBlockByHash(
+      l2Provider,
+      parsedLog.afterState.blockHash
     )
+    if (!l2Block) {
+      throw new ArbTsError(`Block not found. ${parsedLog.afterState.blockHash}`)
+    }
+    if (l2Block.sendRoot !== parsedLog.afterState.sendRoot) {
+      throw new ArbTsError(
+        `L2 block send root doesn't match parsed log. ${l2Block.sendRoot} ${parsedLog.afterState.sendRoot}`
+      )
+    }
+    return l2Block
+  }
 
-    // CHRIS: TODO: could confirm in between these calls
-    const latestConfirmedNodeNum = await rollup.callStatic.latestConfirmed()
-    const latestConfirmedNode = await rollup.getNode(latestConfirmedNodeNum)
+  private async getBlockFromNodeNum(
+    rollup: RollupUserLogic,
+    nodeNum: BigNumber,
+    l2Provider: Provider
+  ): Promise<ArbBlock> {
+    const node = await rollup.getNode(nodeNum)
 
     // now get the block hash and sendroot for that node
-    const eventFetcher = new EventFetcher(l1Provider)
+    const eventFetcher = new EventFetcher(rollup.provider)
     const logs = await eventFetcher.getEvents(
       rollup.address,
       RollupUserLogic__factory,
-      t => t.filters.NodeCreated(latestConfirmedNodeNum),
+      t => t.filters.NodeCreated(nodeNum),
       {
-        fromBlock: latestConfirmedNode.createdAtBlock.toNumber(),
-        toBlock: latestConfirmedNode.createdAtBlock.toNumber(),
+        fromBlock: node.createdAtBlock.toNumber(),
+        toBlock: node.createdAtBlock.toNumber(),
       }
     )
 
     if (logs.length !== 1) throw new ArbTsError('No NodeConfirmed events found')
-
-    const parsedLog = parseNodeCreatedAssertion(logs[0])
-
-    // CHRIS: TODO: look for all .send(
-    const l2Block = await (l2Provider! as ethers.providers.JsonRpcProvider).send(
-      'eth_getBlockByHash',
-      [parsedLog.afterState.blockHash, false]
+    return await this.getBlockFromNodeLog(
+      l2Provider as JsonRpcProvider,
+      logs[0]
     )
-    if (l2Block['sendRoot'] !== parsedLog.afterState.sendRoot) {
-      throw new ArbTsError(`L2 block send root doesn't match parsed log. ${l2Block['sendRoot']} ${parsedLog.afterState.sendRoot}`)
-    }
+  }
 
-    const sendRootSize = BigNumber.from(l2Block['sendCount'])
-    if (sendRootSize.gt(this.event.position)) {
-      this.sendRootSize = sendRootSize
-      this.sendRootHash = parsedLog.afterState.sendRoot
+  private async getSendProps(l2Provider: Provider) {
+    if (!this.sendRootHash) {
+      const l2Network = await getL2Network(l2Provider)
+
+      const rollup = RollupUserLogic__factory.connect(
+        l2Network.ethBridge.rollup,
+        this.l1Provider
+      )
+
+      const latestConfirmedNodeNum = await rollup.callStatic.latestConfirmed()
+      const l2Block = await this.getBlockFromNodeNum(
+        rollup,
+        latestConfirmedNodeNum,
+        l2Provider
+      )
+
+      const sendRootSize = BigNumber.from(l2Block.sendCount)
+      if (sendRootSize.gt(this.event.position)) {
+        this.sendRootSize = sendRootSize
+        this.sendRootHash = l2Block.sendRoot
+      }
+    }
+    return {
+      sendRootSize: this.sendRootSize,
+      sendRootHash: this.sendRootHash,
     }
   }
 
@@ -362,7 +391,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   public async getFirstExecutableBlock(
     l2Provider: Provider
   ): Promise<BigNumber | null> {
-    // TODO: create version that queries multiple L2 to L1 txs, so a single multicall can make all requests
+    // FRED: TODO: create version that queries multiple L2 to L1 txs, so a single multicall can make all requests
     // we assume the L2 to L1 tx is valid, but we could check that on the constructor that the L2 to L1 msg is valid
     const l2Network = await getL2Network(l2Provider)
 
@@ -374,17 +403,13 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     const status = await this.status(l2Provider)
     if (status === L2ToL1MessageStatus.EXECUTED) return null
     if (status === L2ToL1MessageStatus.CONFIRMED) return null
-    if (status === L2ToL1MessageStatus.NOT_FOUND)
-      throw new ArbTsError('L2ToL1Msg not found')
 
     // consistency check in case we change the enum in the future
     if (status !== L2ToL1MessageStatus.UNCONFIRMED)
       throw new ArbTsError('L2ToL1Msg expected to be unconfirmed')
 
     const latestBlock = await this.l1Provider.getBlockNumber()
-
     const eventFetcher = new EventFetcher(this.l1Provider)
-
     const logs = (
       await eventFetcher.getEvents(
         rollup.address,
@@ -411,35 +436,29 @@ export class L2ToL1MessageReader extends L2ToL1Message {
         .add(ASSERTION_CONFIRMED_PADDING)
         .add(latestBlock)
 
-    let found = false
-    let logIndex = 0
-    while (!found) {
-      const log = logs[logIndex]
-      const l2Block = await (l2Provider! as ethers.providers.JsonRpcProvider).send(
-        'eth_getBlockByHash',
-        [parseNodeCreatedAssertion(log).afterState.blockHash, false]
+    let foundLog: FetchedEvent<NodeCreatedEvent> | undefined = undefined
+    // FRED: TODO: optimise with a binary search
+    for (const log of logs) {
+      const l2Block = await this.getBlockFromNodeLog(
+        l2Provider as JsonRpcProvider,
+        log
       )
-
-      const sendCount = BigNumber.from(l2Block['sendCount'])
-
+      const sendCount = BigNumber.from(l2Block.sendCount)
       if (sendCount.gte(this.event.position)) {
-        found = true
-      } else {
-        // TODO: optimise with a binary search
-        logIndex++
-        if (logIndex >= logs.length) break
+        foundLog = log
+        break
       }
     }
 
     // here we assume the L2 to L1 tx is actually valid, so the user needs to wait the max time
     // since there isn't a pending node that includes this message yet
-    if (!found)
+    if (!foundLog)
       return BigNumber.from(l2Network.confirmPeriodBlocks)
         .add(ASSERTION_CREATED_PADDING)
         .add(ASSERTION_CONFIRMED_PADDING)
         .add(latestBlock)
 
-    const earliestNodeWithExit = logs[logIndex].event.nodeNum
+    const earliestNodeWithExit = foundLog.event.nodeNum
     const node = await rollup.getNode(earliestNodeWithExit)
     return node.deadlineBlock.add(ASSERTION_CONFIRMED_PADDING)
   }
@@ -454,6 +473,7 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
     outboxAddress: string,
     event: L2ToL1TransactionEvent['args']
   ) {
+    l1Signer.sendTransaction
     super(l1Signer.provider!, outboxAddress, event)
   }
 
@@ -463,7 +483,6 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
    * corresponding assertion is confirmed.
    * @returns
    */
-  // CHRIS: TODO: provide gas override options?
   public async execute(
     l2Provider: Provider,
     overrides?: Overrides
@@ -480,6 +499,7 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
     // CHRIS: TODO: ethers errors
     // 1. when I dont have enough funds here - can test by not funding on L1 in the weth withdraw test - we get a horrible error
     // 2. check out all the horrible errors in populate transaction, all the unawaited errors in there
+    // 3. blockWithTransactions formatter should be fixed
 
     return await outbox.executeTransaction(
       proof,

@@ -1,34 +1,31 @@
 import {
   TransactionReceipt,
-  TransactionResponse,
+  Block,
 } from '@ethersproject/providers'
+import {
+  BlockWithTransactions
+} from '@ethersproject/abstract-provider'
 import { BigNumber } from 'ethers'
 
-/**
- * Eth transaction response with additional arbitrum specific fields
- */
-export interface ArbTransactionResponse extends TransactionResponse {
+export interface ArbBlockProps {
   /**
-   * The sequenced number for this transaction
+   * The merkle root of the withdrawals tree
    */
-  l1SequenceNumber: BigNumber
-
-  // CHRIS: TODO: still relevant for nitro? we need to review all these things Arb** things
-  // These fields are commented out for now
-  // we can add them in as we need them and are able to document
-  // them properly
-  // parentRequestId: string
-  // indexInParent: number
-  // arbType: number
-  // arbSubType: number
+  sendRoot: string
 
   /**
-   * The l1 block number that would be used for block.number calls
-   * that occur within this transaction.
-   * See https://developer.offchainlabs.com/docs/time_in_arbitrum
+   * Cumulative number of withdrawals since genesis
+   */
+  sendCount: BigNumber
+
+  /**
+   * The l1 block number as seen from within this l2 block
    */
   l1BlockNumber: number
 }
+
+export type ArbBlock = ArbBlockProps & Block
+export type ArbBlockWithTransactions = ArbBlockProps & BlockWithTransactions
 
 export interface FeeStatComponents {
   /**
@@ -150,18 +147,6 @@ export enum ReturnCode {
  */
 export interface ArbTransactionReceipt extends TransactionReceipt {
   /**
-   * Data from a smart contract return or the revert reason if an EVM revert statement was hit
-   */
-  returnData?: string
-  /**
-   * Arbitrum status code
-   */
-  returnCode: ReturnCode
-  /**
-   * Arbitrum fee breakdown
-   */
-  feeStats: FeeStats
-  /**
    * Batch info, populated if an l1 provider is present when fetching the receipt
    */
   l1InboxBatchInfo: BatchInfo | null
@@ -171,4 +156,9 @@ export interface ArbTransactionReceipt extends TransactionReceipt {
    * See https://developer.offchainlabs.com/docs/time_in_arbitrum
    */
   l1BlockNumber: number
+  /**
+   * Amount of gas spent on l1 computation in units of l2 gas
+   */
+  gasUsedForL1: BigNumber
+  
 }

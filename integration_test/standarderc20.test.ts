@@ -92,7 +92,10 @@ describe('standard ERC20', () => {
     // do a manual redeem - supply enough gas so that the redeem tx succeeds but l2 tx doesnt
     // CHRIS: TODO: this below should be batched up into a `waitForRedeem` - although it is a rare event? no, batch it
     const manualRedeem = await message.redeem({ gasLimit })
-    const rec = new L2TransactionReceipt(await manualRedeem.wait())
+    const rec = new L2TransactionReceipt(
+      await manualRedeem.wait(),
+      message.chainId
+    )
     const redeemScheduledEvents = await rec.getRedeemScheduledEvents()
     const retryRec = await message.l2Provider.getTransactionReceipt(
       redeemScheduledEvents[0].retryTxHash
@@ -105,12 +108,11 @@ describe('standard ERC20', () => {
   }
 
   // CHRIS: TODO: gas questions
-  // 1. how do I calculate l2gasused
+  // 1. how do we calculate l2gasused - we should have a function for this on the transaction receipt
   // 2. what happens to left over gas from redeem
   // 3. what value is returned when I call NodeInterface.estimateGas - it's the value required to call autoRedeem, but no submission cost
   // 4. is any submission cost paid for plain eth deposits?
-  // 5.
-
+  
   it('deposit with no funds, manual redeem', async () => {
     const { waitRes } = await depositToken(
       depositAmount,
