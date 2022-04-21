@@ -301,8 +301,6 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    * @returns TransactionReceipt of the first successful redeem if exists, otherwise null
    */
   public async getSuccessfulRedeem(): Promise<TransactionReceipt | null> {
-
-    // CHRIS: TODO: tidy up below?
     const l2Network = await getL2Network(this.l2Provider)
     const creationReceipt = await this.getRetryableCreationReceipt()
     const autoRedeem = await this.getAutoRedeemAttempt()
