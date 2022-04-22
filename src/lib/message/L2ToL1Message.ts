@@ -31,7 +31,7 @@ import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
-import { constants, ContractTransaction, ethers, Overrides } from 'ethers'
+import { Contract, ContractTransaction, Overrides } from 'ethers'
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { ArbTsError } from '../dataEntities/errors'
 import {
@@ -39,12 +39,13 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { wait } from '../utils/lib'
-import { getL2Network } from '../dataEntities/networks'
+import { getL2Network, getOutboxAddr } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
 import { L2TransactionReceipt } from './L2Transaction'
 import { getArbBlockByHash } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
 import { JsonRpcProvider } from '@ethersproject/providers'
+import { Interface } from 'ethers/lib/utils'
 
 export interface MessageBatchProofInfo {
   /**
@@ -131,17 +132,15 @@ export class L2ToL1Message {
 
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    outboxAddress: string,
     event: L2ToL1TransactionEvent['args']
   ): L2ToL1MessageReaderOrWriter<T>
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    outboxAddress: string,
     event: L2ToL1TransactionEvent['args']
   ): L2ToL1MessageReader | L2ToL1MessageWriter {
     return SignerProviderUtils.isSigner(l1SignerOrProvider)
-      ? new L2ToL1MessageWriter(l1SignerOrProvider, outboxAddress, event)
-      : new L2ToL1MessageReader(l1SignerOrProvider, outboxAddress, event)
+      ? new L2ToL1MessageWriter(l1SignerOrProvider, event)
+      : new L2ToL1MessageReader(l1SignerOrProvider, event)
   }
 
   public static async getL2ToL1MessageLogs(
@@ -220,12 +219,13 @@ export class L2ToL1Message {
  * Provides read-only access for l2-to-l1-messages
  */
 export class L2ToL1MessageReader extends L2ToL1Message {
-  private sendRootHash?: string
-  private sendRootSize?: BigNumber
+  protected sendRootHash?: string
+  protected sendRootSize?: BigNumber
+  protected outboxAddress?: string
+  protected l1BatchNumber?: number
 
   constructor(
     protected readonly l1Provider: Provider,
-    protected readonly outboxAddress: string,
     event: L2ToL1TransactionEvent['args']
   ) {
     super(event)
@@ -257,8 +257,13 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   /**
    * Check if this message has already been executed in the Outbox
    */
-  private async hasExecuted(): Promise<boolean> {
-    const outbox = Outbox__factory.connect(this.outboxAddress, this.l1Provider)
+  protected async hasExecuted(l2Provider: Provider): Promise<boolean> {
+    const outboxAddr = await this.getOutboxAddress(l2Provider)
+    // if the outbox address cannot be found then the withdrawal
+    // cannot have been executed
+    if (!outboxAddr) return false
+
+    const outbox = Outbox__factory.connect(outboxAddr, this.l1Provider)
 
     return outbox.callStatic.spent(this.event.position)
   }
@@ -271,7 +276,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   public async status(l2Provider: Provider): Promise<L2ToL1MessageStatus> {
     const { sendRootHash } = await this.getSendProps(l2Provider)
     if (!sendRootHash) return L2ToL1MessageStatus.UNCONFIRMED
-    return (await this.hasExecuted())
+    return (await this.hasExecuted(l2Provider))
       ? L2ToL1MessageStatus.EXECUTED
       : L2ToL1MessageStatus.CONFIRMED
   }
@@ -331,7 +336,49 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     )
   }
 
-  private async getSendProps(l2Provider: Provider) {
+  protected async getBatchNumber(l2Provider: Provider) {
+    if (this.l1BatchNumber == undefined) {
+      // CHRIS: TODO: use correct abis
+      // findBatchContainingBlock errors if block number does not exist
+      try {
+        const iface = new Interface([
+          'function findBatchContainingBlock(uint64 block) external view returns (uint64 batch)',
+          'function getL1Confirmations(bytes32 blockHash) external view returns (uint64 confirmations)',
+        ])
+        const nodeInterface = new Contract(
+          NODE_INTERFACE_ADDRESS,
+          iface,
+          l2Provider
+        )
+        const res = (
+          await nodeInterface.functions['findBatchContainingBlock'](
+            this.event.arbBlockNum
+          )
+        )[0] as BigNumber
+        this.l1BatchNumber = res.toNumber()
+      } catch (err) {
+        // do nothing - errors are expected here
+      }
+    }
+
+    return this.l1BatchNumber
+  }
+
+  protected async getOutboxAddress(l2Provider: Provider) {
+    if (!this.outboxAddress) {
+      const batchNumber = await this.getBatchNumber(l2Provider)
+      if (batchNumber != undefined) {
+        const l2Network = await getL2Network(l2Provider)
+        const outboxAddr = getOutboxAddr(l2Network, batchNumber)
+
+        this.outboxAddress = outboxAddr
+      }
+    }
+
+    return this.outboxAddress
+  }
+
+  protected async getSendProps(l2Provider: Provider) {
     if (!this.sendRootHash) {
       const l2Network = await getL2Network(l2Provider)
 
@@ -470,11 +517,10 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 export class L2ToL1MessageWriter extends L2ToL1MessageReader {
   constructor(
     private readonly l1Signer: Signer,
-    outboxAddress: string,
     event: L2ToL1TransactionEvent['args']
   ) {
     l1Signer.sendTransaction
-    super(l1Signer.provider!, outboxAddress, event)
+    super(l1Signer.provider!, event)
   }
 
   /**
@@ -494,7 +540,13 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
       )
     }
     const proof = await this.getOutboxProof(l2Provider)
-    const outbox = Outbox__factory.connect(this.outboxAddress, this.l1Signer)
+    const outboxAddr = await this.getOutboxAddress(l2Provider)
+    if (!outboxAddr) {
+      throw new ArbTsError(
+        `Outbox address not found but node is confirmed. ${this.event.hash.toHexString()}`
+      )
+    }
+    const outbox = Outbox__factory.connect(outboxAddr, this.l1Signer)
 
     // CHRIS: TODO: ethers errors
     // 1. when I dont have enough funds here - can test by not funding on L1 in the weth withdraw test - we get a horrible error

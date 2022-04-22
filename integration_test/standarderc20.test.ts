@@ -57,11 +57,8 @@ describe('standard ERC20', () => {
 
   before('init', async () => {
     const setup = await testSetup()
-
     await fundL1(setup.l1Signer)
     await fundL2(setup.l2Signer)
-    // CHRIS: TODO: remove second fund
-    // await fundL2(setup.l2Signer)
 
     const deployErc20 = new TestERC20__factory().connect(setup.l1Signer)
     const testToken = await deployErc20.deploy()

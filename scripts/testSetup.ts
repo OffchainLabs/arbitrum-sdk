@@ -36,7 +36,6 @@ import { RollupAdminFacet__factory } from '../src/lib/abi/factories/RollupAdminF
 import { deployErc20AndInit } from './deployBridge'
 import * as path from 'path'
 import * as fs from 'fs'
-import { Inbox__factory } from '../src/lib/abi/factories/Inbox__factory'
 
 dotenv.config()
 

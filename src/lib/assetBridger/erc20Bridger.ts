@@ -636,7 +636,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
       [[l1TokenAddress], [l2TokenAddress]]
     )
 
-    // CHRIS: TODO: is this really the best way to get base fee?
     const l1SignerAddr = await l1Signer.getAddress()
     const baseFee = await (await l1Signer.provider.getBlock('latest'))
       .baseFeePerGas!

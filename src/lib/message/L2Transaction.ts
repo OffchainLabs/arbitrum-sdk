@@ -21,11 +21,6 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { Log } from '@ethersproject/abstract-provider'
 import { ContractTransaction, providers } from 'ethers'
 import {
-  getL2Network,
-  getOutboxAddr,
-  L2Network,
-} from '../dataEntities/networks'
-import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
@@ -127,16 +122,9 @@ export class L2TransactionReceipt implements TransactionReceipt {
     const provider = SignerProviderUtils.getProvider(l1SignerOrProvider)
     if (!provider) throw new Error('Signer not connected to provider.')
 
-    const l2Network = await getL2Network(this.chainId)
-
-    return this.getL2ToL1Events().map(log => {
-      const outboxAddr = getOutboxAddr(
-        l2Network,
-        BigNumber.from(1) // log.batchNumber, CHRIS: TODO: broken
-      )
-
-      return L2ToL1Message.fromEvent(l1SignerOrProvider, outboxAddr, log)
-    })
+    return this.getL2ToL1Events().map(log =>
+      L2ToL1Message.fromEvent(l1SignerOrProvider, log)
+    )
   }
 
   /**
@@ -156,7 +144,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
     if (!arbReceipt) return false
 
     // is there a batch with enough confirmations
-    return arbReceipt?.l1BatchConfirmations > confirmations
+    return arbReceipt.l1BatchConfirmations > confirmations
   }
 
   /**

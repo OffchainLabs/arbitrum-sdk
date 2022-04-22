@@ -20,7 +20,7 @@ import dotenv from 'dotenv'
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbTsError } from '../dataEntities/errors'
 import { SEVEN_DAYS_IN_SECONDS } from './constants'
-import { BigNumber } from "@ethersproject/bignumber";
+import { BigNumber } from '@ethersproject/bignumber'
 
 dotenv.config()
 
@@ -166,7 +166,7 @@ export const l1Networks: L1Networks = {
     blockTime: 15,
     rpcURL: process.env['RINKEBY_RPC'] as string,
     isCustom: false,
-  }
+  },
 }
 
 export const l2Networks: L2Networks = {
@@ -181,7 +181,7 @@ export const l2Networks: L2Networks = {
     confirmPeriodBlocks: 45818,
     rpcURL: process.env['ARB_ONE_RPC'] || 'https://arb1.arbitrum.io/rpc',
     isCustom: false,
-    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS
+    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
   },
   421611: {
     chainID: 421611,
@@ -194,8 +194,8 @@ export const l2Networks: L2Networks = {
     confirmPeriodBlocks: 6545, // TODO
     rpcURL: process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc',
     isCustom: false,
-    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS
-  }
+    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
+  },
 }
 
 const getNetwork = async (
@@ -273,30 +273,27 @@ export const addCustomNetwork = ({
   }
 }
 
-export const getOutboxAddr = (network: L2Network, batchNumber: BigNumber) => {
+export const getOutboxAddr = (network: L2Network, batchNumber: number) => {
   // find the outbox where the activation batch number of the next outbox
-    // is greater than the supplied batch
-    const res = Object.entries(network.ethBridge.outboxes)
-      .sort((a, b) => {
-        if (a[1] < b[1]) return -1
-        else if (a[1] === b[1]) return 0
-        else return 1
-      })
-      .find(
-        (_, index, array) =>
-          array[index + 1] === undefined ||
-          array[index + 1][1] > batchNumber.toNumber()
-      )
+  // is greater than the supplied batch
+  const res = Object.entries(network.ethBridge.outboxes)
+    .sort((a, b) => {
+      if (a[1] < b[1]) return -1
+      else if (a[1] === b[1]) return 0
+      else return 1
+    })
+    .find(
+      (_, index, array) =>
+        array[index + 1] === undefined || array[index + 1][1] > batchNumber
+    )
 
-    if (!res) {
-      throw new ArbTsError(
-        `No outbox found for batch number: ${batchNumber.toString()} on network: ${
-          network.chainID
-        }.`
-      )
-    }
+  if (!res) {
+    throw new ArbTsError(
+      `No outbox found for batch number: ${batchNumber} on network: ${network.chainID}.`
+    )
+  }
 
-    return res[0]
+  return res[0]
 }
 
 export const isL1Network = (
