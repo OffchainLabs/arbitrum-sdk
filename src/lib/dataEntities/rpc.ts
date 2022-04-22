@@ -1,10 +1,5 @@
-import {
-  TransactionReceipt,
-  Block,
-} from '@ethersproject/providers'
-import {
-  BlockWithTransactions
-} from '@ethersproject/abstract-provider'
+import { TransactionReceipt, Block } from '@ethersproject/providers'
+import { BlockWithTransactions } from '@ethersproject/abstract-provider'
 import { BigNumber } from 'ethers'
 
 export interface ArbBlockProps {
@@ -142,14 +137,24 @@ export enum ReturnCode {
   Unknown = 255,
 }
 
+export interface ArbBatchConfirmations {
+  /**
+   * The number of confirmations this batch has
+   */
+  l1BatchConfirmations: number
+}
+
+export interface ArbBatchNumber {
+  /**
+   * The number of the batch which this transaction was included in
+   */
+  l1BatchNumber?: number
+}
+
 /**
  * Eth transaction receipt with additional arbitrum specific fields
  */
 export interface ArbTransactionReceipt extends TransactionReceipt {
-  /**
-   * Batch info, populated if an l1 provider is present when fetching the receipt
-   */
-  l1InboxBatchInfo: BatchInfo | null
   /**
    * The l1 block number that would be used for block.number calls
    * that occur within this transaction.
@@ -160,5 +165,4 @@ export interface ArbTransactionReceipt extends TransactionReceipt {
    * Amount of gas spent on l1 computation in units of l2 gas
    */
   gasUsedForL1: BigNumber
-  
 }

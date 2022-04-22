@@ -306,7 +306,6 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     const autoRedeem = await this.getAutoRedeemAttempt()
     if (autoRedeem && autoRedeem.status === 1) return autoRedeem
     if (creationReceipt) {
-      const ticketId = this.retryableCreationId
       const iFace = ArbRetryableTx__factory.createInterface()
       const redeemTopic = iFace.getEventTopic('RedeemScheduled')
 
@@ -320,31 +319,33 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       const maxBlock = await this.l2Provider.getBlockNumber()
       while (fromBlock.number < maxBlock) {
         const toBlockNumber = Math.min(fromBlock.number + increment, maxBlock)
-        // We can skip creationBlock because it is covered by `getAutoRedeem` shortcut
+
+        // We can skip by doing fromBlock.number + 1 on the first go
+        // since creationBlock because it is covered by the `getAutoRedeem` shortcut
         const redeemEventLogs = await this.l2Provider.getLogs({
           fromBlock: fromBlock.number + 1,
           toBlock: toBlockNumber,
-          topics: [redeemTopic, ticketId],
+          topics: [redeemTopic, this.retryableCreationId],
         })
-        if (redeemEventLogs.length != 0) {
-          const redeemEvents = redeemEventLogs.map(
-            r => iFace.parseLog(r).args as RedeemScheduledEvent['args']
+        const redeemEvents = redeemEventLogs.map(
+          r => iFace.parseLog(r).args as RedeemScheduledEvent['args']
+        )
+        const successfulRedeem = (
+          await Promise.all(
+            redeemEvents
+              .map(e => e.retryTxHash)
+              .map(this.l2Provider.getTransactionReceipt)
           )
-          const successfulRedeem = (
-            await Promise.all(
-              redeemEvents.map(
-                async e =>
-                  await this.l2Provider.getTransactionReceipt(e.retryTxHash)
-              )
-            )
-          ).filter(r => r.status === 1)
-          if (successfulRedeem.length > 1)
-            throw new ArbTsError(
-              `Unexpected number of successful redeems. Expected only one redeem for ticket ${ticketId}, but found ${successfulRedeem.length}.`
-            )
-          if (successfulRedeem.length == 1) return successfulRedeem[0]
-        }
+        ).filter(r => r.status === 1)
+        if (successfulRedeem.length > 1)
+          throw new ArbTsError(
+            `Unexpected number of successful redeems. Expected only one redeem for ticket ${this.retryableCreationId}, but found ${successfulRedeem.length}.`
+          )
+        if (successfulRedeem.length == 1) return successfulRedeem[0]
+
         const toBlock = await this.l2Provider.getBlock(toBlockNumber)
+        // dont bother looking past the retryable lifetime of the ticket for now
+        // CHRIS: TODO: create a ticket for this
         if (
           toBlock.timestamp - creationBlock.timestamp >
           l2Network.retryableLifetimeSeconds
@@ -355,6 +356,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
           // find the increment that cover ~ 1 day
           increment *= Math.ceil(86400 / processedSeconds)
         }
+
         fromBlock = toBlock
       }
     }
@@ -413,7 +415,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     // 2. then we redeem it
     // 3. that means the ticket no longer exists, so a call to isExpired will fail
     // 4. was the result successful? we know that based on the waitresult?
-    // QQQ: we need a test for this too 
+    // QQQ: we need a test for this too
 
     // not redeemed, has it now expired
     if (await this.isExpired()) {

@@ -145,17 +145,18 @@ export class L2TransactionReceipt implements TransactionReceipt {
    */
   public async isDataAvailable(
     l2Provider: providers.JsonRpcProvider,
-    l1Provider: providers.JsonRpcProvider
+    confirmations: number = 10
   ): Promise<boolean> {
     const arbReceipt = await getArbTransactionReceipt(
       l2Provider,
       this.transactionHash,
-      l1Provider
+      false,
+      true
     )
+    if (!arbReceipt) return false
 
-    // Data is made available in batches, if the batch info is
-    // available then so is the tx data
-    return !!arbReceipt?.l1InboxBatchInfo
+    // is there a batch with enough confirmations
+    return arbReceipt?.l1BatchConfirmations > confirmations
   }
 
   /**
