@@ -32,7 +32,7 @@ import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { execSync } from 'child_process'
 import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
-import { RollupAdminFacet__factory } from '../src/lib/abi/factories/RollupAdminFacet__factory'
+import { RollupAdminLogic__factory } from '../src/lib/abi/factories/RollupAdminLogic__factory'
 import { deployErc20AndInit } from './deployBridge'
 import * as path from 'path'
 import * as fs from 'fs'
@@ -64,7 +64,7 @@ export const getCustomNetworks = async (
     rollup: string
   }
 
-  const rollup = RollupAdminFacet__factory.connect(
+  const rollup = RollupAdminLogic__factory.connect(
     parsedDeploymentData.rollup,
     l1Provider
   )
