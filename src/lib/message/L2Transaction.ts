@@ -35,7 +35,7 @@ import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
 import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
-import { ArbTsError } from '../dataEntities/errors'
+import { ArbSdkError } from '../dataEntities/errors'
 
 export interface L2ContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<L2TransactionReceipt>
@@ -135,6 +135,9 @@ export class L2TransactionReceipt implements TransactionReceipt {
   /**
    * Whether the data associated with this transaction has been
    * made available on L1
+   * @param l2Provider
+   * @param confirmations The number of confirmations on the batch before data is to be considered available
+   * @returns
    */
   public async isDataAvailable(
     l2Provider: providers.JsonRpcProvider,
@@ -190,7 +193,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
       const redeemScheduledEvents = await rec.getRedeemScheduledEvents()
 
       if (redeemScheduledEvents.length !== 1) {
-        throw new ArbTsError(
+        throw new ArbSdkError(
           `Transaction is not a redeem transaction: ${rec.transactionHash}`
         )
       }

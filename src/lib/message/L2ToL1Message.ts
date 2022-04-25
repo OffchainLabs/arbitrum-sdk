@@ -33,7 +33,7 @@ import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
 import { Contract, ContractTransaction, Overrides } from 'ethers'
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
-import { ArbTsError } from '../dataEntities/errors'
+import { ArbSdkError } from '../dataEntities/errors'
 import {
   SignerProviderUtils,
   SignerOrProvider,
@@ -166,7 +166,7 @@ export class L2ToL1Message {
       if (indexItems.length === 1) {
         return indexItems
       } else if (indexItems.length > 1) {
-        throw new ArbTsError('More than one indexed item found in batch.')
+        throw new ArbSdkError('More than one indexed item found in batch.')
       } else return []
     } else return events
   }
@@ -203,7 +203,7 @@ export class L2ToL1Message {
       if (indexItems.length === 1) {
         return indexItems
       } else if (indexItems.length > 1) {
-        throw new ArbTsError('More than one indexed item found in batch.')
+        throw new ArbSdkError('More than one indexed item found in batch.')
       } else return []
     }
 
@@ -230,7 +230,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   public async getOutboxProof(l2Provider: Provider) {
     const { sendRootSize } = await this.getSendProps(l2Provider)
     if (!sendRootSize)
-      throw new ArbTsError('Node not yet confirmed, cannot get proof.')
+      throw new ArbSdkError('Node not yet confirmed, cannot get proof.')
 
     const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
@@ -297,10 +297,10 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       parsedLog.afterState.blockHash
     )
     if (!l2Block) {
-      throw new ArbTsError(`Block not found. ${parsedLog.afterState.blockHash}`)
+      throw new ArbSdkError(`Block not found. ${parsedLog.afterState.blockHash}`)
     }
     if (l2Block.sendRoot !== parsedLog.afterState.sendRoot) {
-      throw new ArbTsError(
+      throw new ArbSdkError(
         `L2 block send root doesn't match parsed log. ${l2Block.sendRoot} ${parsedLog.afterState.sendRoot}`
       )
     }
@@ -326,7 +326,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       }
     )
 
-    if (logs.length !== 1) throw new ArbTsError('No NodeConfirmed events found')
+    if (logs.length !== 1) throw new ArbSdkError('No NodeConfirmed events found')
     return await this.getBlockFromNodeLog(
       l2Provider as JsonRpcProvider,
       logs[0]
@@ -435,8 +435,6 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   public async getFirstExecutableBlock(
     l2Provider: Provider
   ): Promise<BigNumber | null> {
-    // FRED: TODO: create version that queries multiple L2 to L1 txs, so a single multicall can make all requests
-    // we assume the L2 to L1 tx is valid, but we could check that on the constructor that the L2 to L1 msg is valid
     const l2Network = await getL2Network(l2Provider)
 
     const rollup = RollupUserLogic__factory.connect(
@@ -450,7 +448,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
     // consistency check in case we change the enum in the future
     if (status !== L2ToL1MessageStatus.UNCONFIRMED)
-      throw new ArbTsError('L2ToL1Msg expected to be unconfirmed')
+      throw new ArbSdkError('L2ToL1Msg expected to be unconfirmed')
 
     const latestBlock = await this.l1Provider.getBlockNumber()
     const eventFetcher = new EventFetcher(this.l1Provider)
@@ -481,7 +479,6 @@ export class L2ToL1MessageReader extends L2ToL1Message {
         .add(latestBlock)
 
     let foundLog: FetchedEvent<NodeCreatedEvent> | undefined = undefined
-    // FRED: TODO: optimise with a binary search
     for (const log of logs) {
       const l2Block = await this.getBlockFromNodeLog(
         l2Provider as JsonRpcProvider,
@@ -532,14 +529,14 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
   ): Promise<ContractTransaction> {
     const status = await this.status(l2Provider)
     if (status !== L2ToL1MessageStatus.CONFIRMED) {
-      throw new ArbTsError(
+      throw new ArbSdkError(
         `Cannot execute message. Status is: ${status} but must be ${L2ToL1MessageStatus.CONFIRMED}.`
       )
     }
     const proof = await this.getOutboxProof(l2Provider)
     const outboxAddr = await this.getOutboxAddress(l2Provider)
     if (!outboxAddr) {
-      throw new ArbTsError(
+      throw new ArbSdkError(
         `Outbox address not found but node is confirmed. ${this.event.hash.toHexString()}`
       )
     }

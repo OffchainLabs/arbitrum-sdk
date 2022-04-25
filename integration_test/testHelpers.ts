@@ -30,7 +30,7 @@ import { Signer } from 'ethers'
 import { Erc20Bridger, L1ToL2MessageStatus, L2ToL1MessageStatus } from '../src'
 import { L2Network } from '../src/lib/dataEntities/networks'
 import { GasOverrides } from '../src/lib/message/L1ToL2MessageGasEstimator'
-import { ArbTsError } from '../src/lib/dataEntities/errors'
+import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import { ERC20 } from '../src/lib/abi/ERC20'
 
 export const preFundAmount = parseEther('0.1')
@@ -164,7 +164,7 @@ const getGateways = (gatewayType: GatewayType, l2Network: L2Network) => {
         expectedL2Gateway: l2Network.tokenBridge.l2WethGateway,
       }
     default:
-      throw new ArbTsError(`Unexpected gateway type: ${gatewayType}`)
+      throw new ArbSdkError(`Unexpected gateway type: ${gatewayType}`)
   }
 }
 

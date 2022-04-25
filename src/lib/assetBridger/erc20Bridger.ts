@@ -45,7 +45,7 @@ import {
 } from '../message/L1ToL2MessageGasEstimator'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { L2Network } from '../dataEntities/networks'
-import { ArbTsError, MissingProviderArbTsError } from '../dataEntities/errors'
+import { ArbSdkError, MissingProviderArbTsError } from '../dataEntities/errors'
 import { DISABLED_GATEWAY } from '../dataEntities/constants'
 import { EventFetcher } from '../utils/eventFetcher'
 import { EthDepositBase, EthWithdrawParams } from './ethBridger'
@@ -611,7 +611,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
 
     const l1AddressFromL2 = await l2Token.l1Address()
     if (l1AddressFromL2 !== l1TokenAddress) {
-      throw new ArbTsError(
+      throw new ArbSdkError(
         `L2 token does not have l1 address set. Set address: ${l1AddressFromL2}, expected address: ${l1TokenAddress}.`
       )
     }
@@ -647,7 +647,8 @@ export class AdminErc20Bridger extends Erc20Bridger {
     )
 
     const setGatwayEstimates = await gasPriceEstimator.estimateAll(
-      // these addresses are wrong? where the transaction actually coming from
+      // CHRIS: TODO: I thought I did this :(
+      // CHRIS: TODO: confirm whether these addresses are wrong? where the transaction actually coming from
       this.l2Network.tokenBridge.l1GatewayRouter,
       this.l2Network.tokenBridge.l2GatewayRouter,
       l2SetGatewaysCallData,

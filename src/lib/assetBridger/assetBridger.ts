@@ -17,7 +17,7 @@
 'use strict'
 
 import { BigNumber } from 'ethers'
-import { ArbTsError } from '../dataEntities/errors'
+import { ArbSdkError } from '../dataEntities/errors'
 import { L1ContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'
 
@@ -36,7 +36,7 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   public constructor(public readonly l2Network: L2Network) {
     this.l1Network = l1Networks[l2Network.partnerChainID]
     if (!this.l1Network) {
-      throw new ArbTsError(
+      throw new ArbSdkError(
         `Unknown l1 network chain id: ${l2Network.partnerChainID}`
       )
     }

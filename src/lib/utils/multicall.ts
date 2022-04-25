@@ -22,7 +22,7 @@ import { BigNumber } from 'ethers'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { Multicall2 } from '../abi/Multicall2'
 import { Multicall2__factory } from '../abi/factories/Multicall2__factory'
-import { ArbTsError } from '../dataEntities/errors'
+import { ArbSdkError } from '../dataEntities/errors'
 import {
   isL1Network,
   L1Network,
@@ -136,7 +136,7 @@ export class MultiCaller {
 
     const network = l2Network || l1Network
     if (!network) {
-      throw new ArbTsError(
+      throw new ArbSdkError(
         `Unexpected network id: ${chainId}. Ensure that chain ${chainId} has been added as a network.`
       )
     }
@@ -145,7 +145,7 @@ export class MultiCaller {
     if (isL1Network(network)) {
       const firstL2 = l2Networks[network.partnerChainIDs[0]]
       if (!firstL2)
-        throw new ArbTsError(
+        throw new ArbSdkError(
           `No partner chain found l1 network: ${network.chainID} : partner chain ids ${network.partnerChainIDs}`
         )
       multiCallAddr = firstL2.tokenBridge.l1MultiCall

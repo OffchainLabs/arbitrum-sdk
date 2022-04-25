@@ -30,7 +30,7 @@ import { l1Networks, L2Network } from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
 import { MultiCaller, CallInput } from '../utils/multicall'
-import { ArbTsError } from '../dataEntities/errors'
+import { ArbSdkError } from '../dataEntities/errors'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
@@ -50,7 +50,7 @@ export class InboxTools {
     this.l1Provider = SignerProviderUtils.getProviderOrThrow(this.l1Signer)
     this.l1Network = l1Networks[l2Network.partnerChainID]
     if (!this.l1Network)
-      throw new ArbTsError(
+      throw new ArbSdkError(
         `L1Network not found for chain id: ${l2Network.partnerChainID}.`
       )
   }
@@ -73,7 +73,6 @@ export class InboxTools {
 
     // we take a long average block time of 14s
     // and always move at least 10 blocks
-
     const diffBlocks = Math.max(Math.ceil(diff / this.l1Network.blockTime), 10)
 
     return await this.findFirstBlockBelow(

@@ -35,7 +35,7 @@ import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
-import { ArbTsError } from '../dataEntities/errors'
+import { ArbSdkError } from '../dataEntities/errors'
 import { ethers } from 'ethers'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { InboxMessageDeliveredEvent } from '../abi/Inbox'
@@ -95,7 +95,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
   }
 
   /**
-   * Get the numbers of any messages created by this transaction
+   * Get any MessageDelivered events that were emitted during this transaction
    * @returns
    */
   public getMessageDeliveredEvents(): MessageDeliveredEvent['args'][] {
@@ -109,7 +109,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
   }
 
   /**
-   * Get the numbers of any messages created by this transaction
+   * Get any InboxMessageDelivered events that were emitted during this transaction
    * @returns
    */
   public getInboxMessageDeliveredEvent(): InboxMessageDeliveredEvent['args'][] {
@@ -122,6 +122,11 @@ export class L1TransactionReceipt implements TransactionReceipt {
       .map(l => iFace.parseLog(l).args as InboxMessageDeliveredEvent['args'])
   }
 
+  /**
+   * Get combined data for any InboxMessageDelivered and MessageDelivered events
+   * emitted during this transaction
+   * @returns 
+   */
   public getMessageEvents(): {
     inboxMessageEvent: InboxMessageDeliveredEvent['args']
     bridgeMessageEvent: MessageDeliveredEvent['args']
@@ -130,7 +135,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     const inboxMessages = this.getInboxMessageDeliveredEvent()
 
     if (bridgeMessages.length !== inboxMessages.length) {
-      throw new ArbTsError(
+      throw new ArbSdkError(
         `Unexpected missing events. Inbox message count: ${
           inboxMessages.length
         } does not equal bridge message count: ${
@@ -146,7 +151,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     for (const bm of bridgeMessages) {
       const im = inboxMessages.filter(i => i.messageNum.eq(bm.messageIndex))[0]
       if (!im) {
-        throw new ArbTsError(
+        throw new ArbSdkError(
           `Unexepected missing event for message index: ${bm.messageIndex.toString()}. ${JSON.stringify(
             inboxMessages
           )}`
@@ -254,16 +259,16 @@ export class L1TransactionReceipt implements TransactionReceipt {
     const allL1ToL2Messages = await this.getL1ToL2Messages(l2SignerOrProvider)
     const messageCount = allL1ToL2Messages.length
     if (!messageCount)
-      throw new ArbTsError(
+      throw new ArbSdkError(
         `No l1 to L2 message found for ${this.transactionHash}`
       )
 
     if (messageIndex !== undefined && messageIndex >= messageCount)
-      throw new ArbTsError(
+      throw new ArbSdkError(
         `Provided message number out of range for ${this.transactionHash}; index was ${messageIndex}, but only ${messageCount} messages`
       )
     if (messageIndex === undefined && messageCount > 1)
-      throw new ArbTsError(
+      throw new ArbSdkError(
         `${messageCount} L2 messages for ${this.transactionHash}; must provide messageNumberIndex (or use (signersAndProviders, l1Txn))`
       )
 

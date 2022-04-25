@@ -1,11 +1,11 @@
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
-import { ArbTsError, MissingProviderArbTsError } from '../dataEntities/errors'
+import { ArbSdkError, MissingProviderArbTsError } from '../dataEntities/errors'
 
 export type SignerOrProvider = Signer | Provider
 
 /**
- * Utiliy functions for signer/provider union types
+ * Utility functions for signer/provider union types
  */
 export class SignerProviderUtils {
   public static isSigner(
@@ -61,7 +61,7 @@ export class SignerProviderUtils {
 
     const providerChainId = (await provider.getNetwork()).chainId
     if (providerChainId !== chainId) {
-      throw new ArbTsError(
+      throw new ArbSdkError(
         `Signer/provider chain id: ${providerChainId} doesn't match provided chain id: ${chainId}.`
       )
     }

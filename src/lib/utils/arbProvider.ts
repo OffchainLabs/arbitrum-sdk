@@ -5,30 +5,22 @@ import {
   ArbBlock,
   ArbBlockWithTransactions,
   ArbTransactionReceipt,
-  BatchInfo,
 } from '../dataEntities/rpc'
 import { BigNumber, Contract } from 'ethers'
-import { Formats, FormatFuncs } from '@ethersproject/providers/lib/formatter'
+import { Formats } from '@ethersproject/providers/lib/formatter'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { Interface } from 'ethers/lib/utils'
 
-type ArbFormats = Formats & {
-  batchInfo: FormatFuncs
-}
-
 class ArbFormatter extends Formatter {
-  readonly formats!: ArbFormats
+  readonly formats!: Formats
 
-  public getDefaultFormats(): ArbFormats {
+  public getDefaultFormats(): Formats {
     // formats was already initialised in super, so we can just access here
     const superFormats = super.getDefaultFormats()
 
-    const address = this.address.bind(this)
     const bigNumber = this.bigNumber.bind(this)
-    const data = this.data.bind(this)
     const hash = this.hash.bind(this)
     const number = this.number.bind(this)
-    const batchInfo = this.batchInfo.bind(this)
 
     const arbBlockProps = {
       sendRoot: hash,
@@ -38,33 +30,19 @@ class ArbFormatter extends Formatter {
 
     const arbReceiptFormat = {
       ...superFormats.receipt,
-      batchInfo: Formatter.allowNull(batchInfo, null),
       l1BlockNumber: number,
       gasUsedForL1: bigNumber,
-    }
-
-    const batchInfoFormat = {
-      confirmations: number,
-      blockNumber: number,
-      logAddress: address,
-      logTopics: Formatter.arrayOf(hash),
-      logData: data,
     }
 
     return {
       ...superFormats,
       receipt: arbReceiptFormat,
-      batchInfo: batchInfoFormat,
       block: { ...superFormats.block, ...arbBlockProps },
       blockWithTransactions: {
         ...superFormats.blockWithTransactions,
         ...arbBlockProps,
       },
     }
-  }
-
-  public batchInfo(batchInfo: any): BatchInfo {
-    return Formatter.check(this.formats.batchInfo, batchInfo)
   }
 
   public receipt(value: any): ArbTransactionReceipt {
@@ -155,7 +133,7 @@ export async function getArbTransactionReceipt<
 }
 
 /**
- * Fetch a block for the provided hash, and include some additional arbitrum specific fields
+ * Fetch a block for the provided hash, including additional arbitrum specific fields
  * @param l2Provider
  * @param blockHash
  * @param includeTransactions
@@ -179,5 +157,5 @@ export async function getArbBlockByHash<T extends boolean = false>(
 
   return includeTransactions
     ? arbFormatter.blockWithTransactions(l2Block)
-    : (arbFormatter.block(l2Block) as unknown as ArbBlockWithTransactions)
+    : ((arbFormatter.block(l2Block) as unknown) as ArbBlockWithTransactions)
 }

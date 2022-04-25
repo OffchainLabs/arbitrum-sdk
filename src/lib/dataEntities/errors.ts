@@ -17,9 +17,9 @@
 'use strict'
 
 /**
- * Errors originating in ArbTs
+ * Errors originating in Arbitrum SDK
  */
-export class ArbTsError extends Error {
+export class ArbSdkError extends Error {
   constructor(message?: string) {
     super(message)
   }
@@ -28,7 +28,7 @@ export class ArbTsError extends Error {
 /**
  * Thrown when a signer does not have a connected provider
  */
-export class MissingProviderArbTsError extends ArbTsError {
+export class MissingProviderArbTsError extends ArbSdkError {
   constructor(signerName: string) {
     super(
       `${signerName} does not have a connected provider and one is required.`

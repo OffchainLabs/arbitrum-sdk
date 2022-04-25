@@ -1,7 +1,7 @@
 import { getAddress } from '@ethersproject/address'
 import { utils } from 'ethers'
 import { ADDRESS_ALIAS_OFFSET } from './constants'
-import { ArbTsError } from './errors'
+import { ArbSdkError } from './errors'
 
 /**
  * Ethereum/Arbitrum address class
@@ -17,7 +17,7 @@ export class Address {
    */
   constructor(public readonly value: string) {
     if (!utils.isAddress(value))
-      throw new ArbTsError(`'${value}' is not a valid address`)
+      throw new ArbSdkError(`'${value}' is not a valid address`)
   }
 
   private alias(address: string, forward: boolean) {
@@ -52,11 +52,7 @@ export class Address {
     return new Address(this.alias(this.value, false))
   }
 
-  /**
-   * String represenation of a
-   * @returns
-   */
-  public toString() {
-    return this.value
+  public equals(other: Address): boolean {
+    return this.value.toLowerCase() === other.value.toLowerCase()
   }
 }

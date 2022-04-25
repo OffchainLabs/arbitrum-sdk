@@ -18,7 +18,7 @@
 
 import dotenv from 'dotenv'
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
-import { ArbTsError } from '../dataEntities/errors'
+import { ArbSdkError } from '../dataEntities/errors'
 import { SEVEN_DAYS_IN_SECONDS } from './constants'
 
 dotenv.config()
@@ -217,7 +217,7 @@ const getNetwork = async (
   if (networks[chainID]) {
     return networks[chainID]
   } else {
-    throw new ArbTsError(`Unrecognized network ${chainID}.`)
+    throw new ArbSdkError(`Unrecognized network ${chainID}.`)
   }
 }
 
@@ -272,6 +272,13 @@ export const addCustomNetwork = ({
   }
 }
 
+/**
+ * New outboxes can be added to the bridge, and withdrawals always use the latest outbox.
+ * This function finds the outbox address for a supplied batch number
+ * @param network 
+ * @param batchNumber 
+ * @returns 
+ */
 export const getOutboxAddr = (network: L2Network, batchNumber: number) => {
   // find the outbox where the activation batch number of the next outbox
   // is greater than the supplied batch
@@ -287,7 +294,7 @@ export const getOutboxAddr = (network: L2Network, batchNumber: number) => {
     )
 
   if (!res) {
-    throw new ArbTsError(
+    throw new ArbSdkError(
       `No outbox found for batch number: ${batchNumber} on network: ${network.chainID}.`
     )
   }
