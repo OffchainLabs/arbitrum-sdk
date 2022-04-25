@@ -115,9 +115,8 @@ export enum L2ToL1MessageStatus {
  * If T is of type Signer then L2ToL1MessageReaderOrWriter<T> will be of
  * type L2ToL1MessageWriter.
  */
-export type L2ToL1MessageReaderOrWriter<
-  T extends SignerOrProvider
-> = T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
+export type L2ToL1MessageReaderOrWriter<T extends SignerOrProvider> =
+  T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
 
 // expected number of L1 blocks that it takes for an L2 tx to be included in a L1 assertion
 const ASSERTION_CREATED_PADDING = 50
@@ -125,7 +124,7 @@ const ASSERTION_CREATED_PADDING = 50
 const ASSERTION_CONFIRMED_PADDING = 20
 
 export class L2ToL1Message {
-  // CHRIS: TODO: docs on these - update the constructor
+  // CHRIS: TODO: docs
   protected constructor(
     public readonly event: L2ToL1TransactionEvent['args']
   ) {}
@@ -189,14 +188,11 @@ export class L2ToL1Message {
       filter
     )
 
-    const chainId = (await l2Provider.getNetwork()).chainId
     const l2ToL1Events = await Promise.all(
       events.map(e =>
         l2Provider
           .getTransactionReceipt(e.transactionHash)
-          .then(receipt =>
-            new L2TransactionReceipt(receipt, chainId).getL2ToL1Events()
-          )
+          .then(receipt => new L2TransactionReceipt(receipt).getL2ToL1Events())
       )
     ).then(res => res.flat())
 
@@ -241,10 +237,11 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       l2Provider
     )
 
-    const outboxProofParams = await nodeInterface.callStatic.constructOutboxProof(
-      sendRootSize.toNumber(),
-      this.event.position.toNumber()
-    )
+    const outboxProofParams =
+      await nodeInterface.callStatic.constructOutboxProof(
+        sendRootSize.toNumber(),
+        this.event.position.toNumber()
+      )
 
     // CHRIS: TODO: check these from the return vals to make sure they're expected ones
     // this.event.hash,
@@ -547,11 +544,6 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
       )
     }
     const outbox = Outbox__factory.connect(outboxAddr, this.l1Signer)
-
-    // CHRIS: TODO: ethers errors
-    // 1. when I dont have enough funds here - can test by not funding on L1 in the weth withdraw test - we get a horrible error
-    // 2. check out all the horrible errors in populate transaction, all the unawaited errors in there
-    // 3. blockWithTransactions formatter should be fixed
 
     return await outbox.executeTransaction(
       proof,

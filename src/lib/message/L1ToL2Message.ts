@@ -32,11 +32,10 @@ import {
 import { ArbTsError } from '../dataEntities/errors'
 import { ethers, Overrides } from 'ethers'
 import { Address } from '../dataEntities/address'
-import { L2TransactionReceipt } from './L2Transaction'
+import { L2TransactionReceipt, RedeemTransaction } from './L2Transaction'
 import { getL2Network } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
-// CHRIS: TODO: after linting go through the tops of all the files and check for unused imports
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -77,9 +76,8 @@ export enum L1ToL2MessageStatus {
  * If T is of type Signer then L1ToL2MessageReaderOrWriter<T> will be of
  * type L1ToL2MessageWriter.
  */
-export type L1ToL2MessageReaderOrWriter<
-  T extends SignerOrProvider
-> = T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
+export type L1ToL2MessageReaderOrWriter<T extends SignerOrProvider> =
+  T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
 
 export abstract class L1ToL2Message {
   /**
@@ -252,15 +250,15 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   ): Promise<TransactionReceipt> {
     if (!this.retryableCreationReceipt) {
       if (confirmations || timeout) {
-        this.retryableCreationReceipt = await this.l2Provider.waitForTransaction(
-          this.retryableCreationId,
-          confirmations,
-          timeout
-        )
+        this.retryableCreationReceipt =
+          await this.l2Provider.waitForTransaction(
+            this.retryableCreationId,
+            confirmations,
+            timeout
+          )
       } else {
-        this.retryableCreationReceipt = await this.l2Provider.getTransactionReceipt(
-          this.retryableCreationId
-        )
+        this.retryableCreationReceipt =
+          await this.l2Provider.getTransactionReceipt(this.retryableCreationId)
       }
     }
     return this.retryableCreationReceipt
@@ -279,14 +277,16 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     const creationReceipt = await this.getRetryableCreationReceipt()
 
     if (creationReceipt) {
-      const l2Receipt = new L2TransactionReceipt(creationReceipt, this.chainId)
+      const l2Receipt = new L2TransactionReceipt(creationReceipt)
       const redeemEvents = l2Receipt.getRedeemScheduledEvents()
 
       if (redeemEvents.length === 1) {
-        // CHRIS: TODO: this seems weird that we should only return if there was one redeem event?
-        // CHRIS: TODO: throw an error if this is unexpected
         return await this.l2Provider.getTransactionReceipt(
           redeemEvents[0].retryTxHash
+        )
+      } else if (redeemEvents.length > 1) {
+        throw new ArbTsError(
+          `Unexpected number of redeem events for retryable creation tx. ${creationReceipt} ${redeemEvents}`
         )
       }
     }
@@ -309,7 +309,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       const iFace = ArbRetryableTx__factory.createInterface()
       const redeemTopic = iFace.getEventTopic('RedeemScheduled')
 
-      let increment: number = 1000
+      let increment = 1000
       let fromBlock = await this.l2Provider.getBlock(
         creationReceipt.blockNumber
       )
@@ -345,7 +345,6 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
         const toBlock = await this.l2Provider.getBlock(toBlockNumber)
         // dont bother looking past the retryable lifetime of the ticket for now
-        // CHRIS: TODO: create a ticket for this
         if (
           toBlock.timestamp - creationBlock.timestamp >
           l2Network.retryableLifetimeSeconds
@@ -409,13 +408,6 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     if (l2TxReceipt && l2TxReceipt.status === 1) {
       return L1ToL2MessageStatus.REDEEMED
     }
-
-    // CHRIS: TODO:
-    // 1. we create a ticket with too low
-    // 2. then we redeem it
-    // 3. that means the ticket no longer exists, so a call to isExpired will fail
-    // 4. was the result successful? we know that based on the waitresult?
-    // QQQ: we need a test for this too
 
     // not redeemed, has it now expired
     if (await this.isExpired()) {
@@ -548,7 +540,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
    * Manually redeem the retryable ticket.
    * Throws if message status is not L1ToL2MessageStatus.NOT_YET_REDEEMED
    */
-  public async redeem(overrides?: Overrides): Promise<ContractTransaction> {
+  public async redeem(overrides?: Overrides): Promise<RedeemTransaction> {
     const status = await this.status()
     if (status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
       const arbRetryableTx = ArbRetryableTx__factory.connect(
@@ -559,11 +551,16 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
 
       // CHRIS: TODO: check what the default behaviour is for gasprice
       // CHRIS: TODO: why are we using 1559 here, but not elsewhere? All tx should be - in many cases it may be ignored though/depend on the wallet
-      return await arbRetryableTx.redeem(this.retryableCreationId, {
+      const redeemTx = await arbRetryableTx.redeem(this.retryableCreationId, {
         maxFeePerGas: feeData.maxFeePerGas!,
         maxPriorityFeePerGas: feeData.maxPriorityFeePerGas!,
         ...overrides,
       })
+
+      return L2TransactionReceipt.toRedeemTransaction(
+        L2TransactionReceipt.monkeyPatchWait(redeemTx),
+        this.l2Provider
+      )
     } else {
       throw new ArbTsError(
         `Cannot redeem. Message status: ${status} must be: ${L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2}.`

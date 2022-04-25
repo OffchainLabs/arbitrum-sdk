@@ -152,12 +152,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('L1 and L2 implementations of calculateL2ERC20Address match', async () => {
-    const {
-      l1Signer,
-      l2Signer,
-      l2Network,
-      erc20Bridger,
-    } = await testSetup()
+    const { l1Signer, l2Signer, l2Network, erc20Bridger } = await testSetup()
 
     const address = hexlify(randomBytes(20))
 

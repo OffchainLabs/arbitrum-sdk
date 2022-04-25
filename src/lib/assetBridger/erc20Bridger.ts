@@ -47,9 +47,7 @@ import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { L2Network } from '../dataEntities/networks'
 import { ArbTsError, MissingProviderArbTsError } from '../dataEntities/errors'
 import { DISABLED_GATEWAY } from '../dataEntities/constants'
-
 import { EventFetcher } from '../utils/eventFetcher'
-
 import { EthDepositBase, EthWithdrawParams } from './ethBridger'
 import { AssetBridger } from './assetBridger'
 import {
@@ -61,6 +59,7 @@ import {
   L2ContractTransaction,
   L2TransactionReceipt,
 } from '../message/L2Transaction'
+import { getBaseFee } from '../utils/lib'
 
 export interface TokenApproveParams {
   /**
@@ -253,7 +252,7 @@ export class Erc20Bridger extends AssetBridger<
     } catch (err) {
       if (
         err instanceof Error &&
-        ((err as unknown) as { code: ErrorCode }).code ===
+        (err as unknown as { code: ErrorCode }).code ===
           Logger.errors.CALL_EXCEPTION
       ) {
         return false
@@ -371,9 +370,7 @@ export class Erc20Bridger extends AssetBridger<
     )
   }
 
-  private async getDepositParams(
-    params: TokenDepositParams
-  ): Promise<{
+  private async getDepositParams(params: TokenDepositParams): Promise<{
     erc20L1Address: string
     amount: BigNumber
     depositCallValue: BigNumber
@@ -382,13 +379,8 @@ export class Erc20Bridger extends AssetBridger<
     l2MaxFeePerGas: BigNumber
     destinationAddress: string
   }> {
-    const {
-      erc20L1Address,
-      amount,
-      l2Provider,
-      l1Signer,
-      destinationAddress,
-    } = params
+    const { erc20L1Address, amount, l2Provider, l1Signer, destinationAddress } =
+      params
     const { retryableGasOverrides } = params
 
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
@@ -423,7 +415,7 @@ export class Erc20Bridger extends AssetBridger<
     const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
 
     let tokenGasOverrides: GasOverrides | undefined = retryableGasOverrides
-    
+
     // we also add a hardcoded minimum gas limit for custom gateway deposits
     if (l1GatewayAddress === this.l2Network.tokenBridge.l1CustomGateway) {
       if (!tokenGasOverrides) tokenGasOverrides = {}
@@ -432,9 +424,8 @@ export class Erc20Bridger extends AssetBridger<
     }
 
     // 2. get the gas estimates
-    const baseFee = await (await l1Signer.provider.getBlock('latest'))
-      .baseFeePerGas!
-    const estimates = await gasEstimator.estimateMessage(
+    const baseFee = await getBaseFee(l1Signer.provider)
+    const estimates = await gasEstimator.estimateAll(
       l1GatewayAddress,
       l2Dest,
       depositCalldata,
@@ -637,9 +628,8 @@ export class AdminErc20Bridger extends Erc20Bridger {
     )
 
     const l1SignerAddr = await l1Signer.getAddress()
-    const baseFee = await (await l1Signer.provider.getBlock('latest'))
-      .baseFeePerGas!
-    const setTokenEstimates = await gasPriceEstimator.estimateMessage(
+    const baseFee = await getBaseFee(l1Signer.provider)
+    const setTokenEstimates = await gasPriceEstimator.estimateAll(
       this.l2Network.tokenBridge.l1CustomGateway,
       this.l2Network.tokenBridge.l2CustomGateway,
       l2SetTokenCallData,
@@ -656,7 +646,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
       [[l1TokenAddress], [this.l2Network.tokenBridge.l1CustomGateway]]
     )
 
-    const setGatwayEstimates = await gasPriceEstimator.estimateMessage(
+    const setGatwayEstimates = await gasPriceEstimator.estimateAll(
       // these addresses are wrong? where the transaction actually coming from
       this.l2Network.tokenBridge.l1GatewayRouter,
       this.l2Network.tokenBridge.l2GatewayRouter,
@@ -771,8 +761,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     await this.checkL2Network(l2Provider)
 
     const estimator = new L1ToL2MessageGasEstimator(l2Provider)
-    const baseFee = await (await l1Signer.provider.getBlock('latest'))
-      .baseFeePerGas!
+    const baseFee = await getBaseFee(l1Signer.provider)
 
     const iL2GatewayRouter = L2GatewayRouter__factory.createInterface()
     const l2SetGatewaysCallData = iL2GatewayRouter.encodeFunctionData(
@@ -784,7 +773,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     )
 
     const l1SignerAddr = await l1Signer.getAddress()
-    const estimates = await estimator.estimateMessage(
+    const estimates = await estimator.estimateAll(
       this.l2Network.tokenBridge.l1GatewayRouter,
       this.l2Network.tokenBridge.l2GatewayRouter,
       l2SetGatewaysCallData,

@@ -35,9 +35,14 @@ import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
 import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
+import { ArbTsError } from '../dataEntities/errors'
 
 export interface L2ContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<L2TransactionReceipt>
+}
+
+export interface RedeemTransaction extends L2ContractTransaction {
+  waitForRedeem: () => Promise<TransactionReceipt>
 }
 
 export class L2TransactionReceipt implements TransactionReceipt {
@@ -59,7 +64,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
   public readonly type: number
   public readonly status?: number
 
-  constructor(tx: TransactionReceipt, public readonly chainId: number) {
+  constructor(tx: TransactionReceipt) {
     this.to = tx.to
     this.from = tx.from
     this.contractAddress = tx.contractAddress
@@ -133,7 +138,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
    */
   public async isDataAvailable(
     l2Provider: providers.JsonRpcProvider,
-    confirmations: number = 10
+    confirmations = 10
   ): Promise<boolean> {
     const arbReceipt = await getArbTransactionReceipt(
       l2Provider,
@@ -141,6 +146,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
       false,
       true
     )
+
     if (!arbReceipt) return false
 
     // is there a batch with enough confirmations
@@ -162,8 +168,37 @@ export class L2TransactionReceipt implements TransactionReceipt {
       // an l2 transaction - check if a batch is on L1, if an assertion has been made, and if
       // it has been confirmed.
       const result = await wait()
-      return new L2TransactionReceipt(result, contractTransaction.chainId)
+      return new L2TransactionReceipt(result)
     }
     return contractTransaction as L2ContractTransaction
+  }
+
+  /**
+   * Adds a waitForRedeem function to a redeem transaction
+   * @param redeemTx
+   * @param l2Provider
+   * @returns
+   */
+  public static toRedeemTransaction(
+    redeemTx: L2ContractTransaction,
+    l2Provider: providers.Provider
+  ): RedeemTransaction {
+    const returnRec = redeemTx as RedeemTransaction
+    returnRec.waitForRedeem = async () => {
+      const rec = await redeemTx.wait()
+
+      const redeemScheduledEvents = await rec.getRedeemScheduledEvents()
+
+      if (redeemScheduledEvents.length !== 1) {
+        throw new ArbTsError(
+          `Transaction is not a redeem transaction: ${rec.transactionHash}`
+        )
+      }
+
+      return await l2Provider.getTransactionReceipt(
+        redeemScheduledEvents[0].retryTxHash
+      )
+    }
+    return returnRec
   }
 }

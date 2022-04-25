@@ -636,7 +636,6 @@ const registerCustomToken = async (
   l2Signer: Signer,
   adminErc20Bridger: AdminErc20Bridger
 ) => {
-  
   // create a custom token on L1 and L2
   // CHRIS: TODO: use the proper abi here
   const l1CustomTokenFac = new ContractFactory(

@@ -39,14 +39,11 @@ import * as fs from 'fs'
 
 dotenv.config()
 
-// CHRIS: TODO: find all usages of the process.env, and streamline and update the .env-sample
 export const config = {
   arbUrl: process.env['ARB_URL'] as string,
   ethUrl: process.env['ETH_URL'] as string,
-  arbGenesisKey: process.env['ARB_GENESIS_KEY'] as string
+  arbGenesisKey: process.env['ARB_GENESIS_KEY'] as string,
 }
-
-// CHRIS: TODO: check everything in the /scripts folder
 
 export const getCustomNetworks = async (
   l1Url: string,
@@ -63,7 +60,7 @@ export const getCustomNetworks = async (
   const parsedDeploymentData = JSON.parse(deploymentData) as {
     bridge: string
     inbox: string
-    ["sequencer-inbox"]: string
+    ['sequencer-inbox']: string
     rollup: string
   }
 
@@ -110,7 +107,7 @@ export const getCustomNetworks = async (
     name: 'ArbLocal',
     partnerChainID: l1NetworkInfo.chainId,
     rpcURL: l2Url,
-    retryableLifetimeSeconds: 7 * 24 * 60 * 60
+    retryableLifetimeSeconds: 7 * 24 * 60 * 60,
   }
   return {
     l1Network,
@@ -233,7 +230,7 @@ export const testSetup = async (): Promise<{
         l1Deployer,
         l2Deployer,
         config.ethUrl,
-        config.arbUrl,
+        config.arbUrl
       )
       setL1Network = l1Network
       setL2Network = l2Network

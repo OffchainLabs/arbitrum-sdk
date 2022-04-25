@@ -1,5 +1,4 @@
 import { Signer, ContractFactory, constants } from 'ethers'
-import { L1Network, L2Network } from '../src/lib/dataEntities/networks'
 
 import { L1GatewayRouter__factory } from '../src/lib/abi/factories/L1GatewayRouter__factory'
 import { L1ERC20Gateway__factory } from '../src/lib/abi/factories/L1ERC20Gateway__factory'
@@ -19,8 +18,6 @@ import { AeWETH__factory } from '../src/lib/abi/factories/AeWETH__factory'
 import { TestWETH9__factory } from '../src/lib/abi/factories/TestWETH9__factory'
 import { Multicall2__factory } from '../src/lib/abi/factories/Multicall2__factory'
 import { ArbMulticall2__factory } from '../src/lib/abi/factories/ArbMulticall2__factory'
-import { L1ToL2MessageGasEstimator } from '../src/lib/message/L1ToL2MessageGasEstimator'
-import { parseEther } from 'ethers/lib/utils'
 
 const deployBehindProxy = async <
   T extends ContractFactory & { contractName: string }
@@ -184,55 +181,74 @@ export const deployErc20AndInit = async (
   console.log('initialising L2')
   await l2.router.initialize(l1.router.address, l2.standardGateway.address)
   await l2.beaconProxyFactory.initialize(l2.beacon.address)
-  await (await l2.standardGateway.initialize(
-    l1.standardGateway.address,
-    l2.router.address,
-    l2.beaconProxyFactory.address
-  )).wait()
-  await (await l2.customGateway.initialize(l1.customGateway.address, l2.router.address)).wait()
-  await (await l2.weth.initialize(
-    'WETH',
-    'WETH',
-    18,
-    l2.wethGateway.address,
-    l1.weth.address
-  )).wait()
-  await (await l2.wethGateway.initialize(
-    l1.wethGateway.address,
-    l2.router.address,
-    l1.weth.address,
-    l2.weth.address
-  )).wait()
+  await (
+    await l2.standardGateway.initialize(
+      l1.standardGateway.address,
+      l2.router.address,
+      l2.beaconProxyFactory.address
+    )
+  ).wait()
+  await (
+    await l2.customGateway.initialize(
+      l1.customGateway.address,
+      l2.router.address
+    )
+  ).wait()
+  await (
+    await l2.weth.initialize(
+      'WETH',
+      'WETH',
+      18,
+      l2.wethGateway.address,
+      l1.weth.address
+    )
+  ).wait()
+  await (
+    await l2.wethGateway.initialize(
+      l1.wethGateway.address,
+      l2.router.address,
+      l1.weth.address,
+      l2.weth.address
+    )
+  ).wait()
 
   console.log('initialising L1')
-  await (await l1.router.initialize(
-    await l1Signer.getAddress(),
-    l1.standardGateway.address,
-    constants.AddressZero,
-    l2.router.address,
-    inboxAddress
-  )).wait()
+  await (
+    await l1.router.initialize(
+      await l1Signer.getAddress(),
+      l1.standardGateway.address,
+      constants.AddressZero,
+      l2.router.address,
+      inboxAddress
+    )
+  ).wait()
 
-  await (await l1.standardGateway.initialize(
-    l2.standardGateway.address,
-    l1.router.address,
-    inboxAddress,
-    await l2.beaconProxyFactory.cloneableProxyHash(),
-    l2.beaconProxyFactory.address
-  )).wait()
-  await (await l1.customGateway.initialize(
-    l2.customGateway.address,
-    l1.router.address,
-    inboxAddress,
-    await l1Signer.getAddress()
-  )).wait()
-  await (await l1.wethGateway.initialize(
-    l2.wethGateway.address,
-    l1.router.address,
-    inboxAddress,
-    l1.weth.address,
-    l2.weth.address
-  )).wait()
+  await (
+    await l1.standardGateway.initialize(
+      l2.standardGateway.address,
+      l1.router.address,
+      inboxAddress,
+      await l2.beaconProxyFactory.cloneableProxyHash(),
+      l2.beaconProxyFactory.address
+    )
+  ).wait()
+  await (
+    await l1.customGateway.initialize(
+      l2.customGateway.address,
+      l1.router.address,
+      inboxAddress,
+      await l1Signer.getAddress()
+    )
+  ).wait()
+  await (
+    await l1.wethGateway.initialize(
+      l2.wethGateway.address,
+      l1.router.address,
+      inboxAddress,
+      l1.weth.address,
+      l2.weth.address
+    )
+  ).wait()
 
   return { l1, l2 }
 }

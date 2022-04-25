@@ -20,7 +20,6 @@ import dotenv from 'dotenv'
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbTsError } from '../dataEntities/errors'
 import { SEVEN_DAYS_IN_SECONDS } from './constants'
-import { BigNumber } from '@ethersproject/bignumber'
 
 dotenv.config()
 
@@ -153,7 +152,7 @@ export const l1Networks: L1Networks = {
     chainID: 1338,
     name: 'Hardhat_Mainnet_Fork',
     explorerUrl: 'https://etherscan.io',
-    partnerChainIDs: [42161], // TODO: use sequencer fork ID
+    partnerChainIDs: [42161],
     blockTime: 1,
     rpcURL: 'http://127.0.0.1:8545/',
     isCustom: false,

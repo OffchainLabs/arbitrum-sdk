@@ -50,12 +50,10 @@ export interface L1ContractTransaction<
   wait(confirmations?: number): Promise<TReceipt>
 }
 // some helper interfaces to reduce the verbosity elsewhere
-export type L1EthDepositTransaction = L1ContractTransaction<
-  L1EthDepositTransactionReceipt
->
-export type L1ContractCallTransaction = L1ContractTransaction<
-  L1ContractCallTransactionReceipt
->
+export type L1EthDepositTransaction =
+  L1ContractTransaction<L1EthDepositTransactionReceipt>
+export type L1ContractCallTransaction =
+  L1ContractTransaction<L1ContractCallTransactionReceipt>
 
 export class L1TransactionReceipt implements TransactionReceipt {
   public readonly to: string
@@ -114,7 +112,6 @@ export class L1TransactionReceipt implements TransactionReceipt {
    * Get the numbers of any messages created by this transaction
    * @returns
    */
-  // CHRIS: TODO: we also need inbox message from origin event
   public getInboxMessageDeliveredEvent(): InboxMessageDeliveredEvent['args'][] {
     const iFace = Inbox__factory.createInterface()
     const inboxMessageDeliveredTopic = iFace.getEventTopic(

@@ -32,7 +32,6 @@ import {
   L1ToL2MessageStatus,
   L1ToL2MessageWriter,
   L2Network,
-  L2TransactionReceipt,
 } from '../src'
 import { Signer } from 'ethers'
 import { TestERC20 } from '../src/lib/abi/TestERC20'
@@ -86,22 +85,15 @@ describe('standard ERC20', () => {
     expectedStatus: 0 | 1,
     gasLimit?: BigNumber
   ) => {
-    // do a manual redeem - supply enough gas so that the redeem tx succeeds but l2 tx doesnt
-    // CHRIS: TODO: this below should be batched up into a `waitForRedeem` - although it is a rare event? no, batch it
     const manualRedeem = await message.redeem({ gasLimit })
-    const rec = new L2TransactionReceipt(
-      await manualRedeem.wait(),
-      message.chainId
-    )
-    const redeemScheduledEvents = await rec.getRedeemScheduledEvents()
-    const retryRec = await message.l2Provider.getTransactionReceipt(
-      redeemScheduledEvents[0].retryTxHash
-    )
-    expect(retryRec!.blockHash, 'redeemed in same block').to.eq(rec.blockHash)
-    expect(retryRec!.to, 'redeemed in same block').to.eq(
+    const retryRec = await manualRedeem.waitForRedeem()
+    const blockHash = (await manualRedeem.wait()).blockHash
+
+    expect(retryRec.blockHash, 'redeemed in same block').to.eq(blockHash)
+    expect(retryRec.to, 'redeemed in same block').to.eq(
       testState.l2Network.tokenBridge.l2ERC20Gateway
     )
-    expect(retryRec!.status, 'tx didnt fail').to.eq(expectedStatus)
+    expect(retryRec.status, 'tx didnt fail').to.eq(expectedStatus)
   }
 
   // CHRIS: TODO: gas questions
@@ -109,7 +101,7 @@ describe('standard ERC20', () => {
   // 2. what happens to left over gas from redeem
   // 3. what value is returned when I call NodeInterface.estimateGas - it's the value required to call autoRedeem, but no submission cost
   // 4. is any submission cost paid for plain eth deposits?
-  
+
   it('deposit with no funds, manual redeem', async () => {
     const { waitRes } = await depositToken(
       depositAmount,

@@ -23,7 +23,7 @@ import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
 
 import { ArbGasInfo__factory } from '../src/lib/abi/factories/ArbGasInfo__factory'
-import { fundL1, fundL2, prettyLog, skipIfMainnet, wait } from './testHelpers'
+import { fundL1, fundL2, prettyLog, skipIfMainnet } from './testHelpers'
 import { ARB_GAS_INFO } from '../src/lib/dataEntities/constants'
 import {
   L2ToL1Message,
@@ -125,7 +125,7 @@ describe('Ether', async () => {
     ]) {
       expect(value.isZero(), 'message inputs value error').to.be.true
     }
-    expect(l1ToL2Message.messageData.data, "empty call data").to.eq("0x")
+    expect(l1ToL2Message.messageData.data, 'empty call data').to.eq('0x')
 
     prettyLog('l2TxHash: ' + waitResult.message.retryableCreationId)
     prettyLog('l2 transaction found!')
@@ -140,7 +140,7 @@ describe('Ether', async () => {
   })
 
   it('withdraw Ether transaction succeeds', async () => {
-    const { l2Network, l2Signer, l1Signer, ethBridger } = await testSetup()
+    const { l2Signer, l1Signer, ethBridger } = await testSetup()
     await fundL2(l2Signer)
     await fundL1(l1Signer)
     const ethToWithdraw = parseEther('0.00000002')

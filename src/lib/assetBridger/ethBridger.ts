@@ -29,7 +29,7 @@ import {
   PercentIncrease,
 } from '../message/L1ToL2MessageGasEstimator'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
-import { ArbTsError, MissingProviderArbTsError } from '../dataEntities/errors'
+import { MissingProviderArbTsError } from '../dataEntities/errors'
 import { AssetBridger } from './assetBridger'
 import {
   L1EthDepositTransaction,
@@ -39,6 +39,7 @@ import {
   L2ContractTransaction,
   L2TransactionReceipt,
 } from '../message/L2Transaction'
+import { getBaseFee } from '../utils/lib'
 
 export interface EthWithdrawParams {
   /**
@@ -115,15 +116,7 @@ export class EthBridger extends AssetBridger<
     await this.checkL2Network(params.l2Provider)
 
     const gasEstimator = new L1ToL2MessageGasEstimator(params.l2Provider)
-
-    // CHRIS: TODO: look for all usages of base fee, and have think about them
-    const baseFee = (await params.l1Signer.provider.getBlock('latest'))
-      .baseFeePerGas
-    if (!baseFee) {
-      throw new ArbTsError(
-        'Latest block did not contain base fee, ensure l1 provider is connected to a network that supports EIP 1559.'
-      )
-    }
+    const baseFee = await getBaseFee(params.l1Signer.provider)
 
     const submissionCost = await gasEstimator.estimateSubmissionFee(
       baseFee,

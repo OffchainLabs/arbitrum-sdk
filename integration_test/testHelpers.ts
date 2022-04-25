@@ -17,7 +17,6 @@
 'use strict'
 
 import { expect } from 'chai'
-import yargs from 'yargs/yargs'
 import chalk from 'chalk'
 
 import { BigNumber } from '@ethersproject/bignumber'
@@ -28,26 +27,11 @@ import { parseEther } from '@ethersproject/units'
 import { config, testSetup } from '../scripts/testSetup'
 
 import { Signer } from 'ethers'
-import {
-  EthBridger,
-  InboxTools,
-  Erc20Bridger,
-  L1ToL2MessageStatus,
-  L2ToL1MessageStatus,
-} from '../src'
-import { L1Network, L2Network } from '../src/lib/dataEntities/networks'
-import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
+import { Erc20Bridger, L1ToL2MessageStatus, L2ToL1MessageStatus } from '../src'
+import { L2Network } from '../src/lib/dataEntities/networks'
 import { GasOverrides } from '../src/lib/message/L1ToL2MessageGasEstimator'
 import { ArbTsError } from '../src/lib/dataEntities/errors'
 import { ERC20 } from '../src/lib/abi/ERC20'
-
-const argv = yargs(process.argv.slice(2))
-  .options({
-    networkID: {
-      type: 'string',
-    },
-  })
-  .parseSync()
 
 export const preFundAmount = parseEther('0.1')
 
@@ -90,9 +74,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   const withdrawRec = await withdrawRes.wait()
   expect(withdrawRec.status).to.equal(1, 'initiate token withdraw txn failed')
 
-  const message = (
-    await withdrawRec.getL2ToL1Messages(params.l1Signer)
-  )[0]
+  const message = (await withdrawRec.getL2ToL1Messages(params.l1Signer))[0]
   expect(message, 'withdraw message not found').to.exist
 
   const messageStatus = await message.status(params.l2Signer.provider!)
@@ -260,7 +242,7 @@ export const depositToken = async (
   const waitRes = await depositRec.waitForL2(l2Signer)
 
   expect(waitRes.status, 'Unexpected status').to.eq(expectedStatus)
-  if (!!retryableOverrides) {
+  if (retryableOverrides) {
     return {
       l1Token,
       waitRes,

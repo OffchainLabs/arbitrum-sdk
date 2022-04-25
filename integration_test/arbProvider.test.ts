@@ -47,6 +47,7 @@ describe('ArbProvider', () => {
     const testTxHash = rec.transactionHash
 
     // wait for the batch data
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       await wait(300)
       const arbTxReceipt = await getArbTransactionReceipt(
@@ -58,7 +59,11 @@ describe('ArbProvider', () => {
       if (!arbTxReceipt) continue
 
       const l1BlockNum = await l1Signer.provider!.getBlockNumber()
-      console.log(arbTxReceipt.l1BatchNumber, arbTxReceipt.l1BatchConfirmations, l1BlockNum)
+      console.log(
+        arbTxReceipt.l1BatchNumber,
+        arbTxReceipt.l1BatchConfirmations,
+        l1BlockNum
+      )
 
       if (arbTxReceipt.l1BatchNumber && arbTxReceipt.l1BatchNumber > 0) {
         expect(

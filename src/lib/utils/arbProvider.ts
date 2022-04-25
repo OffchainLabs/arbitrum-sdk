@@ -97,8 +97,10 @@ export async function getArbTransactionReceipt<
   fetchBatchConfirmations?: TConfirmations
 ): Promise<
   | (ArbTransactionReceipt &
-      (TBatch extends true ? ArbBatchNumber : {}) &
-      (TConfirmations extends true ? ArbBatchConfirmations : {}))
+      (TBatch extends true ? ArbBatchNumber : Record<string, never>) &
+      (TConfirmations extends true
+        ? ArbBatchConfirmations
+        : Record<string, never>))
   | null
 >
 export async function getArbTransactionReceipt<
@@ -119,14 +121,13 @@ export async function getArbTransactionReceipt<
   const arbTxReceipt: ArbTransactionReceipt &
     Partial<ArbBatchConfirmations & ArbBatchNumber> = arbFormatter.receipt(rec)
 
-  // CHRIS: TODO: update interface from nitro
+  // CHRIS: TODO: use correct abis
   const iface = new Interface([
     'function findBatchContainingBlock(uint64 block) external view returns (uint64 batch)',
     'function getL1Confirmations(bytes32 blockHash) external view returns (uint64 confirmations)',
   ])
   const nodeInterface = new Contract(NODE_INTERFACE_ADDRESS, iface, l2Provider)
   if (fetchBatchNumber) {
-    // CHRIS: TODO: update nitro with this comment and the other below
     // findBatchContainingBlock errors if block number does not exist
     try {
       const res = (
@@ -178,5 +179,5 @@ export async function getArbBlockByHash<T extends boolean = false>(
 
   return includeTransactions
     ? arbFormatter.blockWithTransactions(l2Block)
-    : ((arbFormatter.block(l2Block) as unknown) as ArbBlockWithTransactions)
+    : (arbFormatter.block(l2Block) as unknown as ArbBlockWithTransactions)
 }
