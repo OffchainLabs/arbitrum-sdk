@@ -275,9 +275,9 @@ export const addCustomNetwork = ({
 /**
  * New outboxes can be added to the bridge, and withdrawals always use the latest outbox.
  * This function finds the outbox address for a supplied batch number
- * @param network 
- * @param batchNumber 
- * @returns 
+ * @param network
+ * @param batchNumber
+ * @returns
  */
 export const getOutboxAddr = (network: L2Network, batchNumber: number) => {
   // find the outbox where the activation batch number of the next outbox

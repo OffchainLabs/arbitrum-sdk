@@ -297,7 +297,9 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       parsedLog.afterState.blockHash
     )
     if (!l2Block) {
-      throw new ArbSdkError(`Block not found. ${parsedLog.afterState.blockHash}`)
+      throw new ArbSdkError(
+        `Block not found. ${parsedLog.afterState.blockHash}`
+      )
     }
     if (l2Block.sendRoot !== parsedLog.afterState.sendRoot) {
       throw new ArbSdkError(
@@ -326,7 +328,8 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       }
     )
 
-    if (logs.length !== 1) throw new ArbSdkError('No NodeConfirmed events found')
+    if (logs.length !== 1)
+      throw new ArbSdkError('No NodeConfirmed events found')
     return await this.getBlockFromNodeLog(
       l2Provider as JsonRpcProvider,
       logs[0]

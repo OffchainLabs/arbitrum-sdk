@@ -206,7 +206,7 @@ describe('Ether', async () => {
       await withdrawMessage.status(l2Signer.provider!),
       'executed status'
     ).to.eq(L2ToL1MessageStatus.EXECUTED)
-    
+
     console.log(
       `This number should be zero...? ${initialBalance
         .sub(totalEth)

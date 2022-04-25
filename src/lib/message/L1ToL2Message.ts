@@ -76,9 +76,8 @@ export enum L1ToL2MessageStatus {
  * If T is of type Signer then L1ToL2MessageReaderOrWriter<T> will be of
  * type L1ToL2MessageWriter.
  */
-export type L1ToL2MessageReaderOrWriter<
-  T extends SignerOrProvider
-> = T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
+export type L1ToL2MessageReaderOrWriter<T extends SignerOrProvider> =
+  T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
 
 export abstract class L1ToL2Message {
   /**
@@ -252,11 +251,12 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     if (!this.retryableCreationReceipt) {
       if (confirmations || timeout) {
         try {
-          this.retryableCreationReceipt = await this.l2Provider.waitForTransaction(
-            this.retryableCreationId,
-            confirmations,
-            timeout
-          )
+          this.retryableCreationReceipt =
+            await this.l2Provider.waitForTransaction(
+              this.retryableCreationId,
+              confirmations,
+              timeout
+            )
         } catch (err) {
           if ((err as Error).message.includes('timeout exceeded')) {
             // return null
@@ -264,9 +264,8 @@ export class L1ToL2MessageReader extends L1ToL2Message {
           } else throw err
         }
       } else {
-        this.retryableCreationReceipt = await this.l2Provider.getTransactionReceipt(
-          this.retryableCreationId
-        )
+        this.retryableCreationReceipt =
+          await this.l2Provider.getTransactionReceipt(this.retryableCreationId)
       }
     }
 
@@ -444,7 +443,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       await this.getSuccessfulRedeem()
     )
   }
-  
+
   /**
    * Wait for the retryable ticket to be created, for it to be redeemed, and for the l2Tx to be executed.
    * Note: The terminal status of a transaction that only does an eth deposit is FUNDS_DEPOSITED_ON_L2 as
@@ -462,7 +461,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     timeout = 900000
   ): Promise<L1ToL2MessageWaitResult> {
     // try to wait for the retryable ticket to be created
-    let retryableCreationReceipt = await this.getRetryableCreationReceipt(
+    const retryableCreationReceipt = await this.getRetryableCreationReceipt(
       confirmations,
       timeout
     )

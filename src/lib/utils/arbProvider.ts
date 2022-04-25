@@ -157,5 +157,5 @@ export async function getArbBlockByHash<T extends boolean = false>(
 
   return includeTransactions
     ? arbFormatter.blockWithTransactions(l2Block)
-    : ((arbFormatter.block(l2Block) as unknown) as ArbBlockWithTransactions)
+    : (arbFormatter.block(l2Block) as unknown as ArbBlockWithTransactions)
 }

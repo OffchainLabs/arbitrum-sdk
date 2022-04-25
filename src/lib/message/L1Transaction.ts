@@ -125,7 +125,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
   /**
    * Get combined data for any InboxMessageDelivered and MessageDelivered events
    * emitted during this transaction
-   * @returns 
+   * @returns
    */
   public getMessageEvents(): {
     inboxMessageEvent: InboxMessageDeliveredEvent['args']
