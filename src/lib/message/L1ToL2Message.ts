@@ -76,8 +76,9 @@ export enum L1ToL2MessageStatus {
  * If T is of type Signer then L1ToL2MessageReaderOrWriter<T> will be of
  * type L1ToL2MessageWriter.
  */
-export type L1ToL2MessageReaderOrWriter<T extends SignerOrProvider> =
-  T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
+export type L1ToL2MessageReaderOrWriter<
+  T extends SignerOrProvider
+> = T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
 
 export abstract class L1ToL2Message {
   /**
@@ -250,15 +251,15 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   ): Promise<TransactionReceipt> {
     if (!this.retryableCreationReceipt) {
       if (confirmations || timeout) {
-        this.retryableCreationReceipt =
-          await this.l2Provider.waitForTransaction(
-            this.retryableCreationId,
-            confirmations,
-            timeout
-          )
+        this.retryableCreationReceipt = await this.l2Provider.waitForTransaction(
+          this.retryableCreationId,
+          confirmations,
+          timeout
+        )
       } else {
-        this.retryableCreationReceipt =
-          await this.l2Provider.getTransactionReceipt(this.retryableCreationId)
+        this.retryableCreationReceipt = await this.l2Provider.getTransactionReceipt(
+          this.retryableCreationId
+        )
       }
     }
     return this.retryableCreationReceipt
@@ -332,9 +333,9 @@ export class L1ToL2MessageReader extends L1ToL2Message {
         )
         const successfulRedeem = (
           await Promise.all(
-            redeemEvents
-              .map(e => e.retryTxHash)
-              .map(this.l2Provider.getTransactionReceipt)
+            redeemEvents.map(e =>
+              this.l2Provider.getTransactionReceipt(e.retryTxHash)
+            )
           )
         ).filter(r => r.status === 1)
         if (successfulRedeem.length > 1)

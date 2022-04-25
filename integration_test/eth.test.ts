@@ -38,9 +38,6 @@ describe('Ether', async () => {
     await skipIfMainnet(this)
   })
 
-  // CHRIS: TODO: test a high gas price, what's collected on l2, and in redeem?
-  // CHRIS: TODO: what happens to excess gas in a manual redeem
-
   it('transfers ether on l2', async () => {
     const { l2Signer } = await testSetup()
 
@@ -209,10 +206,7 @@ describe('Ether', async () => {
       await withdrawMessage.status(l2Signer.provider!),
       'executed status'
     ).to.eq(L2ToL1MessageStatus.EXECUTED)
-
-    // CHRIS: TODO: check balances and check withdrawal event logs
-
-    // CHRIS: TODO: should calc this
+    
     console.log(
       `This number should be zero...? ${initialBalance
         .sub(totalEth)

@@ -40,7 +40,7 @@ import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
-describe('standard ERC20', () => {
+describe.only('standard ERC20', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
@@ -96,13 +96,7 @@ describe('standard ERC20', () => {
     expect(retryRec.status, 'tx didnt fail').to.eq(expectedStatus)
   }
 
-  // CHRIS: TODO: gas questions
-  // 1. how do we calculate l2gasused - we should have a function for this on the transaction receipt
-  // 2. what happens to left over gas from redeem
-  // 3. what value is returned when I call NodeInterface.estimateGas - it's the value required to call autoRedeem, but no submission cost
-  // 4. is any submission cost paid for plain eth deposits?
-
-  it('deposit with no funds, manual redeem', async () => {
+  it.only('deposit with no funds, manual redeem', async () => {
     const { waitRes } = await depositToken(
       depositAmount,
       testState.l1Token.address,

@@ -169,8 +169,3 @@ describe('sanity checks (read-only)', async () => {
     expect(erc20L2AddressAsPerL2).to.equal(erc20L2AddressAsPerL1)
   })
 })
-
-// CHRIS: TODO: sanity test:
-// 1. send an l1 to l2 message
-// 2. calculate the submission cost
-// 3. check how much arrived - it should be exactly the submission cost
