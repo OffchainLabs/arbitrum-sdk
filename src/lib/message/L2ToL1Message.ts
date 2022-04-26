@@ -123,8 +123,10 @@ const ASSERTION_CREATED_PADDING = 50
 // expected number of L1 blocks that it takes for a validator to confirm an L1 block after the node deadline is passed
 const ASSERTION_CONFIRMED_PADDING = 20
 
+/**
+ * Base functionality for L2->L1 messages
+ */
 export class L2ToL1Message {
-  // CHRIS: TODO: docs
   protected constructor(
     public readonly event: L2ToL1TransactionEvent['args']
   ) {}

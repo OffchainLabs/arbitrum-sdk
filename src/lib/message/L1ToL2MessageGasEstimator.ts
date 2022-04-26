@@ -112,11 +112,10 @@ export class L1ToL2MessageGasEstimator {
       .add(1400)
       .mul(l1BaseFee)
 
-    const costWithPadding = this.percentIncrease(
+    return this.percentIncrease(
       defaultedOptions.base || submissionCost,
       defaultedOptions.percentIncrease
     )
-    return costWithPadding
   }
 
   /**
