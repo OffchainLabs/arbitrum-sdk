@@ -134,7 +134,7 @@ export abstract class L1ToL2Message {
     const fields: any[] = [
       formatNumber(chainId),
       zeroPad(formatNumber(msgNum), 32),
-      from.toString(),
+      from.value,
       formatNumber(l1BaseFee),
 
       formatNumber(l1Value),
