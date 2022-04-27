@@ -39,8 +39,7 @@ export const setGateWays = async (
   type: 'standard' | 'arbCustom',
   overrideGateways: string[] = []
 ): Promise<ContractReceipt> => {
-  const { adminErc20Bridger, l1Signer, l2Network, l2Signer } =
-    await testSetup()
+  const { adminErc20Bridger, l1Signer, l2Network, l2Signer } = await testSetup()
   const l1Provider = l1Signer.provider!
   const l2Provider = l2Signer.provider!
   if (tokens.length === 0) {
@@ -137,10 +136,15 @@ export const checkRetryableStatus = async (l1Hash: string): Promise<void> => {
   const messageStatus = await message.waitForStatus()
 
   const autoRedeemTxnRec = await message.getAutoRedeemAttempt()
-  const autoRedeemTxnHash = autoRedeemTxnRec ? autoRedeemTxnRec.transactionHash : null
+  const autoRedeemTxnHash = autoRedeemTxnRec
+    ? autoRedeemTxnRec.transactionHash
+    : null
 
   const retryableTicketId = message.retryableCreationId
-  const retryableTicketRec = messageStatus.status === L1ToL2MessageStatus.REDEEMED ? messageStatus.l2TxReceipt : null
+  const retryableTicketRec =
+    messageStatus.status === L1ToL2MessageStatus.REDEEMED
+      ? messageStatus.l2TxReceipt
+      : null
 
   console.log('*** autoRedeemTxnHash', autoRedeemTxnHash)
   console.log(
@@ -157,6 +161,9 @@ export const checkRetryableStatus = async (l1Hash: string): Promise<void> => {
     retryableTicketRec ? retryableTicketRec.status : messageStatus.status
   )
   if (retryableTicketRec) {
-    console.log('**** retryableTicket receipt', retryableTicketRec.transactionHash)
+    console.log(
+      '**** retryableTicket receipt',
+      retryableTicketRec.transactionHash
+    )
   }
 }

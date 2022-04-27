@@ -48,9 +48,9 @@ export {
   L2Network,
   getL1Network,
   getL2Network,
-  addCustomNetwork
+  addCustomNetwork,
 } from './lib/dataEntities/networks'
-export { getRawArbTransactionReceipt } from './lib/utils/arbProvider'
+export { getArbTransactionReceipt } from './lib/utils/arbProvider'
 export { InboxTools } from './lib/inbox/inbox'
 export { EventFetcher } from './lib/utils/eventFetcher'
 export * as constants from './lib/dataEntities/constants'

@@ -35,11 +35,14 @@ import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
-import { ArbTsError } from '../dataEntities/errors'
+import { ArbSdkError } from '../dataEntities/errors'
 import { ethers } from 'ethers'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { InboxMessageDeliveredEvent } from '../abi/Inbox'
 import { hexZeroPad } from '@ethersproject/bytes'
+import { RetryableMessageParams } from '../dataEntities/message'
+import { Bridge__factory } from '../abi/factories/Bridge__factory'
+import { MessageDeliveredEvent } from '../abi/Bridge'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -47,20 +50,10 @@ export interface L1ContractTransaction<
   wait(confirmations?: number): Promise<TReceipt>
 }
 // some helper interfaces to reduce the verbosity elsewhere
-export type L1EthDepositTransaction = L1ContractTransaction<
-  L1EthDepositTransactionReceipt
->
-export type L1ContractCallTransaction = L1ContractTransaction<
-  L1ContractCallTransactionReceipt
->
-
-// CHRIS: TODO: remove and use proper abi
-// CHRIS: TODO: remove all console logging in these arbitrum-sdk
-interface TempMessageDeliveredEvent {
-  messageIndex: BigNumber
-  sender: string
-  baseFeeL1: BigNumber
-}
+export type L1EthDepositTransaction =
+  L1ContractTransaction<L1EthDepositTransactionReceipt>
+export type L1ContractCallTransaction =
+  L1ContractTransaction<L1ContractCallTransactionReceipt>
 
 export class L1TransactionReceipt implements TransactionReceipt {
   public readonly to: string
@@ -102,33 +95,23 @@ export class L1TransactionReceipt implements TransactionReceipt {
   }
 
   /**
-   * Get the numbers of any messages created by this transaction
+   * Get any MessageDelivered events that were emitted during this transaction
    * @returns
    */
-  public getMessageDeliveredEvents(): TempMessageDeliveredEvent[] {
-    // CHRIS: TODO: this will work when we have the proper abis
-    // const iface = Bridge__factory.createInterface()
-    const iface = new ethers.utils.Interface([
-      'event MessageDelivered(      uint256 indexed messageIndex,      bytes32 indexed beforeInboxAcc,      address inbox,      uint8 kind,      address sender,      bytes32 messageDataHash,      uint256 baseFeeL1,      uint64 timestamp  )',
-    ])
-
+  public getMessageDeliveredEvents(): MessageDeliveredEvent['args'][] {
+    const iface = Bridge__factory.createInterface()
     const messageDeliveredTopic = iface.getEventTopic(
       iface.getEvent('MessageDelivered')
     )
     return this.logs
       .filter(log => log.topics[0] === messageDeliveredTopic)
-      .map(
-        l => (iface.parseLog(l).args as unknown) as TempMessageDeliveredEvent
-      )
+      .map(l => iface.parseLog(l).args as MessageDeliveredEvent['args'])
   }
 
   /**
-   * Get the numbers of any messages created by this transaction
+   * Get any InboxMessageDelivered events that were emitted during this transaction
    * @returns
    */
-  // TODO: CHRIS: we need to get the sender from the message delivered event
-  // TODO: CHRIS: we should make sure that we dont use any non general stuff here
-  // TOOD: CHRIS: we also need inbox message from origin event
   public getInboxMessageDeliveredEvent(): InboxMessageDeliveredEvent['args'][] {
     const iFace = Inbox__factory.createInterface()
     const inboxMessageDeliveredTopic = iFace.getEventTopic(
@@ -139,15 +122,20 @@ export class L1TransactionReceipt implements TransactionReceipt {
       .map(l => iFace.parseLog(l).args as InboxMessageDeliveredEvent['args'])
   }
 
+  /**
+   * Get combined data for any InboxMessageDelivered and MessageDelivered events
+   * emitted during this transaction
+   * @returns
+   */
   public getMessageEvents(): {
     inboxMessageEvent: InboxMessageDeliveredEvent['args']
-    bridgeMessageEvent: TempMessageDeliveredEvent
+    bridgeMessageEvent: MessageDeliveredEvent['args']
   }[] {
     const bridgeMessages = this.getMessageDeliveredEvents()
     const inboxMessages = this.getInboxMessageDeliveredEvent()
 
     if (bridgeMessages.length !== inboxMessages.length) {
-      throw new ArbTsError(
+      throw new ArbSdkError(
         `Unexpected missing events. Inbox message count: ${
           inboxMessages.length
         } does not equal bridge message count: ${
@@ -158,12 +146,12 @@ export class L1TransactionReceipt implements TransactionReceipt {
 
     const messages: {
       inboxMessageEvent: InboxMessageDeliveredEvent['args']
-      bridgeMessageEvent: TempMessageDeliveredEvent
+      bridgeMessageEvent: MessageDeliveredEvent['args']
     }[] = []
     for (const bm of bridgeMessages) {
       const im = inboxMessages.filter(i => i.messageNum.eq(bm.messageIndex))[0]
       if (!im) {
-        throw new ArbTsError(
+        throw new ArbSdkError(
           `Unexepected missing event for message index: ${bm.messageIndex.toString()}. ${JSON.stringify(
             inboxMessages
           )}`
@@ -180,11 +168,11 @@ export class L1TransactionReceipt implements TransactionReceipt {
 
   private parseInboxMessage(
     inboxMessageDeliveredEvent: InboxMessageDeliveredEvent['args']
-  ) {
+  ): RetryableMessageParams {
     // decode the data field - is been packed so we cant decode the bytes field this way
     const parsed = ethers.utils.defaultAbiCoder.decode(
       [
-        'uint256', // dest // CHRIS: TODO: why dont we just encode these as addresses?
+        'uint256', // dest
         'uint256', // l2 call balue
         'uint256', // msg val
         'uint256', // max submission
@@ -194,35 +182,32 @@ export class L1TransactionReceipt implements TransactionReceipt {
         'uint256', // gas price bid
         'uint256', // data length
       ],
+      // decode from the first 9 words
       inboxMessageDeliveredEvent.data.substring(0, 64 * 9 + 2)
-    )
+    ) as BigNumber[]
 
-    // CHRIS: TODO: we shouldnt decode addresses this way - since leading zeros get lost
-    const destAddress = ethers.utils.getAddress(
-      hexZeroPad((parsed[0] as BigNumber).toHexString(), 20)
-    )
-    const l2CallValue = parsed[1] as BigNumber
-    const l1Value = parsed[2] as BigNumber
-    const maxSubmissionCost = parsed[3] as BigNumber
-    const excessFeeRefundAddress = ethers.utils.getAddress(
-      hexZeroPad((parsed[4] as BigNumber).toHexString(), 20)
-    )
-    const callValueRefundAddress = ethers.utils.getAddress(
-      hexZeroPad((parsed[5] as BigNumber).toHexString(), 20)
-    )
-    const maxGas = parsed[6] as BigNumber
-    const gasPriceBid = parsed[7] as BigNumber
+    const addressFromBigNumber = (bn: BigNumber) =>
+      ethers.utils.getAddress(hexZeroPad(bn.toHexString(), 20))
+
+    const destAddress = addressFromBigNumber(parsed[0])
+    const l2CallValue = parsed[1]
+    const l1Value = parsed[2]
+    const maxSubmissionFee = parsed[3]
+    const excessFeeRefundAddress = addressFromBigNumber(parsed[4])
+    const callValueRefundAddress = addressFromBigNumber(parsed[5])
+    const gasLimit = parsed[6]
+    const maxFeePerGas = parsed[7]
     const data = '0x' + inboxMessageDeliveredEvent.data.substring(64 * 9 + 2)
 
     return {
       destAddress,
       l2CallValue,
       l1Value,
-      maxSubmissionCost,
+      maxSubmissionFee: maxSubmissionFee,
       excessFeeRefundAddress,
       callValueRefundAddress,
-      maxGas,
-      gasPriceBid,
+      gasLimit,
+      maxFeePerGas,
       data,
     }
   }
@@ -245,29 +230,13 @@ export class L1TransactionReceipt implements TransactionReceipt {
 
     return messages.map(mn => {
       const inboxMessageData = this.parseInboxMessage(mn.inboxMessageEvent)
-      console.log(inboxMessageData)
-
-      const ticketCreationHash = L1ToL2Message.calculateSubmitRetryableId(
-        BigNumber.from(chainID),
-
+      return L1ToL2Message.fromTxComponents(
+        l2SignerOrProvider,
+        BigNumber.from(chainID).toNumber(),
         mn.bridgeMessageEvent.sender,
         mn.inboxMessageEvent.messageNum,
         mn.bridgeMessageEvent.baseFeeL1,
-
-        inboxMessageData.destAddress,
-        inboxMessageData.l2CallValue,
-        inboxMessageData.l1Value,
-        inboxMessageData.maxSubmissionCost,
-        inboxMessageData.excessFeeRefundAddress,
-        inboxMessageData.callValueRefundAddress,
-        inboxMessageData.maxGas,
-        inboxMessageData.gasPriceBid,
-        inboxMessageData.data
-      )
-      return L1ToL2Message.fromRetryableCreationId(
-        l2SignerOrProvider,
-        ticketCreationHash,
-        mn.inboxMessageEvent.messageNum
+        inboxMessageData
       )
     })
   }
@@ -290,16 +259,16 @@ export class L1TransactionReceipt implements TransactionReceipt {
     const allL1ToL2Messages = await this.getL1ToL2Messages(l2SignerOrProvider)
     const messageCount = allL1ToL2Messages.length
     if (!messageCount)
-      throw new ArbTsError(
+      throw new ArbSdkError(
         `No l1 to L2 message found for ${this.transactionHash}`
       )
 
     if (messageIndex !== undefined && messageIndex >= messageCount)
-      throw new ArbTsError(
+      throw new ArbSdkError(
         `Provided message number out of range for ${this.transactionHash}; index was ${messageIndex}, but only ${messageCount} messages`
       )
     if (messageIndex === undefined && messageCount > 1)
-      throw new ArbTsError(
+      throw new ArbSdkError(
         `${messageCount} L2 messages for ${this.transactionHash}; must provide messageNumberIndex (or use (signersAndProviders, l1Txn))`
       )
 

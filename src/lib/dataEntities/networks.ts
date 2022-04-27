@@ -18,7 +18,7 @@
 
 import dotenv from 'dotenv'
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
-import { ArbTsError } from '../dataEntities/errors'
+import { ArbSdkError } from '../dataEntities/errors'
 import { SEVEN_DAYS_IN_SECONDS } from './constants'
 
 dotenv.config()
@@ -152,7 +152,7 @@ export const l1Networks: L1Networks = {
     chainID: 1338,
     name: 'Hardhat_Mainnet_Fork',
     explorerUrl: 'https://etherscan.io',
-    partnerChainIDs: [42161], // TODO: use sequencer fork ID
+    partnerChainIDs: [42161],
     blockTime: 1,
     rpcURL: 'http://127.0.0.1:8545/',
     isCustom: false,
@@ -165,7 +165,7 @@ export const l1Networks: L1Networks = {
     blockTime: 15,
     rpcURL: process.env['RINKEBY_RPC'] as string,
     isCustom: false,
-  }
+  },
 }
 
 export const l2Networks: L2Networks = {
@@ -180,7 +180,7 @@ export const l2Networks: L2Networks = {
     confirmPeriodBlocks: 45818,
     rpcURL: process.env['ARB_ONE_RPC'] || 'https://arb1.arbitrum.io/rpc',
     isCustom: false,
-    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS
+    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
   },
   421611: {
     chainID: 421611,
@@ -193,8 +193,8 @@ export const l2Networks: L2Networks = {
     confirmPeriodBlocks: 6545, // TODO
     rpcURL: process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc',
     isCustom: false,
-    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS
-  }
+    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
+  },
 }
 
 const getNetwork = async (
@@ -217,7 +217,7 @@ const getNetwork = async (
   if (networks[chainID]) {
     return networks[chainID]
   } else {
-    throw new ArbTsError(`Unrecognized network ${chainID}.`)
+    throw new ArbSdkError(`Unrecognized network ${chainID}.`)
   }
 }
 
@@ -270,6 +270,36 @@ export const addCustomNetwork = ({
   if (!l1PartnerChain.partnerChainIDs.includes(customL2Network.chainID)) {
     l1PartnerChain.partnerChainIDs.push(customL2Network.chainID)
   }
+}
+
+/**
+ * New outboxes can be added to the bridge, and withdrawals always use the latest outbox.
+ * This function finds the outbox address for a supplied batch number
+ * @param network
+ * @param batchNumber
+ * @returns
+ */
+export const getOutboxAddr = (network: L2Network, batchNumber: number) => {
+  // find the outbox where the activation batch number of the next outbox
+  // is greater than the supplied batch
+  const res = Object.entries(network.ethBridge.outboxes)
+    .sort((a, b) => {
+      if (a[1] < b[1]) return -1
+      else if (a[1] === b[1]) return 0
+      else return 1
+    })
+    .find(
+      (_, index, array) =>
+        array[index + 1] === undefined || array[index + 1][1] > batchNumber
+    )
+
+  if (!res) {
+    throw new ArbSdkError(
+      `No outbox found for batch number: ${batchNumber} on network: ${network.chainID}.`
+    )
+  }
+
+  return res[0]
 }
 
 export const isL1Network = (

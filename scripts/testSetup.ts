@@ -32,22 +32,18 @@ import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { execSync } from 'child_process'
 import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
-import { RollupAdminFacet__factory } from '../src/lib/abi/factories/RollupAdminFacet__factory'
+import { RollupAdminLogic__factory } from '../src/lib/abi/factories/RollupAdminLogic__factory'
 import { deployErc20AndInit } from './deployBridge'
 import * as path from 'path'
 import * as fs from 'fs'
-import { Inbox__factory } from '../src/lib/abi/factories/Inbox__factory'
 
 dotenv.config()
 
-// CHRIS: TODO: find all usages of the process.env, and streamline and update the .env-sample
 export const config = {
   arbUrl: process.env['ARB_URL'] as string,
   ethUrl: process.env['ETH_URL'] as string,
-  arbGenesisKey: process.env['ARB_GENESIS_KEY'] as string
+  arbGenesisKey: process.env['ARB_GENESIS_KEY'] as string,
 }
-
-// CHRIS: TODO: check everything in the /scripts folder
 
 export const getCustomNetworks = async (
   l1Url: string,
@@ -69,20 +65,20 @@ export const getCustomNetworks = async (
     ).toString()
   }
   const parsedDeploymentData = JSON.parse(deploymentData) as {
-    Bridge: string
-    Inbox: string
-    SequencerInbox: string
-    Rollup: string
+    bridge: string
+    inbox: string
+    ['sequencer-inbox']: string
+    rollup: string
   }
 
-  const rollup = RollupAdminFacet__factory.connect(
-    parsedDeploymentData.Rollup,
+  const rollup = RollupAdminLogic__factory.connect(
+    parsedDeploymentData.rollup,
     l1Provider
   )
   const confirmPeriodBlocks = await rollup.confirmPeriodBlocks()
 
   const bridge = Bridge__factory.connect(
-    parsedDeploymentData.Bridge,
+    parsedDeploymentData.bridge,
     l1Provider
   )
   const outboxAddr = await bridge.allowedOutboxList(0)
@@ -104,13 +100,13 @@ export const getCustomNetworks = async (
     chainID: l2NetworkInfo.chainId,
     confirmPeriodBlocks: confirmPeriodBlocks.toNumber(),
     ethBridge: {
-      bridge: parsedDeploymentData.Bridge,
-      inbox: parsedDeploymentData.Inbox,
+      bridge: parsedDeploymentData.bridge,
+      inbox: parsedDeploymentData.inbox,
       outboxes: {
         [outboxAddr]: 0,
       },
-      rollup: parsedDeploymentData.Rollup,
-      sequencerInbox: parsedDeploymentData.SequencerInbox,
+      rollup: parsedDeploymentData.rollup,
+      sequencerInbox: parsedDeploymentData['sequencer-inbox'],
     },
     explorerUrl: '',
     isArbitrum: true,
@@ -118,7 +114,7 @@ export const getCustomNetworks = async (
     name: 'ArbLocal',
     partnerChainID: l1NetworkInfo.chainId,
     rpcURL: l2Url,
-    retryableLifetimeSeconds: 7 * 24 * 60 * 60
+    retryableLifetimeSeconds: 7 * 24 * 60 * 60,
   }
   return {
     l1Network,
@@ -246,7 +242,7 @@ export const testSetup = async (): Promise<{
         l1Deployer,
         l2Deployer,
         config.ethUrl,
-        config.arbUrl,
+        config.arbUrl
       )
       setL1Network = l1Network
       setL2Network = l2Network

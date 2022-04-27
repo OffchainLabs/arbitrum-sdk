@@ -152,12 +152,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   it('L1 and L2 implementations of calculateL2ERC20Address match', async () => {
-    const {
-      l1Signer,
-      l2Signer,
-      l2Network,
-      erc20Bridger,
-    } = await testSetup()
+    const { l1Signer, l2Signer, l2Network, erc20Bridger } = await testSetup()
 
     const address = hexlify(randomBytes(20))
 
@@ -174,8 +169,3 @@ describe('sanity checks (read-only)', async () => {
     expect(erc20L2AddressAsPerL2).to.equal(erc20L2AddressAsPerL1)
   })
 })
-
-// CHRIS: TODO: sanity test:
-// 1. send an l1 to l2 message
-// 2. calculate the submission cost
-// 3. check how much arrived - it should be exactly the submission cost

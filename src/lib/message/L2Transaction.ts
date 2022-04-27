@@ -16,12 +16,10 @@
 /* eslint-env node */
 'use strict'
 
-import { JsonRpcProvider, TransactionReceipt } from '@ethersproject/providers'
+import { TransactionReceipt } from '@ethersproject/providers'
 import { BigNumber } from '@ethersproject/bignumber'
-import { Log, Provider } from '@ethersproject/abstract-provider'
-import { Contract, ContractTransaction, providers } from 'ethers'
-import { getL2Network, L2Network } from '../dataEntities/networks'
-import { ArbTsError } from '../dataEntities/errors'
+import { Log } from '@ethersproject/abstract-provider'
+import { ContractTransaction, providers } from 'ethers'
 import {
   SignerProviderUtils,
   SignerOrProvider,
@@ -31,13 +29,20 @@ import {
   L2ToL1MessageReaderOrWriter,
   L2ToL1Message,
   L2ToL1MessageWriter,
-  L2ToL1Event,
 } from './L2ToL1Message'
-import { getRawArbTransactionReceipt } from '../..'
-import { Interface } from 'ethers/lib/utils'
+import { getArbTransactionReceipt } from '../..'
+import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
+import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
+import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
+import { L2ToL1TransactionEvent } from '../abi/ArbSys'
+import { ArbSdkError } from '../dataEntities/errors'
 
 export interface L2ContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<L2TransactionReceipt>
+}
+
+export interface RedeemTransaction extends L2ContractTransaction {
+  waitForRedeem: () => Promise<TransactionReceipt>
 }
 
 export class L2TransactionReceipt implements TransactionReceipt {
@@ -83,74 +88,30 @@ export class L2TransactionReceipt implements TransactionReceipt {
    * Get an L2ToL1Transaction events created by this transaction
    * @returns
    */
-  public getL2ToL1Events(): L2ToL1Event[] {
-    // CHRIS: TODO: use the proper event and ABI
-    // const iface = ArbSys__factory.createInterface()
-    const iface = new Interface([
-      'event L2ToL1Transaction( address caller, address indexed destination, uint256 indexed hash, uint256 indexed position, uint256 indexInBatch, uint256 arbBlockNum, uint256 ethBlockNum, uint256 timestamp, uint256 callvalue, bytes data    );',
-    ])
+  public getL2ToL1Events(): L2ToL1TransactionEvent['args'][] {
+    const iface = ArbSys__factory.createInterface()
     const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
     const eventTopic = iface.getEventTopic(l2ToL1Event)
     const logs = this.logs.filter(log => log.topics[0] === eventTopic)
 
-    return logs.map(log => (iface.parseLog(log).args as unknown) as L2ToL1Event)
+    return logs.map(
+      log => iface.parseLog(log).args as L2ToL1TransactionEvent['args']
+    )
   }
 
   /**
    * Get event data for any redeems that were scheduled in this transaction
    * @returns
    */
-  public getRedeemScheduledEvents(): {
-    ticketId: string
-    retryTxHash: string
-    sequenceNum: BigNumber
-    donatedGas: BigNumber
-    gasDonor: string
-  }[] {
-    // CHRIS: TODO: use the proper ABI here and in the return sig of this function
-    const iFace = new Interface([
-      'event RedeemScheduled(     bytes32 indexed ticketId,     bytes32 indexed retryTxHash,     uint64 indexed sequenceNum,     uint64 donatedGas,     address gasDonor )',
-    ])
+  public getRedeemScheduledEvents(): RedeemScheduledEvent['args'][] {
+    const iFace = ArbRetryableTx__factory.createInterface()
     const redeemTopic = iFace.getEventTopic('RedeemScheduled')
     const redeemScheduledEvents = this.logs.filter(
       l => l.topics[0] === redeemTopic
     )
     return redeemScheduledEvents.map(
-      r =>
-        (iFace.parseLog(r).args as unknown) as {
-          ticketId: string
-          retryTxHash: string
-          sequenceNum: BigNumber
-          donatedGas: BigNumber
-          gasDonor: string
-        }
+      r => iFace.parseLog(r).args as RedeemScheduledEvent['args']
     )
-  }
-
-  private getOutboxAddr(network: L2Network, batchNumber: BigNumber) {
-    // find the outbox where the activation batch number of the next outbox
-    // is greater than the supplied batch
-    const res = Object.entries(network.ethBridge.outboxes)
-      .sort((a, b) => {
-        if (a[1] < b[1]) return -1
-        else if (a[1] === b[1]) return 0
-        else return 1
-      })
-      .find(
-        (_, index, array) =>
-          array[index + 1] === undefined ||
-          array[index + 1][1] > batchNumber.toNumber()
-      )
-
-    if (!res) {
-      throw new ArbTsError(
-        `No outbox found for batch number: ${batchNumber.toString()} on network: ${
-          network.chainID
-        }.`
-      )
-    }
-
-    return res[0]
   }
 
   /**
@@ -158,47 +119,41 @@ export class L2TransactionReceipt implements TransactionReceipt {
    * @param l2SignerOrProvider
    */
   public async getL2ToL1Messages<T extends SignerOrProvider>(
-    l1SignerOrProvider: T,
-    l2Network: L2Network
+    l1SignerOrProvider: T
   ): Promise<L2ToL1MessageReaderOrWriter<T>[]>
   public async getL2ToL1Messages<T extends SignerOrProvider>(
-    l1SignerOrProvider: T,
-    l2Network: L2Network
+    l1SignerOrProvider: T
   ): Promise<L2ToL1MessageReader[] | L2ToL1MessageWriter[]> {
     const provider = SignerProviderUtils.getProvider(l1SignerOrProvider)
     if (!provider) throw new Error('Signer not connected to provider.')
 
-    return this.getL2ToL1Events().map(log => {
-      const outboxAddr = this.getOutboxAddr(
-        l2Network,
-        BigNumber.from(1) // log.batchNumber, CHRIS: TODO: broken
-      )
-
-      return L2ToL1Message.fromEvent(
-        l1SignerOrProvider,
-        outboxAddr,
-        log,
-      )
-    })
+    return this.getL2ToL1Events().map(log =>
+      L2ToL1Message.fromEvent(l1SignerOrProvider, log)
+    )
   }
 
   /**
    * Whether the data associated with this transaction has been
    * made available on L1
+   * @param l2Provider
+   * @param confirmations The number of confirmations on the batch before data is to be considered available
+   * @returns
    */
   public async isDataAvailable(
     l2Provider: providers.JsonRpcProvider,
-    l1Provider: providers.JsonRpcProvider
+    confirmations = 10
   ): Promise<boolean> {
-    const arbReceipt = await getRawArbTransactionReceipt(
+    const arbReceipt = await getArbTransactionReceipt(
       l2Provider,
       this.transactionHash,
-      l1Provider
+      false,
+      true
     )
 
-    // Data is made available in batches, if the batch info is
-    // available then so is the tx data
-    return !!arbReceipt?.l1InboxBatchInfo
+    if (!arbReceipt) return false
+
+    // is there a batch with enough confirmations
+    return arbReceipt.l1BatchConfirmations > confirmations
   }
 
   /**
@@ -219,5 +174,34 @@ export class L2TransactionReceipt implements TransactionReceipt {
       return new L2TransactionReceipt(result)
     }
     return contractTransaction as L2ContractTransaction
+  }
+
+  /**
+   * Adds a waitForRedeem function to a redeem transaction
+   * @param redeemTx
+   * @param l2Provider
+   * @returns
+   */
+  public static toRedeemTransaction(
+    redeemTx: L2ContractTransaction,
+    l2Provider: providers.Provider
+  ): RedeemTransaction {
+    const returnRec = redeemTx as RedeemTransaction
+    returnRec.waitForRedeem = async () => {
+      const rec = await redeemTx.wait()
+
+      const redeemScheduledEvents = await rec.getRedeemScheduledEvents()
+
+      if (redeemScheduledEvents.length !== 1) {
+        throw new ArbSdkError(
+          `Transaction is not a redeem transaction: ${rec.transactionHash}`
+        )
+      }
+
+      return await l2Provider.getTransactionReceipt(
+        redeemScheduledEvents[0].retryTxHash
+      )
+    }
+    return returnRec
   }
 }

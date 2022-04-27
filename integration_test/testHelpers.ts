@@ -17,7 +17,6 @@
 'use strict'
 
 import { expect } from 'chai'
-import yargs from 'yargs/yargs'
 import chalk from 'chalk'
 
 import { BigNumber } from '@ethersproject/bignumber'
@@ -28,24 +27,11 @@ import { parseEther } from '@ethersproject/units'
 import { config, testSetup } from '../scripts/testSetup'
 
 import { Signer } from 'ethers'
-import {
-  EthBridger,
-  InboxTools,
-  Erc20Bridger,
-  L1ToL2MessageStatus,
-} from '../src'
-import { L1Network, L2Network } from '../src/lib/dataEntities/networks'
-import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
+import { Erc20Bridger, L1ToL2MessageStatus, L2ToL1MessageStatus } from '../src'
+import { L2Network } from '../src/lib/dataEntities/networks'
 import { GasOverrides } from '../src/lib/message/L1ToL2MessageGasEstimator'
-import { ArbTsError } from '../src/lib/dataEntities/errors'
-
-const argv = yargs(process.argv.slice(2))
-  .options({
-    networkID: {
-      type: 'string',
-    },
-  })
-  .parseSync()
+import { ArbSdkError } from '../src/lib/dataEntities/errors'
+import { ERC20 } from '../src/lib/abi/ERC20'
 
 export const preFundAmount = parseEther('0.1')
 
@@ -59,10 +45,127 @@ export const warn = (text: string): void => {
   console.log()
 }
 
-export enum ExpectedGatewayType {
+export enum GatewayType {
   STANDARD = 1,
   CUSTOM = 2,
   WETH = 3,
+}
+
+interface WithdrawalParams {
+  startBalance: BigNumber
+  amount: BigNumber
+  erc20Bridger: Erc20Bridger
+  l1Token: ERC20
+  l2Signer: Signer
+  l1Signer: Signer
+  gatewayType: GatewayType
+}
+
+/**
+ * Withdraws a token and tests that it occurred correctly
+ * @param params
+ */
+export const withdrawToken = async (params: WithdrawalParams) => {
+  const withdrawRes = await params.erc20Bridger.withdraw({
+    amount: params.amount,
+    erc20l1Address: params.l1Token.address,
+    l2Signer: params.l2Signer,
+  })
+  const withdrawRec = await withdrawRes.wait()
+  expect(withdrawRec.status).to.equal(1, 'initiate token withdraw txn failed')
+
+  const message = (await withdrawRec.getL2ToL1Messages(params.l1Signer))[0]
+  expect(message, 'withdraw message not found').to.exist
+
+  const messageStatus = await message.status(params.l2Signer.provider!)
+  expect(messageStatus, `invalid withdraw status`).to.eq(
+    L2ToL1MessageStatus.UNCONFIRMED
+  )
+
+  const l2TokenAddr = await params.erc20Bridger.getL2ERC20Address(
+    params.l1Token.address,
+    params.l1Signer.provider!
+  )
+  const l2Token = params.erc20Bridger.getL2TokenContract(
+    params.l2Signer.provider!,
+    l2TokenAddr
+  )
+  const testWalletL2Balance = await l2Token.balanceOf(
+    await params.l2Signer.getAddress()
+  )
+  expect(
+    testWalletL2Balance.toNumber(),
+    'token withdraw balance not deducted'
+  ).to.eq(params.startBalance.sub(params.amount).toNumber())
+  const walletAddress = await params.l1Signer.getAddress()
+
+  const gatewayAddress = await params.erc20Bridger.getL2GatewayAddress(
+    params.l1Token.address,
+    params.l2Signer.provider!
+  )
+
+  const { expectedL2Gateway } = getGateways(
+    params.gatewayType,
+    params.erc20Bridger.l2Network
+  )
+  expect(gatewayAddress, 'Gateway is not custom gateway').to.eq(
+    expectedL2Gateway
+  )
+
+  const gatewayWithdrawEvents = await params.erc20Bridger.getL2WithdrawalEvents(
+    params.l2Signer.provider!,
+    gatewayAddress,
+    { fromBlock: withdrawRec.blockNumber, toBlock: 'latest' },
+    params.l1Token.address,
+    walletAddress
+  )
+  expect(gatewayWithdrawEvents.length).to.equal(1, 'token query failed')
+
+  const balBefore = await params.l1Token.balanceOf(
+    await params.l1Signer.getAddress()
+  )
+  await message.waitUntilReadyToExecute(params.l2Signer.provider!)
+  expect(
+    await message.status(params.l2Signer.provider!),
+    'confirmed status'
+  ).to.eq(L2ToL1MessageStatus.CONFIRMED)
+
+  const execTx = await message.execute(params.l2Signer.provider!)
+
+  await execTx.wait()
+  expect(
+    await message.status(params.l2Signer.provider!),
+    'executed status'
+  ).to.eq(L2ToL1MessageStatus.EXECUTED)
+
+  const balAfter = await params.l1Token.balanceOf(
+    await params.l1Signer.getAddress()
+  )
+  expect(balBefore.add(params.amount).toString(), 'Not withdrawn').to.eq(
+    balAfter.toString()
+  )
+}
+
+const getGateways = (gatewayType: GatewayType, l2Network: L2Network) => {
+  switch (gatewayType) {
+    case GatewayType.CUSTOM:
+      return {
+        expectedL1Gateway: l2Network.tokenBridge.l1CustomGateway,
+        expectedL2Gateway: l2Network.tokenBridge.l2CustomGateway,
+      }
+    case GatewayType.STANDARD:
+      return {
+        expectedL1Gateway: l2Network.tokenBridge.l1ERC20Gateway,
+        expectedL2Gateway: l2Network.tokenBridge.l2ERC20Gateway,
+      }
+    case GatewayType.WETH:
+      return {
+        expectedL1Gateway: l2Network.tokenBridge.l1WethGateway,
+        expectedL2Gateway: l2Network.tokenBridge.l2WethGateway,
+      }
+    default:
+      throw new ArbSdkError(`Unexpected gateway type: ${gatewayType}`)
+  }
 }
 
 /**
@@ -80,8 +183,8 @@ export const depositToken = async (
   l1Signer: Signer,
   l2Signer: Signer,
   expectedStatus: L1ToL2MessageStatus,
-  expectedGatewayType: ExpectedGatewayType,
-  retryableOverrides?: Omit<GasOverrides, 'sendL2CallValueFromL1'>
+  expectedGatewayType: GatewayType,
+  retryableOverrides?: GasOverrides
 ) => {
   await (
     await erc20Bridger.approveToken({
@@ -108,6 +211,7 @@ export const depositToken = async (
   const initialBridgeTokenBalance = await l1Token.balanceOf(
     expectedL1GatewayAddress
   )
+  const userBalBefore = await l1Token.balanceOf(await l1Signer.getAddress())
 
   const depositRes = await erc20Bridger.deposit({
     l1Signer: l1Signer,
@@ -121,43 +225,34 @@ export const depositToken = async (
   const finalBridgeTokenBalance = await l1Token.balanceOf(
     expectedL1GatewayAddress
   )
-
   expect(
-    initialBridgeTokenBalance.add(depositAmount).toNumber(),
+    finalBridgeTokenBalance.toNumber(),
     'bridge balance not updated after L1 token deposit txn'
-  ).to.eq(finalBridgeTokenBalance.toNumber())
+  ).to.eq(
+    // for weth the eth is actually withdrawn, rather than transferred
+    expectedGatewayType === GatewayType.WETH
+      ? 0
+      : initialBridgeTokenBalance.add(depositAmount).toNumber()
+  )
+  const userBalAfter = await l1Token.balanceOf(await l1Signer.getAddress())
+  expect(userBalAfter.toString(), 'user bal after').to.eq(
+    userBalBefore.sub(depositAmount).toString()
+  )
 
   const waitRes = await depositRec.waitForL2(l2Signer)
 
   expect(waitRes.status, 'Unexpected status').to.eq(expectedStatus)
-  if (!!retryableOverrides) {
+  if (retryableOverrides) {
     return {
       l1Token,
       waitRes,
     }
   }
 
-  const { expectedL1Gateway, expectedL2Gateway } = (() => {
-    switch (expectedGatewayType) {
-      case ExpectedGatewayType.CUSTOM:
-        return {
-          expectedL1Gateway: erc20Bridger.l2Network.tokenBridge.l1CustomGateway,
-          expectedL2Gateway: erc20Bridger.l2Network.tokenBridge.l2CustomGateway,
-        }
-      case ExpectedGatewayType.STANDARD:
-        return {
-          expectedL1Gateway: erc20Bridger.l2Network.tokenBridge.l1ERC20Gateway,
-          expectedL2Gateway: erc20Bridger.l2Network.tokenBridge.l2ERC20Gateway,
-        }
-      case ExpectedGatewayType.WETH:
-        return {
-          expectedL1Gateway: erc20Bridger.l2Network.tokenBridge.l1WethGateway,
-          expectedL2Gateway: erc20Bridger.l2Network.tokenBridge.l2WethGateway,
-        }
-      default:
-        throw new ArbTsError(`Unexpected gateway type: ${expectedGatewayType}`)
-    }
-  })()
+  const { expectedL1Gateway, expectedL2Gateway } = getGateways(
+    expectedGatewayType,
+    erc20Bridger.l2Network
+  )
 
   const l1Gateway = await erc20Bridger.getL1GatewayAddress(
     l1TokenAddress,
@@ -217,7 +312,7 @@ export const fundL2 = async (
   amount?: BigNumber
 ): Promise<void> => {
   const testWalletAddress = await l2Signer.getAddress()
-  const arbGenesisWallet = new Wallet(config.arbGenesisKey);
+  const arbGenesisWallet = new Wallet(config.arbGenesisKey)
   await (
     await arbGenesisWallet.connect(l2Signer.provider!).sendTransaction({
       to: testWalletAddress,

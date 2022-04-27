@@ -21,7 +21,7 @@ import { ContractReceipt } from '@ethersproject/contracts'
 import { testSetup } from '../scripts/testSetup'
 import args from './getCLargs'
 import { L1TransactionReceipt } from '../src/lib/message/L1Transaction'
-import { L1ToL2Message, L1ToL2MessageReader, L1ToL2MessageStatus, L1ToL2MessageWriter } from '../src'
+import { L1ToL2MessageStatus, L1ToL2MessageWriter } from '../src'
 import { fundL2 } from '../integration_test/testHelpers'
 
 if (!args.txid) {
@@ -43,12 +43,12 @@ if (!l1Txn) {
     await l1Provider.getTransactionReceipt(l1Txn)
   )
   const l1ToL2Message = await l1Receipt.getL1ToL2Message(l2Signer)
-  if (l1ToL2Message instanceof L1ToL2MessageWriter){
+  if (l1ToL2Message instanceof L1ToL2MessageWriter) {
     const redeemStatus = (await l1ToL2Message.waitForStatus()).status
-    if (redeemStatus == L1ToL2MessageStatus.REDEEMED){
+    if (redeemStatus == L1ToL2MessageStatus.REDEEMED) {
       const redeemTx = await l1ToL2Message.getSuccessfulRedeem()
       console.log(`Already redeemed ${redeemTx!.transactionHash}`)
-      return;
+      return
     }
     const res = await l1ToL2Message.redeem()
     const rec = await res.wait()

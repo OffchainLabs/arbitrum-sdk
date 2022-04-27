@@ -30,7 +30,7 @@ import { l1Networks, L2Network } from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
 import { MultiCaller, CallInput } from '../utils/multicall'
-import { ArbTsError } from '../dataEntities/errors'
+import { ArbSdkError } from '../dataEntities/errors'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
@@ -50,7 +50,7 @@ export class InboxTools {
     this.l1Provider = SignerProviderUtils.getProviderOrThrow(this.l1Signer)
     this.l1Network = l1Networks[l2Network.partnerChainID]
     if (!this.l1Network)
-      throw new ArbTsError(
+      throw new ArbSdkError(
         `L1Network not found for chain id: ${l2Network.partnerChainID}.`
       )
   }
@@ -73,7 +73,6 @@ export class InboxTools {
 
     // we take a long average block time of 14s
     // and always move at least 10 blocks
-
     const diffBlocks = Math.max(Math.ceil(diff / this.l1Network.blockTime), 10)
 
     return await this.findFirstBlockBelow(
@@ -95,28 +94,17 @@ export class InboxTools {
 
     const multicall = await MultiCaller.fromProvider(this.l1Provider)
     const multicallInput: [
-      CallInput<Awaited<ReturnType<SequencerInbox['maxDelayBlocks']>>>,
-      CallInput<Awaited<ReturnType<SequencerInbox['maxDelaySeconds']>>>,
+      CallInput<Awaited<ReturnType<SequencerInbox['maxTimeVariation']>>>,
       ReturnType<MultiCaller['getBlockNumberInput']>,
       ReturnType<MultiCaller['getCurrentBlockTimestampInput']>
     ] = [
       {
         targetAddr: sequencerInbox.address,
         encoder: () =>
-          sequencerInbox.interface.encodeFunctionData('maxDelayBlocks'),
+          sequencerInbox.interface.encodeFunctionData('maxTimeVariation'),
         decoder: (returnData: string) =>
           sequencerInbox.interface.decodeFunctionResult(
-            'maxDelayBlocks',
-            returnData
-          )[0],
-      },
-      {
-        targetAddr: sequencerInbox.address,
-        encoder: () =>
-          sequencerInbox.interface.encodeFunctionData('maxDelaySeconds'),
-        decoder: (returnData: string) =>
-          sequencerInbox.interface.decodeFunctionResult(
-            'maxDelaySeconds',
+            'maxTimeVariation',
             returnData
           )[0],
       },
@@ -124,17 +112,14 @@ export class InboxTools {
       multicall.getCurrentBlockTimestampInput(),
     ]
 
-    const [
-      maxDelayBlocks,
-      maxDelaySeconds,
-      currentBlockNumber,
-      currentBlockTimestamp,
-    ] = await multicall.multiCall(multicallInput, true)
+    const [maxTimeVariation, currentBlockNumber, currentBlockTimestamp] =
+      await multicall.multiCall(multicallInput, true)
 
     const firstEligibleBlockNumber =
-      currentBlockNumber.toNumber() - maxDelayBlocks.toNumber()
+      currentBlockNumber.toNumber() - maxTimeVariation.delayBlocks.toNumber()
     const firstEligibleTimestamp =
-      currentBlockTimestamp.toNumber() - maxDelaySeconds.toNumber()
+      currentBlockTimestamp.toNumber() -
+      maxTimeVariation.delaySeconds.toNumber()
 
     const firstEligibleBlock = await this.findFirstBlockBelow(
       firstEligibleBlockNumber,
@@ -278,18 +263,13 @@ export class InboxTools {
     if (!eventInfo) return null
     const block = await this.l1Provider.getBlock(eventInfo.blockHash)
 
-    const transactionReceipt = await this.l1Provider.getTransactionReceipt(
-      eventInfo.transactionHash
-    )
     return await sequencerInbox.functions.forceInclusion(
       eventInfo.event.messageIndex.add(1),
       eventInfo.event.kind,
       [eventInfo.blockNumber, block.timestamp],
-      eventInfo.event.messageIndex,
-      transactionReceipt.effectiveGasPrice,
+      eventInfo.event.baseFeeL1,
       eventInfo.event.sender,
       eventInfo.event.messageDataHash,
-      eventInfo.delayedAcc,
       // we need to pass in {} because if overrides is undefined it thinks we've provided too many params
       overrides || {}
     )
