@@ -34,8 +34,11 @@ import { execSync } from 'child_process'
 import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
 import { RollupAdminLogic__factory } from '../src/lib/abi/factories/RollupAdminLogic__factory'
 import { deployErc20AndInit } from './deployBridge'
+import { addCustomNetwork as classicAddCustomNetwork } from "@arbitrum/sdk-classic"
+import { addCustomNetwork as nitroAddCustomNetwork} from "@arbitrum/sdk-nitro"
 import * as path from 'path'
 import * as fs from 'fs'
+import { convertNetwork } from '../src/lib/utils/migration_types'
 
 dotenv.config()
 
@@ -155,6 +158,10 @@ export const setupNetworks = async (
     customL1Network: l1Network,
     customL2Network: l2Network,
   })
+  nitroAddCustomNetwork({
+    customL1Network: l1Network,
+    customL2Network: l2Network,
+  })
 
   // also register the weth gateway
   // we add it here rather than in deployBridge because
@@ -219,6 +226,10 @@ export const testSetup = async (): Promise<{
         l2Network: L2Network
       }
       addCustomNetwork({
+        customL1Network: l1Network,
+        customL2Network: l2Network,
+      })
+      nitroAddCustomNetwork({
         customL1Network: l1Network,
         customL2Network: l2Network,
       })

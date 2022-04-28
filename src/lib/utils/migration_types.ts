@@ -44,7 +44,7 @@ export const isNitroL1 = async (
 export const isNitroL2 = async (
   l2Provider: SignerOrProvider
 ): Promise<boolean> => {
-  isNitro = true
+  if (isNitro) return true
   const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2Provider)
   const version = await arbSys.arbOSVersion()
   if (version.toNumber() > 56) {
@@ -133,8 +133,8 @@ export interface IL1ToL2MessageReader {
 }
 
 export interface IL1ToL2MessageWriter extends IL1ToL2MessageReader {
-  redeem(): Promise<ContractTransaction>
-  cancel(): Promise<ContractTransaction>
+  redeem(overrides?: Overrides): Promise<ContractTransaction>
+  cancel(overrides?: Overrides): Promise<ContractTransaction>
 }
 export type IL1ToL2MessageReaderOrWriter<
   T extends SignerOrProvider

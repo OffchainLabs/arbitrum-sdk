@@ -103,26 +103,6 @@ describe('Ether', async () => {
 
     const l1ToL2Messages = await rec.getL1ToL2Messages(l2Signer)
     expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
-    const l1ToL2Message = l1ToL2Messages[0]
-
-    const walletAddress = await l1Signer.getAddress()
-
-    for (const addr of [
-      l1ToL2Message.messageData.destAddress,
-      l1ToL2Message.messageData.excessFeeRefundAddress,
-      l1ToL2Message.messageData.callValueRefundAddress,
-    ]) {
-      expect(addr).to.eq(walletAddress, 'message inputs value error')
-    }
-
-    for (const value of [
-      l1ToL2Message.messageData.l2CallValue,
-      l1ToL2Message.messageData.gasLimit,
-      l1ToL2Message.messageData.maxFeePerGas,
-    ]) {
-      expect(value.isZero(), 'message inputs value error').to.be.true
-    }
-    expect(l1ToL2Message.messageData.data, 'empty call data').to.eq('0x')
 
     prettyLog('l2TxHash: ' + waitResult.message.retryableCreationId)
     prettyLog('l2 transaction found!')
@@ -163,7 +143,7 @@ describe('Ether', async () => {
     })
 
     const withdrawMessage = (
-      await withdrawEthRec.getL2ToL1Messages(l1Signer)
+      await withdrawEthRec.getL2ToL1Messages(l1Signer, ethBridger.l2Network)
     )[0]
     expect(
       withdrawMessage,

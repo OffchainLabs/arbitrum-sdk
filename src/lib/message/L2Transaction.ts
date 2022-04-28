@@ -20,20 +20,20 @@ import { TransactionReceipt } from '@ethersproject/providers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Log } from '@ethersproject/abstract-provider'
 import { ContractTransaction, providers } from 'ethers'
-import { SignerOrProvider } from '../dataEntities/signerOrProvider'
-import { L2ToL1Message } from './L2ToL1Message'
+import {
+  SignerOrProvider,
+} from '../dataEntities/signerOrProvider'
+import {
+  L2ToL1Message,
+} from './L2ToL1Message'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
 
 import * as classic from '@arbitrum/sdk-classic'
 import * as nitro from '@arbitrum/sdk-nitro'
-import {
-  convertNetwork,
-  isNitroL1,
-  IL2ToL1MessageReader,
+import { convertNetwork, isNitroL1, IL2ToL1MessageReader,
   IL2ToL1MessageWriter,
-  IL2ToL1MessageReaderOrWriter,
-} from '../utils/migration_types'
+  IL2ToL1MessageReaderOrWriter, } from '../utils/migration_types'
 import { getOutboxAddr, L2Network } from '../dataEntities/networks'
 
 export interface L2ContractTransaction extends ContractTransaction {

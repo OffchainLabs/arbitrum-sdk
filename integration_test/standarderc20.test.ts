@@ -27,20 +27,21 @@ import {
   GatewayType,
   withdrawToken,
 } from './testHelpers'
-import {
-  Erc20Bridger,
-  L1ToL2MessageStatus,
-  L1ToL2MessageWriter,
-  L2Network,
-} from '../src'
-import { Signer } from 'ethers'
+import { Erc20Bridger, L1ToL2MessageStatus, L2Network } from '../src'
+import { ethers, Signer } from 'ethers'
+import { Provider } from '@ethersproject/abstract-provider'
 import { TestERC20 } from '../src/lib/abi/TestERC20'
 import { testSetup } from '../scripts/testSetup'
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
+import { ArbSdkError } from '../src/lib/dataEntities/errors'
+import { ArbRetryableTx__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/ArbRetryableTx__factory'
+import { RedeemScheduledEvent } from '@arbitrum/sdk-nitro/dist/lib/abi/ArbRetryableTx'
+import { IL1ToL2MessageWriter } from '../src/lib/utils/migration_types'
+
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
-describe.only('standard ERC20', () => {
+describe('standard ERC20', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
@@ -80,13 +81,40 @@ describe.only('standard ERC20', () => {
     )
   })
 
+  const getRedeemScheduledEvents = (
+    txRec: ethers.providers.TransactionReceipt
+  ): RedeemScheduledEvent['args'][] => {
+    const iFace = ArbRetryableTx__factory.createInterface()
+    const redeemTopic = iFace.getEventTopic('RedeemScheduled')
+    const redeemScheduledEvents = txRec.logs.filter(
+      l => l.topics[0] === redeemTopic
+    )
+    return redeemScheduledEvents.map(
+      r => iFace.parseLog(r).args as RedeemScheduledEvent['args']
+    )
+  }
+
   const redeemAndTest = async (
-    message: L1ToL2MessageWriter,
+    l2Provider: Provider,
+    message: IL1ToL2MessageWriter,
     expectedStatus: 0 | 1,
     gasLimit?: BigNumber
   ) => {
     const manualRedeem = await message.redeem({ gasLimit })
-    const retryRec = await manualRedeem.waitForRedeem()
+
+    const rec = await manualRedeem.wait()
+
+    const redeemScheduledEvents = await getRedeemScheduledEvents(rec)
+
+    if (redeemScheduledEvents.length !== 1) {
+      throw new ArbSdkError(
+        `Transaction is not a redeem transaction: ${rec.transactionHash}`
+      )
+    }
+
+    const retryRec = await l2Provider.getTransactionReceipt(
+      redeemScheduledEvents[0].retryTxHash
+    )
     const blockHash = (await manualRedeem.wait()).blockHash
 
     expect(retryRec.blockHash, 'redeemed in same block').to.eq(blockHash)
@@ -96,7 +124,7 @@ describe.only('standard ERC20', () => {
     expect(retryRec.status, 'tx didnt fail').to.eq(expectedStatus)
   }
 
-  it.only('deposit with no funds, manual redeem', async () => {
+  it('deposit with no funds, manual redeem', async () => {
     const { waitRes } = await depositToken(
       depositAmount,
       testState.l1Token.address,
@@ -111,7 +139,7 @@ describe.only('standard ERC20', () => {
       }
     )
 
-    await redeemAndTest(waitRes.message, 1)
+    await redeemAndTest(testState.l2Signer.provider!, waitRes.message, 1)
   })
 
   it('deposit with low funds, manual redeem', async () => {
@@ -129,7 +157,7 @@ describe.only('standard ERC20', () => {
       }
     )
 
-    await redeemAndTest(waitRes.message, 1)
+    await redeemAndTest(testState.l2Signer.provider!, waitRes.message, 1)
   })
 
   it('deposit with low funds, fails first redeem, succeeds seconds', async () => {
@@ -148,8 +176,13 @@ describe.only('standard ERC20', () => {
     )
 
     // not enough gas
-    await redeemAndTest(waitRes.message, 0, BigNumber.from(130000))
-    await redeemAndTest(waitRes.message, 1)
+    await redeemAndTest(
+      testState.l2Signer.provider!,
+      waitRes.message,
+      0,
+      BigNumber.from(130000)
+    )
+    await redeemAndTest(testState.l2Signer.provider!, waitRes.message, 1)
   })
 
   it('withdraws erc20', async function () {

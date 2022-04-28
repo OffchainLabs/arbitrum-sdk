@@ -16,68 +16,68 @@
 /* eslint-env node */
 'use strict'
 
-import { expect } from 'chai'
+// import { expect } from 'chai'
 
-import { fundL2, skipIfMainnet, wait } from './testHelpers'
-import { getArbTransactionReceipt } from '../src'
-import { JsonRpcProvider } from '@ethersproject/providers'
-import { Wallet } from 'ethers'
-import { parseEther } from 'ethers/lib/utils'
-import { testSetup } from '../scripts/testSetup'
+// import { fundL2, skipIfMainnet, wait } from './testHelpers'
+// import { getArbTransactionReceipt } from '../src'
+// import { JsonRpcProvider } from '@ethersproject/providers'
+// import { Wallet } from 'ethers'
+// import { parseEther } from 'ethers/lib/utils'
+// import { testSetup } from '../scripts/testSetup'
 
-describe('ArbProvider', () => {
-  beforeEach('skipIfMainnet', async function () {
-    await skipIfMainnet(this)
-  })
+// describe('ArbProvider', () => {
+//   beforeEach('skipIfMainnet', async function () {
+//     await skipIfMainnet(this)
+//   })
 
-  it('does find l1 batch info', async () => {
-    const { l2Signer, l1Signer } = await testSetup()
-    const l2Provider = l2Signer.provider! as JsonRpcProvider
+//   it('does find l1 batch info', async () => {
+//     const { l2Signer, l1Signer } = await testSetup()
+//     const l2Provider = l2Signer.provider! as JsonRpcProvider
 
-    await fundL2(l2Signer)
-    const randomAddress = Wallet.createRandom().address
-    const amountToSend = parseEther('0.000005')
+//     await fundL2(l2Signer)
+//     const randomAddress = Wallet.createRandom().address
+//     const amountToSend = parseEther('0.000005')
 
-    // send an l2 transaction, and get the receipt
-    const tx = await l2Signer.sendTransaction({
-      to: randomAddress,
-      value: amountToSend,
-    })
-    const rec = await tx.wait()
-    const testTxHash = rec.transactionHash
+//     // send an l2 transaction, and get the receipt
+//     const tx = await l2Signer.sendTransaction({
+//       to: randomAddress,
+//       value: amountToSend,
+//     })
+//     const rec = await tx.wait()
+//     const testTxHash = rec.transactionHash
 
-    // wait for the batch data
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      await wait(300)
-      const arbTxReceipt = await getArbTransactionReceipt(
-        l2Provider,
-        testTxHash,
-        true,
-        true
-      )
-      if (!arbTxReceipt) continue
+//     // wait for the batch data
+//     // eslint-disable-next-line no-constant-condition
+//     while (true) {
+//       await wait(300)
+//       const arbTxReceipt = await getArbTransactionReceipt(
+//         l2Provider,
+//         testTxHash,
+//         true,
+//         true
+//       )
+//       if (!arbTxReceipt) continue
 
-      const l1BlockNum = await l1Signer.provider!.getBlockNumber()
-      console.log(
-        arbTxReceipt.l1BatchNumber,
-        arbTxReceipt.l1BatchConfirmations,
-        l1BlockNum
-      )
+//       const l1BlockNum = await l1Signer.provider!.getBlockNumber()
+//       console.log(
+//         arbTxReceipt.l1BatchNumber,
+//         arbTxReceipt.l1BatchConfirmations,
+//         l1BlockNum
+//       )
 
-      if (arbTxReceipt.l1BatchNumber && arbTxReceipt.l1BatchNumber > 0) {
-        expect(
-          arbTxReceipt.l1BatchConfirmations,
-          'missing confirmations'
-        ).to.be.gt(0)
-      }
-      if (arbTxReceipt.l1BatchConfirmations > 0) {
-        expect(arbTxReceipt.l1BatchNumber, 'missing batch number').to.be.gt(0)
-      }
+//       if (arbTxReceipt.l1BatchNumber && arbTxReceipt.l1BatchNumber > 0) {
+//         expect(
+//           arbTxReceipt.l1BatchConfirmations,
+//           'missing confirmations'
+//         ).to.be.gt(0)
+//       }
+//       if (arbTxReceipt.l1BatchConfirmations > 0) {
+//         expect(arbTxReceipt.l1BatchNumber, 'missing batch number').to.be.gt(0)
+//       }
 
-      if (arbTxReceipt.l1BatchConfirmations > 8) {
-        break
-      }
-    }
-  })
-})
+//       if (arbTxReceipt.l1BatchConfirmations > 8) {
+//         break
+//       }
+//     }
+//   })
+// })

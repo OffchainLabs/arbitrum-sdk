@@ -290,6 +290,10 @@ export class L2ToL1MessageWriter
       throw new ArbSdkError('Unexpected L2ToL1MessageWriter constructor args')
   }
 
+  // CHRIS: TODO: we shouldnt test isnitro in here
+  // CHRIS: TODO: we should work purely based on the outbox addr
+  // CHRIS: TODO: we need to populate that new outbox addresses somehow - we need to figure out that batch number thing (that isnt immediately clear to me)
+
   /**
    * Executes the L2ToL1Message on L1.
    * Will throw an error if the outbox entry has not been created, which happens when the
