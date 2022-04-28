@@ -19,17 +19,9 @@
 import { Signer } from '@ethersproject/abstract-signer'
 import { Provider } from '@ethersproject/abstract-provider'
 import { PayableOverrides } from '@ethersproject/contracts'
-import { BigNumber, ethers } from 'ethers'
+import { BigNumber } from 'ethers'
 
-import { Inbox__factory } from '../abi/factories/Inbox__factory'
-import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
-import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
-import {
-  L1ToL2MessageGasEstimator,
-  PercentIncrease,
-} from '../message/L1ToL2MessageGasEstimator'
-import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
-import { MissingProviderArbTsError } from '../dataEntities/errors'
+import { PercentIncrease } from '../message/L1ToL2MessageGasEstimator'
 import { AssetBridger } from './assetBridger'
 import {
   L1EthDepositTransaction,
@@ -39,7 +31,11 @@ import {
   L2ContractTransaction,
   L2TransactionReceipt,
 } from '../message/L2Transaction'
-import { getBaseFee } from '../utils/lib'
+
+import * as classic from '@arbitrum/sdk-classic'
+import * as nitro from '@arbitrum/sdk-nitro'
+import { convertNetwork, isNitroL1, isNitroL2 } from '../utils/migration_types'
+import { L2Network } from '../dataEntities/networks'
 
 export interface EthWithdrawParams {
   /**
@@ -101,41 +97,15 @@ export class EthBridger extends AssetBridger<
   EthDepositParams,
   EthWithdrawParams
 > {
-  private async depositTxOrGas<T extends boolean>(
-    params: EthDepositParams,
-    estimate: T
-  ): Promise<T extends true ? BigNumber : ethers.ContractTransaction>
-  private async depositTxOrGas<T extends boolean>(
-    params: EthDepositParams,
-    estimate: T
-  ): Promise<BigNumber | ethers.ContractTransaction> {
-    if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
-      throw new MissingProviderArbTsError('l1Signer')
-    }
-    await this.checkL1Network(params.l1Signer)
-    await this.checkL2Network(params.l2Provider)
-
-    const gasEstimator = new L1ToL2MessageGasEstimator(params.l2Provider)
-    const baseFee = await getBaseFee(params.l1Signer.provider)
-
-    const submissionCost = await gasEstimator.estimateSubmissionFee(
-      baseFee,
-      0,
-      params.retryableGasOverrides?.maxSubmissionPrice
-    )
-
-    const inbox = Inbox__factory.connect(
-      this.l2Network.ethBridge.inbox,
-      params.l1Signer
-    )
-
-    return (estimate ? inbox.estimateGas : inbox.functions).depositEth(
-      submissionCost,
-      {
-        value: params.amount.add(submissionCost),
-        ...(params.overrides || {}),
-      }
-    )
+  private readonly classicBridger: classic.EthBridger
+  private readonly nitroBridger: nitro.EthBridger
+  /**
+   * Bridger for moving ERC20 tokens back and forth betwen L1 to L2
+   */
+  public constructor(l2Network: L2Network) {
+    super(l2Network)
+    this.classicBridger = new classic.EthBridger(convertNetwork(l2Network))
+    this.nitroBridger = new nitro.EthBridger(l2Network)
   }
 
   /**
@@ -146,7 +116,9 @@ export class EthBridger extends AssetBridger<
   public async depositEstimateGas(
     params: EthDepositParams
   ): Promise<BigNumber> {
-    return this.depositTxOrGas(params, true)
+    return (await isNitroL1(params.l1Signer))
+      ? this.nitroBridger.depositEstimateGas(params)
+      : this.classicBridger.depositEstimateGas(params)
   }
 
   /**
@@ -157,33 +129,10 @@ export class EthBridger extends AssetBridger<
   public async deposit(
     params: EthDepositParams
   ): Promise<L1EthDepositTransaction> {
-    const tx = await this.depositTxOrGas(params, false)
-    return L1TransactionReceipt.monkeyPatchEthDepositWait(tx)
-  }
-
-  private async withdrawTxOrGas<T extends boolean>(
-    params: EthWithdrawParams,
-    estimate: T
-  ): Promise<T extends true ? BigNumber : ethers.ContractTransaction>
-  private async withdrawTxOrGas<T extends boolean>(
-    params: EthWithdrawParams,
-    estimate: T
-  ): Promise<BigNumber | ethers.ContractTransaction> {
-    if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
-      throw new MissingProviderArbTsError('l2Signer')
-    }
-    await this.checkL2Network(params.l2Signer)
-
-    const addr =
-      params.destinationAddress || (await params.l2Signer.getAddress())
-    const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, params.l2Signer)
-
-    return (estimate ? arbSys.estimateGas : arbSys.functions).withdrawEth(
-      addr,
-      {
-        value: params.amount,
-        ...(params.overrides || {}),
-      }
+    return L1TransactionReceipt.monkeyPatchEthDepositWait(
+      (await isNitroL1(params.l1Signer))
+        ? await this.nitroBridger.deposit(params)
+        : await this.classicBridger.deposit(params)
     )
   }
 
@@ -195,7 +144,9 @@ export class EthBridger extends AssetBridger<
   public async withdrawEstimateGas(
     params: EthWithdrawParams
   ): Promise<BigNumber> {
-    return await this.withdrawTxOrGas(params, true)
+    return (await isNitroL2(params.l2Signer))
+      ? this.nitroBridger.withdrawEstimateGas(params)
+      : this.classicBridger.withdrawEstimateGas(params)
   }
 
   /**
@@ -206,7 +157,10 @@ export class EthBridger extends AssetBridger<
   public async withdraw(
     params: EthWithdrawParams
   ): Promise<L2ContractTransaction> {
-    const tx = await this.withdrawTxOrGas(params, false)
-    return L2TransactionReceipt.monkeyPatchWait(tx)
+    return L2TransactionReceipt.monkeyPatchWait(
+      (await isNitroL2(params.l2Signer))
+        ? await this.nitroBridger.withdraw(params)
+        : await this.classicBridger.withdraw(params)
+    )
   }
 }

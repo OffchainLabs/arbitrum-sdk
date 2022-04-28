@@ -20,29 +20,19 @@ import { TransactionReceipt } from '@ethersproject/providers'
 import { Log } from '@ethersproject/abstract-provider'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
-import {
-  L1ToL2Message,
-  L1ToL2MessageReaderOrWriter,
-  L1ToL2MessageReader,
-  L1ToL2MessageWriter,
-  L1ToL2MessageStatus,
-  L1ToL2MessageWaitResult,
-} from './L1ToL2Message'
+import { L1ToL2MessageStatus, L1ToL2MessageWaitResult } from './L1ToL2Message'
 
 import { L1ERC20Gateway__factory } from '../abi/factories/L1ERC20Gateway__factory'
 import { DepositInitiatedEvent } from '../abi/L1ERC20Gateway'
+import { SignerOrProvider } from '../dataEntities/signerOrProvider'
+import * as classic from '@arbitrum/sdk-classic'
+import * as nitro from '@arbitrum/sdk-nitro'
 import {
-  SignerProviderUtils,
-  SignerOrProvider,
-} from '../dataEntities/signerOrProvider'
-import { ArbSdkError } from '../dataEntities/errors'
-import { ethers } from 'ethers'
-import { Inbox__factory } from '../abi/factories/Inbox__factory'
-import { InboxMessageDeliveredEvent } from '../abi/Inbox'
-import { hexZeroPad } from '@ethersproject/bytes'
-import { RetryableMessageParams } from '../dataEntities/message'
-import { Bridge__factory } from '../abi/factories/Bridge__factory'
-import { MessageDeliveredEvent } from '../abi/Bridge'
+  isNitroL2,
+  IL1ToL2MessageReaderOrWriter,
+  IL1ToL2MessageReader,
+  IL1ToL2MessageWriter,
+} from '../utils/migration_types'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -74,6 +64,9 @@ export class L1TransactionReceipt implements TransactionReceipt {
   public readonly type: number
   public readonly status?: number
 
+  private readonly classicReceipt: classic.L1TransactionReceipt
+  private readonly nitroReceipt: nitro.L1TransactionReceipt
+
   constructor(tx: TransactionReceipt) {
     this.to = tx.to
     this.from = tx.from
@@ -92,124 +85,9 @@ export class L1TransactionReceipt implements TransactionReceipt {
     this.byzantium = tx.byzantium
     this.type = tx.type
     this.status = tx.status
-  }
 
-  /**
-   * Get any MessageDelivered events that were emitted during this transaction
-   * @returns
-   */
-  public getMessageDeliveredEvents(): MessageDeliveredEvent['args'][] {
-    const iface = Bridge__factory.createInterface()
-    const messageDeliveredTopic = iface.getEventTopic(
-      iface.getEvent('MessageDelivered')
-    )
-    return this.logs
-      .filter(log => log.topics[0] === messageDeliveredTopic)
-      .map(l => iface.parseLog(l).args as MessageDeliveredEvent['args'])
-  }
-
-  /**
-   * Get any InboxMessageDelivered events that were emitted during this transaction
-   * @returns
-   */
-  public getInboxMessageDeliveredEvent(): InboxMessageDeliveredEvent['args'][] {
-    const iFace = Inbox__factory.createInterface()
-    const inboxMessageDeliveredTopic = iFace.getEventTopic(
-      iFace.events['InboxMessageDelivered(uint256,bytes)']
-    )
-    return this.logs
-      .filter(log => log.topics[0] === inboxMessageDeliveredTopic)
-      .map(l => iFace.parseLog(l).args as InboxMessageDeliveredEvent['args'])
-  }
-
-  /**
-   * Get combined data for any InboxMessageDelivered and MessageDelivered events
-   * emitted during this transaction
-   * @returns
-   */
-  public getMessageEvents(): {
-    inboxMessageEvent: InboxMessageDeliveredEvent['args']
-    bridgeMessageEvent: MessageDeliveredEvent['args']
-  }[] {
-    const bridgeMessages = this.getMessageDeliveredEvents()
-    const inboxMessages = this.getInboxMessageDeliveredEvent()
-
-    if (bridgeMessages.length !== inboxMessages.length) {
-      throw new ArbSdkError(
-        `Unexpected missing events. Inbox message count: ${
-          inboxMessages.length
-        } does not equal bridge message count: ${
-          bridgeMessages.length
-        }. ${JSON.stringify(inboxMessages)} ${JSON.stringify(bridgeMessages)}`
-      )
-    }
-
-    const messages: {
-      inboxMessageEvent: InboxMessageDeliveredEvent['args']
-      bridgeMessageEvent: MessageDeliveredEvent['args']
-    }[] = []
-    for (const bm of bridgeMessages) {
-      const im = inboxMessages.filter(i => i.messageNum.eq(bm.messageIndex))[0]
-      if (!im) {
-        throw new ArbSdkError(
-          `Unexepected missing event for message index: ${bm.messageIndex.toString()}. ${JSON.stringify(
-            inboxMessages
-          )}`
-        )
-      }
-
-      messages.push({
-        inboxMessageEvent: im,
-        bridgeMessageEvent: bm,
-      })
-    }
-    return messages
-  }
-
-  private parseInboxMessage(
-    inboxMessageDeliveredEvent: InboxMessageDeliveredEvent['args']
-  ): RetryableMessageParams {
-    // decode the data field - is been packed so we cant decode the bytes field this way
-    const parsed = ethers.utils.defaultAbiCoder.decode(
-      [
-        'uint256', // dest
-        'uint256', // l2 call balue
-        'uint256', // msg val
-        'uint256', // max submission
-        'uint256', // excess fee refund addr
-        'uint256', // call value refund addr
-        'uint256', // max gas
-        'uint256', // gas price bid
-        'uint256', // data length
-      ],
-      // decode from the first 9 words
-      inboxMessageDeliveredEvent.data.substring(0, 64 * 9 + 2)
-    ) as BigNumber[]
-
-    const addressFromBigNumber = (bn: BigNumber) =>
-      ethers.utils.getAddress(hexZeroPad(bn.toHexString(), 20))
-
-    const destAddress = addressFromBigNumber(parsed[0])
-    const l2CallValue = parsed[1]
-    const l1Value = parsed[2]
-    const maxSubmissionFee = parsed[3]
-    const excessFeeRefundAddress = addressFromBigNumber(parsed[4])
-    const callValueRefundAddress = addressFromBigNumber(parsed[5])
-    const gasLimit = parsed[6]
-    const maxFeePerGas = parsed[7]
-    const data = '0x' + inboxMessageDeliveredEvent.data.substring(64 * 9 + 2)
-
-    return {
-      destAddress,
-      l2CallValue,
-      l1Value,
-      maxSubmissionFee: maxSubmissionFee,
-      excessFeeRefundAddress,
-      callValueRefundAddress,
-      gasLimit,
-      maxFeePerGas,
-      data,
-    }
+    this.classicReceipt = new classic.L1TransactionReceipt(tx)
+    this.nitroReceipt = new nitro.L1TransactionReceipt(tx)
   }
 
   /**
@@ -218,27 +96,13 @@ export class L1TransactionReceipt implements TransactionReceipt {
    */
   public async getL1ToL2Messages<T extends SignerOrProvider>(
     l2SignerOrProvider: T
-  ): Promise<L1ToL2MessageReaderOrWriter<T>[]>
+  ): Promise<IL1ToL2MessageReaderOrWriter<T>[]>
   public async getL1ToL2Messages<T extends SignerOrProvider>(
     l2SignerOrProvider: T
-  ): Promise<L1ToL2MessageReader[] | L1ToL2MessageWriter[]> {
-    const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
-    const chainID = (await provider.getNetwork()).chainId.toString()
-
-    const messages = this.getMessageEvents()
-    if (!messages || messages.length === 0) return []
-
-    return messages.map(mn => {
-      const inboxMessageData = this.parseInboxMessage(mn.inboxMessageEvent)
-      return L1ToL2Message.fromTxComponents(
-        l2SignerOrProvider,
-        BigNumber.from(chainID).toNumber(),
-        mn.bridgeMessageEvent.sender,
-        mn.inboxMessageEvent.messageNum,
-        mn.bridgeMessageEvent.baseFeeL1,
-        inboxMessageData
-      )
-    })
+  ): Promise<IL1ToL2MessageReader[] | IL1ToL2MessageWriter[]> {
+    return (await isNitroL2(l2SignerOrProvider))
+      ? this.nitroReceipt.getL1ToL2Messages(l2SignerOrProvider)
+      : this.classicReceipt.getL1ToL2Messages(l2SignerOrProvider)
   }
 
   /**
@@ -251,28 +115,14 @@ export class L1TransactionReceipt implements TransactionReceipt {
   public async getL1ToL2Message<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
     messageNumberIndex?: number
-  ): Promise<L1ToL2MessageReaderOrWriter<T>>
+  ): Promise<IL1ToL2MessageReaderOrWriter<T>>
   public async getL1ToL2Message<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
     messageIndex?: number
-  ): Promise<L1ToL2MessageReader | L1ToL2MessageWriter> {
-    const allL1ToL2Messages = await this.getL1ToL2Messages(l2SignerOrProvider)
-    const messageCount = allL1ToL2Messages.length
-    if (!messageCount)
-      throw new ArbSdkError(
-        `No l1 to L2 message found for ${this.transactionHash}`
-      )
-
-    if (messageIndex !== undefined && messageIndex >= messageCount)
-      throw new ArbSdkError(
-        `Provided message number out of range for ${this.transactionHash}; index was ${messageIndex}, but only ${messageCount} messages`
-      )
-    if (messageIndex === undefined && messageCount > 1)
-      throw new ArbSdkError(
-        `${messageCount} L2 messages for ${this.transactionHash}; must provide messageNumberIndex (or use (signersAndProviders, l1Txn))`
-      )
-
-    return allL1ToL2Messages[messageIndex || 0]
+  ): Promise<IL1ToL2MessageReader | IL1ToL2MessageWriter> {
+    return (await isNitroL2(l2SignerOrProvider))
+      ? this.nitroReceipt.getL1ToL2Message(l2SignerOrProvider, messageIndex)
+      : this.classicReceipt.getL1ToL2Message(l2SignerOrProvider, messageIndex)
   }
 
   /**
@@ -359,7 +209,7 @@ export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
   ): Promise<
     {
       complete: boolean
-      message: L1ToL2MessageReaderOrWriter<T>
+      message: IL1ToL2MessageReaderOrWriter<T>
     } & L1ToL2MessageWaitResult
   > {
     const message = (await this.getL1ToL2Messages(l2SignerOrProvider))[0]
@@ -398,7 +248,7 @@ export class L1ContractCallTransactionReceipt extends L1TransactionReceipt {
   ): Promise<
     {
       complete: boolean
-      message: L1ToL2MessageReaderOrWriter<T>
+      message: IL1ToL2MessageReaderOrWriter<T>
     } & L1ToL2MessageWaitResult
   > {
     const message = (await this.getL1ToL2Messages(l2SignerOrProvider))[0]

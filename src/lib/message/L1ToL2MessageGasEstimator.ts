@@ -1,23 +1,14 @@
 import { Provider } from '@ethersproject/abstract-provider'
-import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
-import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { BigNumber } from '@ethersproject/bignumber'
-import { constants } from 'ethers'
 import { utils } from 'ethers'
 
-/**
- * The default amount to increase the maximum submission cost. Submission cost is calculated
- * from (call data size * some const * l1 base fee). So we need to provide some leeway for
- * base fee increase. Since submission fee is a small amount it isn't too bas for UX to increase
- * it by a large amount, and provide better safety.
- */
-const DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE = BigNumber.from(300)
-
-/**
- * When submitting a retryable we need to estimate what the gas price for it will be when we actually come
- * to execute it. Since the l2 price can move due to congestion we should provide some padding here
- */
-const DEFAULT_GAS_PRICE_PERCENT_INCREASE = BigNumber.from(200)
+import * as classic from '@arbitrum/sdk-classic'
+import * as nitro from '@arbitrum/sdk-nitro'
+import {
+  convertEstimates,
+  convertGasOverrides,
+  isNitroL2,
+} from '../utils/migration_types'
 
 /**
  * An optional big number percentage increase
@@ -45,51 +36,13 @@ export interface GasOverrides {
   maxFeePerGas?: PercentIncrease
 }
 
-const defaultL1ToL2MessageEstimateOptions = {
-  maxSubmissionFeePercentIncrease: DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE,
-  // gas limit for l1->l2 messages should be predictable. If it isn't due to the nature
-  // of the specific transaction, then the caller should provide a 'min' override
-  gasLimitPercentIncrease: constants.Zero,
-  maxFeePerGasPercentIncrease: DEFAULT_GAS_PRICE_PERCENT_INCREASE,
-}
-
 export class L1ToL2MessageGasEstimator {
-  constructor(public readonly l2Provider: Provider) {}
+  private readonly classicEstimator: classic.L1ToL2MessageGasEstimator
+  private readonly nitroEstimator: nitro.L1ToL2MessageGasEstimator
 
-  private percentIncrease(num: BigNumber, increase: BigNumber): BigNumber {
-    return num.add(num.mul(increase).div(100))
-  }
-
-  private applySubmissionPriceDefaults(
-    maxSubmissionFeeOptions?: PercentIncrease
-  ) {
-    return {
-      base: maxSubmissionFeeOptions?.base,
-      percentIncrease:
-        maxSubmissionFeeOptions?.percentIncrease ||
-        defaultL1ToL2MessageEstimateOptions.maxSubmissionFeePercentIncrease,
-    }
-  }
-
-  private applyMaxFeePerGasDefaults(maxFeePerGasOptions?: PercentIncrease) {
-    return {
-      base: maxFeePerGasOptions?.base,
-      percentIncrease:
-        maxFeePerGasOptions?.percentIncrease ||
-        defaultL1ToL2MessageEstimateOptions.maxFeePerGasPercentIncrease,
-    }
-  }
-
-  private applyGasLimitDefaults(
-    gasLimitDefaults?: PercentIncrease & { min?: BigNumber }
-  ) {
-    return {
-      base: gasLimitDefaults?.base,
-      percentIncrease:
-        gasLimitDefaults?.percentIncrease ||
-        defaultL1ToL2MessageEstimateOptions.gasLimitPercentIncrease,
-      min: gasLimitDefaults?.min || constants.Zero,
-    }
+  constructor(public readonly l2Provider: Provider) {
+    this.classicEstimator = new classic.L1ToL2MessageGasEstimator(l2Provider)
+    this.nitroEstimator = new nitro.L1ToL2MessageGasEstimator(l2Provider)
   }
 
   /**
@@ -106,16 +59,18 @@ export class L1ToL2MessageGasEstimator {
       percentIncrease?: BigNumber
     }
   ): Promise<BigNumber> {
-    const defaultedOptions = this.applySubmissionPriceDefaults(options)
-    const submissionCost = BigNumber.from(callDataSize)
-      .mul(6)
-      .add(1400)
-      .mul(l1BaseFee)
-
-    return this.percentIncrease(
-      defaultedOptions.base || submissionCost,
-      defaultedOptions.percentIncrease
-    )
+    return (await isNitroL2(this.l2Provider))
+      ? await this.nitroEstimator.estimateSubmissionFee(
+          l1BaseFee,
+          callDataSize,
+          options
+        )
+      : (
+          await this.classicEstimator.estimateSubmissionPrice(
+            callDataSize,
+            options
+          )
+        ).submissionPrice
   }
 
   /**
@@ -137,22 +92,32 @@ export class L1ToL2MessageGasEstimator {
     excessFeeRefundAddress: string,
     callValueRefundAddress: string,
     calldata: string,
-    senderDeposit: BigNumber = utils.parseEther('1').add(l2CallValue)
+    senderDeposit: BigNumber = utils.parseEther('1').add(l2CallValue),
+    maxSubmissionCost: BigNumber,
+    maxGas: BigNumber,
+    gasPriceBid: BigNumber
   ): Promise<BigNumber> {
-    const nodeInterface = NodeInterface__factory.connect(
-      NODE_INTERFACE_ADDRESS,
-      this.l2Provider
-    )
-
-    return await nodeInterface.estimateGas.estimateRetryableTicket(
-      sender,
-      senderDeposit,
-      destAddr,
-      l2CallValue,
-      excessFeeRefundAddress,
-      callValueRefundAddress,
-      calldata
-    )
+    return (await isNitroL2(this.l2Provider))
+      ? this.nitroEstimator.estimateRetryableTicketGasLimit(
+          sender,
+          destAddr,
+          l2CallValue,
+          excessFeeRefundAddress,
+          callValueRefundAddress,
+          calldata
+        )
+      : this.classicEstimator.estimateRetryableTicketMaxGas(
+          sender,
+          senderDeposit,
+          destAddr,
+          l2CallValue,
+          maxSubmissionCost,
+          excessFeeRefundAddress,
+          callValueRefundAddress,
+          maxGas,
+          gasPriceBid,
+          calldata
+        )
   }
 
   /**
@@ -175,59 +140,35 @@ export class L1ToL2MessageGasEstimator {
     l1BaseFee: BigNumber,
     excessFeeRefundAddress: string,
     callValueRefundAddress: string,
-    options?: GasOverrides
+    options?: GasOverrides & { sendL2CallValueFromL1?: boolean }
   ): Promise<{
     gasLimit: BigNumber
     maxSubmissionFee: BigNumber
     maxFeePerGas: BigNumber
     totalL2GasCosts: BigNumber
   }> {
-    const gasLimitDefaults = this.applyGasLimitDefaults(options?.gasLimit)
-    const maxFeePerGasDefaults = this.applyMaxFeePerGasDefaults(
-      options?.maxFeePerGas
-    )
-
-    // estimate the l1 gas price
-    const maxFeePerGas = this.percentIncrease(
-      maxFeePerGasDefaults.base || (await this.l2Provider.getGasPrice()),
-      maxFeePerGasDefaults.percentIncrease
-    )
-
-    // estimate the submission fee
-    const maxSubmissionFee = await this.estimateSubmissionFee(
-      l1BaseFee,
-      utils.hexDataLength(l2CallData),
-      options?.maxSubmissionFee
-    )
-
-    // estimate the gas limit
-    const calculatedGasLimit = this.percentIncrease(
-      gasLimitDefaults.base ||
-        (await this.estimateRetryableTicketGasLimit(
+    return (await isNitroL2(this.l2Provider))
+      ? await this.nitroEstimator.estimateAll(
           sender,
           l2CallTo,
+          l2CallData,
           l2CallValue,
+          l1BaseFee,
           excessFeeRefundAddress,
           callValueRefundAddress,
-          l2CallData
-        )),
-      gasLimitDefaults.percentIncrease
-    )
-
-    // always ensure the max gas is greater than the min - this can be useful if we know that
-    // gas esimation is bad for the provided transaction
-    const gasLimit = calculatedGasLimit.gt(gasLimitDefaults.min)
-      ? calculatedGasLimit
-      : gasLimitDefaults.min
-
-    // estimate the total l2 gas costs
-    const totalL2GasCosts = maxSubmissionFee.add(maxFeePerGas.mul(gasLimit))
-
-    return {
-      gasLimit,
-      maxSubmissionFee,
-      maxFeePerGas: maxFeePerGas,
-      totalL2GasCosts,
-    }
+          options
+        )
+      : convertEstimates(
+          await this.classicEstimator.estimateMessage(
+            sender,
+            l2CallTo,
+            l2CallData,
+            l2CallValue,
+            {
+              ...convertGasOverrides(options),
+              sendL2CallValueFromL1: options?.sendL2CallValueFromL1,
+            }
+          )
+        )
   }
 }

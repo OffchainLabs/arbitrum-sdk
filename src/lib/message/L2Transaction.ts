@@ -20,22 +20,21 @@ import { TransactionReceipt } from '@ethersproject/providers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Log } from '@ethersproject/abstract-provider'
 import { ContractTransaction, providers } from 'ethers'
-import {
-  SignerProviderUtils,
-  SignerOrProvider,
-} from '../dataEntities/signerOrProvider'
-import {
-  L2ToL1MessageReader,
-  L2ToL1MessageReaderOrWriter,
-  L2ToL1Message,
-  L2ToL1MessageWriter,
-} from './L2ToL1Message'
-import { getArbTransactionReceipt } from '../..'
+import { SignerOrProvider } from '../dataEntities/signerOrProvider'
+import { L2ToL1Message } from './L2ToL1Message'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
-import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
-import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
-import { ArbSdkError } from '../dataEntities/errors'
+
+import * as classic from '@arbitrum/sdk-classic'
+import * as nitro from '@arbitrum/sdk-nitro'
+import {
+  convertNetwork,
+  isNitroL1,
+  IL2ToL1MessageReader,
+  IL2ToL1MessageWriter,
+  IL2ToL1MessageReaderOrWriter,
+} from '../utils/migration_types'
+import { getOutboxAddr, L2Network } from '../dataEntities/networks'
 
 export interface L2ContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<L2TransactionReceipt>
@@ -64,6 +63,9 @@ export class L2TransactionReceipt implements TransactionReceipt {
   public readonly type: number
   public readonly status?: number
 
+  private readonly classicReceipt: classic.L2TransactionReceipt
+  private readonly nitroReceipt: nitro.L2TransactionReceipt
+
   constructor(tx: TransactionReceipt) {
     this.to = tx.to
     this.from = tx.from
@@ -82,6 +84,9 @@ export class L2TransactionReceipt implements TransactionReceipt {
     this.byzantium = tx.byzantium
     this.type = tx.type
     this.status = tx.status
+
+    this.classicReceipt = new classic.L2TransactionReceipt(tx)
+    this.nitroReceipt = new nitro.L2TransactionReceipt(tx)
   }
 
   /**
@@ -100,36 +105,36 @@ export class L2TransactionReceipt implements TransactionReceipt {
   }
 
   /**
-   * Get event data for any redeems that were scheduled in this transaction
-   * @returns
-   */
-  public getRedeemScheduledEvents(): RedeemScheduledEvent['args'][] {
-    const iFace = ArbRetryableTx__factory.createInterface()
-    const redeemTopic = iFace.getEventTopic('RedeemScheduled')
-    const redeemScheduledEvents = this.logs.filter(
-      l => l.topics[0] === redeemTopic
-    )
-    return redeemScheduledEvents.map(
-      r => iFace.parseLog(r).args as RedeemScheduledEvent['args']
-    )
-  }
-
-  /**
    * Get any l2-to-l1-messages created by this transaction
    * @param l2SignerOrProvider
    */
   public async getL2ToL1Messages<T extends SignerOrProvider>(
-    l1SignerOrProvider: T
-  ): Promise<L2ToL1MessageReaderOrWriter<T>[]>
+    l1SignerOrProvider: T,
+    l2Network: L2Network
+  ): Promise<IL2ToL1MessageReaderOrWriter<T>[]>
   public async getL2ToL1Messages<T extends SignerOrProvider>(
-    l1SignerOrProvider: T
-  ): Promise<L2ToL1MessageReader[] | L2ToL1MessageWriter[]> {
-    const provider = SignerProviderUtils.getProvider(l1SignerOrProvider)
-    if (!provider) throw new Error('Signer not connected to provider.')
+    l1SignerOrProvider: T,
+    l2Network: L2Network
+  ): Promise<IL2ToL1MessageReader[] | IL2ToL1MessageWriter[]> {
+    if (await isNitroL1(l1SignerOrProvider)) {
+      return this.nitroReceipt.getL2ToL1Messages(l1SignerOrProvider)
+    } else {
+      const messages = await this.classicReceipt.getL2ToL1Messages(
+        l1SignerOrProvider,
+        convertNetwork(l2Network)
+      )
 
-    return this.getL2ToL1Events().map(log =>
-      L2ToL1Message.fromEvent(l1SignerOrProvider, log)
-    )
+      return messages.map(m => {
+        const outboxAddr = getOutboxAddr(l2Network, m.batchNumber.toNumber())
+        return L2ToL1Message.fromEvent(
+          l1SignerOrProvider,
+          undefined,
+          outboxAddr,
+          m.batchNumber,
+          m.indexInBatch
+        )
+      })
+    }
   }
 
   /**
@@ -141,19 +146,14 @@ export class L2TransactionReceipt implements TransactionReceipt {
    */
   public async isDataAvailable(
     l2Provider: providers.JsonRpcProvider,
+    l1Provider: providers.JsonRpcProvider,
     confirmations = 10
   ): Promise<boolean> {
-    const arbReceipt = await getArbTransactionReceipt(
-      l2Provider,
-      this.transactionHash,
-      false,
-      true
-    )
-
-    if (!arbReceipt) return false
-
-    // is there a batch with enough confirmations
-    return arbReceipt.l1BatchConfirmations > confirmations
+    if (await isNitroL1(l1Provider)) {
+      return this.nitroReceipt.isDataAvailable(l2Provider, confirmations)
+    } else {
+      return this.classicReceipt.isDataAvailable(l2Provider, l1Provider)
+    }
   }
 
   /**
@@ -174,34 +174,5 @@ export class L2TransactionReceipt implements TransactionReceipt {
       return new L2TransactionReceipt(result)
     }
     return contractTransaction as L2ContractTransaction
-  }
-
-  /**
-   * Adds a waitForRedeem function to a redeem transaction
-   * @param redeemTx
-   * @param l2Provider
-   * @returns
-   */
-  public static toRedeemTransaction(
-    redeemTx: L2ContractTransaction,
-    l2Provider: providers.Provider
-  ): RedeemTransaction {
-    const returnRec = redeemTx as RedeemTransaction
-    returnRec.waitForRedeem = async () => {
-      const rec = await redeemTx.wait()
-
-      const redeemScheduledEvents = await rec.getRedeemScheduledEvents()
-
-      if (redeemScheduledEvents.length !== 1) {
-        throw new ArbSdkError(
-          `Transaction is not a redeem transaction: ${rec.transactionHash}`
-        )
-      }
-
-      return await l2Provider.getTransactionReceipt(
-        redeemScheduledEvents[0].retryTxHash
-      )
-    }
-    return returnRec
   }
 }

@@ -78,7 +78,10 @@ export class L1ToL2MessageCreator {
       defaultedGasParams.gasLimit,
       defaultedGasParams.maxFeePerGas,
       l2CallData,
-      { value: defaultedGasParams.totalL2GasCosts, ...overrides }
+      {
+        value: defaultedGasParams.totalL2GasCosts.add(l2CallValue),
+        ...overrides,
+      }
     )
     const receipt = await res.wait()
 
