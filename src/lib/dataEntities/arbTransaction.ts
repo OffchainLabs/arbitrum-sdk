@@ -90,6 +90,7 @@ export interface BatchInfo {
   logData: string
 }
 
+// From https://github.com/OffchainLabs/arb-os/blob/develop/arb_os/constants.json
 export enum ReturnCode {
   TransactionSuccess = 0,
   EVMRevert = 1,
@@ -142,6 +143,18 @@ export enum ReturnCode {
    * Sender not permitted
    */
   SenderNotPermitted = 13,
+  /**
+   * Sequence number too low
+   */
+  SequenceNumberTooLow = 14,
+  /**
+   * Sequence number too high
+   */
+  SequenceNumberTooHigh = 15,
+  /**
+   * Execution ran out of gas
+   */
+  ExecutionRanOutOfGas = 16,
   Unknown = 255,
 }
 
