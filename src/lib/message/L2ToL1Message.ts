@@ -340,23 +340,12 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
   protected async getBatchNumber(l2Provider: Provider) {
     if (this.l1BatchNumber == undefined) {
-      // CHRIS: TODO: use correct abis
       // findBatchContainingBlock errors if block number does not exist
       try {
-        const iface = new Interface([
-          'function findBatchContainingBlock(uint64 block) external view returns (uint64 batch)',
-          'function getL1Confirmations(bytes32 blockHash) external view returns (uint64 confirmations)',
-        ])
-        const nodeInterface = new Contract(
-          NODE_INTERFACE_ADDRESS,
-          iface,
-          l2Provider
+        const nodeInterface = NodeInterface__factory.connect(NODE_INTERFACE_ADDRESS, l2Provider)
+        const res = await nodeInterface.findBatchContainingBlock(
+          this.event.arbBlockNum
         )
-        const res = (
-          await nodeInterface.functions['findBatchContainingBlock'](
-            this.event.arbBlockNum
-          )
-        )[0] as BigNumber
         this.l1BatchNumber = res.toNumber()
       } catch (err) {
         // do nothing - errors are expected here
