@@ -33,9 +33,11 @@ import {
 import { getArbTransactionReceipt } from '../..'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
+import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
 import { ArbSdkError } from '../dataEntities/errors'
+import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 
 export interface L2ContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<L2TransactionReceipt>
@@ -143,17 +145,10 @@ export class L2TransactionReceipt implements TransactionReceipt {
     l2Provider: providers.JsonRpcProvider,
     confirmations = 10
   ): Promise<boolean> {
-    const arbReceipt = await getArbTransactionReceipt(
-      l2Provider,
-      this.transactionHash,
-      false,
-      true
-    )
-
-    if (!arbReceipt) return false
-
+    const nodeInterface = NodeInterface__factory.connect(NODE_INTERFACE_ADDRESS, l2Provider)
+    const res = await nodeInterface.getL1Confirmations(this.blockHash)
     // is there a batch with enough confirmations
-    return arbReceipt.l1BatchConfirmations > confirmations
+    return res.toNumber() > confirmations
   }
 
   /**

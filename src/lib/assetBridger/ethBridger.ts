@@ -129,13 +129,10 @@ export class EthBridger extends AssetBridger<
       params.l1Signer
     )
 
-    return (estimate ? inbox.estimateGas : inbox.functions).depositEth(
-      submissionCost,
-      {
-        value: params.amount.add(submissionCost),
-        ...(params.overrides || {}),
-      }
-    )
+    return (estimate ? inbox.estimateGas : inbox.functions)['depositEth()']({
+      value: params.amount.add(submissionCost),
+      ...(params.overrides || {}),
+    })
   }
 
   /**
