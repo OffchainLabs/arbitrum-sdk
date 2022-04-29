@@ -342,7 +342,10 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     if (this.l1BatchNumber == undefined) {
       // findBatchContainingBlock errors if block number does not exist
       try {
-        const nodeInterface = NodeInterface__factory.connect(NODE_INTERFACE_ADDRESS, l2Provider)
+        const nodeInterface = NodeInterface__factory.connect(
+          NODE_INTERFACE_ADDRESS,
+          l2Provider
+        )
         const res = await nodeInterface.findBatchContainingBlock(
           this.event.arbBlockNum
         )

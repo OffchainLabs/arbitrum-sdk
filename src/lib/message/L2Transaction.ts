@@ -145,7 +145,10 @@ export class L2TransactionReceipt implements TransactionReceipt {
     l2Provider: providers.JsonRpcProvider,
     confirmations = 10
   ): Promise<boolean> {
-    const nodeInterface = NodeInterface__factory.connect(NODE_INTERFACE_ADDRESS, l2Provider)
+    const nodeInterface = NodeInterface__factory.connect(
+      NODE_INTERFACE_ADDRESS,
+      l2Provider
+    )
     const res = await nodeInterface.getL1Confirmations(this.blockHash)
     // is there a batch with enough confirmations
     return res.toNumber() > confirmations

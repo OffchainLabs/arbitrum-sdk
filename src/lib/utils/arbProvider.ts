@@ -99,7 +99,10 @@ export async function getArbTransactionReceipt<
   const arbTxReceipt: ArbTransactionReceipt &
     Partial<ArbBatchConfirmations & ArbBatchNumber> = arbFormatter.receipt(rec)
 
-  const nodeInterface = NodeInterface__factory.connect(NODE_INTERFACE_ADDRESS, l2Provider)
+  const nodeInterface = NodeInterface__factory.connect(
+    NODE_INTERFACE_ADDRESS,
+    l2Provider
+  )
 
   if (fetchBatchNumber) {
     // findBatchContainingBlock errors if block number does not exist
@@ -115,7 +118,7 @@ export async function getArbTransactionReceipt<
 
   if (fetchBatchConfirmations) {
     // getL1Confirmations returns 0 if block has does not exist
-    const res = await nodeInterface.getL1Confirmations(arbTxReceipt.blockHash)    
+    const res = await nodeInterface.getL1Confirmations(arbTxReceipt.blockHash)
     arbTxReceipt.l1BatchConfirmations = res.toNumber()
   }
 
