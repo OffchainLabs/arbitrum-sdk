@@ -30,7 +30,6 @@ import {
   L2ToL1Message,
   L2ToL1MessageWriter,
 } from './L2ToL1Message'
-import { getArbTransactionReceipt } from '../..'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
@@ -38,6 +37,7 @@ import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
 import { ArbSdkError } from '../dataEntities/errors'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
+import { getArbTransactionReceipt } from '../utils/arbProvider'
 
 export interface L2ContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<L2TransactionReceipt>
@@ -135,6 +135,37 @@ export class L2TransactionReceipt implements TransactionReceipt {
   }
 
   /**
+   * Get number of L1 confirmations that the batch including this tx has
+   * @param l2Provider 
+   * @returns number of confirmations of batch including tx, or 0 if no batch included this tx
+   */
+  public getBatchConfirmations(l2Provider: providers.JsonRpcProvider) {
+    const nodeInterface = NodeInterface__factory.connect(
+      NODE_INTERFACE_ADDRESS,
+      l2Provider
+    )
+    return nodeInterface.getL1Confirmations(this.blockHash);
+  }
+
+  /**
+   * Get the number of the batch that included this tx (will throw if no such batch exists)
+   * @param l2Provider 
+   * @returns number of batch in which tx was included, or errors if no batch includes the current tx
+   */
+  public async getBatchNumber(l2Provider: providers.JsonRpcProvider) {
+    const nodeInterface = NodeInterface__factory.connect(
+      NODE_INTERFACE_ADDRESS,
+      l2Provider
+    )
+    const rec = await getArbTransactionReceipt(l2Provider, this.transactionHash)
+    if(rec == null) throw new ArbSdkError("No receipt receipt available for current transaction")
+    // findBatchContainingBlock errors if block number does not exist
+    return nodeInterface.findBatchContainingBlock(
+      rec.blockNumber
+    )
+  }
+
+  /**
    * Whether the data associated with this transaction has been
    * made available on L1
    * @param l2Provider
@@ -145,11 +176,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
     l2Provider: providers.JsonRpcProvider,
     confirmations = 10
   ): Promise<boolean> {
-    const nodeInterface = NodeInterface__factory.connect(
-      NODE_INTERFACE_ADDRESS,
-      l2Provider
-    )
-    const res = await nodeInterface.getL1Confirmations(this.blockHash)
+    const res = await this.getBatchConfirmations(l2Provider)
     // is there a batch with enough confirmations
     return res.toNumber() > confirmations
   }
