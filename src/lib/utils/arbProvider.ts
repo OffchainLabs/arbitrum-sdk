@@ -10,6 +10,7 @@ import { BigNumber, Contract } from 'ethers'
 import { Formats } from '@ethersproject/providers/lib/formatter'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { Interface } from 'ethers/lib/utils'
+import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 class ArbFormatter extends Formatter {
   readonly formats!: Formats
@@ -99,20 +100,16 @@ export async function getArbTransactionReceipt<
   const arbTxReceipt: ArbTransactionReceipt &
     Partial<ArbBatchConfirmations & ArbBatchNumber> = arbFormatter.receipt(rec)
 
-  // CHRIS: TODO: use correct abis
-  const iface = new Interface([
-    'function findBatchContainingBlock(uint64 block) external view returns (uint64 batch)',
-    'function getL1Confirmations(bytes32 blockHash) external view returns (uint64 confirmations)',
-  ])
-  const nodeInterface = new Contract(NODE_INTERFACE_ADDRESS, iface, l2Provider)
+  const nodeInterface = NodeInterface__factory.connect(
+    NODE_INTERFACE_ADDRESS,
+    l2Provider
+  )
   if (fetchBatchNumber) {
     // findBatchContainingBlock errors if block number does not exist
     try {
-      const res = (
-        await nodeInterface.functions['findBatchContainingBlock'](
-          arbTxReceipt.blockNumber
-        )
-      )[0] as BigNumber
+      const res = await nodeInterface.findBatchContainingBlock(
+        arbTxReceipt.blockNumber
+      )
       arbTxReceipt.l1BatchNumber = res.toNumber()
     } catch (err) {
       // do nothing - errors are expected here
@@ -121,11 +118,7 @@ export async function getArbTransactionReceipt<
 
   if (fetchBatchConfirmations) {
     // getL1Confirmations returns 0 if block has does not exist
-    const res = (
-      await nodeInterface.functions['getL1Confirmations'](
-        arbTxReceipt.blockHash
-      )
-    )[0] as BigNumber
+    const res = await nodeInterface.getL1Confirmations(arbTxReceipt.blockHash)
     arbTxReceipt.l1BatchConfirmations = res.toNumber()
   }
 
@@ -157,5 +150,5 @@ export async function getArbBlockByHash<T extends boolean = false>(
 
   return includeTransactions
     ? arbFormatter.blockWithTransactions(l2Block)
-    : (arbFormatter.block(l2Block) as unknown as ArbBlockWithTransactions)
+    : ((arbFormatter.block(l2Block) as unknown) as ArbBlockWithTransactions)
 }

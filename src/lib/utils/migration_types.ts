@@ -27,6 +27,7 @@ import { wait } from './lib'
 import { ArbSdkError } from '../dataEntities/errors'
 import { getL2Network as getL2NetworkClassic } from '@arbitrum/sdk-classic'
 import { getL2Network as getL2NetworkNitro } from '@arbitrum/sdk-nitro'
+import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 const getNitroTransitionBlock = async (l2Provider: Provider) => {
   // CHRIS: TODO: update this to use the NodeInterface method for getting the block number
@@ -34,14 +35,11 @@ const getNitroTransitionBlock = async (l2Provider: Provider) => {
 }
 
 const getBatchNumber = async (l2Provider: Provider, blockNumber: number) => {
-  const iface = new Interface([
-    'function findBatchContainingBlock(uint64 block) external view returns (uint64 batch)',
-    'function getL1Confirmations(bytes32 blockHash) external view returns (uint64 confirmations)',
-  ])
-  const nodeInterface = new Contract(NODE_INTERFACE_ADDRESS, iface, l2Provider)
-  const res = (
-    await nodeInterface.functions['findBatchContainingBlock'](blockNumber)
-  )[0] as BigNumber
+  const nodeInterface = NodeInterface__factory.connect(
+    NODE_INTERFACE_ADDRESS,
+    l2Provider
+  )
+  const res = await nodeInterface.findBatchContainingBlock(blockNumber)
   return res.toNumber()
 }
 
@@ -86,8 +84,9 @@ const updateL2Network = async (
 
   // need to update the network objects in all libs
   const classicNetwork = await getL2NetworkClassic(l2Network.chainID)
-  classicNetwork.ethBridge.outboxes[outboxUpdate] =
-    BigNumber.from(batchNumberUpdate)
+  classicNetwork.ethBridge.outboxes[outboxUpdate] = BigNumber.from(
+    batchNumberUpdate
+  )
 
   const nitroNetwork = await getL2NetworkNitro(l2Network.chainID)
   nitroNetwork.ethBridge.outboxes[outboxUpdate] = batchNumberUpdate
@@ -125,8 +124,9 @@ export const isNitroL2 = async (
   if (version.toNumber() > 56) {
     // try populate the batch number
     try {
-      const l2Provider =
-        SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
+      const l2Provider = SignerProviderUtils.getProviderOrThrow(
+        l2SignerOrProvider
+      )
       const nitroTransitionBlock = await getNitroTransitionBlock(l2Provider)
       const batchNumber = await getBatchNumber(l2Provider, nitroTransitionBlock)
       firstNitroBatchNumber = batchNumber
@@ -226,11 +226,13 @@ export interface IL1ToL2MessageWriter extends IL1ToL2MessageReader {
   redeem(overrides?: Overrides): Promise<ContractTransaction>
   cancel(overrides?: Overrides): Promise<ContractTransaction>
 }
-export type IL1ToL2MessageReaderOrWriter<T extends SignerOrProvider> =
-  T extends Provider ? IL1ToL2MessageReader : IL1ToL2MessageWriter
+export type IL1ToL2MessageReaderOrWriter<
+  T extends SignerOrProvider
+> = T extends Provider ? IL1ToL2MessageReader : IL1ToL2MessageWriter
 
-export type IL2ToL1MessageReaderOrWriter<T extends SignerOrProvider> =
-  T extends Provider ? IL2ToL1MessageReader : IL2ToL1MessageWriter
+export type IL2ToL1MessageReaderOrWriter<
+  T extends SignerOrProvider
+> = T extends Provider ? IL2ToL1MessageReader : IL2ToL1MessageWriter
 
 export interface IL2ToL1MessageReader {
   getOutboxProof(
@@ -299,7 +301,8 @@ export interface MessageBatchProofInfo {
 }
 export { ClassicMessageDeliveredEvent }
 
-export type ClassicForceInclusionParams =
-  FetchedEvent<ClassicMessageDeliveredEvent> & {
-    delayedAcc: string
-  }
+export type ClassicForceInclusionParams = FetchedEvent<
+  ClassicMessageDeliveredEvent
+> & {
+  delayedAcc: string
+}
