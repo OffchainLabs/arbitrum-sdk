@@ -27,7 +27,12 @@ import { parseEther } from '@ethersproject/units'
 import { config, testSetup } from '../scripts/testSetup'
 
 import { Signer } from 'ethers'
-import { getL2Network, Erc20Bridger, L1ToL2MessageStatus, L2ToL1MessageStatus } from '../src'
+import {
+  getL2Network,
+  Erc20Bridger,
+  L1ToL2MessageStatus,
+  L2ToL1MessageStatus,
+} from '../src'
 import { L2Network } from '../src/lib/dataEntities/networks'
 import { GasOverrides } from '../src/lib/message/L1ToL2MessageGasEstimator'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
@@ -75,7 +80,9 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   expect(withdrawRec.status).to.equal(1, 'initiate token withdraw txn failed')
 
   const network = await getL2Network(params.l2Signer)
-  const message = (await withdrawRec.getL2ToL1Messages(params.l1Signer, network))[0]
+  const message = (
+    await withdrawRec.getL2ToL1Messages(params.l1Signer, network)
+  )[0]
   expect(message, 'withdraw message not found').to.exist
 
   const messageStatus = await message.status(params.l2Signer.provider!)

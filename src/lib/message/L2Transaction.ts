@@ -18,23 +18,27 @@
 
 import { TransactionReceipt } from '@ethersproject/providers'
 import { BigNumber } from '@ethersproject/bignumber'
-import { Log } from '@ethersproject/abstract-provider'
+import { Log, Provider } from '@ethersproject/abstract-provider'
 import { ContractTransaction, providers } from 'ethers'
 import {
   SignerOrProvider,
+  SignerProviderUtils,
 } from '../dataEntities/signerOrProvider'
-import {
-  L2ToL1Message,
-} from './L2ToL1Message'
+import { L2ToL1Message } from './L2ToL1Message'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
 
 import * as classic from '@arbitrum/sdk-classic'
 import * as nitro from '@arbitrum/sdk-nitro'
-import { convertNetwork, isNitroL1, IL2ToL1MessageReader,
+import {
+  convertNetwork,
+  isNitroL1,
+  IL2ToL1MessageReader,
   IL2ToL1MessageWriter,
-  IL2ToL1MessageReaderOrWriter, } from '../utils/migration_types'
-import { getOutboxAddr, L2Network } from '../dataEntities/networks'
+  IL2ToL1MessageReaderOrWriter,
+  waitForL2NetworkUpdate,
+} from '../utils/migration_types'
+import { getL2Network, getOutboxAddr } from '../dataEntities/networks'
 
 export interface L2ContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<L2TransactionReceipt>
@@ -110,15 +114,23 @@ export class L2TransactionReceipt implements TransactionReceipt {
    */
   public async getL2ToL1Messages<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    l2Network: L2Network
+    l2Provider: Provider
   ): Promise<IL2ToL1MessageReaderOrWriter<T>[]>
   public async getL2ToL1Messages<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    l2Network: L2Network
+    l2Provider: Provider
   ): Promise<IL2ToL1MessageReader[] | IL2ToL1MessageWriter[]> {
     if (await isNitroL1(l1SignerOrProvider)) {
+      // we cant process a withdrawal until we have the new outbox address
+      // so we need to ensure the network object has been updated
+      await waitForL2NetworkUpdate(
+        SignerProviderUtils.getProviderOrThrow(l1SignerOrProvider),
+        l2Provider
+      )
+
       return this.nitroReceipt.getL2ToL1Messages(l1SignerOrProvider)
     } else {
+      const l2Network = await getL2Network(l2Provider)
       const messages = await this.classicReceipt.getL2ToL1Messages(
         l1SignerOrProvider,
         convertNetwork(l2Network)

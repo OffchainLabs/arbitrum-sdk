@@ -210,7 +210,7 @@ export class L2ToL1MessageReader
       : this.classicReader!.tryGetProof(l2Provider)
   }
 
-  protected classicProof?: MessageBatchProofInfo;
+  protected classicProof?: MessageBatchProofInfo
 
   /**
    * Get the status of this message
@@ -221,9 +221,10 @@ export class L2ToL1MessageReader
     // can we create an l2tol1message here, we need to - the constructor is what we need
     if (this.nitroReader) return this.nitroReader.status(l2Provider)
     else {
-      const proof = this.classicProof ||await this.classicReader!.tryGetProof(l2Provider)
-      if(proof && !this.classicProof) this.classicProof = proof
-      
+      const proof =
+        this.classicProof || (await this.classicReader!.tryGetProof(l2Provider))
+      if (proof && !this.classicProof) this.classicProof = proof
+
       const status = await this.classicReader!.status(proof)
       return convertL2ToL1Status(status)
     }
@@ -290,10 +291,6 @@ export class L2ToL1MessageWriter
       throw new ArbSdkError('Unexpected L2ToL1MessageWriter constructor args')
   }
 
-  // CHRIS: TODO: we shouldnt test isnitro in here
-  // CHRIS: TODO: we should work purely based on the outbox addr
-  // CHRIS: TODO: we need to populate that new outbox addresses somehow - we need to figure out that batch number thing (that isnt immediately clear to me)
-
   /**
    * Executes the L2ToL1Message on L1.
    * Will throw an error if the outbox entry has not been created, which happens when the
@@ -306,9 +303,10 @@ export class L2ToL1MessageWriter
   ): Promise<ContractTransaction> {
     if (this.nitroWriter) return this.nitroWriter.execute(l2Provider, overrides)
     else {
-      const proof = this.classicProof || await this.classicWriter!.tryGetProof(l2Provider)
+      const proof =
+        this.classicProof || (await this.classicWriter!.tryGetProof(l2Provider))
       if (proof === null) throw new ArbSdkError('Unexpected missing proof')
-      if(!this.classicProof) this.classicProof = proof;
+      if (!this.classicProof) this.classicProof = proof
       return await this.classicWriter!.execute(proof)
     }
   }
