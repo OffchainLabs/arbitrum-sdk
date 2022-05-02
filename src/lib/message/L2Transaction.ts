@@ -136,7 +136,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
 
   /**
    * Get number of L1 confirmations that the batch including this tx has
-   * @param l2Provider 
+   * @param l2Provider
    * @returns number of confirmations of batch including tx, or 0 if no batch included this tx
    */
   public getBatchConfirmations(l2Provider: providers.JsonRpcProvider) {
@@ -144,12 +144,12 @@ export class L2TransactionReceipt implements TransactionReceipt {
       NODE_INTERFACE_ADDRESS,
       l2Provider
     )
-    return nodeInterface.getL1Confirmations(this.blockHash);
+    return nodeInterface.getL1Confirmations(this.blockHash)
   }
 
   /**
    * Get the number of the batch that included this tx (will throw if no such batch exists)
-   * @param l2Provider 
+   * @param l2Provider
    * @returns number of batch in which tx was included, or errors if no batch includes the current tx
    */
   public async getBatchNumber(l2Provider: providers.JsonRpcProvider) {
@@ -158,11 +158,12 @@ export class L2TransactionReceipt implements TransactionReceipt {
       l2Provider
     )
     const rec = await getArbTransactionReceipt(l2Provider, this.transactionHash)
-    if(rec == null) throw new ArbSdkError("No receipt receipt available for current transaction")
+    if (rec == null)
+      throw new ArbSdkError(
+        'No receipt receipt available for current transaction'
+      )
     // findBatchContainingBlock errors if block number does not exist
-    return nodeInterface.findBatchContainingBlock(
-      rec.blockNumber
-    )
+    return nodeInterface.findBatchContainingBlock(rec.blockNumber)
   }
 
   /**

@@ -62,7 +62,7 @@ class ArbFormatter extends Formatter {
  */
 export async function getArbTransactionReceipt(
   l2Provider: JsonRpcProvider,
-  txHash: string,
+  txHash: string
 ): Promise<ArbTransactionReceipt | null> {
   const rec = await l2Provider.send('eth_getTransactionReceipt', [txHash])
   if (rec == null) return null
