@@ -81,7 +81,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
 
   const network = await getL2Network(params.l2Signer)
   const message = (
-    await withdrawRec.getL2ToL1Messages(params.l1Signer, network)
+    await withdrawRec.getL2ToL1Messages(params.l1Signer, params.l2Signer.provider!)
   )[0]
   expect(message, 'withdraw message not found').to.exist
 
