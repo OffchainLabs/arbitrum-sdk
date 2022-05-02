@@ -31,7 +31,7 @@ import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
-import { Contract, ContractTransaction, Overrides } from 'ethers'
+import { ContractTransaction, Overrides } from 'ethers'
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
@@ -45,7 +45,6 @@ import { L2TransactionReceipt } from './L2Transaction'
 import { getArbBlockByHash } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { Interface } from 'ethers/lib/utils'
 
 export interface MessageBatchProofInfo {
   /**
