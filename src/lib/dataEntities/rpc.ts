@@ -19,20 +19,6 @@ export interface ArbBlockProps {
   l1BlockNumber: number
 }
 
-export interface ArbBatchConfirmations {
-  /**
-   * The number of confirmations this batch has
-   */
-  l1BatchConfirmations: number
-}
-
-export interface ArbBatchNumber {
-  /**
-   * The number of the batch which this transaction was included in
-   */
-  l1BatchNumber?: number
-}
-
 export type ArbBlock = ArbBlockProps & Block
 export type ArbBlockWithTransactions = ArbBlockProps & BlockWithTransactions
 

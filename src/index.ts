@@ -50,7 +50,6 @@ export {
   getL2Network,
   addCustomNetwork,
 } from './lib/dataEntities/networks'
-export { getArbTransactionReceipt } from './lib/utils/arbProvider'
 export { InboxTools } from './lib/inbox/inbox'
 export { EventFetcher } from './lib/utils/eventFetcher'
 export * as constants from './lib/dataEntities/constants'

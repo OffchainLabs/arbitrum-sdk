@@ -31,7 +31,7 @@ import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
-import { Contract, ContractTransaction, Overrides } from 'ethers'
+import { ContractTransaction, Overrides } from 'ethers'
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
@@ -45,7 +45,6 @@ import { L2TransactionReceipt } from './L2Transaction'
 import { getArbBlockByHash } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { Interface } from 'ethers/lib/utils'
 
 export interface MessageBatchProofInfo {
   /**
@@ -340,23 +339,15 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
   protected async getBatchNumber(l2Provider: Provider) {
     if (this.l1BatchNumber == undefined) {
-      // CHRIS: TODO: use correct abis
       // findBatchContainingBlock errors if block number does not exist
       try {
-        const iface = new Interface([
-          'function findBatchContainingBlock(uint64 block) external view returns (uint64 batch)',
-          'function getL1Confirmations(bytes32 blockHash) external view returns (uint64 confirmations)',
-        ])
-        const nodeInterface = new Contract(
+        const nodeInterface = NodeInterface__factory.connect(
           NODE_INTERFACE_ADDRESS,
-          iface,
           l2Provider
         )
-        const res = (
-          await nodeInterface.functions['findBatchContainingBlock'](
-            this.event.arbBlockNum
-          )
-        )[0] as BigNumber
+        const res = await nodeInterface.findBatchContainingBlock(
+          this.event.arbBlockNum
+        )
         this.l1BatchNumber = res.toNumber()
       } catch (err) {
         // do nothing - errors are expected here
