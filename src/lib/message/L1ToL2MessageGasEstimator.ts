@@ -11,6 +11,8 @@ import { constants } from 'ethers'
 import { utils } from 'ethers'
 
 const DEFAULT_SUBMISSION_PRICE_PERCENT_INCREASE = BigNumber.from(340)
+// Temporary workaround for incorrect gas estimation from NodeInterface when there is gas refund
+const DEFAULT_MAX_GAS_PERCENT_INCREASE = BigNumber.from(50)
 
 /**
  * An optional big number percentage increase
@@ -41,7 +43,7 @@ export interface GasOverrides {
 
 const defaultL1ToL2MessageEstimateOptions = {
   maxSubmissionFeePercentIncrease: DEFAULT_SUBMISSION_PRICE_PERCENT_INCREASE,
-  maxGasPercentIncrease: constants.Zero,
+  maxGasPercentIncrease: DEFAULT_MAX_GAS_PERCENT_INCREASE,
   maxGasPricePercentIncrease: constants.Zero,
   sendL2CallValueFromL1: true,
 }
