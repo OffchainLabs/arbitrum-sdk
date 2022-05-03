@@ -106,7 +106,7 @@ As part of normal operation the Arbitrum sequencer will messages into the rollup
 
 Defaults to `rinkArby`, for custom network use `--network` flag.
 
-`rinkArby` expects env var `DEVNET_PRIVKEY` to be prefunded with at least 0.02 ETH, and env var `INFURA_KEY` to be set.
+`rinkArby` expects env var `ARB_KEY` to be prefunded with at least 0.02 ETH, and env var `INFURA_KEY` to be set.
 (see `integration_test/config.ts`)
 
 ### Bridge A Standard Token
