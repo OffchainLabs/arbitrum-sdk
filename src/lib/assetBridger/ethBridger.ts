@@ -66,11 +66,6 @@ export type EthDepositBase = {
   l1Signer: Signer
 
   /**
-   * An l2 provider
-   */
-  l2Provider: Provider
-
-  /**
    * The amount of ETH or tokens to be deposited
    */
   amount: BigNumber
@@ -109,7 +104,6 @@ export class EthBridger extends AssetBridger<
       throw new MissingProviderArbTsError('l1Signer')
     }
     await this.checkL1Network(params.l1Signer)
-    await this.checkL2Network(params.l2Provider)
 
     const inbox = Inbox__factory.connect(
       this.l2Network.ethBridge.inbox,
