@@ -518,7 +518,6 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
     private readonly l1Signer: Signer,
     event: L2ToL1TransactionEvent['args']
   ) {
-    l1Signer.sendTransaction
     super(l1Signer.provider!, event)
   }
 
