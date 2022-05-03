@@ -433,6 +433,7 @@ export class Erc20Bridger extends AssetBridger<
       baseFee,
       sender,
       sender,
+      l1Signer.provider,
       tokenGasOverrides
     )
 
@@ -636,7 +637,8 @@ export class AdminErc20Bridger extends Erc20Bridger {
       Zero,
       baseFee,
       l1SignerAddr,
-      l1SignerAddr
+      l1SignerAddr,
+      l1Signer.provider
     )
 
     // 2. setGateway
@@ -655,7 +657,8 @@ export class AdminErc20Bridger extends Erc20Bridger {
       Zero,
       baseFee,
       l1SignerAddr,
-      l1SignerAddr
+      l1SignerAddr,
+      l1Signer.provider
     )
 
     // now execute the registration
@@ -781,7 +784,8 @@ export class AdminErc20Bridger extends Erc20Bridger {
       Zero,
       baseFee,
       l1SignerAddr,
-      l1SignerAddr
+      l1SignerAddr,
+      l1Signer.provider
     )
 
     const l1GatewayRouter = L1GatewayRouter__factory.connect(

@@ -44,14 +44,13 @@ export class L1ToL2MessageCreator {
     const sender = await this.l1Signer.getAddress()
     const excessFeeRefundAddress = options?.excessFeeRefundAddress || sender
     const callValueRefundAddress = options?.callValueRefundAddress || sender
+    const l1Provider = SignerProviderUtils.getProviderOrThrow(this.l1Signer)
 
     const defaultedGasParams =
       gasParams ||
       (await (async () => {
         const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
-        const baseFee = await getBaseFee(
-          SignerProviderUtils.getProviderOrThrow(this.l1Signer)
-        )
+        const baseFee = await getBaseFee(l1Provider)
         return await gasEstimator.estimateAll(
           sender,
           l2CallTo,
@@ -59,7 +58,8 @@ export class L1ToL2MessageCreator {
           l2CallValue,
           baseFee,
           excessFeeRefundAddress,
-          callValueRefundAddress
+          callValueRefundAddress,
+          l1Provider
         )
       })())
 
