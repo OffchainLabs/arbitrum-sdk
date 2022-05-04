@@ -111,12 +111,22 @@ export class L1ToL2MessageGasEstimator {
       options?.maxSubmissionFee
     )
 
+    // since we have a base we can return early and avoid a network request
+    if (defaultedOptions.base)
+      return this.percentIncrease(
+        defaultedOptions.base,
+        defaultedOptions.percentIncrease
+      )
+
     const network = await getL2Network(this.l2Provider)
     const inbox = Inbox__factory.connect(network.ethBridge.inbox, l1Provider)
+    const maxSubmissionFee = await inbox.calculateRetryableSubmissionFee(
+      callDataSize,
+      l1BaseFee
+    )
 
     return this.percentIncrease(
-      defaultedOptions.base ||
-        (await inbox.calculateRetryableSubmissionFee(callDataSize, l1BaseFee)),
+      maxSubmissionFee,
       defaultedOptions.percentIncrease
     )
   }
@@ -220,7 +230,7 @@ export class L1ToL2MessageGasEstimator {
     )
 
     // always ensure the max gas is greater than the min - this can be useful if we know that
-    // gas estimation is bad for the provided transaction
+    // gas esimation is bad for the provided transaction
     const gasLimit = calculatedGasLimit.gt(gasLimitDefaults.min)
       ? calculatedGasLimit
       : gasLimitDefaults.min
