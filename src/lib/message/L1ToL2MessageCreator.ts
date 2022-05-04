@@ -1,7 +1,10 @@
 import { Signer } from '@ethersproject/abstract-signer'
 import { Provider } from '@ethersproject/abstract-provider'
 
-import { GasOverrides, L1ToL2MessageGasEstimator } from './L1ToL2MessageGasEstimator'
+import {
+  GasOverrides,
+  L1ToL2MessageGasEstimator,
+} from './L1ToL2MessageGasEstimator'
 import { L1TransactionReceipt } from './L1Transaction'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { getL2Network } from '../dataEntities/networks'
@@ -32,40 +35,28 @@ export class L1ToL2MessageCreator {
     options?: {
       excessFeeRefundAddress?: string
       callValueRefundAddress?: string
-      gasEstimationOptions: GasOverrides,
-      gasOverride?: {
-        maxFeePerGas: BigNumber
-        maxSubmissionFee: BigNumber
-        gasLimit: BigNumber
-        totalL2GasCosts: BigNumber
-      },
+      gasEstimationOptions?: GasOverrides
     },
     overrides: PayableOverrides = {}
   ): Promise<L1TransactionReceipt> {
-    if(options?.gasOverride && options.gasEstimationOptions)
-      throw new ArbSdkError("Cannot set both gasOverride and gasEstimationOptions")
     const sender = await this.l1Signer.getAddress()
     const excessFeeRefundAddress = options?.excessFeeRefundAddress || sender
     const callValueRefundAddress = options?.callValueRefundAddress || sender
     const l1Provider = SignerProviderUtils.getProviderOrThrow(this.l1Signer)
 
-    const defaultedGasParams =
-      options?.gasOverride ||
-      (await (async () => {
-        const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
-        const baseFee = await getBaseFee(l1Provider)
-        return await gasEstimator.estimateAll(
-          sender,
-          l2CallTo,
-          l2CallData,
-          l2CallValue,
-          baseFee,
-          excessFeeRefundAddress,
-          callValueRefundAddress,
-          l1Provider,
-          options?.gasEstimationOptions
-        )
-      })())
+    const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
+    const baseFee = await getBaseFee(l1Provider)
+    const defaultedGasParams = await gasEstimator.estimateAll(
+      sender,
+      l2CallTo,
+      l2CallData,
+      l2CallValue,
+      baseFee,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
+      l1Provider,
+      options?.gasEstimationOptions
+    )
 
     const l2Network = await getL2Network(l2Provider)
     const inbox = Inbox__factory.connect(
