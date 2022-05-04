@@ -39,7 +39,7 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { wait } from '../utils/lib'
-import { getL2Network, getOutboxAddr } from '../dataEntities/networks'
+import { getL2Network } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
 import { L2TransactionReceipt } from './L2Transaction'
 import { getArbBlockByHash } from '../utils/arbProvider'
@@ -256,12 +256,11 @@ export class L2ToL1MessageReader extends L2ToL1Message {
    * Check if this message has already been executed in the Outbox
    */
   protected async hasExecuted(l2Provider: Provider): Promise<boolean> {
-    const outboxAddr = await this.getOutboxAddress(l2Provider)
-    // if the outbox address cannot be found then the withdrawal
-    // cannot have been executed
-    if (!outboxAddr) return false
-
-    const outbox = Outbox__factory.connect(outboxAddr, this.l1Provider)
+    const l2Network = await getL2Network(l2Provider)
+    const outbox = Outbox__factory.connect(
+      l2Network.ethBridge.outbox,
+      this.l1Provider
+    )
 
     return outbox.callStatic.spent(this.event.position)
   }
@@ -355,20 +354,6 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     }
 
     return this.l1BatchNumber
-  }
-
-  protected async getOutboxAddress(l2Provider: Provider) {
-    if (!this.outboxAddress) {
-      const batchNumber = await this.getBatchNumber(l2Provider)
-      if (batchNumber != undefined) {
-        const l2Network = await getL2Network(l2Provider)
-        const outboxAddr = getOutboxAddr(l2Network, batchNumber)
-
-        this.outboxAddress = outboxAddr
-      }
-    }
-
-    return this.outboxAddress
   }
 
   protected async getSendProps(l2Provider: Provider) {
@@ -529,13 +514,11 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
       )
     }
     const proof = await this.getOutboxProof(l2Provider)
-    const outboxAddr = await this.getOutboxAddress(l2Provider)
-    if (!outboxAddr) {
-      throw new ArbSdkError(
-        `Outbox address not found but node is confirmed. ${this.event.hash.toHexString()}`
-      )
-    }
-    const outbox = Outbox__factory.connect(outboxAddr, this.l1Signer)
+    const l2Network = await getL2Network(l2Provider)
+    const outbox = Outbox__factory.connect(
+      l2Network.ethBridge.outbox,
+      this.l1Signer
+    )
 
     return await outbox.executeTransaction(
       proof,

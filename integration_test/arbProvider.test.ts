@@ -44,7 +44,6 @@ describe('ArbProvider', () => {
       value: amountToSend,
     })
     const rec = await tx.wait()
-    const testTxHash = rec.transactionHash
 
     // wait for the batch data
     // eslint-disable-next-line no-constant-condition
@@ -52,10 +51,8 @@ describe('ArbProvider', () => {
       await wait(300)
       const arbTxReceipt = new L2TransactionReceipt(rec)
 
-      const l1BlockNum = await l1Signer.provider!.getBlockNumber()
-
       const l1BatchNumber = (
-        await arbTxReceipt.getBatchNumber(l2Provider).catch(err => {
+        await arbTxReceipt.getBatchNumber(l2Provider).catch(() => {
           // findBatchContainingBlock errors if block number does not exist
           return BigNumber.from(0)
         })
@@ -63,7 +60,6 @@ describe('ArbProvider', () => {
       const l1BatchConfirmations = (
         await arbTxReceipt.getBatchConfirmations(l2Provider)
       ).toNumber()
-      console.log(l1BatchNumber, l1BatchConfirmations, l1BlockNum)
 
       if (l1BatchNumber && l1BatchNumber > 0) {
         expect(l1BatchConfirmations, 'missing confirmations').to.be.gt(0)
