@@ -111,6 +111,7 @@ export class L1ToL2MessageGasEstimator {
       options?.maxSubmissionFee
     )
 
+    // allows user to specify the intended submission cost to be used, so we return instead of estimating it
     if (defaultedOptions.base)
       return this.percentIncrease(
         defaultedOptions.base,
@@ -118,9 +119,7 @@ export class L1ToL2MessageGasEstimator {
       )
 
     const network = await getL2Network(this.l2Provider)
-
     const inbox = Inbox__factory.connect(network.ethBridge.inbox, l1Provider)
-
     const maxSubmissionFee = await inbox.calculateRetryableSubmissionFee(
       callDataSize,
       l1BaseFee
