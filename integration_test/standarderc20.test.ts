@@ -40,7 +40,7 @@ import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
-describe.only('standard ERC20', () => {
+describe('standard ERC20', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
@@ -96,7 +96,7 @@ describe.only('standard ERC20', () => {
     expect(retryRec.status, 'tx didnt fail').to.eq(expectedStatus)
   }
 
-  it.only('deposit with no funds, manual redeem', async () => {
+  it('deposit with no funds, manual redeem', async () => {
     const { waitRes } = await depositToken(
       depositAmount,
       testState.l1Token.address,
