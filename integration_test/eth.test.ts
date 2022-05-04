@@ -207,6 +207,7 @@ describe('Ether', async () => {
       'executed status'
     ).to.eq(L2ToL1MessageStatus.EXECUTED)
 
+    // CHRIS: TODO: move this to a ticket?
     console.log(
       `This number should be zero...? ${initialBalance
         .sub(totalEth)
