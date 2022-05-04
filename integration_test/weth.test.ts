@@ -32,7 +32,7 @@ import { Wallet } from 'ethers'
 import { testSetup } from '../scripts/testSetup'
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 
-describe.only('WETH', async () => {
+describe('WETH', async () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
