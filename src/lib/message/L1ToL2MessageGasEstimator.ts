@@ -220,7 +220,7 @@ export class L1ToL2MessageGasEstimator {
     )
 
     // always ensure the max gas is greater than the min - this can be useful if we know that
-    // gas esimation is bad for the provided transaction
+    // gas estimation is bad for the provided transaction
     const gasLimit = calculatedGasLimit.gt(gasLimitDefaults.min)
       ? calculatedGasLimit
       : gasLimitDefaults.min
