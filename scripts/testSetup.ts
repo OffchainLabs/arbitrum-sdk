@@ -95,9 +95,7 @@ export const getCustomNetworks = async (
     ethBridge: {
       bridge: parsedDeploymentData.bridge,
       inbox: parsedDeploymentData.inbox,
-      outboxes: {
-        [outboxAddr]: 0,
-      },
+      outbox: outboxAddr,
       rollup: parsedDeploymentData.rollup,
       sequencerInbox: parsedDeploymentData['sequencer-inbox'],
     },
