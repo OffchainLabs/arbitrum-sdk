@@ -688,6 +688,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
   public async getL1GatewaySetEvents(
     l1Provider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
+    // CHRIS: TODO: is this the correct way to specify a router? shouldnt it be on the network object already?
     customNetworkL1GatewayRouter?: string
   ): Promise<GatewaySetEvent['args'][]> {
     if (this.l2Network.isCustom && !customNetworkL1GatewayRouter) {
