@@ -529,7 +529,8 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
       l1BaseFee,
       messageData
     )
-    if (!l2Signer.provider) throw new Error('Signer not connected to provider.')
+    if (!l2Signer.provider)
+      throw new ArbSdkError('Signer not connected to provider.')
   }
 
   /**

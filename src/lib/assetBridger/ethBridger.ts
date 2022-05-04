@@ -24,12 +24,9 @@ import { BigNumber, ethers } from 'ethers'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
-import {
-  L1ToL2MessageGasEstimator,
-  PercentIncrease,
-} from '../message/L1ToL2MessageGasEstimator'
+import { PercentIncrease } from '../message/L1ToL2MessageGasEstimator'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
-import { MissingProviderArbTsError } from '../dataEntities/errors'
+import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { AssetBridger } from './assetBridger'
 import {
   L1EthDepositTransaction,
@@ -39,7 +36,6 @@ import {
   L2ContractTransaction,
   L2TransactionReceipt,
 } from '../message/L2Transaction'
-import { getBaseFee } from '../utils/lib'
 
 export interface EthWithdrawParams {
   /**
@@ -63,16 +59,11 @@ export interface EthWithdrawParams {
   overrides?: PayableOverrides
 }
 
-export type EthDepositBase = {
+export type EthDepositParams = {
   /**
    * The L1 entity depositing the assets
    */
   l1Signer: Signer
-
-  /**
-   * An l2 provider
-   */
-  l2Provider: Provider
 
   /**
    * The amount of ETH or tokens to be deposited
@@ -83,15 +74,6 @@ export type EthDepositBase = {
    * Transaction overrides
    */
   overrides?: PayableOverrides
-}
-
-export interface EthDepositParams extends EthDepositBase {
-  /**
-   * Retryable transaction overrides
-   */
-  retryableGasOverrides?: {
-    maxSubmissionPrice?: PercentIncrease
-  }
 }
 
 /**
@@ -110,19 +92,9 @@ export class EthBridger extends AssetBridger<
     estimate: T
   ): Promise<BigNumber | ethers.ContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
-      throw new MissingProviderArbTsError('l1Signer')
+      throw new MissingProviderArbSdkError('l1Signer')
     }
     await this.checkL1Network(params.l1Signer)
-    await this.checkL2Network(params.l2Provider)
-
-    const gasEstimator = new L1ToL2MessageGasEstimator(params.l2Provider)
-    const baseFee = await getBaseFee(params.l1Signer.provider)
-
-    const submissionCost = await gasEstimator.estimateSubmissionFee(
-      baseFee,
-      0,
-      params.retryableGasOverrides?.maxSubmissionPrice
-    )
 
     const inbox = Inbox__factory.connect(
       this.l2Network.ethBridge.inbox,
@@ -130,7 +102,7 @@ export class EthBridger extends AssetBridger<
     )
 
     return (estimate ? inbox.estimateGas : inbox.functions)['depositEth()']({
-      value: params.amount.add(submissionCost),
+      value: params.amount,
       ...(params.overrides || {}),
     })
   }
@@ -167,7 +139,7 @@ export class EthBridger extends AssetBridger<
     estimate: T
   ): Promise<BigNumber | ethers.ContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
-      throw new MissingProviderArbTsError('l2Signer')
+      throw new MissingProviderArbSdkError('l2Signer')
     }
     await this.checkL2Network(params.l2Signer)
 

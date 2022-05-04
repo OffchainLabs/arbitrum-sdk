@@ -88,7 +88,6 @@ describe('Ether', async () => {
     const res = await ethBridger.deposit({
       amount: ethToDeposit,
       l1Signer: l1Signer,
-      l2Provider: l2Signer.provider!,
     })
     const rec = await res.wait()
 
