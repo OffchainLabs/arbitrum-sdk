@@ -87,7 +87,7 @@ describe('Ether', async () => {
     const ethToDeposit = parseEther('0.0002')
     const res = await ethBridger.deposit({
       amount: ethToDeposit,
-      l1Signer: l1Signer
+      l1Signer: l1Signer,
     })
     const rec = await res.wait()
 

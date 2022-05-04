@@ -88,7 +88,7 @@ export interface TokenDepositParams extends EthDepositBase {
    * An L2 provider
    */
   l2Provider: Provider
-  
+
   /**
    * L1 address of the token ERC20 contract
    */
