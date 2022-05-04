@@ -23,8 +23,9 @@ const DEFAULT_GAS_PRICE_PERCENT_INCREASE = BigNumber.from(200)
 
 /**
  * The maximum number of L1 blocks expected to be over 50% full before your tx is included
+ * 20 full blocks mean that the base fee increases by 10x
  */
-const DEFAULT_EXPECTED_MAX_L1_FULL_BLOCKS = BigNumber.from(1000)
+const DEFAULT_EXPECTED_MAX_L1_FULL_BLOCKS = BigNumber.from(20)
 
 /**
  * An optional big number percentage increase
