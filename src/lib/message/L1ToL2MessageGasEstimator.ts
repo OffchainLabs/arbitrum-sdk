@@ -22,6 +22,11 @@ const DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE = BigNumber.from(300)
 const DEFAULT_GAS_PRICE_PERCENT_INCREASE = BigNumber.from(200)
 
 /**
+ * The maximum number of L1 blocks expected to be over 50% full before your tx is included
+ */
+const DEFAULT_EXPECTED_MAX_L1_FULL_BLOCKS = BigNumber.from(1000)
+
+/**
  * An optional big number percentage increase
  */
 export type PercentIncrease = {
@@ -37,6 +42,8 @@ export type PercentIncrease = {
 }
 
 export interface GasOverrides {
+  /** The maximum number of L1 blocks expected to be over 50% full before your tx is included */
+  maxL1FullBlocksExpected?: BigNumber
   gasLimit?: PercentIncrease & {
     /**
      * Set a minimum max gas
@@ -92,6 +99,51 @@ export class L1ToL2MessageGasEstimator {
         defaultL1ToL2MessageEstimateOptions.gasLimitPercentIncrease,
       min: gasLimitDefaults?.min || constants.Zero,
     }
+  }
+
+  /**
+   * Return the fee, in wei, of submitting a new retryable tx with a given calldata size.
+   * @param l1BaseFee
+   * @param callDataSize
+   * @param options
+   * @returns
+   */
+  public async estimateSubmissionFee(
+    l1Provider: Provider,
+    l1BaseFee: BigNumber,
+    callDataSize: BigNumber | number,
+    options?: GasOverrides
+  ): Promise<BigNumber> {
+    const defaultedOptions = this.applySubmissionPriceDefaults(
+      options?.maxSubmissionFee
+    )
+
+    if (defaultedOptions.base)
+      return this.percentIncrease(
+        defaultedOptions.base,
+        defaultedOptions.percentIncrease
+      )
+
+    const network = await getL2Network(this.l2Provider)
+
+    const inbox = Inbox__factory.connect(network.ethBridge.inbox, l1Provider)
+
+    const maxExpectedL1BaseFee = l1BaseFee
+      .mul(9)
+      .div(8)
+      .pow(
+        options?.maxL1FullBlocksExpected || DEFAULT_EXPECTED_MAX_L1_FULL_BLOCKS
+      )
+
+    const maxSubmissionFee = await inbox.calculateRetryableSubmissionFee(
+      callDataSize,
+      maxExpectedL1BaseFee
+    )
+
+    return this.percentIncrease(
+      maxSubmissionFee,
+      defaultedOptions.percentIncrease
+    )
   }
 
   /**
@@ -170,12 +222,12 @@ export class L1ToL2MessageGasEstimator {
       maxFeePerGasDefaults.percentIncrease
     )
 
-    const network = await getL2Network(this.l2Provider)
     // estimate the submission fee
-    const inbox = Inbox__factory.connect(network.ethBridge.inbox, l1Provider)
-    const maxSubmissionFee = await inbox.calculateRetryableSubmissionFee(
+    const maxSubmissionFee = await this.estimateSubmissionFee(
+      l1Provider,
+      l1BaseFee,
       utils.hexDataLength(l2CallData),
-      l1BaseFee
+      options
     )
 
     // estimate the gas limit

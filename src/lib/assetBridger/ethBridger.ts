@@ -59,7 +59,7 @@ export interface EthWithdrawParams {
   overrides?: PayableOverrides
 }
 
-export type EthDepositBase = {
+export type EthDepositParams = {
   /**
    * The L1 entity depositing the assets
    */
@@ -74,15 +74,6 @@ export type EthDepositBase = {
    * Transaction overrides
    */
   overrides?: PayableOverrides
-}
-
-export interface EthDepositParams extends EthDepositBase {
-  /**
-   * Retryable transaction overrides
-   */
-  retryableGasOverrides?: {
-    maxSubmissionPrice?: PercentIncrease
-  }
 }
 
 /**

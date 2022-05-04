@@ -48,7 +48,7 @@ import { L2Network } from '../dataEntities/networks'
 import { ArbSdkError, MissingProviderArbTsError } from '../dataEntities/errors'
 import { DISABLED_GATEWAY } from '../dataEntities/constants'
 import { EventFetcher } from '../utils/eventFetcher'
-import { EthDepositBase, EthWithdrawParams } from './ethBridger'
+import { EthDepositParams, EthWithdrawParams } from './ethBridger'
 import { AssetBridger } from './assetBridger'
 import {
   L1ContractCallTransaction,
@@ -83,7 +83,7 @@ export interface TokenApproveParams {
   overrides?: PayableOverrides
 }
 
-export interface TokenDepositParams extends EthDepositBase {
+export interface TokenDepositParams extends EthDepositParams {
   /**
    * An L2 provider
    */
