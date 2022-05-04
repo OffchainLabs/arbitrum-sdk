@@ -1,9 +1,11 @@
 import { Provider } from '@ethersproject/abstract-provider'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
+import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { BigNumber } from '@ethersproject/bignumber'
 import { constants } from 'ethers'
 import { utils } from 'ethers'
+import { getL2Network } from '../dataEntities/networks'
 
 /**
  * The default amount to increase the maximum submission cost. Submission cost is calculated
@@ -94,26 +96,37 @@ export class L1ToL2MessageGasEstimator {
 
   /**
    * Return the fee, in wei, of submitting a new retryable tx with a given calldata size.
+   * @param l1BaseFee
    * @param callDataSize
    * @param options
    * @returns
    */
   public async estimateSubmissionFee(
+    l1Provider: Provider,
     l1BaseFee: BigNumber,
     callDataSize: BigNumber | number,
-    options?: {
-      base?: BigNumber
-      percentIncrease?: BigNumber
-    }
+    options?: GasOverrides
   ): Promise<BigNumber> {
-    const defaultedOptions = this.applySubmissionPriceDefaults(options)
-    const submissionCost = BigNumber.from(callDataSize)
-      .mul(6)
-      .add(1400)
-      .mul(l1BaseFee)
+    const defaultedOptions = this.applySubmissionPriceDefaults(
+      options?.maxSubmissionFee
+    )
+
+    // allows user to specify the intended submission cost to be used, so we return instead of estimating it
+    if (defaultedOptions.base)
+      return this.percentIncrease(
+        defaultedOptions.base,
+        defaultedOptions.percentIncrease
+      )
+
+    const network = await getL2Network(this.l2Provider)
+    const inbox = Inbox__factory.connect(network.ethBridge.inbox, l1Provider)
+    const maxSubmissionFee = await inbox.calculateRetryableSubmissionFee(
+      callDataSize,
+      l1BaseFee
+    )
 
     return this.percentIncrease(
-      defaultedOptions.base || submissionCost,
+      maxSubmissionFee,
       defaultedOptions.percentIncrease
     )
   }
@@ -175,6 +188,7 @@ export class L1ToL2MessageGasEstimator {
     l1BaseFee: BigNumber,
     excessFeeRefundAddress: string,
     callValueRefundAddress: string,
+    l1Provider: Provider,
     options?: GasOverrides
   ): Promise<{
     gasLimit: BigNumber
@@ -195,9 +209,10 @@ export class L1ToL2MessageGasEstimator {
 
     // estimate the submission fee
     const maxSubmissionFee = await this.estimateSubmissionFee(
+      l1Provider,
       l1BaseFee,
       utils.hexDataLength(l2CallData),
-      options?.maxSubmissionFee
+      options
     )
 
     // estimate the gas limit

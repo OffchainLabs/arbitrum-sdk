@@ -56,6 +56,7 @@ import { ArbAddressTable__factory } from '../abi/factories/ArbAddressTable__fact
 import { ArbAddressTable } from '../abi/ArbAddressTable'
 
 import { ARB_ADDRESS_TABLE_ADDRESS } from '../dataEntities/constants'
+import { ArbSdkError } from '../dataEntities/errors'
 
 type PrimativeType = string | number | boolean | BigNumber
 type PrimativeOrPrimativeArray = PrimativeType | PrimativeType[]
@@ -126,7 +127,7 @@ const formatPrimative = (value: PrimativeType) => {
   ) {
     return toUint(value, 32)
   } else {
-    throw new Error('unsupported type')
+    throw new ArbSdkError('unsupported type')
   }
 }
 /**

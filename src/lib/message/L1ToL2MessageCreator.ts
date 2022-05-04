@@ -1,14 +1,17 @@
 import { Signer } from '@ethersproject/abstract-signer'
 import { Provider } from '@ethersproject/abstract-provider'
 
-import { L1ToL2MessageGasEstimator } from './L1ToL2MessageGasEstimator'
+import {
+  GasOverrides,
+  L1ToL2MessageGasEstimator,
+} from './L1ToL2MessageGasEstimator'
 import { L1TransactionReceipt } from './L1Transaction'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { getL2Network } from '../dataEntities/networks'
 import { PayableOverrides } from '@ethersproject/contracts'
 import { BigNumber } from 'ethers'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
-import { MissingProviderArbTsError } from '../dataEntities/errors'
+import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getBaseFee } from '../utils/lib'
 
 /**
@@ -17,7 +20,7 @@ import { getBaseFee } from '../utils/lib'
 export class L1ToL2MessageCreator {
   constructor(public readonly l1Signer: Signer) {
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
-      throw new MissingProviderArbTsError('l1Signer')
+      throw new MissingProviderArbSdkError('l1Signer')
     }
   }
 
@@ -32,36 +35,28 @@ export class L1ToL2MessageCreator {
     options?: {
       excessFeeRefundAddress?: string
       callValueRefundAddress?: string
-    },
-    gasParams?: {
-      maxFeePerGas: BigNumber
-      maxSubmissionFee: BigNumber
-      gasLimit: BigNumber
-      totalL2GasCosts: BigNumber
+      gasEstimationOptions?: GasOverrides
     },
     overrides: PayableOverrides = {}
   ): Promise<L1TransactionReceipt> {
     const sender = await this.l1Signer.getAddress()
     const excessFeeRefundAddress = options?.excessFeeRefundAddress || sender
     const callValueRefundAddress = options?.callValueRefundAddress || sender
+    const l1Provider = SignerProviderUtils.getProviderOrThrow(this.l1Signer)
 
-    const defaultedGasParams =
-      gasParams ||
-      (await (async () => {
-        const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
-        const baseFee = await getBaseFee(
-          SignerProviderUtils.getProviderOrThrow(this.l1Signer)
-        )
-        return await gasEstimator.estimateAll(
-          sender,
-          l2CallTo,
-          l2CallData,
-          l2CallValue,
-          baseFee,
-          excessFeeRefundAddress,
-          callValueRefundAddress
-        )
-      })())
+    const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
+    const baseFee = await getBaseFee(l1Provider)
+    const defaultedGasParams = await gasEstimator.estimateAll(
+      sender,
+      l2CallTo,
+      l2CallData,
+      l2CallValue,
+      baseFee,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
+      l1Provider,
+      options?.gasEstimationOptions
+    )
 
     const l2Network = await getL2Network(l2Provider)
     const inbox = Inbox__factory.connect(

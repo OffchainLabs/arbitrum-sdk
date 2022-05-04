@@ -127,7 +127,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
     l1SignerOrProvider: T
   ): Promise<L2ToL1MessageReader[] | L2ToL1MessageWriter[]> {
     const provider = SignerProviderUtils.getProvider(l1SignerOrProvider)
-    if (!provider) throw new Error('Signer not connected to provider.')
+    if (!provider) throw new ArbSdkError('Signer not connected to provider.')
 
     return this.getL2ToL1Events().map(log =>
       L2ToL1Message.fromEvent(l1SignerOrProvider, log)
