@@ -66,11 +66,7 @@ export interface EthBridge {
   bridge: string
   inbox: string
   sequencerInbox: string
-  /**
-   * Outbox addresses paired with the first batch number at which they
-   * were activated.
-   */
-  outboxes: { [address: string]: number }
+  outbox: string
   rollup: string
 }
 
@@ -120,10 +116,7 @@ const rinkebyETHBridge: EthBridge = {
   bridge: '0x9a28e783c47bbeb813f32b861a431d0776681e95',
   inbox: '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e',
   sequencerInbox: '0xe1ae39e91c5505f7f0ffc9e2bbf1f6e1122dcfa8',
-  outboxes: {
-    '0xefa1a42D3c4699822eE42677515A64b658be1bFc': 0,
-    '0x2360A33905dc1c72b12d975d975F42BaBdcef9F3': 326,
-  },
+  outbox: '0x2360A33905dc1c72b12d975d975F42BaBdcef9F3',
   rollup: '0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c',
 }
 
@@ -131,10 +124,7 @@ const mainnetETHBridge: EthBridge = {
   bridge: '0x011b6e24ffb0b5f5fcc564cf4183c5bbbc96d515',
   inbox: '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f',
   sequencerInbox: '0x4c6f947Ae67F572afa4ae0730947DE7C874F95Ef',
-  outboxes: {
-    '0x667e23ABd27E623c11d4CC00ca3EC4d0bD63337a': 0,
-    '0x760723CD2e632826c38Fef8CD438A4CC7E7E1A40': 30,
-  },
+  outbox: '0x760723CD2e632826c38Fef8CD438A4CC7E7E1A40',
   rollup: '0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A',
 }
 
@@ -270,36 +260,6 @@ export const addCustomNetwork = ({
   if (!l1PartnerChain.partnerChainIDs.includes(customL2Network.chainID)) {
     l1PartnerChain.partnerChainIDs.push(customL2Network.chainID)
   }
-}
-
-/**
- * New outboxes can be added to the bridge, and withdrawals always use the latest outbox.
- * This function finds the outbox address for a supplied batch number
- * @param network
- * @param batchNumber
- * @returns
- */
-export const getOutboxAddr = (network: L2Network, batchNumber: number) => {
-  // find the outbox where the activation batch number of the next outbox
-  // is greater than the supplied batch
-  const res = Object.entries(network.ethBridge.outboxes)
-    .sort((a, b) => {
-      if (a[1] < b[1]) return -1
-      else if (a[1] === b[1]) return 0
-      else return 1
-    })
-    .find(
-      (_, index, array) =>
-        array[index + 1] === undefined || array[index + 1][1] > batchNumber
-    )
-
-  if (!res) {
-    throw new ArbSdkError(
-      `No outbox found for batch number: ${batchNumber} on network: ${network.chainID}.`
-    )
-  }
-
-  return res[0]
 }
 
 export const isL1Network = (

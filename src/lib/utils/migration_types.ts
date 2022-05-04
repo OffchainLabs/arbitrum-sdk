@@ -16,19 +16,106 @@ import {
 import { L2ToL1MessageStatus } from '../message/L2ToL1Message'
 import { MessageDeliveredEvent as ClassicMessageDeliveredEvent } from '@arbitrum/sdk-classic/dist/lib/abi/Bridge'
 import { FetchedEvent } from './eventFetcher'
-import { getL2Network as getL2NetworkNitro } from '@arbitrum/sdk-nitro'
+import {
+  getL2Network as getL2NetworkNitro,
+  L2Network as NitroL2Network,
+  L1Network as NitroL1Network,
+} from '@arbitrum/sdk-nitro'
+import { Inbox__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/Inbox__factory'
+import { Bridge__factory as NitroBridgeFactory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/Bridge__factory'
+import { RollupUserLogic__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/RollupUserLogic__factory'
+
+import { l2Networks as classicL2Networks } from '@arbitrum/sdk-classic/dist/lib/dataEntities/networks'
+import { ArbSdkError } from '../dataEntities/errors'
 
 let isNitro = false
 
 let outbox: string | undefined = undefined
 
+export const generateNitroNetworks = async (
+  l1Provider: Provider,
+  l2Provider: Provider
+): Promise<{ l1Network: NitroL1Network; l2Network: NitroL2Network }> => {
+  // we know the inbox hasnt changed
+  const classicL2Network = await getL2Network(l2Provider)
+  const classicL1Network = await getL1Network(l1Provider)
+  const inboxAddr = classicL2Network.ethBridge.inbox
+
+  const inbox = Inbox__factory.connect(inboxAddr, l1Provider)
+  const bridgeAddr = await inbox.bridge()
+
+  // the rollup is the bridge owner
+  const bridge = NitroBridgeFactory.connect(bridgeAddr, l1Provider)
+  const rollupAddr = await bridge.owner()
+  const outboxAddr = await bridge.activeOutbox()
+
+  const rollup = RollupUserLogic__factory.connect(rollupAddr, l1Provider)
+  const sequencerInboxAddr = await rollup.sequencerBridge()
+
+  return {
+    l1Network: classicL1Network,
+    l2Network: {
+      chainID: classicL2Network.chainID,
+      confirmPeriodBlocks: classicL2Network.confirmPeriodBlocks,
+      ethBridge: {
+        inbox: inboxAddr,
+        bridge: bridgeAddr,
+        outbox: outboxAddr,
+        rollup: rollupAddr,
+        sequencerInbox: sequencerInboxAddr,
+      },
+      explorerUrl: classicL2Network.explorerUrl,
+      isArbitrum: classicL2Network.isArbitrum,
+      isCustom: classicL2Network.isCustom,
+      name: classicL2Network.name,
+      partnerChainID: classicL2Network.partnerChainID,
+      retryableLifetimeSeconds: classicL2Network.retryableLifetimeSeconds,
+      rpcURL: classicL2Network.rpcURL,
+      tokenBridge: classicL2Network.tokenBridge,
+      gif: classicL2Network.gif,
+    },
+  }
+}
+
+/**
+ * New outboxes can be added to the bridge, and withdrawals always use the latest outbox.
+ * This function finds the outbox address for a supplied batch number
+ * @param network
+ * @param batchNumber
+ * @returns
+ */
+export const getOutboxAddr = (
+  network: classic.L2Network,
+  batchNumber: number
+) => {
+  // find the outbox where the activation batch number of the next outbox
+  // is greater than the supplied batch
+  const res = Object.entries(network.ethBridge.outboxes)
+    .sort((a, b) => {
+      if (a[1] < b[1]) return -1
+      else if (a[1] === b[1]) return 0
+      else return 1
+    })
+    .find(
+      (_, index, array) =>
+        array[index + 1] === undefined || array[index + 1][1].gt(batchNumber)
+    )
+
+  if (!res) {
+    throw new ArbSdkError(
+      `No outbox found for batch number: ${batchNumber} on network: ${network.chainID}.`
+    )
+  }
+
+  return res[0]
+}
+
 const updateL2Network = async (l2Network: L2Network, outboxUpdate: string) => {
-  // CHRIS: TODO: do something about this placeholder
-  l2Network.ethBridge.outboxes[outboxUpdate] = 100000
+  l2Network.ethBridge.outbox = outboxUpdate
 
   // need to update the network objects in all libs
   const nitroNetwork = await getL2NetworkNitro(l2Network.chainID)
-  nitroNetwork.ethBridge.outboxes[outboxUpdate] = 10
+  nitroNetwork.ethBridge.outbox = outboxUpdate
 }
 
 export const isNitroL1 = async (l1Provider: SignerOrProvider) => {
@@ -74,22 +161,13 @@ export const isNitroL2 = async (
 export const convertNetwork = (
   l2Network: nitro.L2Network
 ): classic.L2Network => {
-  const convertedOutboxes: {
-    [address: string]: BigNumber
-  } = {}
-  for (const objKey of Object.keys(l2Network.ethBridge.outboxes)) {
-    convertedOutboxes[objKey] = BigNumber.from(
-      l2Network.ethBridge.outboxes[objKey]
+  const classicNetwork = classicL2Networks[l2Network.chainID]
+  if (!classicNetwork) {
+    throw new ArbSdkError(
+      `Unexpected missing classic network for chain ${l2Network.chainID}`
     )
   }
-
-  return {
-    ...l2Network,
-    ethBridge: {
-      ...l2Network.ethBridge,
-      outboxes: convertedOutboxes,
-    },
-  }
+  return classicNetwork
 }
 
 export const convertGasOverrides = (
@@ -154,13 +232,11 @@ export interface IL1ToL2MessageWriter extends IL1ToL2MessageReader {
   redeem(overrides?: Overrides): Promise<ContractTransaction>
   cancel(overrides?: Overrides): Promise<ContractTransaction>
 }
-export type IL1ToL2MessageReaderOrWriter<
-  T extends SignerOrProvider
-> = T extends Provider ? IL1ToL2MessageReader : IL1ToL2MessageWriter
+export type IL1ToL2MessageReaderOrWriter<T extends SignerOrProvider> =
+  T extends Provider ? IL1ToL2MessageReader : IL1ToL2MessageWriter
 
-export type IL2ToL1MessageReaderOrWriter<
-  T extends SignerOrProvider
-> = T extends Provider ? IL2ToL1MessageReader : IL2ToL1MessageWriter
+export type IL2ToL1MessageReaderOrWriter<T extends SignerOrProvider> =
+  T extends Provider ? IL2ToL1MessageReader : IL2ToL1MessageWriter
 
 export interface IL2ToL1MessageReader {
   getOutboxProof(
@@ -229,8 +305,7 @@ export interface MessageBatchProofInfo {
 }
 export { ClassicMessageDeliveredEvent }
 
-export type ClassicForceInclusionParams = FetchedEvent<
-  ClassicMessageDeliveredEvent
-> & {
-  delayedAcc: string
-}
+export type ClassicForceInclusionParams =
+  FetchedEvent<ClassicMessageDeliveredEvent> & {
+    delayedAcc: string
+  }

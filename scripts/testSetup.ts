@@ -38,6 +38,7 @@ import { addCustomNetwork as nitroAddCustomNetwork } from '@arbitrum/sdk-nitro'
 import * as path from 'path'
 import * as fs from 'fs'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
+import { generateNitroNetworks } from '../src/lib/utils/migration_types'
 
 dotenv.config()
 
@@ -98,9 +99,7 @@ export const getCustomNetworks = async (
     ethBridge: {
       bridge: parsedDeploymentData.bridge,
       inbox: parsedDeploymentData.inbox,
-      outboxes: {
-        [outboxAddr]: 0,
-      },
+      outbox: outboxAddr,
       rollup: parsedDeploymentData.rollup,
       sequencerInbox: parsedDeploymentData['sequencer-inbox'],
     },
@@ -158,9 +157,13 @@ export const setupNetworks = async (
     customL1Network: l1Network,
     customL2Network: l2Network,
   })
+  const nitroNetworks = await generateNitroNetworks(
+    l1Deployer.provider!,
+    l2Deployer.provider!
+  )
   nitroAddCustomNetwork({
-    customL1Network: l1Network,
-    customL2Network: l2Network,
+    customL1Network: nitroNetworks.l1Network,
+    customL2Network: nitroNetworks.l2Network,
   })
 
   // also register the weth gateway
@@ -235,12 +238,16 @@ export const testSetup = async (): Promise<{
         customL1Network: l1Network,
         customL2Network: l2Network,
       })
+      const nitroNetworks = await generateNitroNetworks(
+        l1Signer.provider!,
+        l2Signer.provider!
+      )
       nitroAddCustomNetwork({
-        customL1Network: l1Network,
-        customL2Network: l2Network,
+        customL1Network: nitroNetworks.l1Network,
+        customL2Network: nitroNetworks.l2Network,
       })
-      setL1Network = l1Network
-      setL2Network = l2Network
+      setL1Network = nitroNetworks.l1Network
+      setL2Network = nitroNetworks.l2Network
     } else {
       // deploy a new network
       const { l1Network, l2Network } = await setupNetworks(

@@ -52,6 +52,7 @@ export class L1ToL2MessageGasEstimator {
    * @returns
    */
   public async estimateSubmissionFee(
+    l1Provider: Provider,
     l1BaseFee: BigNumber,
     callDataSize: BigNumber | number,
     options?: {
@@ -61,6 +62,7 @@ export class L1ToL2MessageGasEstimator {
   ): Promise<BigNumber> {
     return (await isNitroL2(this.l2Provider))
       ? await this.nitroEstimator.estimateSubmissionFee(
+          l1Provider,
           l1BaseFee,
           callDataSize,
           options
@@ -140,6 +142,7 @@ export class L1ToL2MessageGasEstimator {
     l1BaseFee: BigNumber,
     excessFeeRefundAddress: string,
     callValueRefundAddress: string,
+    l1Provider: Provider,
     options?: GasOverrides & { sendL2CallValueFromL1?: boolean }
   ): Promise<{
     gasLimit: BigNumber
@@ -156,6 +159,7 @@ export class L1ToL2MessageGasEstimator {
           l1BaseFee,
           excessFeeRefundAddress,
           callValueRefundAddress,
+          l1Provider,
           options
         )
       : convertEstimates(
