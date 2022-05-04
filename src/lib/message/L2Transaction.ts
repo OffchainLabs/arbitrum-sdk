@@ -121,13 +121,6 @@ export class L2TransactionReceipt implements TransactionReceipt {
     l2Provider: Provider
   ): Promise<IL2ToL1MessageReader[] | IL2ToL1MessageWriter[]> {
     if (await isNitroL1(l1SignerOrProvider)) {
-      // we cant process a withdrawal until we have the new outbox address
-      // so we need to ensure the network object has been updated
-      await waitForL2NetworkUpdate(
-        SignerProviderUtils.getProviderOrThrow(l1SignerOrProvider),
-        l2Provider
-      )
-
       return this.nitroReceipt.getL2ToL1Messages(l1SignerOrProvider)
     } else {
       const l2Network = await getL2Network(l2Provider)

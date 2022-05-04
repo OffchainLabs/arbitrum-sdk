@@ -21,24 +21,19 @@ import chalk from 'chalk'
 
 import { BigNumber } from '@ethersproject/bignumber'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
 
 import { config, getSigner, testSetup } from '../scripts/testSetup'
 
 import { Signer } from 'ethers'
-import {
-  getL2Network,
-  Erc20Bridger,
-  L1ToL2MessageStatus,
-  L2ToL1MessageStatus,
-} from '../src'
+import { Erc20Bridger, L1ToL2MessageStatus, L2ToL1MessageStatus } from '../src'
 import { L2Network } from '../src/lib/dataEntities/networks'
 import { GasOverrides } from '../src/lib/message/L1ToL2MessageGasEstimator'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import { ERC20 } from '../src/lib/abi/ERC20'
+import { isNitroL1 } from '../src/lib/utils/migration_types'
 
-export const preFundAmount = parseEther('0.1')
+export const preFundAmount = parseEther('0.01')
 
 export const prettyLog = (text: string): void => {
   console.log(chalk.blue(`    *** ${text}`))
@@ -134,26 +129,28 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   const balBefore = await params.l1Token.balanceOf(
     await params.l1Signer.getAddress()
   )
-  await message.waitUntilReadyToExecute(params.l2Signer.provider!)
-  expect(
-    await message.status(params.l2Signer.provider!),
-    'confirmed status'
-  ).to.eq(L2ToL1MessageStatus.CONFIRMED)
+  if (await isNitroL1(params.l1Signer)) {
+    await message.waitUntilReadyToExecute(params.l2Signer.provider!)
+    expect(
+      await message.status(params.l2Signer.provider!),
+      'confirmed status'
+    ).to.eq(L2ToL1MessageStatus.CONFIRMED)
 
-  const execTx = await message.execute(params.l2Signer.provider!)
+    const execTx = await message.execute(params.l2Signer.provider!)
 
-  await execTx.wait()
-  expect(
-    await message.status(params.l2Signer.provider!),
-    'executed status'
-  ).to.eq(L2ToL1MessageStatus.EXECUTED)
+    await execTx.wait()
+    expect(
+      await message.status(params.l2Signer.provider!),
+      'executed status'
+    ).to.eq(L2ToL1MessageStatus.EXECUTED)
 
-  const balAfter = await params.l1Token.balanceOf(
-    await params.l1Signer.getAddress()
-  )
-  expect(balBefore.add(params.amount).toString(), 'Not withdrawn').to.eq(
-    balAfter.toString()
-  )
+    const balAfter = await params.l1Token.balanceOf(
+      await params.l1Signer.getAddress()
+    )
+    expect(balBefore.add(params.amount).toString(), 'Not withdrawn').to.eq(
+      balAfter.toString()
+    )
+  }
 }
 
 const getGateways = (gatewayType: GatewayType, l2Network: L2Network) => {
@@ -309,13 +306,16 @@ const fund = async (
   amount?: BigNumber,
   fundingKey?: string
 ) => {
-  const wallet = getSigner(signer.provider! as JsonRpcProvider, fundingKey)
-  await (
-    await wallet.sendTransaction({
-      to: await signer.getAddress(),
-      value: amount || preFundAmount,
-    })
-  ).wait()
+  const bal = await signer.getBalance()
+  if (bal.lt(amount || preFundAmount)) {
+    const wallet = getSigner(signer.provider! as JsonRpcProvider, fundingKey)
+    await (
+      await wallet.sendTransaction({
+        to: await signer.getAddress(),
+        value: amount || preFundAmount,
+      })
+    ).wait()
+  }
 }
 
 export const fundL1 = async (

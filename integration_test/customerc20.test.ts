@@ -18,6 +18,7 @@
 
 import { expect } from 'chai'
 import { BigNumber } from '@ethersproject/bignumber'
+import { parseEther } from '@ethersproject/units'
 import { Logger, LogLevel } from '@ethersproject/logger'
 Logger.setLogLevel(LogLevel.ERROR)
 import { L1CustomGateway__factory } from '../src/lib/abi/factories/L1CustomGateway__factory'
@@ -63,7 +64,7 @@ describe('Custom ERC20', () => {
       ...(await testSetup()),
       l1CustomToken: {} as any,
     }
-    await fundL1(testState.l1Signer)
+    await fundL1(testState.l1Signer, parseEther('0.1'))
     await fundL2(testState.l2Signer)
   })
 

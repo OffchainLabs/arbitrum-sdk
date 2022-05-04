@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { JsonRpcProvider, Provider } from '@ethersproject/providers'
+import { JsonRpcProvider } from '@ethersproject/providers'
 import { Wallet } from '@ethersproject/wallet'
 
 import dotenv from 'dotenv'
@@ -184,9 +184,10 @@ export const setupNetworks = async (
   }
 }
 
-export const getSigner =  (provider: JsonRpcProvider, key?: string) => {
-  if(!key && !provider) throw new ArbSdkError("Provide at least one of key or provider.")
-  if(key) return new Wallet(key).connect(provider)
+export const getSigner = (provider: JsonRpcProvider, key?: string) => {
+  if (!key && !provider)
+    throw new ArbSdkError('Provide at least one of key or provider.')
+  if (key) return new Wallet(key).connect(provider)
   else return provider.getSigner(0)
 }
 
@@ -205,9 +206,9 @@ export const testSetup = async (): Promise<{
   const ethProvider = new JsonRpcProvider(config.ethUrl)
   const arbProvider = new JsonRpcProvider(config.arbUrl)
 
-  const l1Deployer = getSigner(ethProvider, config.ethKey);
-  const l2Deployer = getSigner(arbProvider, config.arbKey);
-  
+  const l1Deployer = getSigner(ethProvider, config.ethKey)
+  const l2Deployer = getSigner(arbProvider, config.arbKey)
+
   const seed = Wallet.createRandom()
   const l1Signer = seed.connect(ethProvider)
   const l2Signer = seed.connect(arbProvider)
