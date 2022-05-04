@@ -11,7 +11,7 @@ import { getL2Network } from '../dataEntities/networks'
 import { PayableOverrides } from '@ethersproject/contracts'
 import { BigNumber } from 'ethers'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
-import { ArbSdkError, MissingProviderArbTsError } from '../dataEntities/errors'
+import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getBaseFee } from '../utils/lib'
 
 /**
@@ -20,7 +20,7 @@ import { getBaseFee } from '../utils/lib'
 export class L1ToL2MessageCreator {
   constructor(public readonly l1Signer: Signer) {
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
-      throw new MissingProviderArbTsError('l1Signer')
+      throw new MissingProviderArbSdkError('l1Signer')
     }
   }
 

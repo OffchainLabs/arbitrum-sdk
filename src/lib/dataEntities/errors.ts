@@ -28,7 +28,7 @@ export class ArbSdkError extends Error {
 /**
  * Thrown when a signer does not have a connected provider
  */
-export class MissingProviderArbTsError extends ArbSdkError {
+export class MissingProviderArbSdkError extends ArbSdkError {
   constructor(signerName: string) {
     super(
       `${signerName} does not have a connected provider and one is required.`

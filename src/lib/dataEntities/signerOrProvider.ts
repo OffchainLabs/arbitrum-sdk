@@ -1,6 +1,6 @@
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
-import { ArbSdkError, MissingProviderArbTsError } from '../dataEntities/errors'
+import { ArbSdkError, MissingProviderArbSdkError } from '../dataEntities/errors'
 
 export type SignerOrProvider = Signer | Provider
 
@@ -32,7 +32,7 @@ export class SignerProviderUtils {
     signerOrProvider: SignerOrProvider
   ): Provider {
     const maybeProvider = this.getProvider(signerOrProvider)
-    if (!maybeProvider) throw new MissingProviderArbTsError('signerOrProvider')
+    if (!maybeProvider) throw new MissingProviderArbSdkError('signerOrProvider')
     return maybeProvider
   }
 
@@ -57,7 +57,7 @@ export class SignerProviderUtils {
     chainId: number
   ): Promise<void> {
     const provider = this.getProvider(signerOrProvider)
-    if (!provider) throw new MissingProviderArbTsError('signerOrProvider')
+    if (!provider) throw new MissingProviderArbSdkError('signerOrProvider')
 
     const providerChainId = (await provider.getNetwork()).chainId
     if (providerChainId !== chainId) {

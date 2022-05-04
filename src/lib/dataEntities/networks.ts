@@ -241,9 +241,11 @@ export const addCustomNetwork = ({
 }): void => {
   if (customL1Network) {
     if (l1Networks[customL1Network.chainID]) {
-      throw new Error(`Network ${customL1Network.chainID} already included`)
+      throw new ArbSdkError(
+        `Network ${customL1Network.chainID} already included`
+      )
     } else if (!customL1Network.isCustom) {
-      throw new Error(
+      throw new ArbSdkError(
         `Custom network ${customL1Network.chainID} must have isCustom flag set to true`
       )
     } else {
@@ -252,9 +254,9 @@ export const addCustomNetwork = ({
   }
 
   if (l2Networks[customL2Network.chainID])
-    throw new Error(`Network ${customL2Network.chainID} already included`)
+    throw new ArbSdkError(`Network ${customL2Network.chainID} already included`)
   else if (!customL2Network.isCustom) {
-    throw new Error(
+    throw new ArbSdkError(
       `Custom network ${customL2Network.chainID} must have isCustom flag set to true`
     )
   }
@@ -263,7 +265,7 @@ export const addCustomNetwork = ({
 
   const l1PartnerChain = l1Networks[customL2Network.partnerChainID]
   if (!l1PartnerChain)
-    throw new Error(
+    throw new ArbSdkError(
       `Network ${customL2Network.chainID}'s partner network, ${customL2Network.partnerChainID}, not recognized`
     )
 
