@@ -19,8 +19,6 @@
 import { Signer } from '@ethersproject/abstract-signer'
 import { PayableOverrides } from '@ethersproject/contracts'
 import { BigNumber, ethers } from 'ethers'
-
-import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
