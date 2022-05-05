@@ -89,9 +89,6 @@ describe('Ether', async () => {
     const initialInboxBalance = await l1Signer.provider!.getBalance(
       inboxAddress
     )
-
-    // CHRIS: TODO: export IL1ToL2MessageReader from migration types
-
     const ethToDeposit = parseEther('0.0001')
     const res = await ethBridger.deposit({
       amount: ethToDeposit,
