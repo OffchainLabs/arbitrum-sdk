@@ -375,11 +375,25 @@ export class Erc20Bridger extends AssetBridger<
     )
   }
 
+  private async validateDepositParams(params: TokenDepositParams) {
+    if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
+      throw new MissingProviderArbSdkError('l1Signer')
+    }
+    await this.checkL1Network(params.l1Signer)
+    await this.checkL2Network(params.l2Provider)
+    if ((params.overrides as PayableOverrides | undefined)?.value) {
+      throw new ArbSdkError(
+        'L1 call value should be set through l1CallValue param'
+      )
+    }
+  }
+
   private async getDepositParams(params: TokenDepositParams): Promise<{
     erc20L1Address: string
     amount: BigNumber
     depositCallValue: BigNumber
     maxSubmissionFee: BigNumber
+    data: string
     l2GasLimit: BigNumber
     l2MaxFeePerGas: BigNumber
     destinationAddress: string
@@ -442,12 +456,18 @@ export class Erc20Bridger extends AssetBridger<
       tokenGasOverrides
     )
 
+    const data = defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [estimates.maxSubmissionFee, '0x']
+    )
+
     return {
       l2GasLimit: estimates.gasLimit,
       maxSubmissionFee: estimates.maxSubmissionFee,
       l2MaxFeePerGas: estimates.maxFeePerGas,
       depositCallValue: estimates.totalL2GasCosts,
       destinationAddress: to,
+      data: data,
       amount,
       erc20L1Address,
     }
@@ -461,22 +481,8 @@ export class Erc20Bridger extends AssetBridger<
     params: TokenDepositParams,
     estimate: T
   ): Promise<BigNumber | ethers.ContractTransaction> {
-    if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
-      throw new MissingProviderArbSdkError('l1Signer')
-    }
-    await this.checkL1Network(params.l1Signer)
-    await this.checkL2Network(params.l2Provider)
-    if ((params.overrides as PayableOverrides | undefined)?.value) {
-      throw new ArbSdkError(
-        'L1 call value should be set through l1CallValue param'
-      )
-    }
-
+    await this.validateDepositParams(params)
     const depositParams = await this.getDepositParams(params)
-    const data = defaultAbiCoder.encode(
-      ['uint256', 'bytes'],
-      [depositParams.maxSubmissionFee, '0x']
-    )
 
     const l1GatewayRouter = L1GatewayRouter__factory.connect(
       this.l2Network.tokenBridge.l1GatewayRouter,
@@ -492,11 +498,10 @@ export class Erc20Bridger extends AssetBridger<
       depositParams.amount,
       depositParams.l2GasLimit,
       depositParams.l2MaxFeePerGas,
-      data,
+      depositParams.data,
       {
-        ...(params.overrides || {}),
         value: depositParams.depositCallValue,
-        gasLimit: 3000000,
+        ...params.overrides,
       }
     )
   }
