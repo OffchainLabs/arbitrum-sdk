@@ -105,11 +105,9 @@ export class L1ToL2MessageGasEstimator {
     l1Provider: Provider,
     l1BaseFee: BigNumber,
     callDataSize: BigNumber | number,
-    options?: GasOverrides
+    options?: PercentIncrease
   ): Promise<BigNumber> {
-    const defaultedOptions = this.applySubmissionPriceDefaults(
-      options?.maxSubmissionFee
-    )
+    const defaultedOptions = this.applySubmissionPriceDefaults(options)
 
     const network = await getL2Network(this.l2Provider)
     const inbox = Inbox__factory.connect(network.ethBridge.inbox, l1Provider)
@@ -202,7 +200,7 @@ export class L1ToL2MessageGasEstimator {
       l1Provider,
       l1BaseFee,
       utils.hexDataLength(l2CallData),
-      options
+      options?.maxSubmissionFee
     )
 
     // estimate the gas limit
