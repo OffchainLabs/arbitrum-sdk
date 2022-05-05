@@ -118,7 +118,7 @@ const registerCustomToken = async (
   const l1CustomTokenFac = new TestCustomTokenL1__factory(l1Signer)
   const l1CustomToken = await l1CustomTokenFac.deploy(
     l2Network.tokenBridge.l1CustomGateway,
-    l2Network.tokenBridge.l1GatewayRouter,
+    l2Network.tokenBridge.l1GatewayRouter
   )
   await l1CustomToken.deployed()
 

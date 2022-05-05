@@ -20,13 +20,9 @@ import dotenv from 'dotenv'
 import { SignerOrProvider } from './signerOrProvider'
 
 import * as classic from '@arbitrum/sdk-classic'
-import {
-  l1Networks as classicl1Networks,
-} from '@arbitrum/sdk-classic/dist/lib/dataEntities/networks'
+import { l1Networks as classicl1Networks } from '@arbitrum/sdk-classic/dist/lib/dataEntities/networks'
 import * as nitro from '@arbitrum/sdk-nitro'
-import {
-  l1Networks as nitrol1Networks,
-} from '@arbitrum/sdk-nitro/dist/lib/dataEntities/networks'
+import { l1Networks as nitrol1Networks } from '@arbitrum/sdk-nitro/dist/lib/dataEntities/networks'
 import {
   convertNetworkClassicToNitro,
   convertNetworkNitroToClassic,
@@ -120,8 +116,9 @@ export const addCustomNetwork = ({
   customL2Network: L2Network
 }): void => {
   // we can ignore errors
-  if(customL1Network?.chainID) delete classicl1Networks[customL1Network.chainID]
-  if(customL1Network?.chainID) delete nitrol1Networks[customL1Network.chainID]
+  if (customL1Network?.chainID)
+    delete classicl1Networks[customL1Network.chainID]
+  if (customL1Network?.chainID) delete nitrol1Networks[customL1Network.chainID]
 
   // add to both classic and nitro
   classic.addCustomNetwork({

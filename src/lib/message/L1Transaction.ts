@@ -40,12 +40,10 @@ export interface L1ContractTransaction<
   wait(confirmations?: number): Promise<TReceipt>
 }
 // some helper interfaces to reduce the verbosity elsewhere
-export type L1EthDepositTransaction = L1ContractTransaction<
-  L1EthDepositTransactionReceipt
->
-export type L1ContractCallTransaction = L1ContractTransaction<
-  L1ContractCallTransactionReceipt
->
+export type L1EthDepositTransaction =
+  L1ContractTransaction<L1EthDepositTransactionReceipt>
+export type L1ContractCallTransaction =
+  L1ContractTransaction<L1ContractCallTransactionReceipt>
 
 export class L1TransactionReceipt implements TransactionReceipt {
   public readonly to: string

@@ -48,36 +48,12 @@ describe('Ether', async () => {
     const randomAddress = Wallet.createRandom().address
     const amountToSend = parseEther('0.000005')
 
-    const balanceBefore = await l2Signer.provider!.getBalance(
-      await l2Signer.getAddress()
-    )
-
-    const rec = await (
-      await l2Signer.sendTransaction({
-        to: randomAddress,
-        value: amountToSend,
-      })
-    ).wait()
-
-    const balanceAfter = await l2Signer.provider!.getBalance(
-      await l2Signer.getAddress()
-    )
     const randomBalanceAfter = await l2Signer.provider!.getBalance(
       randomAddress
     )
     expect(randomBalanceAfter.toString(), 'random address balance after').to.eq(
       amountToSend.toString()
     )
-
-    // if (await isNitroL2(l2Signer)) {
-    //   // we only tested the balance after for nitro
-    //   expect(balanceAfter.toString(), 'l2 balance after').to.eq(
-    //     balanceBefore
-    //       .sub(rec.gasUsed.mul(rec.effectiveGasPrice))
-    //       .sub(amountToSend)
-    //       .toString()
-    //   )
-    // }
   })
 
   it('deposits ether', async () => {
@@ -166,7 +142,6 @@ describe('Ether', async () => {
     ).to.exist
 
     const myAddress = await l1Signer.getAddress()
-
 
     const withdrawEvents = await L2ToL1Message.getL2ToL1MessageLogs(
       l2Signer.provider!,

@@ -10,12 +10,6 @@ import { GasOverrides as ClassicGasOverrides } from '@arbitrum/sdk-classic/dist/
 import { GasOverrides as NitroGasOverrides } from '@arbitrum/sdk-nitro/dist/lib/message/L1ToL2MessageGasEstimator'
 import { Provider } from '@ethersproject/abstract-provider'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
-// import {
-//   getL1Network,
-//   getL2Network,
-//   L2Network,
-//   l2Networks,
-// } from '../dataEntities/networks'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
 import {
   SignerOrProvider,
@@ -28,11 +22,7 @@ import {
 import { L2ToL1MessageStatus } from '../message/L2ToL1Message'
 import { MessageDeliveredEvent as ClassicMessageDeliveredEvent } from '@arbitrum/sdk-classic/dist/lib/abi/Bridge'
 import { FetchedEvent } from './eventFetcher'
-import {
-  getL2Network as getL2NetworkNitro,
-  L2Network as NitroL2Network,
-  L1Network as NitroL1Network,
-} from '@arbitrum/sdk-nitro'
+import { L2Network as NitroL2Network } from '@arbitrum/sdk-nitro'
 import { Inbox__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/Inbox__factory'
 import { Bridge__factory as NitroBridgeFactory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/Bridge__factory'
 import { RollupUserLogic__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/RollupUserLogic__factory'
@@ -278,13 +268,11 @@ export interface IL1ToL2MessageWriter extends IL1ToL2MessageReader {
   redeem(overrides?: Overrides): Promise<ContractTransaction>
   cancel(overrides?: Overrides): Promise<ContractTransaction>
 }
-export type IL1ToL2MessageReaderOrWriter<
-  T extends SignerOrProvider
-> = T extends Provider ? IL1ToL2MessageReader : IL1ToL2MessageWriter
+export type IL1ToL2MessageReaderOrWriter<T extends SignerOrProvider> =
+  T extends Provider ? IL1ToL2MessageReader : IL1ToL2MessageWriter
 
-export type IL2ToL1MessageReaderOrWriter<
-  T extends SignerOrProvider
-> = T extends Provider ? IL2ToL1MessageReader : IL2ToL1MessageWriter
+export type IL2ToL1MessageReaderOrWriter<T extends SignerOrProvider> =
+  T extends Provider ? IL2ToL1MessageReader : IL2ToL1MessageWriter
 
 export interface IL2ToL1MessageReader {
   getOutboxProof(
@@ -353,8 +341,7 @@ export interface MessageBatchProofInfo {
 }
 export { ClassicMessageDeliveredEvent }
 
-export type ClassicForceInclusionParams = FetchedEvent<
-  ClassicMessageDeliveredEvent
-> & {
-  delayedAcc: string
-}
+export type ClassicForceInclusionParams =
+  FetchedEvent<ClassicMessageDeliveredEvent> & {
+    delayedAcc: string
+  }

@@ -63,9 +63,8 @@ export enum L2ToL1MessageStatus {
  * If T is of type Signer then L2ToL1MessageReaderOrWriter<T> will be of
  * type L2ToL1MessageWriter.
  */
-export type L2ToL1MessageReaderOrWriter<
-  T extends SignerOrProvider
-> = T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
+export type L2ToL1MessageReaderOrWriter<T extends SignerOrProvider> =
+  T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
 
 /**
  * Base functionality for L2->L1 messages
@@ -170,8 +169,10 @@ export class L2ToL1Message {
 /**
  * Provides read-only access for l2-to-l1-messages
  */
-export class L2ToL1MessageReader extends L2ToL1Message
-  implements IL2ToL1MessageReader {
+export class L2ToL1MessageReader
+  extends L2ToL1Message
+  implements IL2ToL1MessageReader
+{
   private readonly classicReader?: classic.L2ToL1MessageReader
   private readonly nitroReader?: nitro.L2ToL1MessageReader
 
@@ -257,8 +258,10 @@ export class L2ToL1MessageReader extends L2ToL1Message
 /**
  * Provides read and write access for l2-to-l1-messages
  */
-export class L2ToL1MessageWriter extends L2ToL1MessageReader
-  implements IL2ToL1MessageWriter {
+export class L2ToL1MessageWriter
+  extends L2ToL1MessageReader
+  implements IL2ToL1MessageWriter
+{
   private readonly classicWriter?: classic.L2ToL1MessageWriter
   private readonly nitroWriter?: nitro.L2ToL1MessageWriter
   constructor(
