@@ -93,23 +93,6 @@ export class L2TransactionReceipt implements TransactionReceipt {
    * @returns
    */
   public getL2ToL1Events(): L2ToL1TransactionEvent['args'][] {
-    let classicEvents
-    try {
-      classicEvents = this.classicReceipt.getL2ToL1Events()
-    } catch {
-      console.log('err in classic')
-      // could throw parsing the logs
-    }
-    let nitroEvents
-    try {
-      nitroEvents = this.nitroReceipt.getL2ToL1Events()
-    } catch {
-      console.log('err in nitro')
-      // could throw parsing the logs
-    }
-
-    console.log(classicEvents, nitroEvents)
-
     const iface = ArbSys__factory.createInterface()
     const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
     const eventTopic = iface.getEventTopic(l2ToL1Event)
