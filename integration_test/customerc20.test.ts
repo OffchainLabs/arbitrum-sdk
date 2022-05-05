@@ -45,7 +45,7 @@ import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
-describe('Custom ERC20', () => {
+describe.skip('Custom ERC20', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
@@ -64,7 +64,7 @@ describe('Custom ERC20', () => {
       ...(await testSetup()),
       l1CustomToken: {} as any,
     }
-    await fundL1(testState.l1Signer, parseEther('0.1'))
+    await fundL1(testState.l1Signer, parseEther('0.2'))
     await fundL2(testState.l2Signer)
   })
 
@@ -118,7 +118,7 @@ const registerCustomToken = async (
   const l1CustomTokenFac = new TestCustomTokenL1__factory(l1Signer)
   const l1CustomToken = await l1CustomTokenFac.deploy(
     l2Network.tokenBridge.l1CustomGateway,
-    l2Network.tokenBridge.l1GatewayRouter
+    l2Network.tokenBridge.l1GatewayRouter,
   )
   await l1CustomToken.deployed()
 

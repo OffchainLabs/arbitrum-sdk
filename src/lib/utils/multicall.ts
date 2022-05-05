@@ -23,12 +23,11 @@ import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { Multicall2 } from '../abi/Multicall2'
 import { Multicall2__factory } from '../abi/factories/Multicall2__factory'
 import { ArbSdkError } from '../dataEntities/errors'
+import { l1Networks, l2Networks } from "@arbitrum/sdk-nitro/dist/lib/dataEntities/networks"
 import {
   isL1Network,
   L1Network,
-  l1Networks,
   L2Network,
-  l2Networks,
 } from '../dataEntities/networks'
 
 /**

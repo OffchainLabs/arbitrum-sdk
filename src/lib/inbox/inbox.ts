@@ -26,7 +26,7 @@ import * as nitro from '@arbitrum/sdk-nitro'
 import {
   ClassicForceInclusionParams,
   ClassicMessageDeliveredEvent,
-  convertNetwork,
+  lookupExistingNetwork,
   isNitroL1,
 } from '../utils/migration_types'
 
@@ -43,7 +43,7 @@ export class InboxTools {
   constructor(private readonly l1Signer: Signer, l2Network: L2Network) {
     this.classicInbox = new classic.InboxTools(
       l1Signer,
-      convertNetwork(l2Network)
+      lookupExistingNetwork(l2Network)
     )
     this.nitroInbox = new nitro.InboxTools(l1Signer, l2Network)
   }

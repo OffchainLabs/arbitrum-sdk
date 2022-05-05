@@ -93,6 +93,23 @@ export class L2TransactionReceipt implements TransactionReceipt {
    * @returns
    */
   public getL2ToL1Events(): L2ToL1TransactionEvent['args'][] {
+    let classicEvents
+    try {
+      classicEvents = this.classicReceipt.getL2ToL1Events()
+    } catch {
+      console.log('err in classic')
+      // could throw parsing the logs
+    }
+    let nitroEvents
+    try {
+      nitroEvents = this.nitroReceipt.getL2ToL1Events()
+    } catch {
+      console.log('err in nitro')
+      // could throw parsing the logs
+    }
+
+    console.log(classicEvents, nitroEvents)
+
     const iface = ArbSys__factory.createInterface()
     const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
     const eventTopic = iface.getEventTopic(l2ToL1Event)
@@ -119,20 +136,11 @@ export class L2TransactionReceipt implements TransactionReceipt {
       return this.nitroReceipt.getL2ToL1Messages(l1SignerOrProvider)
     } else {
       const l2Network = await classic.getL2Network(l2Provider)
-      const messages = await this.classicReceipt.getL2ToL1Messages(
-        l1SignerOrProvider,
-        l2Network
-      )
+      const events = await this.getL2ToL1Events()
 
-      return messages.map(m => {
-        const outboxAddr = getOutboxAddr(l2Network, m.batchNumber.toNumber())
-        return L2ToL1Message.fromEvent(
-          l1SignerOrProvider,
-          undefined,
-          outboxAddr,
-          m.batchNumber,
-          m.indexInBatch
-        )
+      return events.map(m => {
+        const outboxAddr = getOutboxAddr(l2Network, m.position.toNumber())
+        return L2ToL1Message.fromEvent(l1SignerOrProvider, m, outboxAddr, false)
       })
     }
   }

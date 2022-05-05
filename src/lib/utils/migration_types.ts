@@ -1,14 +1,26 @@
 import * as classic from '@arbitrum/sdk-classic'
 import * as nitro from '@arbitrum/sdk-nitro'
 import { BigNumber, ContractTransaction, Overrides } from 'ethers'
-import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
+import { JsonRpcProvider } from '@ethersproject/providers'
+import {
+  ARB_SYS_ADDRESS,
+  SEVEN_DAYS_IN_SECONDS,
+} from '../dataEntities/constants'
 import { GasOverrides as ClassicGasOverrides } from '@arbitrum/sdk-classic/dist/lib/message/L1ToL2MessageGasEstimator'
 import { GasOverrides as NitroGasOverrides } from '@arbitrum/sdk-nitro/dist/lib/message/L1ToL2MessageGasEstimator'
 import { Provider } from '@ethersproject/abstract-provider'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
-import { getL1Network, getL2Network, L2Network } from '../dataEntities/networks'
+// import {
+//   getL1Network,
+//   getL2Network,
+//   L2Network,
+//   l2Networks,
+// } from '../dataEntities/networks'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
-import { SignerOrProvider } from '../dataEntities/signerOrProvider'
+import {
+  SignerOrProvider,
+  SignerProviderUtils,
+} from '../dataEntities/signerOrProvider'
 import {
   L1ToL2MessageStatus,
   L1ToL2MessageWaitResult,
@@ -26,20 +38,17 @@ import { Bridge__factory as NitroBridgeFactory } from '@arbitrum/sdk-nitro/dist/
 import { RollupUserLogic__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/RollupUserLogic__factory'
 
 import { l2Networks as classicL2Networks } from '@arbitrum/sdk-classic/dist/lib/dataEntities/networks'
+import { l2Networks as nitroL2Networks } from '@arbitrum/sdk-nitro/dist/lib/dataEntities/networks'
 import { ArbSdkError } from '../dataEntities/errors'
 
 let isNitro = false
 
-let outbox: string | undefined = undefined
-
-export const generateNitroNetworks = async (
-  l1Provider: Provider,
-  l2Provider: Provider
-): Promise<{ l1Network: NitroL1Network; l2Network: NitroL2Network }> => {
+export const generateL2NitroNetwork = async (
+  existingNitroL2Network: nitro.L2Network,
+  l1Provider: Provider
+): Promise<NitroL2Network> => {
   // we know the inbox hasnt changed
-  const classicL2Network = await getL2Network(l2Provider)
-  const classicL1Network = await getL1Network(l1Provider)
-  const inboxAddr = classicL2Network.ethBridge.inbox
+  const inboxAddr = existingNitroL2Network.ethBridge.inbox
 
   const inbox = Inbox__factory.connect(inboxAddr, l1Provider)
   const bridgeAddr = await inbox.bridge()
@@ -47,33 +56,30 @@ export const generateNitroNetworks = async (
   // the rollup is the bridge owner
   const bridge = NitroBridgeFactory.connect(bridgeAddr, l1Provider)
   const rollupAddr = await bridge.owner()
-  const outboxAddr = await bridge.activeOutbox()
 
   const rollup = RollupUserLogic__factory.connect(rollupAddr, l1Provider)
   const sequencerInboxAddr = await rollup.sequencerBridge()
+  const outboxAddr = await rollup.outbox()
 
   return {
-    l1Network: classicL1Network,
-    l2Network: {
-      chainID: classicL2Network.chainID,
-      confirmPeriodBlocks: classicL2Network.confirmPeriodBlocks,
-      ethBridge: {
-        inbox: inboxAddr,
-        bridge: bridgeAddr,
-        outbox: outboxAddr,
-        rollup: rollupAddr,
-        sequencerInbox: sequencerInboxAddr,
-      },
-      explorerUrl: classicL2Network.explorerUrl,
-      isArbitrum: classicL2Network.isArbitrum,
-      isCustom: classicL2Network.isCustom,
-      name: classicL2Network.name,
-      partnerChainID: classicL2Network.partnerChainID,
-      retryableLifetimeSeconds: classicL2Network.retryableLifetimeSeconds,
-      rpcURL: classicL2Network.rpcURL,
-      tokenBridge: classicL2Network.tokenBridge,
-      gif: classicL2Network.gif,
+    chainID: existingNitroL2Network.chainID,
+    confirmPeriodBlocks: existingNitroL2Network.confirmPeriodBlocks,
+    ethBridge: {
+      inbox: inboxAddr,
+      bridge: bridgeAddr,
+      outbox: outboxAddr,
+      rollup: rollupAddr,
+      sequencerInbox: sequencerInboxAddr,
     },
+    explorerUrl: existingNitroL2Network.explorerUrl,
+    isArbitrum: existingNitroL2Network.isArbitrum,
+    isCustom: existingNitroL2Network.isCustom,
+    name: existingNitroL2Network.name,
+    partnerChainID: existingNitroL2Network.partnerChainID,
+    retryableLifetimeSeconds: existingNitroL2Network.retryableLifetimeSeconds,
+    rpcURL: existingNitroL2Network.rpcURL,
+    tokenBridge: existingNitroL2Network.tokenBridge,
+    gif: existingNitroL2Network.gif,
   }
 }
 
@@ -110,29 +116,34 @@ export const getOutboxAddr = (
   return res[0]
 }
 
-const updateL2Network = async (l2Network: L2Network, outboxUpdate: string) => {
-  l2Network.ethBridge.outbox = outboxUpdate
-
-  // need to update the network objects in all libs
-  const nitroNetwork = await getL2NetworkNitro(l2Network.chainID)
-  nitroNetwork.ethBridge.outbox = outboxUpdate
-}
-
 export const isNitroL1 = async (l1Provider: SignerOrProvider) => {
   if (isNitro) return true
-  const l1Network = await getL1Network(l1Provider)
+  const l1Network = await nitro.getL1Network(l1Provider)
   const partner = l1Network.partnerChainIDs[0]
-  const l2Network = await getL2Network(partner)
-  const bridge = Bridge__factory.connect(l2Network.ethBridge.bridge, l1Provider)
+  const l2Network = await nitro.getL2Network(partner)
+  if (!l2Network)
+    throw new ArbSdkError(`No l2 network found with chain id ${partner}`)
   try {
-    outbox = await bridge.allowedOutboxList(2)
-    if (outbox) {
-      // we've collected new nitro network info, so update the l2 network object
-      await updateL2Network(l2Network, outbox)
-      isNitro = true
-    }
+    const inboxAddr = l2Network.ethBridge.inbox
+    const inbox = Inbox__factory.connect(inboxAddr, l1Provider)
+    const bridgeAddr = await inbox.bridge()
+    const bridge = Bridge__factory.connect(bridgeAddr, l1Provider)
+    const rollupAdd = await bridge.owner()
+    const rollup = RollupUserLogic__factory.connect(rollupAdd, l1Provider)
+    // this will error if we're not nitro
+    await rollup.wasmModuleRoot()
+
+    // when we've switched to nitro we need to regenerate the nitro
+    // network config and set it
+    const nitroL2Network = await generateL2NitroNetwork(
+      l2Network,
+      SignerProviderUtils.getProviderOrThrow(l1Provider)
+    )
+
+    nitroL2Networks[nitroL2Network.chainID] = nitroL2Network
+    isNitro = true
     return true
-  } catch {
+  } catch (err) {
     return false
   }
 }
@@ -142,23 +153,29 @@ export const isNitroL2 = async (
 ): Promise<boolean> => {
   if (isNitro) return true
   const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2SignerOrProvider)
-  const l2Network = await getL2Network(l2SignerOrProvider)
-  const version = await arbSys.arbOSVersion()
-  if (version.toNumber() > 56) {
-    try {
-      if (outbox) {
-        // we've collected new nitro network info, so update the l2 network object
-        await updateL2Network(l2Network, outbox)
-        isNitro = true
-      }
-      return true
-    } catch {
-      return true
-    }
-  } else return false
+  const l2Network = await nitro.getL2Network(l2SignerOrProvider)
+  const blockNumber = await arbSys.arbBlockNumber()
+  try {
+    // will throw an error if pre nitro
+    await arbSys.arbBlockHash(blockNumber.sub(1))
+
+    const l1Network = await nitro.getL1Network(l2Network.partnerChainID)
+    const l1Provider = new JsonRpcProvider(l1Network.rpcURL)
+    // when we've switched to nitro we need to regenerate the nitro
+    // network config and set it
+    const nitroL2Network = await generateL2NitroNetwork(
+      l2Network,
+      SignerProviderUtils.getProviderOrThrow(l1Provider)
+    )
+    nitroL2Networks[nitroL2Network.chainID] = nitroL2Network
+    isNitro = true
+    return true
+  } catch {
+    return false
+  }
 }
 
-export const convertNetwork = (
+export const lookupExistingNetwork = (
   l2Network: nitro.L2Network
 ): classic.L2Network => {
   const classicNetwork = classicL2Networks[l2Network.chainID]
@@ -168,6 +185,35 @@ export const convertNetwork = (
     )
   }
   return classicNetwork
+}
+
+export const convertNetworkNitroToClassic = (
+  l2Network: nitro.L2Network
+): classic.L2Network => {
+  return {
+    ...l2Network,
+    ethBridge: {
+      ...l2Network.ethBridge,
+      outboxes: {
+        [l2Network.ethBridge.outbox]: BigNumber.from(0),
+      },
+    },
+  }
+}
+
+export const convertNetworkClassicToNitro = (
+  l2Network: classic.L2Network
+): nitro.L2Network => {
+  const outboxes = Object.keys(l2Network.ethBridge.outboxes)
+
+  return {
+    ...l2Network,
+    ethBridge: {
+      ...l2Network.ethBridge,
+      outbox: outboxes[outboxes.length - 1],
+    },
+    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
+  }
 }
 
 export const convertGasOverrides = (
@@ -232,11 +278,13 @@ export interface IL1ToL2MessageWriter extends IL1ToL2MessageReader {
   redeem(overrides?: Overrides): Promise<ContractTransaction>
   cancel(overrides?: Overrides): Promise<ContractTransaction>
 }
-export type IL1ToL2MessageReaderOrWriter<T extends SignerOrProvider> =
-  T extends Provider ? IL1ToL2MessageReader : IL1ToL2MessageWriter
+export type IL1ToL2MessageReaderOrWriter<
+  T extends SignerOrProvider
+> = T extends Provider ? IL1ToL2MessageReader : IL1ToL2MessageWriter
 
-export type IL2ToL1MessageReaderOrWriter<T extends SignerOrProvider> =
-  T extends Provider ? IL2ToL1MessageReader : IL2ToL1MessageWriter
+export type IL2ToL1MessageReaderOrWriter<
+  T extends SignerOrProvider
+> = T extends Provider ? IL2ToL1MessageReader : IL2ToL1MessageWriter
 
 export interface IL2ToL1MessageReader {
   getOutboxProof(
@@ -305,7 +353,8 @@ export interface MessageBatchProofInfo {
 }
 export { ClassicMessageDeliveredEvent }
 
-export type ClassicForceInclusionParams =
-  FetchedEvent<ClassicMessageDeliveredEvent> & {
-    delayedAcc: string
-  }
+export type ClassicForceInclusionParams = FetchedEvent<
+  ClassicMessageDeliveredEvent
+> & {
+  delayedAcc: string
+}

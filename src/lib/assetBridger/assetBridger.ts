@@ -21,7 +21,8 @@ import { ArbSdkError } from '../dataEntities/errors'
 import { L1ContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'
 
-import { l1Networks, L1Network, L2Network } from '../dataEntities/networks'
+import { L1Network, L2Network } from '../dataEntities/networks'
+import { l1Networks } from '@arbitrum/sdk-nitro/dist/lib/dataEntities/networks'
 import {
   SignerOrProvider,
   SignerProviderUtils,

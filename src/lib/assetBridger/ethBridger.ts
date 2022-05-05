@@ -34,7 +34,7 @@ import {
 
 import * as classic from '@arbitrum/sdk-classic'
 import * as nitro from '@arbitrum/sdk-nitro'
-import { convertNetwork, isNitroL1, isNitroL2 } from '../utils/migration_types'
+import { lookupExistingNetwork, isNitroL1, isNitroL2 } from '../utils/migration_types'
 import { L2Network } from '../dataEntities/networks'
 
 export interface EthWithdrawParams {
@@ -104,7 +104,7 @@ export class EthBridger extends AssetBridger<
    */
   public constructor(l2Network: L2Network) {
     super(l2Network)
-    this.classicBridger = new classic.EthBridger(convertNetwork(l2Network))
+    this.classicBridger = new classic.EthBridger(lookupExistingNetwork(l2Network))
     this.nitroBridger = new nitro.EthBridger(l2Network)
   }
 

@@ -40,10 +40,12 @@ export interface L1ContractTransaction<
   wait(confirmations?: number): Promise<TReceipt>
 }
 // some helper interfaces to reduce the verbosity elsewhere
-export type L1EthDepositTransaction =
-  L1ContractTransaction<L1EthDepositTransactionReceipt>
-export type L1ContractCallTransaction =
-  L1ContractTransaction<L1ContractCallTransactionReceipt>
+export type L1EthDepositTransaction = L1ContractTransaction<
+  L1EthDepositTransactionReceipt
+>
+export type L1ContractCallTransaction = L1ContractTransaction<
+  L1ContractCallTransactionReceipt
+>
 
 export class L1TransactionReceipt implements TransactionReceipt {
   public readonly to: string
@@ -100,9 +102,11 @@ export class L1TransactionReceipt implements TransactionReceipt {
   public async getL1ToL2Messages<T extends SignerOrProvider>(
     l2SignerOrProvider: T
   ): Promise<IL1ToL2MessageReader[] | IL1ToL2MessageWriter[]> {
-    return (await isNitroL2(l2SignerOrProvider))
-      ? this.nitroReceipt.getL1ToL2Messages(l2SignerOrProvider)
-      : this.classicReceipt.getL1ToL2Messages(l2SignerOrProvider)
+    if (await isNitroL2(l2SignerOrProvider)) {
+      return this.nitroReceipt.getL1ToL2Messages(l2SignerOrProvider)
+    } else {
+      return this.classicReceipt.getL1ToL2Messages(l2SignerOrProvider)
+    }
   }
 
   /**

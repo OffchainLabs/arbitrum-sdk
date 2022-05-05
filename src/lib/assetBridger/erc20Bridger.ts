@@ -47,7 +47,7 @@ import * as classic from '@arbitrum/sdk-classic'
 import * as nitro from '@arbitrum/sdk-nitro'
 import {
   convertGasOverrides,
-  convertNetwork,
+  lookupExistingNetwork,
   isNitroL1,
   isNitroL2,
 } from '../utils/migration_types'
@@ -124,7 +124,9 @@ export class Erc20Bridger extends AssetBridger<
   public constructor(l2Network: L2Network) {
     super(l2Network)
 
-    this.classicBridger = new classic.Erc20Bridger(convertNetwork(l2Network))
+    this.classicBridger = new classic.Erc20Bridger(
+      lookupExistingNetwork(l2Network)
+    )
     this.nitroBridger = new nitro.Erc20Bridger(l2Network)
   }
 
@@ -360,7 +362,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
   public constructor(l2Network: L2Network) {
     super(l2Network)
     this.adminClassicBridger = new ClassicAdminErc20Bridger(
-      convertNetwork(l2Network)
+      lookupExistingNetwork(l2Network)
     )
     this.adminNitroBridger = new NitroAdminErc20Bridger(l2Network)
   }

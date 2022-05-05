@@ -53,3 +53,11 @@ export {
 export { InboxTools } from './lib/inbox/inbox'
 export { EventFetcher } from './lib/utils/eventFetcher'
 export * as constants from './lib/dataEntities/constants'
+export {
+  isNitroL1,
+  isNitroL2,
+  IL1ToL2MessageReader,
+  IL1ToL2MessageWriter,
+  IL2ToL1MessageReader,
+  IL2ToL1MessageWriter,
+} from './lib/utils/migration_types'

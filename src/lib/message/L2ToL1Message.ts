@@ -63,8 +63,9 @@ export enum L2ToL1MessageStatus {
  * If T is of type Signer then L2ToL1MessageReaderOrWriter<T> will be of
  * type L2ToL1MessageWriter.
  */
-export type L2ToL1MessageReaderOrWriter<T extends SignerOrProvider> =
-  T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
+export type L2ToL1MessageReaderOrWriter<
+  T extends SignerOrProvider
+> = T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
 
 /**
  * Base functionality for L2->L1 messages
@@ -72,32 +73,28 @@ export type L2ToL1MessageReaderOrWriter<T extends SignerOrProvider> =
 export class L2ToL1Message {
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event?: L2ToL1TransactionEvent['args'],
-    outboxAddress?: string,
-    batchNumber?: BigNumber,
-    indexInBatch?: BigNumber
+    event: L2ToL1TransactionEvent['args'],
+    outboxAddress: string,
+    isNitro: boolean
   ): L2ToL1MessageReaderOrWriter<T>
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event?: L2ToL1TransactionEvent['args'],
-    outboxAddress?: string,
-    batchNumber?: BigNumber,
-    indexInBatch?: BigNumber
+    event: L2ToL1TransactionEvent['args'],
+    outboxAddress: string,
+    isNitro: boolean
   ): L2ToL1MessageReader | L2ToL1MessageWriter {
     return SignerProviderUtils.isSigner(l1SignerOrProvider)
       ? new L2ToL1MessageWriter(
           l1SignerOrProvider,
           event,
           outboxAddress,
-          batchNumber,
-          indexInBatch
+          isNitro
         )
       : new L2ToL1MessageReader(
           l1SignerOrProvider,
           event,
           outboxAddress,
-          batchNumber,
-          indexInBatch
+          isNitro
         )
   }
 
@@ -173,33 +170,29 @@ export class L2ToL1Message {
 /**
  * Provides read-only access for l2-to-l1-messages
  */
-export class L2ToL1MessageReader
-  extends L2ToL1Message
-  implements IL2ToL1MessageReader
-{
+export class L2ToL1MessageReader extends L2ToL1Message
+  implements IL2ToL1MessageReader {
   private readonly classicReader?: classic.L2ToL1MessageReader
   private readonly nitroReader?: nitro.L2ToL1MessageReader
 
   constructor(
     protected readonly l1Provider: Provider,
-    event?: L2ToL1TransactionEvent['args'],
-    protected readonly outboxAddress?: string,
-    batchNumber?: BigNumber,
-    indexInBatch?: BigNumber
+    event: L2ToL1TransactionEvent['args'],
+    protected readonly outboxAddress: string,
+    protected readonly isNitro: boolean
   ) {
     super()
 
-    if (event) {
+    if (isNitro) {
       this.nitroReader = new nitro.L2ToL1MessageReader(l1Provider, event)
-    } else if (outboxAddress && batchNumber && indexInBatch) {
+    } else {
       this.classicReader = new classic.L2ToL1MessageReader(
         l1Provider,
         outboxAddress,
-        batchNumber,
-        indexInBatch
+        event.position,
+        event.indexInBatch
       )
-    } else
-      throw new ArbSdkError('Unexpected L2ToL1MessageReader constructor args')
+    }
   }
 
   public async getOutboxProof(
@@ -264,31 +257,28 @@ export class L2ToL1MessageReader
 /**
  * Provides read and write access for l2-to-l1-messages
  */
-export class L2ToL1MessageWriter
-  extends L2ToL1MessageReader
-  implements IL2ToL1MessageWriter
-{
+export class L2ToL1MessageWriter extends L2ToL1MessageReader
+  implements IL2ToL1MessageWriter {
   private readonly classicWriter?: classic.L2ToL1MessageWriter
   private readonly nitroWriter?: nitro.L2ToL1MessageWriter
   constructor(
     l1Signer: Signer,
-    event?: L2ToL1TransactionEvent['args'],
-    outboxAddress?: string,
-    batchNumber?: BigNumber,
-    indexInBatch?: BigNumber
+    event: L2ToL1TransactionEvent['args'],
+    outboxAddress: string,
+    isNitro: boolean
   ) {
-    super(l1Signer.provider!, event, outboxAddress, batchNumber, indexInBatch)
+    super(l1Signer.provider!, event, outboxAddress, isNitro)
 
-    if (event) this.nitroWriter = new nitro.L2ToL1MessageWriter(l1Signer, event)
-    else if (outboxAddress && batchNumber && indexInBatch)
+    if (isNitro)
+      this.nitroWriter = new nitro.L2ToL1MessageWriter(l1Signer, event)
+    else {
       this.classicWriter = new classic.L2ToL1MessageWriter(
         l1Signer,
         outboxAddress,
-        batchNumber,
-        indexInBatch
+        event.position,
+        event.indexInBatch
       )
-    else
-      throw new ArbSdkError('Unexpected L2ToL1MessageWriter constructor args')
+    }
   }
 
   /**
