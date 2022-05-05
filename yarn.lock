@@ -9,7 +9,7 @@
   dependencies:
     "@jridgewell/trace-mapping" "^0.3.0"
 
-"@arbitrum/nitro-contracts@^1.0.0-beta.2":
+"@arbitrum/nitro-contracts@1.0.0-beta.2", "@arbitrum/nitro-contracts@^1.0.0-beta.2":
   version "1.0.0-beta.2"
   resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.0.0-beta.2.tgz#70c1d114f087959b56ccbda3caadc805e34fda73"
   integrity sha512-IdwJUtjZ8+bIZpzKVUpqE0hGqnRW/tkKtCUbQgfXgveiJ2NYacqUL+xlpM2WyVsBdP1vS/cgINBtPNXdBPKSPQ==
@@ -17,6 +17,43 @@
     "@openzeppelin/contracts" "4.5.0"
     "@openzeppelin/contracts-upgradeable" "4.5.2"
     hardhat "^2.6.6"
+
+"@arbitrum/sdk-classic:@npm:@arbitrum/sdk@1.1.4":
+  version "1.1.4"
+  resolved "https://registry.yarnpkg.com/@arbitrum/sdk/-/sdk-1.1.4.tgz#1f51455a93e23aff29ab047ac1be06cec78e6145"
+  integrity sha512-Tosm9p6eS+kpp64VMjqEHdbjsg9XmS+hjnFzarzKjUkILn5ShX+E2oYOhp4eHnYddQOL/jKhJkFdgfPh3tqI/g==
+  dependencies:
+    "@ethersproject/address" "^5.0.8"
+    "@ethersproject/bignumber" "^5.1.1"
+    "@ethersproject/bytes" "^5.0.8"
+    "@typechain/ethers-v5" "9.0.0"
+    "@types/prompts" "^2.0.14"
+    "@types/yargs" "^17.0.9"
+    arb-bridge-eth "0.7.5"
+    arb-bridge-peripherals "1.0.6"
+    arbos-precompiles "1.0.2"
+    dotenv "^10.0.0"
+    ethers "^5.1.0"
+    ts-node "^10.2.1"
+    typechain "7.0.0"
+
+"@arbitrum/sdk-nitro:@npm:@arbitrum/sdk@1.1.4-nitro-beta.0":
+  version "1.1.4-nitro-beta.0"
+  resolved "https://registry.yarnpkg.com/@arbitrum/sdk/-/sdk-1.1.4-nitro-beta.0.tgz#83b4c97c6853fa44b55bc6d3cf21c7b246372292"
+  integrity sha512-KHQ3c6Ja6+xbV0SPxSL6EXpIjSpY+8rOSfQOAX0jiVSDFtRzC0n7N2HzQOgSb3YIAcR7RWGwSoMZVrmitts4TQ==
+  dependencies:
+    "@arbitrum/nitro-contracts" "1.0.0-beta.2"
+    "@ethersproject/address" "^5.0.8"
+    "@ethersproject/bignumber" "^5.1.1"
+    "@ethersproject/bytes" "^5.0.8"
+    "@typechain/ethers-v5" "9.0.0"
+    "@types/prompts" "^2.0.14"
+    "@types/yargs" "^17.0.9"
+    arb-bridge-peripherals "1.0.9"
+    dotenv "^10.0.0"
+    ethers "^5.1.0"
+    ts-node "^10.2.1"
+    typechain "7.0.0"
 
 "@babel/code-frame@7.12.11":
   version "7.12.11"
@@ -1192,6 +1229,16 @@ append-transform@^2.0.0:
   dependencies:
     default-require-extensions "^3.0.0"
 
+arb-bridge-eth@0.7.5:
+  version "0.7.5"
+  resolved "https://registry.yarnpkg.com/arb-bridge-eth/-/arb-bridge-eth-0.7.5.tgz#465a304b145eaad0af168e63192f714ee02cb025"
+  integrity sha512-OzsOqKBdU7AwmMJS1Pt27yqt/tYIteSXUIYNJYahiM7lUZk2ZsnPRnYKUc64ONDpTo/VGhO0cVXGjkrseBeJrA==
+  dependencies:
+    "@openzeppelin/contracts" "3.4.2"
+    "@openzeppelin/contracts-0.8" "npm:@openzeppelin/contracts@^4.3.2"
+    "@openzeppelin/contracts-upgradeable" "3.4.2"
+    hardhat "^2.6.1"
+
 arb-bridge-eth@0.7.6:
   version "0.7.6"
   resolved "https://registry.yarnpkg.com/arb-bridge-eth/-/arb-bridge-eth-0.7.6.tgz#76cfa217c43bb03d488af58f646dee9fa27bb153"
@@ -1201,6 +1248,19 @@ arb-bridge-eth@0.7.6:
     "@openzeppelin/contracts-0.8" "npm:@openzeppelin/contracts@^4.3.2"
     "@openzeppelin/contracts-upgradeable" "3.4.2"
     hardhat "^2.6.1"
+
+arb-bridge-peripherals@1.0.6:
+  version "1.0.6"
+  resolved "https://registry.yarnpkg.com/arb-bridge-peripherals/-/arb-bridge-peripherals-1.0.6.tgz#91024740b96bf10fc43bf6582ee0debf93cf3d81"
+  integrity sha512-nrarOZ72VEo/DprRO+CPaD4dwM9EuhHqZ/pyPjTjgprLtvQ9gVewIi0O8dtM2E83JC7O3zUxHOPBtTLuJaZ/oQ==
+  dependencies:
+    "@openzeppelin/contracts" "3.4.2"
+    "@openzeppelin/contracts-upgradeable" "3.4.2"
+    arb-bridge-eth "0.7.5"
+    arbos-precompiles "^1.0.2"
+    hardhat "^2.6.1"
+  optionalDependencies:
+    "@openzeppelin/upgrades-core" "^1.7.6"
 
 arb-bridge-peripherals@1.0.9:
   version "1.0.9"
@@ -1215,7 +1275,7 @@ arb-bridge-peripherals@1.0.9:
   optionalDependencies:
     "@openzeppelin/upgrades-core" "^1.7.6"
 
-arbos-precompiles@^1.0.2:
+arbos-precompiles@1.0.2, arbos-precompiles@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/arbos-precompiles/-/arbos-precompiles-1.0.2.tgz#7bebd5963aef972cd259eb41f3116ea065013ea6"
   integrity sha512-1dOFYFJUN0kKoofh6buZJ8qCqTs+oLGSsGzHI0trA/Pka/TCERflCRsNVxez2lihOvK7MT/a2RA8AepKtBXdPQ==
