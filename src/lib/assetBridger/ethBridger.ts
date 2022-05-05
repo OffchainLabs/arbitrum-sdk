@@ -34,6 +34,10 @@ import {
   L2ContractTransaction,
   L2TransactionReceipt,
 } from '../message/L2Transaction'
+import { L1ToL2MessageGasEstimator } from '../message/L1ToL2MessageGasEstimator'
+import { Provider } from '@ethersproject/abstract-provider'
+import { getBaseFee } from '../utils/lib'
+import { Interface } from 'ethers/lib/utils'
 
 export interface EthWithdrawParams {
   /**
@@ -72,6 +76,7 @@ export type EthDepositParams = {
    * Transaction overrides
    */
   overrides?: PayableOverrides
+  l2Provider: Provider
 }
 
 /**
@@ -94,12 +99,33 @@ export class EthBridger extends AssetBridger<
     }
     await this.checkL1Network(params.l1Signer)
 
-    const inbox = Inbox__factory.connect(
+    // CHRIS: TODO: update this back to the new depositEth
+
+    const estimator = new L1ToL2MessageGasEstimator(params.l2Provider)
+    const baseFee = await getBaseFee(params.l1Signer.provider)
+    const submissionFee = estimator.estimateSubmissionFee(
+      params.l1Signer.provider,
+      baseFee,
+      0
+    )
+
+    // const inbox = Inbox__factory.connect(
+    //   this.l2Network.ethBridge.inbox,
+    //   params.l1Signer
+    // )
+
+    const iFace = new Interface([
+      'function depositEth(uint256 maxSubmissionCost) external payable returns (uint256)',
+    ])
+    const contract = new ethers.Contract(
       this.l2Network.ethBridge.inbox,
+      iFace,
       params.l1Signer
     )
 
-    return (estimate ? inbox.estimateGas : inbox.functions)['depositEth()']({
+    return (estimate ? contract.estimateGas : contract.functions)[
+      'depositEth(uint256)'
+    ](submissionFee, {
       value: params.amount,
       ...(params.overrides || {}),
     })
