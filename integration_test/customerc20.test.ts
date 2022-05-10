@@ -45,7 +45,7 @@ import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
-describe.skip('Custom ERC20', () => {
+describe('Custom ERC20', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })

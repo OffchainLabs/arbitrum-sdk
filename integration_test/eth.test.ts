@@ -48,6 +48,13 @@ describe('Ether', async () => {
     const randomAddress = Wallet.createRandom().address
     const amountToSend = parseEther('0.000005')
 
+    await (
+      await l2Signer.sendTransaction({
+        to: randomAddress,
+        value: amountToSend,
+      })
+    ).wait()
+
     const randomBalanceAfter = await l2Signer.provider!.getBalance(
       randomAddress
     )
