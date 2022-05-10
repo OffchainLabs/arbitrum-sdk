@@ -121,9 +121,9 @@ export class L2TransactionReceipt implements TransactionReceipt {
       const l2Network = await classic.getL2Network(l2Provider)
       const events = await this.getL2ToL1Events()
 
-      return events.map(m => {
-        const outboxAddr = getOutboxAddr(l2Network, m.position.toNumber())
-        return L2ToL1Message.fromEvent(l1SignerOrProvider, m, outboxAddr, false)
+      return events.map(e => {
+        const outboxAddr = getOutboxAddr(l2Network, e.position.toNumber())
+        return L2ToL1Message.fromEvent(l1SignerOrProvider, e, outboxAddr)
       })
     }
   }
