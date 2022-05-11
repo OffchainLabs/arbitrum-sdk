@@ -159,7 +159,7 @@ export interface Erc20DepositFunctionArgs {
 }
 
 /**
- * A deposit of tokens for L1 to L2
+ * A deposit of tokens from L1 to L2
  */
 class Erc20Deposit implements Erc20DepositFunctionArgs {
   public readonly erc20L1Address: string
