@@ -30,7 +30,7 @@ import {
 import * as classic from '@arbitrum/sdk-classic'
 import * as nitro from '@arbitrum/sdk-nitro'
 import { L2ToL1TransactionEvent as ClassicL2ToL1TransactionEvent } from '@arbitrum/sdk-classic/dist/lib/abi/ArbSys'
-import { L2ToL1TransactionEvent as NitroL2ToL1TransactionEvent } from '@arbitrum/sdk-nitro/dist/lib/abi/ArbSys'
+import { L2ToL1TxEvent as NitroL2ToL1TransactionEvent } from '@arbitrum/sdk-nitro/dist/lib/abi/ArbSys'
 import {
   convertL2ToL1Status,
   IL2ToL1MessageReader,
@@ -67,8 +67,6 @@ export type L2ToL1MessageReaderOrWriter<
   T extends SignerOrProvider
 > = T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
 
-
-
 /**
  * Base functionality for L2->L1 messages
  */
@@ -76,7 +74,7 @@ export class L2ToL1Message {
   protected isClassic(
     e: L2ToL1TransactionEvent
   ): e is ClassicL2ToL1TransactionEvent['args'] {
-    if (e.indexInBatch) return true
+    if ((e as ClassicL2ToL1TransactionEvent['args']).indexInBatch) return true
     else return false
   }
 
@@ -124,9 +122,7 @@ export class L2ToL1Message {
       hashOrUniqueId
     )
 
-    return [
-      ...classicLogs, ...nitroLogs
-    ]
+    return [...classicLogs, ...nitroLogs]
   }
 }
 
