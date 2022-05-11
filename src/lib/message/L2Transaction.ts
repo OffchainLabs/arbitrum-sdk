@@ -22,11 +22,10 @@ import { Log, Provider } from '@ethersproject/abstract-provider'
 import { ContractTransaction, providers } from 'ethers'
 import { SignerOrProvider } from '../dataEntities/signerOrProvider'
 import { L2ToL1Message } from './L2ToL1Message'
-import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
-import { L2ToL1TransactionEvent } from '../abi/ArbSys'
-
 import * as classic from '@arbitrum/sdk-classic'
 import * as nitro from '@arbitrum/sdk-nitro'
+import { L2ToL1TransactionEvent as ClassicL2ToL1TransactionEvent } from '@arbitrum/sdk-classic/dist/lib/abi/ArbSys'
+import { L2ToL1TransactionEvent } from './L2ToL1Message'
 import {
   isNitroL1,
   IL2ToL1MessageReader,
@@ -92,15 +91,18 @@ export class L2TransactionReceipt implements TransactionReceipt {
    * Get an L2ToL1Transaction events created by this transaction
    * @returns
    */
-  public getL2ToL1Events(): L2ToL1TransactionEvent['args'][] {
-    const iface = ArbSys__factory.createInterface()
-    const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
-    const eventTopic = iface.getEventTopic(l2ToL1Event)
-    const logs = this.logs.filter(log => log.topics[0] === eventTopic)
+  public getL2ToL1Events(): L2ToL1TransactionEvent[] {
+    return [
+      ...this.nitroReceipt.getL2ToL1Events(),
+      ...this.classicReceipt.getL2ToL1Events(),
+    ]
+  }
 
-    return logs.map(
-      log => iface.parseLog(log).args as L2ToL1TransactionEvent['args']
-    )
+  private isClassic(
+    e: L2ToL1TransactionEvent
+  ): e is ClassicL2ToL1TransactionEvent['args'] {
+    if ((e as ClassicL2ToL1TransactionEvent['args']).indexInBatch) return true
+    else return false
   }
 
   /**
@@ -115,17 +117,21 @@ export class L2TransactionReceipt implements TransactionReceipt {
     l1SignerOrProvider: T,
     l2Provider: Provider
   ): Promise<IL2ToL1MessageReader[] | IL2ToL1MessageWriter[]> {
-    if (await isNitroL1(l1SignerOrProvider)) {
-      return this.nitroReceipt.getL2ToL1Messages(l1SignerOrProvider)
-    } else {
-      const l2Network = await classic.getL2Network(l2Provider)
-      const events = await this.getL2ToL1Events()
+    const events = await this.getL2ToL1Events()
 
-      return events.map(e => {
-        const outboxAddr = getOutboxAddr(l2Network, e.position.toNumber())
-        return L2ToL1Message.fromEvent(l1SignerOrProvider, e, outboxAddr)
+    return Promise.all(
+      events.map(async e => {
+        if (this.isClassic(e)) {
+          // classic
+          const l2Network = await classic.getL2Network(l2Provider)
+          const outboxAddr = getOutboxAddr(l2Network, e.batchNumber.toNumber())
+          return L2ToL1Message.fromEvent(l1SignerOrProvider, e, outboxAddr)
+        } else {
+          // nitro
+          return L2ToL1Message.fromEvent(l1SignerOrProvider, e)
+        }
       })
-    }
+    )
   }
 
   /**
