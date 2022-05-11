@@ -34,7 +34,7 @@ import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
-import { L2ToL1TransactionEvent } from '../abi/ArbSys'
+import { L2ToL1TxEvent } from '../abi/ArbSys'
 import { ArbSdkError } from '../dataEntities/errors'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { getArbTransactionReceipt } from '../utils/arbProvider'
@@ -87,18 +87,16 @@ export class L2TransactionReceipt implements TransactionReceipt {
   }
 
   /**
-   * Get an L2ToL1Transaction events created by this transaction
+   * Get an L2ToL1TxEvent events created by this transaction
    * @returns
    */
-  public getL2ToL1Events(): L2ToL1TransactionEvent['args'][] {
+  public getL2ToL1Events(): L2ToL1TxEvent['args'][] {
     const iface = ArbSys__factory.createInterface()
-    const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
+    const l2ToL1Event = iface.getEvent('L2ToL1Tx')
     const eventTopic = iface.getEventTopic(l2ToL1Event)
     const logs = this.logs.filter(log => log.topics[0] === eventTopic)
 
-    return logs.map(
-      log => iface.parseLog(log).args as L2ToL1TransactionEvent['args']
-    )
+    return logs.map(log => iface.parseLog(log).args as L2ToL1TxEvent['args'])
   }
 
   /**
