@@ -30,7 +30,7 @@ import { RollupUserLogic__factory } from '../abi/factories/RollupUserLogic__fact
 import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
-import { L2ToL1TransactionEvent } from '../abi/ArbSys'
+import { L2ToL1TxEvent } from '../abi/ArbSys'
 import { ContractTransaction, Overrides } from 'ethers'
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { ArbSdkError } from '../dataEntities/errors'
@@ -41,7 +41,6 @@ import {
 import { wait } from '../utils/lib'
 import { getL2Network } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
-import { L2TransactionReceipt } from './L2Transaction'
 import { getArbBlockByHash } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
 import { JsonRpcProvider } from '@ethersproject/providers'
@@ -126,89 +125,37 @@ const ASSERTION_CONFIRMED_PADDING = 20
  * Base functionality for L2->L1 messages
  */
 export class L2ToL1Message {
-  protected constructor(
-    public readonly event: L2ToL1TransactionEvent['args']
-  ) {}
+  protected constructor(public readonly event: L2ToL1TxEvent['args']) {}
 
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event: L2ToL1TransactionEvent['args']
+    event: L2ToL1TxEvent['args']
   ): L2ToL1MessageReaderOrWriter<T>
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event: L2ToL1TransactionEvent['args']
+    event: L2ToL1TxEvent['args']
   ): L2ToL1MessageReader | L2ToL1MessageWriter {
     return SignerProviderUtils.isSigner(l1SignerOrProvider)
       ? new L2ToL1MessageWriter(l1SignerOrProvider, event)
       : new L2ToL1MessageReader(l1SignerOrProvider, event)
   }
 
-  public static async getL2ToL1MessageLogs(
-    l2Provider: Provider,
-    filter: { fromBlock: BlockTag; toBlock: BlockTag },
-    batchNumber?: BigNumber,
-    destination?: string,
-    uniqueId?: BigNumber,
-    indexInBatch?: BigNumber
-  ): Promise<L2ToL1TransactionEvent['args'][]> {
-    const eventFetcher = new EventFetcher(l2Provider)
-    const events = (
-      await eventFetcher.getEvents(
-        ARB_SYS_ADDRESS,
-        ArbSys__factory,
-        t =>
-          t.filters.L2ToL1Transaction(null, destination, uniqueId, batchNumber),
-        filter
-      )
-    ).map(l => l.event)
-
-    if (indexInBatch) {
-      const indexItems = events.filter(b => b.indexInBatch.eq(indexInBatch))
-      if (indexItems.length === 1) {
-        return indexItems
-      } else if (indexItems.length > 1) {
-        throw new ArbSdkError('More than one indexed item found in batch.')
-      } else return []
-    } else return events
-  }
-
   public static async getL2ToL1Events(
     l2Provider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
-    batchNumber?: BigNumber,
+    position?: BigNumber,
     destination?: string,
-    uniqueId?: BigNumber,
-    indexInBatch?: BigNumber
-  ): Promise<L2ToL1TransactionEvent['args'][]> {
+    hash?: BigNumber
+  ): Promise<L2ToL1TxEvent['args'][]> {
     const eventFetcher = new EventFetcher(l2Provider)
-    const events = await eventFetcher.getEvents(
-      ARB_SYS_ADDRESS,
-      ArbSys__factory,
-      t =>
-        t.filters.L2ToL1Transaction(null, destination, uniqueId, batchNumber),
-      filter
-    )
-
-    const l2ToL1Events = await Promise.all(
-      events.map(e =>
-        l2Provider
-          .getTransactionReceipt(e.transactionHash)
-          .then(receipt => new L2TransactionReceipt(receipt).getL2ToL1Events())
+    return (
+      await eventFetcher.getEvents(
+        ARB_SYS_ADDRESS,
+        ArbSys__factory,
+        t => t.filters.L2ToL1Tx(null, destination, hash, position),
+        filter
       )
-    ).then(res => res.flat())
-
-    if (indexInBatch) {
-      const indexItems = l2ToL1Events.filter(b =>
-        b.indexInBatch.eq(indexInBatch)
-      )
-      if (indexItems.length === 1) {
-        return indexItems
-      } else if (indexItems.length > 1) {
-        throw new ArbSdkError('More than one indexed item found in batch.')
-      } else return []
-    }
-
-    return l2ToL1Events
+    ).map(l => l.event)
   }
 }
 
@@ -223,7 +170,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
   constructor(
     protected readonly l1Provider: Provider,
-    event: L2ToL1TransactionEvent['args']
+    event: L2ToL1TxEvent['args']
   ) {
     super(event)
   }
@@ -490,10 +437,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
  * Provides read and write access for l2-to-l1-messages
  */
 export class L2ToL1MessageWriter extends L2ToL1MessageReader {
-  constructor(
-    private readonly l1Signer: Signer,
-    event: L2ToL1TransactionEvent['args']
-  ) {
+  constructor(private readonly l1Signer: Signer, event: L2ToL1TxEvent['args']) {
     super(l1Signer.provider!, event)
   }
 
