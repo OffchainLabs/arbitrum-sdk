@@ -170,7 +170,7 @@ describe('Ether', async () => {
     ).to.exist
 
     const myAddress = await l1Signer.getAddress()
-    const withdrawEvents = await L2ToL1Message.getL2ToL1MessageLogs(
+    const withdrawEvents = await L2ToL1Message.getL2ToL1Events(
       l2Signer.provider!,
       { fromBlock: withdrawEthRec.blockNumber, toBlock: 'latest' },
       undefined,
