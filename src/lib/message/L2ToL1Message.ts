@@ -41,7 +41,6 @@ import {
 import { wait } from '../utils/lib'
 import { getL2Network } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
-import { L2TransactionReceipt } from './L2Transaction'
 import { getArbBlockByHash } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
 import { JsonRpcProvider } from '@ethersproject/providers'
@@ -114,9 +113,8 @@ export enum L2ToL1MessageStatus {
  * If T is of type Signer then L2ToL1MessageReaderOrWriter<T> will be of
  * type L2ToL1MessageWriter.
  */
-export type L2ToL1MessageReaderOrWriter<
-  T extends SignerOrProvider
-> = T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
+export type L2ToL1MessageReaderOrWriter<T extends SignerOrProvider> =
+  T extends Provider ? L2ToL1MessageReader : L2ToL1MessageWriter
 
 // expected number of L1 blocks that it takes for an L2 tx to be included in a L1 assertion
 const ASSERTION_CREATED_PADDING = 50
@@ -187,10 +185,11 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       l2Provider
     )
 
-    const outboxProofParams = await nodeInterface.callStatic.constructOutboxProof(
-      sendRootSize.toNumber(),
-      this.event.position.toNumber()
-    )
+    const outboxProofParams =
+      await nodeInterface.callStatic.constructOutboxProof(
+        sendRootSize.toNumber(),
+        this.event.position.toNumber()
+      )
 
     // CHRIS: TODO: check these from the return vals to make sure they're expected ones
     // this.event.hash,
