@@ -43,7 +43,6 @@ export interface RetryableMessageParams {
   data: string
 }
 
-
 // CHRIS: TODO: docs
 export enum InboxMessageKind {
   L1MessageType_submitRetryableTx = 9,

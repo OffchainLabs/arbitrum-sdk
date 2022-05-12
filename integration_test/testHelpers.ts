@@ -21,7 +21,6 @@ import chalk from 'chalk'
 
 import { BigNumber } from '@ethersproject/bignumber'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
 
 import { config, getSigner, testSetup } from '../scripts/testSetup'
@@ -83,7 +82,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   )
 
   const l2TokenAddr = await params.erc20Bridger.getL2ERC20Address(
-  params.l1Token.address,
+    params.l1Token.address,
     params.l1Signer.provider!
   )
   const l2Token = params.erc20Bridger.getL2TokenContract(
