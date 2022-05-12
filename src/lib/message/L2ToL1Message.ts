@@ -95,6 +95,20 @@ export class L2ToL1Message {
       : new L2ToL1MessageReader(l1SignerOrProvider, event, outboxAddress)
   }
 
+  /**
+   * Get event logs for L2ToL1 transactions.
+   * @param l2Provider 
+   * @param filter Block range filter
+   * @param positionOrBatchNumber The batchnumber indexed field was removed in nitro and a position indexed field was added.
+   * For pre-nitro events the value passed in here will be used to find events with the same batchnumber.
+   * For post nitro events it will be used to find events with the same position.
+   * @param destination The L1 destination of the L2ToL1 message
+   * @param hashOrUniqueId The uniqueId indexed field was removed in nitro and a hash indexed field was added.
+   * For pre-nitro events the value passed in here will be used to find events with the same uniqueId. 
+   * For post nitro events it will be used to find events with the same hash.
+   * @param indexInBatch The index in the batch, only valid for pre-nitro events. This parameter is ignored post-nitro
+   * @returns Any classic and nitro events that match the provided filters.
+   */
   public static async getEventLogs(
     l2Provider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
