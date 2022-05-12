@@ -132,7 +132,7 @@ describe('Ether', async () => {
     expect(testWalletL2EthBalance.gt(ethToDeposit), 'final balance').to.be.true
   })
 
-  it.only('withdraw Ether transaction succeeds', async () => {
+  it('withdraw Ether transaction succeeds', async () => {
     const { l2Signer, l1Signer, ethBridger } = await testSetup()
     await fundL2(l2Signer)
     await fundL1(l1Signer)
