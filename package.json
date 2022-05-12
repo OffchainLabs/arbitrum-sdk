@@ -46,7 +46,7 @@
   "dependencies": {
     "@arbitrum/nitro-contracts": "^1.0.0-beta.2",
     "@arbitrum/sdk-classic": "npm:@arbitrum/sdk@1.1.4",
-    "@arbitrum/sdk-nitro": "npm:@arbitrum/sdk@1.1.4-nitro-beta.1",
+    "@arbitrum/sdk-nitro": "npm:@arbitrum/sdk@1.1.4-nitro-beta.2",
     "@ethersproject/address": "^5.0.8",
     "@ethersproject/bignumber": "^5.1.1",
     "@ethersproject/bytes": "^5.0.8",
