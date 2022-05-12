@@ -117,24 +117,25 @@ export class L2ToL1Message {
     hashOrUniqueId?: BigNumber,
     indexInBatch?: BigNumber
   ): Promise<L2ToL1TransactionEvent[]> {
-    const classicLogs = await classic.L2ToL1Message.getL2ToL1MessageLogs(
-      l2Provider,
-      filter,
-      positionOrBatchNumber,
-      destination,
-      hashOrUniqueId,
-      indexInBatch
-    )
-
-    const nitroLogs = await nitro.L2ToL1Message.getL2ToL1Events(
-      l2Provider,
-      filter,
-      positionOrBatchNumber,
-      destination,
-      hashOrUniqueId
-    )
-
-    return [...classicLogs, ...nitroLogs]
+    return (
+      await Promise.all([
+        classic.L2ToL1Message.getL2ToL1MessageLogs(
+          l2Provider,
+          filter,
+          positionOrBatchNumber,
+          destination,
+          hashOrUniqueId,
+          indexInBatch
+        ),
+        nitro.L2ToL1Message.getL2ToL1Events(
+          l2Provider,
+          filter,
+          positionOrBatchNumber,
+          destination,
+          hashOrUniqueId
+        ),
+      ])
+    ).flat(1)
   }
 }
 
