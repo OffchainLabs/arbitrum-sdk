@@ -101,8 +101,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
   private isClassic(
     e: L2ToL1TransactionEvent
   ): e is ClassicL2ToL1TransactionEvent['args'] {
-    if ((e as ClassicL2ToL1TransactionEvent['args']).indexInBatch) return true
-    else return false
+    return !!(e as ClassicL2ToL1TransactionEvent['args']).indexInBatch
   }
 
   /**
