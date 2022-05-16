@@ -21,7 +21,7 @@ import { Signer } from '@ethersproject/abstract-signer'
 import { BigNumber } from '@ethersproject/bignumber'
 import { BlockTag } from '@ethersproject/abstract-provider'
 
-import { ContractTransaction, Overrides } from 'ethers'
+import { Contract, ContractTransaction, Overrides } from 'ethers'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
   SignerProviderUtils,
@@ -35,8 +35,11 @@ import {
   convertL2ToL1Status,
   IL2ToL1MessageReader,
   IL2ToL1MessageWriter,
+  isNitroL2,
   MessageBatchProofInfo,
 } from '../utils/migration_types'
+import { Interface } from 'ethers/lib/utils'
+import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 
 export type L2ToL1TransactionEvent =
   | ClassicL2ToL1TransactionEvent['args']
@@ -185,12 +188,50 @@ export class L2ToL1MessageReader
     }
   }
 
+  protected async tryGetClassicProof(
+    l2Provider: Provider
+  ): Promise<MessageBatchProofInfo | null> {
+    if (!this.classicReader)
+      throw new ArbSdkError(
+        'Trying get classic proof for empty classic reader.'
+      )
+
+    // If we're on the nitro node but need a classic proof we'll need
+    // call a different function as it's been renamed to 'legacy'
+    if (await isNitroL2(l2Provider)) {
+      const iNodeInterface = new Interface(
+        'function legacyLookupMessageBatchProof(uint256 batchNum, uint64 index) external view returns (bytes32[] memory proof, uint256 path, address l2Sender, address l1Dest, uint256 l2Block, uint256 l1Block, uint256 timestamp, uint256 amount, bytes memory calldataForL1);'
+      )
+
+      const nodeInterface = new Contract(
+        NODE_INTERFACE_ADDRESS,
+        iNodeInterface,
+        l2Provider
+      )
+      try {
+        return nodeInterface.functions['legacyLookupMessageBatchProof'](
+          this.classicReader.batchNumber,
+          this.classicReader.indexInBatch
+        )
+      } catch (e) {
+        const expectedError = "batch doesn't exist"
+        const err = e as Error & { error: Error }
+        const actualError =
+          err && (err.message || (err.error && err.error.message))
+        if (actualError.includes(expectedError)) return null
+        else throw e
+      }
+    } else {
+      return await this.classicReader.tryGetProof(l2Provider)
+    }
+  }
+
   public async getOutboxProof(
     l2Provider: Provider
   ): Promise<MessageBatchProofInfo | null | string[]> {
     return this.nitroReader
       ? this.nitroReader.getOutboxProof(l2Provider)
-      : this.classicReader!.tryGetProof(l2Provider)
+      : this.tryGetClassicProof(l2Provider)
   }
 
   protected classicProof?: MessageBatchProofInfo
@@ -205,7 +246,7 @@ export class L2ToL1MessageReader
     if (this.nitroReader) return this.nitroReader.status(l2Provider)
     else {
       const proof =
-        this.classicProof || (await this.classicReader!.tryGetProof(l2Provider))
+        this.classicProof || (await this.tryGetClassicProof(l2Provider))
       if (proof && !this.classicProof) this.classicProof = proof
 
       const status = await this.classicReader!.status(proof)
@@ -304,7 +345,7 @@ export class L2ToL1MessageWriter
     if (this.nitroWriter) return this.nitroWriter.execute(l2Provider, overrides)
     else {
       const proof =
-        this.classicProof || (await this.classicWriter!.tryGetProof(l2Provider))
+        this.classicProof || (await this.tryGetClassicProof(l2Provider))
       if (proof === null) throw new ArbSdkError('Unexpected missing proof')
       if (!this.classicProof) this.classicProof = proof
       return await this.classicWriter!.execute(proof)
