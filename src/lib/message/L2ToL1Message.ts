@@ -194,7 +194,6 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     // CHRIS: TODO: check these from the return vals to make sure they're expected ones
     // this.event.hash,
     //   this.sendRootHash,
-    // console.log(outboxProofParams)
 
     return outboxProofParams.proof
   }
