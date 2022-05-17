@@ -21,10 +21,9 @@ import chalk from 'chalk'
 
 import { BigNumber } from '@ethersproject/bignumber'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
 
-import { config, testSetup } from '../scripts/testSetup'
+import { config, getSigner, testSetup } from '../scripts/testSetup'
 
 import { Signer } from 'ethers'
 import { Erc20Bridger, L1ToL2MessageStatus, L2ToL1MessageStatus } from '../src'
@@ -294,31 +293,32 @@ export const depositToken = async (
   return { l1Token, waitRes, l2Token }
 }
 
+const fund = async (
+  signer: Signer,
+  amount?: BigNumber,
+  fundingKey?: string
+) => {
+  const wallet = getSigner(signer.provider! as JsonRpcProvider, fundingKey)
+  await (
+    await wallet.sendTransaction({
+      to: await signer.getAddress(),
+      value: amount || preFundAmount,
+    })
+  ).wait()
+}
+
 export const fundL1 = async (
   l1Signer: Signer,
   amount?: BigNumber
 ): Promise<void> => {
-  const preFundedSigner = (l1Signer.provider! as JsonRpcProvider).getSigner(0)
-  await (
-    await preFundedSigner.sendTransaction({
-      to: await l1Signer.getAddress(),
-      value: amount || preFundAmount,
-    })
-  ).wait()
+  await fund(l1Signer, amount, config.ethKey)
 }
 
 export const fundL2 = async (
   l2Signer: Signer,
   amount?: BigNumber
 ): Promise<void> => {
-  const testWalletAddress = await l2Signer.getAddress()
-  const arbGenesisWallet = new Wallet(config.arbGenesisKey)
-  await (
-    await arbGenesisWallet.connect(l2Signer.provider!).sendTransaction({
-      to: testWalletAddress,
-      value: amount || preFundAmount,
-    })
-  ).wait()
+  await fund(l2Signer, amount, config.arbKey)
 }
 
 export const wait = (ms = 0): Promise<void> => {

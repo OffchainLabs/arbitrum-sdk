@@ -26,7 +26,6 @@ import {
   L2ToL1Message,
   L2ToL1MessageStatus,
 } from '../src/lib/message/L2ToL1Message'
-import { L1ToL2MessageStatus } from '../src/lib/message/L1ToL2Message'
 import { testSetup } from '../scripts/testSetup'
 dotenv.config()
 
@@ -120,13 +119,11 @@ describe('Ether', async () => {
     }
     expect(l1ToL2Message.messageData.data, 'empty call data').to.eq('0x')
 
-    prettyLog('l2TxHash: ' + waitResult.message.retryableCreationId)
+    prettyLog('l2TxHash: ' + waitResult.message.l2DepositTxHash)
     prettyLog('l2 transaction found!')
     expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
-    expect(waitResult.status).to.eq(
-      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
-      'eth deposit l2 transaction not found'
-    )
+    expect(waitResult.l2TxReceipt).to.exist
+    expect(waitResult.l2TxReceipt).to.not.be.null
 
     const testWalletL2EthBalance = await l2Signer.getBalance()
     expect(testWalletL2EthBalance.gt(ethToDeposit), 'final balance').to.be.true

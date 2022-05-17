@@ -33,14 +33,13 @@ import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 
 dotenv.config()
 
-const pk = process.env['DEVNET_PRIVKEY'] as string
-const mnemonic = process.env['DEV_MNEMONIC'] as string
-const verbose = process.env['VERBOSE'] as string
+const arbKey = process.env['ARB_KEY'] as string
+const ethKey = process.env['ETH_KEY'] as string
 
 const defaultNetworkId = 421611
 
 export const instantiateBridge = (
-  l1pkParam?: string,
+  l1PkParam?: string,
   l2PkParam?: string
 ): {
   l1Network: L1Network
@@ -52,23 +51,19 @@ export const instantiateBridge = (
   adminErc20Bridger: AdminErc20Bridger
   inboxTools: InboxTools
 } => {
-  if (!l1pkParam) {
-    if (!pk && !mnemonic)
-      throw new Error('need DEVNET_PRIVKEY or DEV_MNEMONIC env var')
-
-    if (pk && mnemonic)
-      throw new Error(
-        'You have both a DEVNET_PRIVKEY and DEV_MNEMONIC var set; pick one! '
-      )
+  if (!l1PkParam && !ethKey) {
+    throw new Error('need ARB_KEY var')
+  }
+  if (!l2PkParam && !arbKey) {
+    throw new Error('need ARB_KEY var')
   }
 
   let networkID = args.networkID
   if (!networkID) {
-    verbose &&
-      console.log(
-        'No networkID command line arg provided; using network',
-        defaultNetworkId
-      )
+    console.log(
+      'No networkID command line arg provided; using network',
+      defaultNetworkId
+    )
 
     networkID = defaultNetworkId
   }
@@ -97,16 +92,13 @@ export const instantiateBridge = (
     throw new Error('L2 rpc url not set (see .env.sample or utils/networks.ts)')
   }
   const ethProvider = new JsonRpcProvider(l1Network.rpcURL)
-
   const arbProvider = new JsonRpcProvider(l2Network.rpcURL)
 
   const l1Signer = (() => {
-    if (l1pkParam) {
-      return new Wallet(l1pkParam, ethProvider)
-    } else if (mnemonic) {
-      return Wallet.fromMnemonic(mnemonic).connect(ethProvider)
-    } else if (pk) {
-      return new Wallet(pk, ethProvider)
+    if (l1PkParam) {
+      return new Wallet(l1PkParam, ethProvider)
+    } else if (ethKey) {
+      return new Wallet(ethKey, ethProvider)
     } else {
       throw new Error('impossible path')
     }
@@ -115,24 +107,16 @@ export const instantiateBridge = (
   const l2Signer = (() => {
     if (l2PkParam) {
       return new Wallet(l2PkParam, arbProvider)
-    } else if (mnemonic) {
-      return Wallet.fromMnemonic(mnemonic).connect(arbProvider)
-    } else if (pk) {
-      return new Wallet(pk, arbProvider)
+    } else if (arbKey) {
+      return new Wallet(arbKey, arbProvider)
     } else {
       throw new Error('impossible path')
     }
   })()
 
-  if (verbose) {
-    console.log('')
-    console.log(
-      '**** Bridger instantiated w/ address',
-      l1Signer.address,
-      '****'
-    )
-    console.log('')
-  }
+  console.log('')
+  console.log('**** Bridger instantiated w/ address', l1Signer.address, '****')
+  console.log('')
 
   const erc20Bridger = new Erc20Bridger(l2Network)
   const adminErc20Bridger = new AdminErc20Bridger(l2Network)
