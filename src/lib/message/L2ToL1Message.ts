@@ -88,6 +88,11 @@ export class L2ToL1Message {
     event: ClassicL2ToL1TransactionEvent['args'],
     outboxAddress: string
   ): L2ToL1MessageReaderOrWriter<T>
+  public static fromEvent<T extends SignerOrProvider>(
+    l1SignerOrProvider: T,
+    event: L2ToL1TransactionEvent,
+    outboxAddress?: string
+  ): L2ToL1MessageReaderOrWriter<T>
   static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
     event: L2ToL1TransactionEvent,
