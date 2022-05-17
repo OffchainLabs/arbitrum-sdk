@@ -537,13 +537,8 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
         ARB_RETRYABLE_TX_ADDRESS,
         this.l2Signer
       )
-      const feeData = await this.l2Provider.getFeeData()
 
-      // CHRIS: TODO: check what the default behaviour is for gasprice
-      // CHRIS: TODO: why are we using 1559 here, but not elsewhere? All tx should be - in many cases it may be ignored though/depend on the wallet
       const redeemTx = await arbRetryableTx.redeem(this.retryableCreationId, {
-        maxFeePerGas: feeData.maxFeePerGas!,
-        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas!,
         ...overrides,
       })
 
