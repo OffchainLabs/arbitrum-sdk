@@ -106,63 +106,86 @@ export const getOutboxAddr = (
   return res[0]
 }
 
+type LastUpdated = { timestamp: number; value: boolean }
+const fifthteenMinutesMs = 15 * 60 * 1000
+
+const lastUpdatedL1: LastUpdated = {
+  timestamp: 0,
+  value: false,
+}
+
+const lastUpdatedL2: LastUpdated = {
+  timestamp: 0,
+  value: false,
+}
+
 export const isNitroL1 = async (l1Provider: SignerOrProvider) => {
   if (isNitro) return true
-  const l1Network = await nitro.getL1Network(l1Provider)
-  const partner = l1Network.partnerChainIDs[0]
-  const l2Network = await nitro.getL2Network(partner)
-  if (!l2Network)
-    throw new ArbSdkError(`No l2 network found with chain id ${partner}`)
-  try {
-    const inboxAddr = l2Network.ethBridge.inbox
-    const inbox = Inbox__factory.connect(inboxAddr, l1Provider)
-    const bridgeAddr = await inbox.bridge()
-    const bridge = Bridge__factory.connect(bridgeAddr, l1Provider)
-    const rollupAdd = await bridge.owner()
-    const rollup = RollupUserLogic__factory.connect(rollupAdd, l1Provider)
-    // this will error if we're not nitro
-    await rollup.wasmModuleRoot()
+  if (Date.now() - lastUpdatedL1.timestamp > fifthteenMinutesMs) {
+    const l1Network = await nitro.getL1Network(l1Provider)
+    const partner = l1Network.partnerChainIDs[0]
+    const l2Network = await nitro.getL2Network(partner)
+    if (!l2Network)
+      throw new ArbSdkError(`No l2 network found with chain id ${partner}`)
+    try {
+      const inboxAddr = l2Network.ethBridge.inbox
+      const inbox = Inbox__factory.connect(inboxAddr, l1Provider)
+      const bridgeAddr = await inbox.bridge()
+      const bridge = Bridge__factory.connect(bridgeAddr, l1Provider)
+      const rollupAdd = await bridge.owner()
+      const rollup = RollupUserLogic__factory.connect(rollupAdd, l1Provider)
+      // this will error if we're not nitro
+      await rollup.wasmModuleRoot()
 
-    // when we've switched to nitro we need to regenerate the nitro
-    // network config and set it
-    const nitroL2Network = await generateL2NitroNetwork(
-      l2Network,
-      SignerProviderUtils.getProviderOrThrow(l1Provider)
-    )
+      // when we've switched to nitro we need to regenerate the nitro
+      // network config and set it
+      const nitroL2Network = await generateL2NitroNetwork(
+        l2Network,
+        SignerProviderUtils.getProviderOrThrow(l1Provider)
+      )
 
-    nitroL2Networks[nitroL2Network.chainID] = nitroL2Network
-    isNitro = true
-    return true
-  } catch (err) {
-    return false
+      nitroL2Networks[nitroL2Network.chainID] = nitroL2Network
+      isNitro = true
+      lastUpdatedL1.timestamp = Date.now()
+      lastUpdatedL1.value = true
+    } catch (err) {
+      lastUpdatedL1.timestamp = Date.now()
+      lastUpdatedL1.value = false
+    }
   }
+  return lastUpdatedL1.value
 }
 
 export const isNitroL2 = async (
   l2SignerOrProvider: SignerOrProvider
 ): Promise<boolean> => {
   if (isNitro) return true
-  const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2SignerOrProvider)
-  const l2Network = await nitro.getL2Network(l2SignerOrProvider)
-  const blockNumber = await arbSys.arbBlockNumber()
-  try {
-    // will throw an error if pre nitro
-    await arbSys.arbBlockHash(blockNumber.sub(1))
+  if (Date.now() - lastUpdatedL2.timestamp > fifthteenMinutesMs) {
+    const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2SignerOrProvider)
+    const l2Network = await nitro.getL2Network(l2SignerOrProvider)
+    const blockNumber = await arbSys.arbBlockNumber()
+    try {
+      // will throw an error if pre nitro
+      await arbSys.arbBlockHash(blockNumber.sub(1))
 
-    const l1Network = await nitro.getL1Network(l2Network.partnerChainID)
-    const l1Provider = new JsonRpcProvider(l1Network.rpcURL)
-    // when we've switched to nitro we need to regenerate the nitro
-    // network config and set it
-    const nitroL2Network = await generateL2NitroNetwork(
-      l2Network,
-      SignerProviderUtils.getProviderOrThrow(l1Provider)
-    )
-    nitroL2Networks[nitroL2Network.chainID] = nitroL2Network
-    isNitro = true
-    return true
-  } catch {
-    return false
+      const l1Network = await nitro.getL1Network(l2Network.partnerChainID)
+      const l1Provider = new JsonRpcProvider(l1Network.rpcURL)
+      // when we've switched to nitro we need to regenerate the nitro
+      // network config and set it
+      const nitroL2Network = await generateL2NitroNetwork(
+        l2Network,
+        SignerProviderUtils.getProviderOrThrow(l1Provider)
+      )
+      nitroL2Networks[nitroL2Network.chainID] = nitroL2Network
+      isNitro = true
+      lastUpdatedL2.timestamp = Date.now()
+      lastUpdatedL2.value = true
+    } catch {
+      lastUpdatedL2.timestamp = Date.now()
+      lastUpdatedL2.value = false
+    }
   }
+  return lastUpdatedL2.value
 }
 
 export const lookupExistingNetwork = (
