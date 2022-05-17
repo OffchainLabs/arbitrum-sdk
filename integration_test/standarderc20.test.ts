@@ -18,6 +18,7 @@
 
 import { expect } from 'chai'
 import { BigNumber } from '@ethersproject/bignumber'
+import { parseEther } from '@ethersproject/units'
 import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
 import {
   fundL1,
@@ -36,7 +37,11 @@ import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import { ArbRetryableTx__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/ArbRetryableTx__factory'
 import { RedeemScheduledEvent } from '@arbitrum/sdk-nitro/dist/lib/abi/ArbRetryableTx'
-import { IL1ToL2MessageWriter } from '../src/lib/utils/migration_types'
+import {
+  IL1ToL2MessageWriter,
+  isNitroL1,
+  isNitroL2,
+} from '../src/lib/utils/migration_types'
 
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
@@ -57,7 +62,7 @@ describe('standard ERC20', () => {
 
   before('init', async () => {
     const setup = await testSetup()
-    await fundL1(setup.l1Signer)
+    await fundL1(setup.l1Signer, parseEther('0.1'))
     await fundL2(setup.l2Signer)
 
     const deployErc20 = new TestERC20__factory().connect(setup.l1Signer)
@@ -101,27 +106,27 @@ describe('standard ERC20', () => {
     gasLimit?: BigNumber
   ) => {
     const manualRedeem = await message.redeem({ gasLimit })
-
     const rec = await manualRedeem.wait()
+    if (await isNitroL2(l2Provider)) {
+      const redeemScheduledEvents = await getRedeemScheduledEvents(rec)
 
-    const redeemScheduledEvents = await getRedeemScheduledEvents(rec)
+      if (redeemScheduledEvents.length !== 1) {
+        throw new ArbSdkError(
+          `Transaction is not a redeem transaction: ${rec.transactionHash}`
+        )
+      }
 
-    if (redeemScheduledEvents.length !== 1) {
-      throw new ArbSdkError(
-        `Transaction is not a redeem transaction: ${rec.transactionHash}`
+      const retryRec = await l2Provider.getTransactionReceipt(
+        redeemScheduledEvents[0].retryTxHash
       )
+      const blockHash = rec.blockHash
+
+      expect(retryRec.blockHash, 'redeemed in same block').to.eq(blockHash)
+      expect(retryRec.to, 'redeemed in same block').to.eq(
+        testState.l2Network.tokenBridge.l2ERC20Gateway
+      )
+      expect(retryRec.status, 'tx didnt fail').to.eq(expectedStatus)
     }
-
-    const retryRec = await l2Provider.getTransactionReceipt(
-      redeemScheduledEvents[0].retryTxHash
-    )
-    const blockHash = (await manualRedeem.wait()).blockHash
-
-    expect(retryRec.blockHash, 'redeemed in same block').to.eq(blockHash)
-    expect(retryRec.to, 'redeemed in same block').to.eq(
-      testState.l2Network.tokenBridge.l2ERC20Gateway
-    )
-    expect(retryRec.status, 'tx didnt fail').to.eq(expectedStatus)
   }
 
   it('deposit with no funds, manual redeem', async () => {
@@ -161,28 +166,30 @@ describe('standard ERC20', () => {
   })
 
   it('deposit with low funds, fails first redeem, succeeds seconds', async () => {
-    const { waitRes } = await depositToken(
-      depositAmount,
-      testState.l1Token.address,
-      testState.erc20Bridger,
-      testState.l1Signer,
-      testState.l2Signer,
-      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
-      GatewayType.STANDARD,
-      {
-        gasLimit: { base: BigNumber.from(5) },
-        maxFeePerGas: { base: BigNumber.from(5) },
-      }
-    )
+    if (await isNitroL1(testState.l1Signer)) {
+      const { waitRes } = await depositToken(
+        depositAmount,
+        testState.l1Token.address,
+        testState.erc20Bridger,
+        testState.l1Signer,
+        testState.l2Signer,
+        L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+        GatewayType.STANDARD,
+        {
+          gasLimit: { base: BigNumber.from(5) },
+          maxFeePerGas: { base: BigNumber.from(5) },
+        }
+      )
 
-    // not enough gas
-    await redeemAndTest(
-      testState.l2Signer.provider!,
-      waitRes.message,
-      0,
-      BigNumber.from(130000)
-    )
-    await redeemAndTest(testState.l2Signer.provider!, waitRes.message, 1)
+      // not enough gas
+      await redeemAndTest(
+        testState.l2Signer.provider!,
+        waitRes.message,
+        0,
+        BigNumber.from(130000)
+      )
+      await redeemAndTest(testState.l2Signer.provider!, waitRes.message, 1)
+    }
   })
 
   it('withdraws erc20', async function () {
@@ -195,7 +202,9 @@ describe('standard ERC20', () => {
       l2TokenAddr
     )
     // 4 deposits above - increase this number if more deposit tests added
-    const startBalance = depositAmount.mul(4)
+    const startBalance = depositAmount.mul(
+      (await isNitroL1(testState.l1Signer)) ? 4 : 3
+    )
     const l2BalanceStart = await l2Token.balanceOf(
       await testState.l2Signer.getAddress()
     )

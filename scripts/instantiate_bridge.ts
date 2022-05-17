@@ -97,7 +97,7 @@ export const instantiateBridge = (
   const l1Signer = (() => {
     if (l1PkParam) {
       return new Wallet(l1PkParam, ethProvider)
-    } else if (ethKey {
+    } else if (ethKey) {
       return new Wallet(ethKey, ethProvider)
     } else {
       throw new Error('impossible path')

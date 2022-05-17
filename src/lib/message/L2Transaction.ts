@@ -20,25 +20,19 @@ import { TransactionReceipt } from '@ethersproject/providers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Log, Provider } from '@ethersproject/abstract-provider'
 import { ContractTransaction, providers } from 'ethers'
-import {
-  SignerOrProvider,
-  SignerProviderUtils,
-} from '../dataEntities/signerOrProvider'
+import { SignerOrProvider } from '../dataEntities/signerOrProvider'
 import { L2ToL1Message } from './L2ToL1Message'
-import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
-import { L2ToL1TransactionEvent } from '../abi/ArbSys'
-
 import * as classic from '@arbitrum/sdk-classic'
 import * as nitro from '@arbitrum/sdk-nitro'
+import { L2ToL1TransactionEvent as ClassicL2ToL1TransactionEvent } from '@arbitrum/sdk-classic/dist/lib/abi/ArbSys'
+import { L2ToL1TransactionEvent } from './L2ToL1Message'
 import {
-  convertNetwork,
   isNitroL1,
   IL2ToL1MessageReader,
   IL2ToL1MessageWriter,
+  getOutboxAddr,
   IL2ToL1MessageReaderOrWriter,
-  waitForL2NetworkUpdate,
 } from '../utils/migration_types'
-import { getL2Network, getOutboxAddr } from '../dataEntities/networks'
 
 export interface L2ContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<L2TransactionReceipt>
@@ -97,15 +91,17 @@ export class L2TransactionReceipt implements TransactionReceipt {
    * Get an L2ToL1Transaction events created by this transaction
    * @returns
    */
-  public getL2ToL1Events(): L2ToL1TransactionEvent['args'][] {
-    const iface = ArbSys__factory.createInterface()
-    const l2ToL1Event = iface.getEvent('L2ToL1Transaction')
-    const eventTopic = iface.getEventTopic(l2ToL1Event)
-    const logs = this.logs.filter(log => log.topics[0] === eventTopic)
+  public getL2ToL1Events(): L2ToL1TransactionEvent[] {
+    return [
+      ...this.nitroReceipt.getL2ToL1Events(),
+      ...this.classicReceipt.getL2ToL1Events(),
+    ]
+  }
 
-    return logs.map(
-      log => iface.parseLog(log).args as L2ToL1TransactionEvent['args']
-    )
+  private isClassic(
+    e: L2ToL1TransactionEvent
+  ): e is ClassicL2ToL1TransactionEvent['args'] {
+    return !!(e as ClassicL2ToL1TransactionEvent['args']).indexInBatch
   }
 
   /**
@@ -120,33 +116,21 @@ export class L2TransactionReceipt implements TransactionReceipt {
     l1SignerOrProvider: T,
     l2Provider: Provider
   ): Promise<IL2ToL1MessageReader[] | IL2ToL1MessageWriter[]> {
-    if (await isNitroL1(l1SignerOrProvider)) {
-      // we cant process a withdrawal until we have the new outbox address
-      // so we need to ensure the network object has been updated
-      await waitForL2NetworkUpdate(
-        SignerProviderUtils.getProviderOrThrow(l1SignerOrProvider),
-        l2Provider
-      )
+    const events = await this.getL2ToL1Events()
 
-      return this.nitroReceipt.getL2ToL1Messages(l1SignerOrProvider)
-    } else {
-      const l2Network = await getL2Network(l2Provider)
-      const messages = await this.classicReceipt.getL2ToL1Messages(
-        l1SignerOrProvider,
-        convertNetwork(l2Network)
-      )
-
-      return messages.map(m => {
-        const outboxAddr = getOutboxAddr(l2Network, m.batchNumber.toNumber())
-        return L2ToL1Message.fromEvent(
-          l1SignerOrProvider,
-          undefined,
-          outboxAddr,
-          m.batchNumber,
-          m.indexInBatch
-        )
+    return Promise.all(
+      events.map(async e => {
+        if (this.isClassic(e)) {
+          // classic
+          const l2Network = await classic.getL2Network(l2Provider)
+          const outboxAddr = getOutboxAddr(l2Network, e.batchNumber.toNumber())
+          return L2ToL1Message.fromEvent(l1SignerOrProvider, e, outboxAddr)
+        } else {
+          // nitro
+          return L2ToL1Message.fromEvent(l1SignerOrProvider, e)
+        }
       })
-    }
+    )
   }
 
   /**

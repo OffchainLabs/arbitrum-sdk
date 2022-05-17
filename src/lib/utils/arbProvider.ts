@@ -6,10 +6,8 @@ import {
   ArbBlockWithTransactions,
   ArbTransactionReceipt,
 } from '../dataEntities/rpc'
-import { BigNumber, Contract } from 'ethers'
 import { Formats } from '@ethersproject/providers/lib/formatter'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
-import { Interface } from 'ethers/lib/utils'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 class ArbFormatter extends Formatter {
@@ -150,5 +148,5 @@ export async function getArbBlockByHash<T extends boolean = false>(
 
   return includeTransactions
     ? arbFormatter.blockWithTransactions(l2Block)
-    : ((arbFormatter.block(l2Block) as unknown) as ArbBlockWithTransactions)
+    : (arbFormatter.block(l2Block) as unknown as ArbBlockWithTransactions)
 }

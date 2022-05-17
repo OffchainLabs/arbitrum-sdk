@@ -9,7 +9,16 @@
   dependencies:
     "@jridgewell/trace-mapping" "^0.3.0"
 
-"@arbitrum/nitro-contracts@1.0.0-beta.2", "@arbitrum/nitro-contracts@^1.0.0-beta.2":
+"@arbitrum/nitro-contracts@1.0.0-beta.5":
+  version "1.0.0-beta.5"
+  resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.0.0-beta.5.tgz#b4ca2a8d99b8a108e7dc412f6c2cb74818d5099a"
+  integrity sha512-hEpRXIL8S6AfTt6dqJsKCa84JufhuXuRgm2BnximdRrhJ8ukqR6Pt/mndYMa4nWRRTBMYkIxy6EA5iYxDwxWAQ==
+  dependencies:
+    "@openzeppelin/contracts" "4.5.0"
+    "@openzeppelin/contracts-upgradeable" "4.5.2"
+    hardhat "^2.6.6"
+
+"@arbitrum/nitro-contracts@^1.0.0-beta.2":
   version "1.0.0-beta.2"
   resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.0.0-beta.2.tgz#70c1d114f087959b56ccbda3caadc805e34fda73"
   integrity sha512-IdwJUtjZ8+bIZpzKVUpqE0hGqnRW/tkKtCUbQgfXgveiJ2NYacqUL+xlpM2WyVsBdP1vS/cgINBtPNXdBPKSPQ==
@@ -18,7 +27,7 @@
     "@openzeppelin/contracts-upgradeable" "4.5.2"
     hardhat "^2.6.6"
 
-"@arbitrum/sdk-classic:@npm:@arbitrum/sdk@1.1.4":
+"@arbitrum/sdk-classic@npm:@arbitrum/sdk@1.1.4":
   version "1.1.4"
   resolved "https://registry.yarnpkg.com/@arbitrum/sdk/-/sdk-1.1.4.tgz#1f51455a93e23aff29ab047ac1be06cec78e6145"
   integrity sha512-Tosm9p6eS+kpp64VMjqEHdbjsg9XmS+hjnFzarzKjUkILn5ShX+E2oYOhp4eHnYddQOL/jKhJkFdgfPh3tqI/g==
@@ -37,12 +46,12 @@
     ts-node "^10.2.1"
     typechain "7.0.0"
 
-"@arbitrum/sdk-nitro:@npm:@arbitrum/sdk@1.1.4-nitro-beta.0":
-  version "1.1.4-nitro-beta.0"
-  resolved "https://registry.yarnpkg.com/@arbitrum/sdk/-/sdk-1.1.4-nitro-beta.0.tgz#83b4c97c6853fa44b55bc6d3cf21c7b246372292"
-  integrity sha512-KHQ3c6Ja6+xbV0SPxSL6EXpIjSpY+8rOSfQOAX0jiVSDFtRzC0n7N2HzQOgSb3YIAcR7RWGwSoMZVrmitts4TQ==
+"@arbitrum/sdk-nitro@npm:@arbitrum/sdk@1.1.4-nitro-beta.2":
+  version "1.1.4-nitro-beta.2"
+  resolved "https://registry.yarnpkg.com/@arbitrum/sdk/-/sdk-1.1.4-nitro-beta.2.tgz#85a21cc9e53f65c5b41ddedbaaedc4baf333447f"
+  integrity sha512-X9eZq29zTkwtFjK5Z3W/C8SJRn5Hc08o4h9c0LohUO4UMdBSI8HeZxtjDE6vguJ+WOGy8noAxt2r+BuQQh92Nw==
   dependencies:
-    "@arbitrum/nitro-contracts" "1.0.0-beta.2"
+    "@arbitrum/nitro-contracts" "1.0.0-beta.5"
     "@ethersproject/address" "^5.0.8"
     "@ethersproject/bignumber" "^5.1.1"
     "@ethersproject/bytes" "^5.0.8"

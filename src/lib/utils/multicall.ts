@@ -24,12 +24,10 @@ import { Multicall2 } from '../abi/Multicall2'
 import { Multicall2__factory } from '../abi/factories/Multicall2__factory'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
-  isL1Network,
-  L1Network,
   l1Networks,
-  L2Network,
   l2Networks,
-} from '../dataEntities/networks'
+} from '@arbitrum/sdk-nitro/dist/lib/dataEntities/networks'
+import { isL1Network, L1Network, L2Network } from '../dataEntities/networks'
 
 /**
  * Input to multicall aggregator

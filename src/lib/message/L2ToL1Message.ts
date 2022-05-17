@@ -16,31 +16,31 @@
 /* eslint-env node */
 'use strict'
 
-import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { BigNumber } from '@ethersproject/bignumber'
 import { BlockTag } from '@ethersproject/abstract-provider'
 
-import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
-
-import { L2ToL1TransactionEvent } from '../abi/ArbSys'
 import { ContractTransaction, Overrides } from 'ethers'
-import { EventFetcher } from '../utils/eventFetcher'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
-import { L2TransactionReceipt } from './L2Transaction'
 import * as classic from '@arbitrum/sdk-classic'
 import * as nitro from '@arbitrum/sdk-nitro'
+import { L2ToL1TransactionEvent as ClassicL2ToL1TransactionEvent } from '@arbitrum/sdk-classic/dist/lib/abi/ArbSys'
+import { L2ToL1TxEvent as NitroL2ToL1TransactionEvent } from '@arbitrum/sdk-nitro/dist/lib/abi/ArbSys'
 import {
   convertL2ToL1Status,
   IL2ToL1MessageReader,
   IL2ToL1MessageWriter,
   MessageBatchProofInfo,
 } from '../utils/migration_types'
+
+export type L2ToL1TransactionEvent =
+  | ClassicL2ToL1TransactionEvent['args']
+  | NitroL2ToL1TransactionEvent['args']
 
 export enum L2ToL1MessageStatus {
   /**
@@ -70,103 +70,77 @@ export type L2ToL1MessageReaderOrWriter<T extends SignerOrProvider> =
  * Base functionality for L2->L1 messages
  */
 export class L2ToL1Message {
+  protected isClassic(
+    e: L2ToL1TransactionEvent
+  ): e is ClassicL2ToL1TransactionEvent['args'] {
+    return !!(e as ClassicL2ToL1TransactionEvent['args']).indexInBatch
+  }
+
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event?: L2ToL1TransactionEvent['args'],
-    outboxAddress?: string,
-    batchNumber?: BigNumber,
-    indexInBatch?: BigNumber
+    event: NitroL2ToL1TransactionEvent['args']
   ): L2ToL1MessageReaderOrWriter<T>
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event?: L2ToL1TransactionEvent['args'],
-    outboxAddress?: string,
-    batchNumber?: BigNumber,
-    indexInBatch?: BigNumber
+    event: ClassicL2ToL1TransactionEvent['args'],
+    outboxAddress: string
+  ): L2ToL1MessageReaderOrWriter<T>
+  public static fromEvent<T extends SignerOrProvider>(
+    l1SignerOrProvider: T,
+    event: L2ToL1TransactionEvent,
+    outboxAddress?: string
+  ): L2ToL1MessageReaderOrWriter<T>
+  static fromEvent<T extends SignerOrProvider>(
+    l1SignerOrProvider: T,
+    event: L2ToL1TransactionEvent,
+    outboxAddress?: string
   ): L2ToL1MessageReader | L2ToL1MessageWriter {
     return SignerProviderUtils.isSigner(l1SignerOrProvider)
-      ? new L2ToL1MessageWriter(
-          l1SignerOrProvider,
-          event,
-          outboxAddress,
-          batchNumber,
-          indexInBatch
-        )
-      : new L2ToL1MessageReader(
-          l1SignerOrProvider,
-          event,
-          outboxAddress,
-          batchNumber,
-          indexInBatch
-        )
+      ? new L2ToL1MessageWriter(l1SignerOrProvider, event, outboxAddress)
+      : new L2ToL1MessageReader(l1SignerOrProvider, event, outboxAddress)
   }
 
-  public static async getL2ToL1MessageLogs(
+  /**
+   * Get event logs for L2ToL1 transactions.
+   * @param l2Provider
+   * @param filter Block range filter
+   * @param positionOrBatchNumber The batchnumber indexed field was removed in nitro and a position indexed field was added.
+   * For pre-nitro events the value passed in here will be used to find events with the same batchnumber.
+   * For post nitro events it will be used to find events with the same position.
+   * @param destination The L1 destination of the L2ToL1 message
+   * @param hashOrUniqueId The uniqueId indexed field was removed in nitro and a hash indexed field was added.
+   * For pre-nitro events the value passed in here will be used to find events with the same uniqueId.
+   * For post nitro events it will be used to find events with the same hash.
+   * @param indexInBatch The index in the batch, only valid for pre-nitro events. This parameter is ignored post-nitro
+   * @returns Any classic and nitro events that match the provided filters.
+   */
+  public static async getEventLogs(
     l2Provider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
-    batchNumber?: BigNumber,
+    positionOrBatchNumber?: BigNumber,
     destination?: string,
-    uniqueId?: BigNumber,
+    hashOrUniqueId?: BigNumber,
     indexInBatch?: BigNumber
-  ): Promise<L2ToL1TransactionEvent['args'][]> {
-    const eventFetcher = new EventFetcher(l2Provider)
-    const events = (
-      await eventFetcher.getEvents(
-        ARB_SYS_ADDRESS,
-        ArbSys__factory,
-        t =>
-          t.filters.L2ToL1Transaction(null, destination, uniqueId, batchNumber),
-        filter
-      )
-    ).map(l => l.event)
-
-    if (indexInBatch) {
-      const indexItems = events.filter(b => b.indexInBatch.eq(indexInBatch))
-      if (indexItems.length === 1) {
-        return indexItems
-      } else if (indexItems.length > 1) {
-        throw new ArbSdkError('More than one indexed item found in batch.')
-      } else return []
-    } else return events
-  }
-
-  public static async getL2ToL1Events(
-    l2Provider: Provider,
-    filter: { fromBlock: BlockTag; toBlock: BlockTag },
-    batchNumber?: BigNumber,
-    destination?: string,
-    uniqueId?: BigNumber,
-    indexInBatch?: BigNumber
-  ): Promise<L2ToL1TransactionEvent['args'][]> {
-    const eventFetcher = new EventFetcher(l2Provider)
-    const events = await eventFetcher.getEvents(
-      ARB_SYS_ADDRESS,
-      ArbSys__factory,
-      t =>
-        t.filters.L2ToL1Transaction(null, destination, uniqueId, batchNumber),
-      filter
-    )
-
-    const l2ToL1Events = await Promise.all(
-      events.map(e =>
-        l2Provider
-          .getTransactionReceipt(e.transactionHash)
-          .then(receipt => new L2TransactionReceipt(receipt).getL2ToL1Events())
-      )
-    ).then(res => res.flat())
-
-    if (indexInBatch) {
-      const indexItems = l2ToL1Events.filter(b =>
-        b.indexInBatch.eq(indexInBatch)
-      )
-      if (indexItems.length === 1) {
-        return indexItems
-      } else if (indexItems.length > 1) {
-        throw new ArbSdkError('More than one indexed item found in batch.')
-      } else return []
-    }
-
-    return l2ToL1Events
+  ): Promise<L2ToL1TransactionEvent[]> {
+    return (
+      await Promise.all([
+        classic.L2ToL1Message.getL2ToL1MessageLogs(
+          l2Provider,
+          filter,
+          positionOrBatchNumber,
+          destination,
+          hashOrUniqueId,
+          indexInBatch
+        ),
+        nitro.L2ToL1Message.getL2ToL1Events(
+          l2Provider,
+          filter,
+          positionOrBatchNumber,
+          destination,
+          hashOrUniqueId
+        ),
+      ])
+    ).flat(1)
   }
 }
 
@@ -180,26 +154,40 @@ export class L2ToL1MessageReader
   private readonly classicReader?: classic.L2ToL1MessageReader
   private readonly nitroReader?: nitro.L2ToL1MessageReader
 
+  public constructor(
+    l1Provider: Provider,
+    event: NitroL2ToL1TransactionEvent['args']
+  )
+  public constructor(
+    l1Provider: Provider,
+    event: ClassicL2ToL1TransactionEvent['args'],
+    outboxAddress: string
+  )
+  constructor(
+    l1Provider: Provider,
+    event: L2ToL1TransactionEvent,
+    outboxAddress?: string
+  )
   constructor(
     protected readonly l1Provider: Provider,
-    event?: L2ToL1TransactionEvent['args'],
-    protected readonly outboxAddress?: string,
-    batchNumber?: BigNumber,
-    indexInBatch?: BigNumber
+    event: L2ToL1TransactionEvent,
+    protected readonly outboxAddress?: string
   ) {
     super()
-
-    if (event) {
-      this.nitroReader = new nitro.L2ToL1MessageReader(l1Provider, event)
-    } else if (outboxAddress && batchNumber && indexInBatch) {
+    if (this.isClassic(event)) {
+      if (!outboxAddress)
+        throw new ArbSdkError(
+          'No outbox address supplied for classic L2ToL1Message.'
+        )
       this.classicReader = new classic.L2ToL1MessageReader(
         l1Provider,
         outboxAddress,
-        batchNumber,
-        indexInBatch
+        event.batchNumber,
+        event.indexInBatch
       )
-    } else
-      throw new ArbSdkError('Unexpected L2ToL1MessageReader constructor args')
+    } else {
+      this.nitroReader = new nitro.L2ToL1MessageReader(l1Provider, event)
+    }
   }
 
   public async getOutboxProof(
@@ -270,25 +258,42 @@ export class L2ToL1MessageWriter
 {
   private readonly classicWriter?: classic.L2ToL1MessageWriter
   private readonly nitroWriter?: nitro.L2ToL1MessageWriter
+
+  public constructor(
+    l1Signer: Signer,
+    event: NitroL2ToL1TransactionEvent['args']
+  )
+  public constructor(
+    l1Signer: Signer,
+    event: ClassicL2ToL1TransactionEvent['args'],
+    outboxAddress: string
+  )
   constructor(
     l1Signer: Signer,
-    event?: L2ToL1TransactionEvent['args'],
-    outboxAddress?: string,
-    batchNumber?: BigNumber,
-    indexInBatch?: BigNumber
+    event: L2ToL1TransactionEvent,
+    outboxAddress?: string
+  )
+  constructor(
+    l1Signer: Signer,
+    event: L2ToL1TransactionEvent,
+    outboxAddress?: string
   ) {
-    super(l1Signer.provider!, event, outboxAddress, batchNumber, indexInBatch)
+    super(l1Signer.provider!, event, outboxAddress)
 
-    if (event) this.nitroWriter = new nitro.L2ToL1MessageWriter(l1Signer, event)
-    else if (outboxAddress && batchNumber && indexInBatch)
+    if (this.isClassic(event)) {
+      if (!outboxAddress)
+        throw new ArbSdkError(
+          'No outbox address supplied for classic L2ToL1Message.'
+        )
       this.classicWriter = new classic.L2ToL1MessageWriter(
         l1Signer,
         outboxAddress,
-        batchNumber,
-        indexInBatch
+        event.batchNumber,
+        event.indexInBatch
       )
-    else
-      throw new ArbSdkError('Unexpected L2ToL1MessageWriter constructor args')
+    } else {
+      this.nitroWriter = new nitro.L2ToL1MessageWriter(l1Signer, event)
+    }
   }
 
   /**
