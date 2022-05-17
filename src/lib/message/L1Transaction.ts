@@ -123,7 +123,9 @@ export class L1TransactionReceipt implements TransactionReceipt {
     messageIndex?: number
   ): Promise<IL1ToL2MessageReader | IL1ToL2MessageWriter> {
     return (await isNitroL2(l2SignerOrProvider))
-      ? this.nitroReceipt.getL1ToL2Message(l2SignerOrProvider, messageIndex)
+      ? (await this.nitroReceipt.getL1ToL2Messages(l2SignerOrProvider))[
+          messageIndex || 0
+        ]
       : this.classicReceipt.getL1ToL2Message(l2SignerOrProvider, messageIndex)
   }
 

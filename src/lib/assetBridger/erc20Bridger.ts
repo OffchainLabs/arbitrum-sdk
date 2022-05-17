@@ -410,11 +410,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     customNetworkL1GatewayRouter?: string
   ): Promise<GatewaySetEvent['args'][]> {
     return (await isNitroL1(l1Provider))
-      ? this.adminNitroBridger.getL1GatewaySetEvents(
-          l1Provider,
-          filter,
-          customNetworkL1GatewayRouter
-        )
+      ? this.adminNitroBridger.getL1GatewaySetEvents(l1Provider, filter)
       : this.adminClassicBridger.getL1GatewaySetEvents(
           l1Provider,
           filter,
