@@ -110,7 +110,8 @@ export const setGateWays = async (
   }
 
   console.log('redeeming retryable ticket:')
-  const l2Tx = await rec.getL1ToL2Message(l2Signer)
+  const l2Tx = (await rec.getL1ToL2Messages(l2Signer))[0]
+  if (!l2Tx) throw new Error('No l1 to l2 message found.')
   const messageRes = await l2Tx.waitForStatus()
   if (messageRes.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
     const redeemRes = await l2Tx.redeem()
@@ -127,9 +128,9 @@ export const checkRetryableStatus = async (l1Hash: string): Promise<void> => {
   const l2Provider = l2Signer.provider!
   const rec = await l1Provider.getTransactionReceipt(l1Hash)
   if (!rec) throw new Error('L1 tx not found!')
-  const message = await new L1TransactionReceipt(rec).getL1ToL2Message(
-    l2Provider
-  )
+  const message = (
+    await new L1TransactionReceipt(rec).getL1ToL2Messages(l2Provider)
+  )[0]
 
   if (!message) throw new Error('no seq nums')
 
