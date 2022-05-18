@@ -17,7 +17,7 @@
 'use strict'
 
 import { Signer } from '@ethersproject/abstract-signer'
-import { PayableOverrides } from '@ethersproject/contracts'
+import { PayableOverrides, Overrides } from '@ethersproject/contracts'
 import { BigNumber, ethers } from 'ethers'
 
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
@@ -34,6 +34,7 @@ import {
   L2ContractTransaction,
   L2TransactionReceipt,
 } from '../message/L2Transaction'
+import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
 
 export interface EthWithdrawParams {
   /**
@@ -74,6 +75,11 @@ export type EthDepositParams = {
   overrides?: PayableOverrides
 }
 
+export type L1ToL2TxReqAndSigner = L1ToL2TransactionRequest & {
+  l1Signer: Signer
+  overrides?: Overrides
+}
+
 /**
  * Bridger for moving ETH back and forth betwen L1 to L2
  */
@@ -82,11 +88,11 @@ export class EthBridger extends AssetBridger<
   EthWithdrawParams
 > {
   private async depositTxOrGas<T extends boolean>(
-    params: EthDepositParams,
+    params: EthDepositParams | L1ToL2TxReqAndSigner,
     estimate: T
   ): Promise<T extends true ? BigNumber : ethers.ContractTransaction>
   private async depositTxOrGas<T extends boolean>(
-    params: EthDepositParams,
+    params: EthDepositParams | L1ToL2TxReqAndSigner,
     estimate: T
   ): Promise<BigNumber | ethers.ContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
@@ -94,15 +100,45 @@ export class EthBridger extends AssetBridger<
     }
     await this.checkL1Network(params.l1Signer)
 
-    const inbox = Inbox__factory.connect(
-      this.l2Network.ethBridge.inbox,
-      params.l1Signer
-    )
+    const ethDeposit = this.isDepositRequest(params)
+      ? params
+      : await this.getDepositRequest(params)
 
-    return (estimate ? inbox.estimateGas : inbox.functions)['depositEth()']({
-      value: params.amount,
-      ...(params.overrides || {}),
+    return await params.l1Signer[estimate ? 'estimateGas' : 'sendTransaction']({
+      ...ethDeposit,
+      ...params.overrides,
     })
+  }
+
+  public async getDepositRequest(
+    params: EthDepositParams
+  ): Promise<L1ToL2TransactionRequest> {
+    const inboxInterface = Inbox__factory.createInterface()
+    
+    const functionData = (
+      inboxInterface as unknown as {
+        encodeFunctionData(
+          functionFragment: 'depositEth',
+          values?: undefined
+        ): string
+      }
+    ).encodeFunctionData('depositEth')
+
+    return {
+      l2GasLimit: BigNumber.from(0),
+      l2GasCostsMaxTotal: BigNumber.from(0),
+      l2MaxFeePerGas: BigNumber.from(0),
+      l2SubmissionFee: BigNumber.from(0),
+      to: this.l2Network.ethBridge.inbox,
+      value: params.amount,
+      data: functionData,
+    }
+  }
+
+  private isDepositRequest(
+    params: EthDepositParams | L1ToL2TransactionRequest
+  ): params is L1ToL2TransactionRequest {
+    return (params as L1ToL2TransactionRequest).l2GasCostsMaxTotal != undefined
   }
 
   /**
@@ -111,9 +147,9 @@ export class EthBridger extends AssetBridger<
    * @returns
    */
   public async depositEstimateGas(
-    params: EthDepositParams
+    params: EthDepositParams | L1ToL2TxReqAndSigner
   ): Promise<BigNumber> {
-    return this.depositTxOrGas(params, true)
+    return await this.depositTxOrGas(params, true)
   }
 
   /**
@@ -122,7 +158,7 @@ export class EthBridger extends AssetBridger<
    * @returns
    */
   public async deposit(
-    params: EthDepositParams
+    params: EthDepositParams | L1ToL2TxReqAndSigner
   ): Promise<L1EthDepositTransaction> {
     const tx = await this.depositTxOrGas(params, false)
     return L1TransactionReceipt.monkeyPatchEthDepositWait(tx)
