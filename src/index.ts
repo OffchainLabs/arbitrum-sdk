@@ -19,10 +19,6 @@
 export { EthBridger } from './lib/assetBridger/ethBridger'
 export { Erc20Bridger } from './lib/assetBridger/erc20Bridger'
 export {
-  Erc20Deposit,
-  Erc20DepositFunctionArgs,
-} from './lib/assetBridger/erc20Deposit'
-export {
   L2TransactionReceipt,
   L2ContractTransaction,
 } from './lib/message/L2Transaction'
