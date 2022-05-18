@@ -36,13 +36,15 @@ import { RollupAdminLogic__factory } from '../src/lib/abi/factories/RollupAdminL
 import { deployErc20AndInit } from './deployBridge'
 import * as path from 'path'
 import * as fs from 'fs'
+import { ArbSdkError } from '../src/lib/dataEntities/errors'
 
 dotenv.config()
 
 export const config = {
   arbUrl: process.env['ARB_URL'] as string,
   ethUrl: process.env['ETH_URL'] as string,
-  arbGenesisKey: process.env['ARB_GENESIS_KEY'] as string,
+  arbKey: process.env['ARB_KEY'] as string,
+  ethKey: process.env['ETH_KEY'] as string,
 }
 
 export const getCustomNetworks = async (
@@ -175,6 +177,13 @@ export const setupNetworks = async (
   }
 }
 
+export const getSigner = (provider: JsonRpcProvider, key?: string) => {
+  if (!key && !provider)
+    throw new ArbSdkError('Provide at least one of key or provider.')
+  if (key) return new Wallet(key).connect(provider)
+  else return provider.getSigner(0)
+}
+
 export const testSetup = async (): Promise<{
   l1Network: L1Network
   l2Network: L2Network
@@ -190,9 +199,8 @@ export const testSetup = async (): Promise<{
   const ethProvider = new JsonRpcProvider(config.ethUrl)
   const arbProvider = new JsonRpcProvider(config.arbUrl)
 
-  const l1Deployer = ethProvider.getSigner(0)
-  const arbGenesisWallet = new Wallet(config.arbGenesisKey)
-  const l2Deployer = arbGenesisWallet.connect(arbProvider)
+  const l1Deployer = getSigner(ethProvider, config.ethKey)
+  const l2Deployer = getSigner(arbProvider, config.arbKey)
 
   const seed = Wallet.createRandom()
   const l1Signer = seed.connect(ethProvider)

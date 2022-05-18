@@ -672,8 +672,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
     )
 
     const setGatwayEstimates = await gasPriceEstimator.estimateAll(
-      // CHRIS: TODO: I thought I did this :(
-      // CHRIS: TODO: confirm whether these addresses are wrong? where the transaction actually coming from
       this.l2Network.tokenBridge.l1GatewayRouter,
       this.l2Network.tokenBridge.l2GatewayRouter,
       l2SetGatewaysCallData,
@@ -713,20 +711,11 @@ export class AdminErc20Bridger extends Erc20Bridger {
    */
   public async getL1GatewaySetEvents(
     l1Provider: Provider,
-    filter: { fromBlock: BlockTag; toBlock: BlockTag },
-    // CHRIS: TODO: is this the correct way to specify a router? shouldnt it be on the network object already?
-    customNetworkL1GatewayRouter?: string
+    filter: { fromBlock: BlockTag; toBlock: BlockTag }
   ): Promise<GatewaySetEvent['args'][]> {
-    if (this.l2Network.isCustom && !customNetworkL1GatewayRouter) {
-      throw new ArbSdkError(
-        'Must supply customNetworkL1GatewayRouter for custom network '
-      )
-    }
     await this.checkL1Network(l1Provider)
 
-    const l1GatewayRouterAddress =
-      customNetworkL1GatewayRouter || this.l2Network.tokenBridge.l1GatewayRouter
-
+    const l1GatewayRouterAddress = this.l2Network.tokenBridge.l1GatewayRouter
     const eventFetcher = new EventFetcher(l1Provider)
     return (
       await eventFetcher.getEvents(
