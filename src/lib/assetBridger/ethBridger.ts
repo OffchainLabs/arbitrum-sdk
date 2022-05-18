@@ -114,7 +114,7 @@ export class EthBridger extends AssetBridger<
     params: EthDepositParams
   ): Promise<L1ToL2TransactionRequest> {
     const inboxInterface = Inbox__factory.createInterface()
-    
+
     const functionData = (
       inboxInterface as unknown as {
         encodeFunctionData(
