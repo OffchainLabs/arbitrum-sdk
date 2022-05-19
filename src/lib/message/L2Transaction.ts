@@ -38,6 +38,7 @@ import { L2ToL1TxEvent } from '../abi/ArbSys'
 import { ArbSdkError } from '../dataEntities/errors'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { getArbTransactionReceipt } from '../utils/arbProvider'
+import { EventArgs } from '../dataEntities/event'
 
 export interface L2ContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<L2TransactionReceipt>
@@ -90,26 +91,28 @@ export class L2TransactionReceipt implements TransactionReceipt {
    * Get an L2ToL1TxEvent events created by this transaction
    * @returns
    */
-  public getL2ToL1Events(): L2ToL1TxEvent['args'][] {
+  public getL2ToL1Events(): EventArgs<L2ToL1TxEvent>[] {
     const iface = ArbSys__factory.createInterface()
     const l2ToL1Event = iface.getEvent('L2ToL1Tx')
     const eventTopic = iface.getEventTopic(l2ToL1Event)
     const logs = this.logs.filter(log => log.topics[0] === eventTopic)
-    return logs.map(log => iface.parseLog(log).args as L2ToL1TxEvent['args'])
+    return logs.map(
+      log => iface.parseLog(log).args as unknown as EventArgs<L2ToL1TxEvent>
+    )
   }
 
   /**
    * Get event data for any redeems that were scheduled in this transaction
    * @returns
    */
-  public getRedeemScheduledEvents(): RedeemScheduledEvent['args'][] {
+  public getRedeemScheduledEvents(): EventArgs<RedeemScheduledEvent>[] {
     const iFace = ArbRetryableTx__factory.createInterface()
     const redeemTopic = iFace.getEventTopic('RedeemScheduled')
     const redeemScheduledEvents = this.logs.filter(
       l => l.topics[0] === redeemTopic
     )
     return redeemScheduledEvents.map(
-      r => iFace.parseLog(r).args as RedeemScheduledEvent['args']
+      r => iFace.parseLog(r).args as unknown as EventArgs<RedeemScheduledEvent>
     )
   }
 
