@@ -43,7 +43,10 @@ export interface RetryableMessageParams {
   data: string
 }
 
-// CHRIS: TODO: docs
+/**
+ * The inbox message kind as defined in:
+ * https://github.com/OffchainLabs/nitro/blob/c7f3429e2456bf5ca296a49cec3bb437420bc2bb/contracts/src/libraries/MessageTypes.sol
+ */
 export enum InboxMessageKind {
   L1MessageType_submitRetryableTx = 9,
   L1MessageType_ethDeposit = 12,
