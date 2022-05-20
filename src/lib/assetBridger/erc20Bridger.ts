@@ -59,7 +59,10 @@ import {
   L2TransactionReceipt,
 } from '../message/L2Transaction'
 import { getBaseFee } from '../utils/lib'
-import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
+import {
+  isL1ToL2TransactionRequest,
+  L1ToL2TransactionRequest,
+} from '../dataEntities/transactionRequest'
 import { defaultAbiCoder } from 'ethers/lib/utils'
 
 export interface TokenApproveParams {
@@ -485,14 +488,6 @@ export class Erc20Bridger extends AssetBridger<
     }
   }
 
-  private isDepositRequest(
-    params: Erc20DepositParams | L1ToL2TxReqAndSignerProvider
-  ): params is L1ToL2TxReqAndSignerProvider {
-    return (
-      (params as L1ToL2TxReqAndSignerProvider).l2GasCostsMaxTotal != undefined
-    )
-  }
-
   private async depositTxOrGas<T extends boolean>(
     params: Erc20DepositParams | L1ToL2TxReqAndSignerProvider,
     estimate: T
@@ -507,7 +502,7 @@ export class Erc20Bridger extends AssetBridger<
       throw new MissingProviderArbSdkError('l1Signer')
     }
 
-    const tokenDeposit = this.isDepositRequest(params)
+    const tokenDeposit = isL1ToL2TransactionRequest(params)
       ? params
       : await this.getDepositRequest(params)
 

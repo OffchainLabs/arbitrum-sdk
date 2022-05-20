@@ -34,7 +34,10 @@ import {
   L2ContractTransaction,
   L2TransactionReceipt,
 } from '../message/L2Transaction'
-import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
+import {
+  isL1ToL2TransactionRequest,
+  L1ToL2TransactionRequest,
+} from '../dataEntities/transactionRequest'
 
 export interface EthWithdrawParams {
   /**
@@ -100,7 +103,7 @@ export class EthBridger extends AssetBridger<
     }
     await this.checkL1Network(params.l1Signer)
 
-    const ethDeposit = this.isDepositRequest(params)
+    const ethDeposit = isL1ToL2TransactionRequest(params)
       ? params
       : await this.getDepositRequest(params)
 
@@ -133,12 +136,6 @@ export class EthBridger extends AssetBridger<
       value: params.amount,
       data: functionData,
     }
-  }
-
-  private isDepositRequest(
-    params: EthDepositParams | L1ToL2TransactionRequest
-  ): params is L1ToL2TransactionRequest {
-    return (params as L1ToL2TransactionRequest).l2GasCostsMaxTotal != undefined
   }
 
   /**
