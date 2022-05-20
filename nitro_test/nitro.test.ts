@@ -60,7 +60,7 @@ describe('Nitro', async () => {
     expect(balBeforeDeploy.sub(await signer.getBalance())).eq(
       deployreceipt.gasUsed.mul(deployreceipt.effectiveGasPrice)
     )
-    expect(deployreceipt.gasUsed).eq(deployGasEstimate)
+    expect(deployreceipt.gasUsed).lt(deployGasEstimate.mul(11).div(10))
 
     const balBeforeFn = await signer.getBalance()
     const fnGasEstimate = await ethers.provider.estimateGas(
@@ -71,7 +71,7 @@ describe('Nitro', async () => {
     expect(balBeforeFn.sub(await signer.getBalance())).eq(
       txreceipt.gasUsed.mul(txreceipt.effectiveGasPrice)
     )
-    expect(txreceipt.gasUsed).eq(fnGasEstimate)
+    expect(txreceipt.gasUsed).lt(fnGasEstimate.mul(11).div(10))
   })
 
   it('Can transfer 0 value with correct gas estimate and accounting', async () => {
@@ -93,7 +93,7 @@ describe('Nitro', async () => {
     expect(balBeforeFn.sub(value).sub(await signer.getBalance())).eq(
       txreceipt.gasUsed.mul(txreceipt.effectiveGasPrice)
     )
-    expect(txreceipt.gasUsed).eq(fnGasEstimate)
+    expect(txreceipt.gasUsed).lt(fnGasEstimate.mul(11).div(10))
   })
 
   it('Can transfer >0 value with correct gas estimate and accounting', async () => {
@@ -115,7 +115,7 @@ describe('Nitro', async () => {
     expect(balBeforeFn.sub(value).sub(await signer.getBalance())).eq(
       txreceipt.gasUsed.mul(txreceipt.effectiveGasPrice)
     )
-    expect(txreceipt.gasUsed).eq(fnGasEstimate)
+    expect(txreceipt.gasUsed).lt(fnGasEstimate.mul(11).div(10))
   })
 
   it('Suicide To', async () => {
