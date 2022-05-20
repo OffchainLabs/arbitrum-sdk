@@ -30,8 +30,8 @@ import { RollupUserLogic__factory } from '../abi/factories/RollupUserLogic__fact
 import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
-import { L2ToL1TransactionEvent } from '../abi/ArbSys'
-import { Contract, ContractTransaction, Overrides } from 'ethers'
+import { L2ToL1TxEvent } from '../abi/ArbSys'
+import { ContractTransaction, Overrides } from 'ethers'
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
@@ -39,13 +39,11 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { wait } from '../utils/lib'
-import { getL2Network, getOutboxAddr } from '../dataEntities/networks'
+import { getL2Network } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
-import { L2TransactionReceipt } from './L2Transaction'
 import { getArbBlockByHash } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { Interface } from 'ethers/lib/utils'
 
 export interface MessageBatchProofInfo {
   /**
@@ -127,89 +125,37 @@ const ASSERTION_CONFIRMED_PADDING = 20
  * Base functionality for L2->L1 messages
  */
 export class L2ToL1Message {
-  protected constructor(
-    public readonly event: L2ToL1TransactionEvent['args']
-  ) {}
+  protected constructor(public readonly event: L2ToL1TxEvent['args']) {}
 
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event: L2ToL1TransactionEvent['args']
+    event: L2ToL1TxEvent['args']
   ): L2ToL1MessageReaderOrWriter<T>
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event: L2ToL1TransactionEvent['args']
+    event: L2ToL1TxEvent['args']
   ): L2ToL1MessageReader | L2ToL1MessageWriter {
     return SignerProviderUtils.isSigner(l1SignerOrProvider)
       ? new L2ToL1MessageWriter(l1SignerOrProvider, event)
       : new L2ToL1MessageReader(l1SignerOrProvider, event)
   }
 
-  public static async getL2ToL1MessageLogs(
-    l2Provider: Provider,
-    filter: { fromBlock: BlockTag; toBlock: BlockTag },
-    batchNumber?: BigNumber,
-    destination?: string,
-    uniqueId?: BigNumber,
-    indexInBatch?: BigNumber
-  ): Promise<L2ToL1TransactionEvent['args'][]> {
-    const eventFetcher = new EventFetcher(l2Provider)
-    const events = (
-      await eventFetcher.getEvents(
-        ARB_SYS_ADDRESS,
-        ArbSys__factory,
-        t =>
-          t.filters.L2ToL1Transaction(null, destination, uniqueId, batchNumber),
-        filter
-      )
-    ).map(l => l.event)
-
-    if (indexInBatch) {
-      const indexItems = events.filter(b => b.indexInBatch.eq(indexInBatch))
-      if (indexItems.length === 1) {
-        return indexItems
-      } else if (indexItems.length > 1) {
-        throw new ArbSdkError('More than one indexed item found in batch.')
-      } else return []
-    } else return events
-  }
-
   public static async getL2ToL1Events(
     l2Provider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
-    batchNumber?: BigNumber,
+    position?: BigNumber,
     destination?: string,
-    uniqueId?: BigNumber,
-    indexInBatch?: BigNumber
-  ): Promise<L2ToL1TransactionEvent['args'][]> {
+    hash?: BigNumber
+  ): Promise<L2ToL1TxEvent['args'][]> {
     const eventFetcher = new EventFetcher(l2Provider)
-    const events = await eventFetcher.getEvents(
-      ARB_SYS_ADDRESS,
-      ArbSys__factory,
-      t =>
-        t.filters.L2ToL1Transaction(null, destination, uniqueId, batchNumber),
-      filter
-    )
-
-    const l2ToL1Events = await Promise.all(
-      events.map(e =>
-        l2Provider
-          .getTransactionReceipt(e.transactionHash)
-          .then(receipt => new L2TransactionReceipt(receipt).getL2ToL1Events())
+    return (
+      await eventFetcher.getEvents(
+        ARB_SYS_ADDRESS,
+        ArbSys__factory,
+        t => t.filters.L2ToL1Tx(null, destination, hash, position),
+        filter
       )
-    ).then(res => res.flat())
-
-    if (indexInBatch) {
-      const indexItems = l2ToL1Events.filter(b =>
-        b.indexInBatch.eq(indexInBatch)
-      )
-      if (indexItems.length === 1) {
-        return indexItems
-      } else if (indexItems.length > 1) {
-        throw new ArbSdkError('More than one indexed item found in batch.')
-      } else return []
-    }
-
-    return l2ToL1Events
+    ).map(l => l.event)
   }
 }
 
@@ -224,7 +170,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
   constructor(
     protected readonly l1Provider: Provider,
-    event: L2ToL1TransactionEvent['args']
+    event: L2ToL1TxEvent['args']
   ) {
     super(event)
   }
@@ -245,11 +191,6 @@ export class L2ToL1MessageReader extends L2ToL1Message {
         this.event.position.toNumber()
       )
 
-    // CHRIS: TODO: check these from the return vals to make sure they're expected ones
-    // this.event.hash,
-    //   this.sendRootHash,
-    // console.log(outboxProofParams)
-
     return outboxProofParams.proof
   }
 
@@ -257,12 +198,11 @@ export class L2ToL1MessageReader extends L2ToL1Message {
    * Check if this message has already been executed in the Outbox
    */
   protected async hasExecuted(l2Provider: Provider): Promise<boolean> {
-    const outboxAddr = await this.getOutboxAddress(l2Provider)
-    // if the outbox address cannot be found then the withdrawal
-    // cannot have been executed
-    if (!outboxAddr) return false
-
-    const outbox = Outbox__factory.connect(outboxAddr, this.l1Provider)
+    const l2Network = await getL2Network(l2Provider)
+    const outbox = Outbox__factory.connect(
+      l2Network.ethBridge.outbox,
+      this.l1Provider
+    )
 
     return outbox.callStatic.spent(this.event.position)
   }
@@ -340,23 +280,15 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
   protected async getBatchNumber(l2Provider: Provider) {
     if (this.l1BatchNumber == undefined) {
-      // CHRIS: TODO: use correct abis
       // findBatchContainingBlock errors if block number does not exist
       try {
-        const iface = new Interface([
-          'function findBatchContainingBlock(uint64 block) external view returns (uint64 batch)',
-          'function getL1Confirmations(bytes32 blockHash) external view returns (uint64 confirmations)',
-        ])
-        const nodeInterface = new Contract(
+        const nodeInterface = NodeInterface__factory.connect(
           NODE_INTERFACE_ADDRESS,
-          iface,
           l2Provider
         )
-        const res = (
-          await nodeInterface.functions['findBatchContainingBlock'](
-            this.event.arbBlockNum
-          )
-        )[0] as BigNumber
+        const res = await nodeInterface.findBatchContainingBlock(
+          this.event.arbBlockNum
+        )
         this.l1BatchNumber = res.toNumber()
       } catch (err) {
         // do nothing - errors are expected here
@@ -364,20 +296,6 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     }
 
     return this.l1BatchNumber
-  }
-
-  protected async getOutboxAddress(l2Provider: Provider) {
-    if (!this.outboxAddress) {
-      const batchNumber = await this.getBatchNumber(l2Provider)
-      if (batchNumber != undefined) {
-        const l2Network = await getL2Network(l2Provider)
-        const outboxAddr = getOutboxAddr(l2Network, batchNumber)
-
-        this.outboxAddress = outboxAddr
-      }
-    }
-
-    return this.outboxAddress
   }
 
   protected async getSendProps(l2Provider: Provider) {
@@ -514,11 +432,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
  * Provides read and write access for l2-to-l1-messages
  */
 export class L2ToL1MessageWriter extends L2ToL1MessageReader {
-  constructor(
-    private readonly l1Signer: Signer,
-    event: L2ToL1TransactionEvent['args']
-  ) {
-    l1Signer.sendTransaction
+  constructor(private readonly l1Signer: Signer, event: L2ToL1TxEvent['args']) {
     super(l1Signer.provider!, event)
   }
 
@@ -539,13 +453,11 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
       )
     }
     const proof = await this.getOutboxProof(l2Provider)
-    const outboxAddr = await this.getOutboxAddress(l2Provider)
-    if (!outboxAddr) {
-      throw new ArbSdkError(
-        `Outbox address not found but node is confirmed. ${this.event.hash.toHexString()}`
-      )
-    }
-    const outbox = Outbox__factory.connect(outboxAddr, this.l1Signer)
+    const l2Network = await getL2Network(l2Provider)
+    const outbox = Outbox__factory.connect(
+      l2Network.ethBridge.outbox,
+      this.l1Signer
+    )
 
     return await outbox.executeTransaction(
       proof,

@@ -19,9 +19,9 @@
 import { expect } from 'chai'
 
 import { fundL2, skipIfMainnet, wait } from './testHelpers'
-import { getArbTransactionReceipt } from '../src'
+import { L2TransactionReceipt } from '../src'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { Wallet } from 'ethers'
+import { BigNumber, Wallet } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
 import { testSetup } from '../scripts/testSetup'
 
@@ -31,7 +31,7 @@ describe('ArbProvider', () => {
   })
 
   it('does find l1 batch info', async () => {
-    const { l2Signer, l1Signer } = await testSetup()
+    const { l2Signer } = await testSetup()
     const l2Provider = l2Signer.provider! as JsonRpcProvider
 
     await fundL2(l2Signer)
@@ -44,38 +44,31 @@ describe('ArbProvider', () => {
       value: amountToSend,
     })
     const rec = await tx.wait()
-    const testTxHash = rec.transactionHash
 
     // wait for the batch data
     // eslint-disable-next-line no-constant-condition
     while (true) {
       await wait(300)
-      const arbTxReceipt = await getArbTransactionReceipt(
-        l2Provider,
-        testTxHash,
-        true,
-        true
-      )
-      if (!arbTxReceipt) continue
+      const arbTxReceipt = new L2TransactionReceipt(rec)
 
-      const l1BlockNum = await l1Signer.provider!.getBlockNumber()
-      console.log(
-        arbTxReceipt.l1BatchNumber,
-        arbTxReceipt.l1BatchConfirmations,
-        l1BlockNum
-      )
+      const l1BatchNumber = (
+        await arbTxReceipt.getBatchNumber(l2Provider).catch(() => {
+          // findBatchContainingBlock errors if block number does not exist
+          return BigNumber.from(0)
+        })
+      ).toNumber()
+      const l1BatchConfirmations = (
+        await arbTxReceipt.getBatchConfirmations(l2Provider)
+      ).toNumber()
 
-      if (arbTxReceipt.l1BatchNumber && arbTxReceipt.l1BatchNumber > 0) {
-        expect(
-          arbTxReceipt.l1BatchConfirmations,
-          'missing confirmations'
-        ).to.be.gt(0)
+      if (l1BatchNumber && l1BatchNumber > 0) {
+        expect(l1BatchConfirmations, 'missing confirmations').to.be.gt(0)
       }
-      if (arbTxReceipt.l1BatchConfirmations > 0) {
-        expect(arbTxReceipt.l1BatchNumber, 'missing batch number').to.be.gt(0)
+      if (l1BatchConfirmations > 0) {
+        expect(l1BatchNumber, 'missing batch number').to.be.gt(0)
       }
 
-      if (arbTxReceipt.l1BatchConfirmations > 8) {
+      if (l1BatchConfirmations > 8) {
         break
       }
     }

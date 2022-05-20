@@ -1,4 +1,5 @@
 import { Provider } from '@ethersproject/abstract-provider'
+import { TransactionReceipt } from '@ethersproject/providers'
 import { ArbSdkError } from '../dataEntities/errors'
 
 export const wait = (ms: number): Promise<void> =>
@@ -12,4 +13,39 @@ export const getBaseFee = async (provider: Provider) => {
     )
   }
   return baseFee
+}
+
+/**
+ * Waits for a transaction receipt if confirmations or timeout is provided
+ * Otherwise tries to fetch straight away.
+ * @param provider
+ * @param txHash
+ * @param confirmations
+ * @param timeout
+ * @returns
+ */
+export const getTransactionReceipt = async (
+  provider: Provider,
+  txHash: string,
+  confirmations?: number,
+  timeout = 900000
+): Promise<TransactionReceipt | null> => {
+  if (confirmations || timeout) {
+    try {
+      const receipt = await provider.waitForTransaction(
+        txHash,
+        confirmations,
+        timeout
+      )
+      return receipt || null
+    } catch (err) {
+      if ((err as Error).message.includes('timeout exceeded')) {
+        // return null
+        return null
+      } else throw err
+    }
+  } else {
+    const receipt = await provider.getTransactionReceipt(txHash)
+    return receipt || null
+  }
 }

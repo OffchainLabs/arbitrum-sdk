@@ -36,9 +36,9 @@ const l1TxnReceipt = new L1TransactionReceipt(
   txnReceipt /** <-- ethers-js TransactionReceipt of an ethereum tx that triggered an L1 to L2 message (say depositting a token via a bridge)  */
 )
 
-const l1ToL2Message = await l1TxnReceipt.getL1ToL2Message(
+const l1ToL2Message = (await l1TxnReceipt.getL1ToL2Messages(
   l2Signer /** <-- connected ethers-js Wallet */
-)
+))[0]
 
 const res = await l1ToL2Message.waitForStatus()
 
@@ -59,12 +59,13 @@ import { L2TransactionReceipt } from '@arbitrum/sdk'
 const l2TxnReceipt = new L2TransactionReceipt(
   txnReceipt /** <-- ethers-js TransactionReceipt of an arbitrum tx */
 )
-s
+
 /** Wait 3 minutes: */
-setTimeout(() => {
-  const dataIsOnL1 = l2TxnReceipt.isDataAvailable(l2Provider, l1Provider)
-  // if dataIsOnL1, sequencer has posted it and it inherits full rollup/L1 security
-}, 1000 * 60 * 3000)
+await new Promise(resolve => setTimeout(resolve, 1000 * 60 * 3000));
+
+// if dataIsOnL1, sequencer has posted it and it inherits full rollup/L1 security
+const dataIsOnL1 = await l2TxnReceipt.isDataAvailable(l2Provider, l1Provider)
+
 ```
 
 ### Bridging assets
@@ -106,7 +107,7 @@ As part of normal operation the Arbitrum sequencer will messages into the rollup
 
 Defaults to `rinkArby`, for custom network use `--network` flag.
 
-`rinkArby` expects env var `DEVNET_PRIVKEY` to be prefunded with at least 0.02 ETH, and env var `INFURA_KEY` to be set.
+`rinkArby` expects env var `ARB_KEY` to be prefunded with at least 0.02 ETH, and env var `INFURA_KEY` to be set.
 (see `integration_test/config.ts`)
 
 ### Bridge A Standard Token

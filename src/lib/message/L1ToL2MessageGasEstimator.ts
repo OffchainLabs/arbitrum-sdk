@@ -1,9 +1,11 @@
 import { Provider } from '@ethersproject/abstract-provider'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
+import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { BigNumber } from '@ethersproject/bignumber'
 import { constants } from 'ethers'
 import { utils } from 'ethers'
+import { getL2Network } from '../dataEntities/networks'
 
 /**
  * The default amount to increase the maximum submission cost. Submission cost is calculated
@@ -94,26 +96,25 @@ export class L1ToL2MessageGasEstimator {
 
   /**
    * Return the fee, in wei, of submitting a new retryable tx with a given calldata size.
+   * @param l1BaseFee
    * @param callDataSize
    * @param options
    * @returns
    */
   public async estimateSubmissionFee(
+    l1Provider: Provider,
     l1BaseFee: BigNumber,
     callDataSize: BigNumber | number,
-    options?: {
-      base?: BigNumber
-      percentIncrease?: BigNumber
-    }
+    options?: PercentIncrease
   ): Promise<BigNumber> {
     const defaultedOptions = this.applySubmissionPriceDefaults(options)
-    const submissionCost = BigNumber.from(callDataSize)
-      .mul(6)
-      .add(1400)
-      .mul(l1BaseFee)
+
+    const network = await getL2Network(this.l2Provider)
+    const inbox = Inbox__factory.connect(network.ethBridge.inbox, l1Provider)
 
     return this.percentIncrease(
-      defaultedOptions.base || submissionCost,
+      defaultedOptions.base ||
+        (await inbox.calculateRetryableSubmissionFee(callDataSize, l1BaseFee)),
       defaultedOptions.percentIncrease
     )
   }
@@ -175,6 +176,7 @@ export class L1ToL2MessageGasEstimator {
     l1BaseFee: BigNumber,
     excessFeeRefundAddress: string,
     callValueRefundAddress: string,
+    l1Provider: Provider,
     options?: GasOverrides
   ): Promise<{
     gasLimit: BigNumber
@@ -195,6 +197,7 @@ export class L1ToL2MessageGasEstimator {
 
     // estimate the submission fee
     const maxSubmissionFee = await this.estimateSubmissionFee(
+      l1Provider,
       l1BaseFee,
       utils.hexDataLength(l2CallData),
       options?.maxSubmissionFee
@@ -215,7 +218,7 @@ export class L1ToL2MessageGasEstimator {
     )
 
     // always ensure the max gas is greater than the min - this can be useful if we know that
-    // gas esimation is bad for the provided transaction
+    // gas estimation is bad for the provided transaction
     const gasLimit = calculatedGasLimit.gt(gasLimitDefaults.min)
       ? calculatedGasLimit
       : gasLimitDefaults.min

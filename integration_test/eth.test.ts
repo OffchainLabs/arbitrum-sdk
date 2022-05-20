@@ -21,15 +21,11 @@ import dotenv from 'dotenv'
 
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
-
-import { ArbGasInfo__factory } from '../src/lib/abi/factories/ArbGasInfo__factory'
 import { fundL1, fundL2, prettyLog, skipIfMainnet } from './testHelpers'
-import { ARB_GAS_INFO } from '../src/lib/dataEntities/constants'
 import {
   L2ToL1Message,
   L2ToL1MessageStatus,
 } from '../src/lib/message/L2ToL1Message'
-import { L1ToL2MessageStatus } from '../src/lib/message/L1ToL2Message'
 import { testSetup } from '../scripts/testSetup'
 dotenv.config()
 
@@ -88,7 +84,6 @@ describe('Ether', async () => {
     const res = await ethBridger.deposit({
       amount: ethToDeposit,
       l1Signer: l1Signer,
-      l2Provider: l2Signer.provider!,
     })
     const rec = await res.wait()
 
@@ -124,13 +119,11 @@ describe('Ether', async () => {
     }
     expect(l1ToL2Message.messageData.data, 'empty call data').to.eq('0x')
 
-    prettyLog('l2TxHash: ' + waitResult.message.retryableCreationId)
+    prettyLog('l2TxHash: ' + waitResult.message.l2DepositTxHash)
     prettyLog('l2 transaction found!')
     expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
-    expect(waitResult.status).to.eq(
-      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
-      'eth deposit l2 transaction not found'
-    )
+    expect(waitResult.l2TxReceipt).to.exist
+    expect(waitResult.l2TxReceipt).to.not.be.null
 
     const testWalletL2EthBalance = await l2Signer.getBalance()
     expect(testWalletL2EthBalance.gt(ethToDeposit), 'final balance').to.be.true
@@ -140,27 +133,21 @@ describe('Ether', async () => {
     const { l2Signer, l1Signer, ethBridger } = await testSetup()
     await fundL2(l2Signer)
     await fundL1(l1Signer)
-    const ethToWithdraw = parseEther('0.00000002')
-    const initialBalance = await l2Signer.getBalance()
 
+    const ethToWithdraw = parseEther('0.00000002')
+    // const initialBalance = await l2Signer.getBalance()
+    const randomAddress = Wallet.createRandom().address
     const withdrawEthRes = await ethBridger.withdraw({
       amount: ethToWithdraw,
       l2Signer: l2Signer,
+      destinationAddress: randomAddress,
     })
     const withdrawEthRec = await withdrawEthRes.wait()
 
-    const arbGasInfo = ArbGasInfo__factory.connect(
-      ARB_GAS_INFO,
-      l2Signer.provider!
-    )
     expect(withdrawEthRec.status).to.equal(
       1,
       'initiate eth withdraw txn failed'
     )
-
-    const inWei = await arbGasInfo.getPricesInWei({
-      blockTag: withdrawEthRec.blockNumber,
-    })
 
     const withdrawMessage = (
       await withdrawEthRec.getL2ToL1Messages(l1Signer)
@@ -170,12 +157,11 @@ describe('Ether', async () => {
       'eth withdraw getWithdrawalsInL2Transaction query came back empty'
     ).to.exist
 
-    const myAddress = await l1Signer.getAddress()
-    const withdrawEvents = await L2ToL1Message.getL2ToL1MessageLogs(
+    const withdrawEvents = await L2ToL1Message.getL2ToL1Events(
       l2Signer.provider!,
       { fromBlock: withdrawEthRec.blockNumber, toBlock: 'latest' },
       undefined,
-      myAddress
+      randomAddress
     )
 
     expect(withdrawEvents.length).to.equal(
@@ -189,10 +175,14 @@ describe('Ether', async () => {
       `eth withdraw status returned ${messageStatus}`
     ).to.be.eq(L2ToL1MessageStatus.UNCONFIRMED)
 
-    const etherBalance = await l2Signer.getBalance()
-    const totalEth = etherBalance
-      .add(ethToWithdraw)
-      .add(withdrawEthRec.gasUsed.mul(inWei[5]))
+    // CHRIS: TODO: comment this back in when fixed in nitro
+    // const actualFinalBalance = await l2Signer.getBalance()
+    // const expectedFinalBalance = initialBalance
+    //   .sub(ethToWithdraw)
+    //   .sub(withdrawEthRec.gasUsed.mul(withdrawEthRec.effectiveGasPrice))
+    // expect(actualFinalBalance.toString(), 'L2 final balance').to.eq(
+    //   expectedFinalBalance.toString()
+    // )
 
     await withdrawMessage.waitUntilReadyToExecute(l2Signer.provider!)
     expect(
@@ -207,12 +197,11 @@ describe('Ether', async () => {
       'executed status'
     ).to.eq(L2ToL1MessageStatus.EXECUTED)
 
-    console.log(
-      `This number should be zero...? ${initialBalance
-        .sub(totalEth)
-        .toString()}`
+    const finalRandomBalance = await l1Signer.provider!.getBalance(
+      randomAddress
     )
-
-    expect(true).to.be.true
+    expect(finalRandomBalance.toString(), 'L1 final balance').to.eq(
+      ethToWithdraw.toString()
+    )
   })
 })

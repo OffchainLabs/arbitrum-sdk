@@ -17,7 +17,7 @@
 'use strict'
 
 import { TransactionReceipt } from '@ethersproject/providers'
-import { Log } from '@ethersproject/abstract-provider'
+import { Log, Provider } from '@ethersproject/abstract-provider'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
 import {
@@ -27,6 +27,8 @@ import {
   L1ToL2MessageWriter,
   L1ToL2MessageStatus,
   L1ToL2MessageWaitResult,
+  EthDepositMessage,
+  EthDepositMessageWaitResult,
 } from './L1ToL2Message'
 
 import { L1ERC20Gateway__factory } from '../abi/factories/L1ERC20Gateway__factory'
@@ -40,7 +42,10 @@ import { ethers } from 'ethers'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { InboxMessageDeliveredEvent } from '../abi/Inbox'
 import { hexZeroPad } from '@ethersproject/bytes'
-import { RetryableMessageParams } from '../dataEntities/message'
+import {
+  InboxMessageKind,
+  RetryableMessageParams,
+} from '../dataEntities/message'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
 import { MessageDeliveredEvent } from '../abi/Bridge'
 
@@ -166,9 +171,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     return messages
   }
 
-  private parseInboxMessage(
-    inboxMessageDeliveredEvent: InboxMessageDeliveredEvent['args']
-  ): RetryableMessageParams {
+  private parseRetryableMessageData(eventData: string): RetryableMessageParams {
     // decode the data field - is been packed so we cant decode the bytes field this way
     const parsed = ethers.utils.defaultAbiCoder.decode(
       [
@@ -183,7 +186,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
         'uint256', // data length
       ],
       // decode from the first 9 words
-      inboxMessageDeliveredEvent.data.substring(0, 64 * 9 + 2)
+      eventData.substring(0, 64 * 9 + 2)
     ) as BigNumber[]
 
     const addressFromBigNumber = (bn: BigNumber) =>
@@ -197,7 +200,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     const callValueRefundAddress = addressFromBigNumber(parsed[5])
     const gasLimit = parsed[6]
     const maxFeePerGas = parsed[7]
-    const data = '0x' + inboxMessageDeliveredEvent.data.substring(64 * 9 + 2)
+    const data = '0x' + eventData.substring(64 * 9 + 2)
 
     return {
       destAddress,
@@ -212,6 +215,40 @@ export class L1TransactionReceipt implements TransactionReceipt {
     }
   }
 
+  private parseEthDepositData(eventData: string): BigNumber {
+    const parsed = ethers.utils.defaultAbiCoder.decode(
+      ['uint256'],
+      // decode from the first 9 words
+      eventData.substring(0, 64 * 9 + 2)
+    ) as BigNumber[]
+
+    return parsed[0]
+  }
+
+  public async getEthDepositMessages(
+    l2Provider: Provider
+  ): Promise<EthDepositMessage[]> {
+    const chainID = (await l2Provider.getNetwork()).chainId
+
+    return this.getMessageEvents()
+      .filter(
+        e =>
+          e.bridgeMessageEvent.kind ===
+          InboxMessageKind.L1MessageType_ethDeposit
+      )
+      .map(m => {
+        const value = this.parseEthDepositData(m.inboxMessageEvent.data)
+
+        return new EthDepositMessage(
+          l2Provider,
+          chainID,
+          m.inboxMessageEvent.messageNum,
+          m.bridgeMessageEvent.sender,
+          value
+        )
+      })
+  }
+
   /**
    * Get any l1tol2 messages created by this transaction
    * @param l2SignerOrProvider
@@ -224,55 +261,27 @@ export class L1TransactionReceipt implements TransactionReceipt {
   ): Promise<L1ToL2MessageReader[] | L1ToL2MessageWriter[]> {
     const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
     const chainID = (await provider.getNetwork()).chainId.toString()
+    const events = this.getMessageEvents()
 
-    const messages = this.getMessageEvents()
-    if (!messages || messages.length === 0) return []
-
-    return messages.map(mn => {
-      const inboxMessageData = this.parseInboxMessage(mn.inboxMessageEvent)
-      return L1ToL2Message.fromTxComponents(
-        l2SignerOrProvider,
-        BigNumber.from(chainID).toNumber(),
-        mn.bridgeMessageEvent.sender,
-        mn.inboxMessageEvent.messageNum,
-        mn.bridgeMessageEvent.baseFeeL1,
-        inboxMessageData
+    return events
+      .filter(
+        e =>
+          e.bridgeMessageEvent.kind ===
+          InboxMessageKind.L1MessageType_submitRetryableTx
       )
-    })
-  }
-
-  /**
-   * Gets a single l1ToL2Message
-   * If the messageIndex is supplied the message at that index will be returned.
-   * If no messageIndex is supplied a message will be returned if this transaction only created one message
-   * All other cases throw an error
-   * @param l2SignerOrProvider
-   */
-  public async getL1ToL2Message<T extends SignerOrProvider>(
-    l2SignerOrProvider: T,
-    messageNumberIndex?: number
-  ): Promise<L1ToL2MessageReaderOrWriter<T>>
-  public async getL1ToL2Message<T extends SignerOrProvider>(
-    l2SignerOrProvider: T,
-    messageIndex?: number
-  ): Promise<L1ToL2MessageReader | L1ToL2MessageWriter> {
-    const allL1ToL2Messages = await this.getL1ToL2Messages(l2SignerOrProvider)
-    const messageCount = allL1ToL2Messages.length
-    if (!messageCount)
-      throw new ArbSdkError(
-        `No l1 to L2 message found for ${this.transactionHash}`
-      )
-
-    if (messageIndex !== undefined && messageIndex >= messageCount)
-      throw new ArbSdkError(
-        `Provided message number out of range for ${this.transactionHash}; index was ${messageIndex}, but only ${messageCount} messages`
-      )
-    if (messageIndex === undefined && messageCount > 1)
-      throw new ArbSdkError(
-        `${messageCount} L2 messages for ${this.transactionHash}; must provide messageNumberIndex (or use (signersAndProviders, l1Txn))`
-      )
-
-    return allL1ToL2Messages[messageIndex || 0]
+      .map(mn => {
+        const inboxMessageData = this.parseRetryableMessageData(
+          mn.inboxMessageEvent.data
+        )
+        return L1ToL2Message.fromTxComponents(
+          l2SignerOrProvider,
+          BigNumber.from(chainID).toNumber(),
+          mn.bridgeMessageEvent.sender,
+          mn.inboxMessageEvent.messageNum,
+          mn.bridgeMessageEvent.baseFeeL1,
+          inboxMessageData
+        )
+      })
   }
 
   /**
@@ -352,25 +361,24 @@ export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
    * If `complete` is true then this message is in the terminal state.
    * For eth deposits complete this is when the status is FUNDS_DEPOSITED, EXPIRED or REDEEMED.
    */
-  public async waitForL2<T extends SignerOrProvider>(
-    l2SignerOrProvider: T,
+  public async waitForL2(
+    l2Provider: Provider,
     confirmations?: number,
     timeout = 900000
   ): Promise<
     {
       complete: boolean
-      message: L1ToL2MessageReaderOrWriter<T>
-    } & L1ToL2MessageWaitResult
+      message: EthDepositMessage
+    } & EthDepositMessageWaitResult
   > {
-    const message = (await this.getL1ToL2Messages(l2SignerOrProvider))[0]
-    const res = await message.waitForStatus(confirmations, timeout)
+    const message = (await this.getEthDepositMessages(l2Provider))[0]
+    if (!message)
+      throw new ArbSdkError('Unexpected missing Eth Deposit message.')
+    const res = await message.wait(confirmations, timeout)
 
     return {
-      complete:
-        res.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2 ||
-        res.status === L1ToL2MessageStatus.EXPIRED ||
-        res.status === L1ToL2MessageStatus.REDEEMED,
-      ...res,
+      complete: !!res,
+      l2TxReceipt: res,
       message,
     }
   }
@@ -402,6 +410,7 @@ export class L1ContractCallTransactionReceipt extends L1TransactionReceipt {
     } & L1ToL2MessageWaitResult
   > {
     const message = (await this.getL1ToL2Messages(l2SignerOrProvider))[0]
+    if (!message) throw new ArbSdkError('Unexpected missing L1ToL2 message.')
     const res = await message.waitForStatus(confirmations, timeout)
 
     return {

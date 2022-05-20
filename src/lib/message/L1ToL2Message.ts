@@ -36,6 +36,7 @@ import { L2TransactionReceipt, RedeemTransaction } from './L2Transaction'
 import { getL2Network } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
+import { getTransactionReceipt } from '../utils/lib'
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -105,7 +106,7 @@ export abstract class L1ToL2Message {
    * @param data
    * @returns
    */
-  public calculateSubmitRetryableId(
+  public static calculateSubmitRetryableId(
     l2ChainId: number,
     fromAddress: string,
     messageNumber: BigNumber,
@@ -199,7 +200,7 @@ export abstract class L1ToL2Message {
     public readonly l1BaseFee: BigNumber,
     public readonly messageData: RetryableMessageParams
   ) {
-    this.retryableCreationId = this.calculateSubmitRetryableId(
+    this.retryableCreationId = L1ToL2Message.calculateSubmitRetryableId(
       chainId,
       sender,
       messageNumber,
@@ -225,8 +226,12 @@ export type L1ToL2MessageWaitResult =
   | { status: L1ToL2MessageStatus.REDEEMED; l2TxReceipt: TransactionReceipt }
   | { status: Exclude<L1ToL2MessageStatus, L1ToL2MessageStatus.REDEEMED> }
 
+export type EthDepositMessageWaitResult = {
+  l2TxReceipt: TransactionReceipt | null
+}
+
 export class L1ToL2MessageReader extends L1ToL2Message {
-  private retryableCreationReceipt: TransactionReceipt | undefined
+  private retryableCreationReceipt: TransactionReceipt | undefined | null
   public constructor(
     public readonly l2Provider: Provider,
     chainId: number,
@@ -249,24 +254,12 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     timeout?: number
   ): Promise<TransactionReceipt | null> {
     if (!this.retryableCreationReceipt) {
-      if (confirmations || timeout) {
-        try {
-          this.retryableCreationReceipt =
-            await this.l2Provider.waitForTransaction(
-              this.retryableCreationId,
-              confirmations,
-              timeout
-            )
-        } catch (err) {
-          if ((err as Error).message.includes('timeout exceeded')) {
-            // return null
-            return null
-          } else throw err
-        }
-      } else {
-        this.retryableCreationReceipt =
-          await this.l2Provider.getTransactionReceipt(this.retryableCreationId)
-      }
+      this.retryableCreationReceipt = await getTransactionReceipt(
+        this.l2Provider,
+        this.retryableCreationId,
+        confirmations,
+        timeout
+      )
     }
 
     return this.retryableCreationReceipt || null
@@ -529,7 +522,8 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
       l1BaseFee,
       messageData
     )
-    if (!l2Signer.provider) throw new Error('Signer not connected to provider.')
+    if (!l2Signer.provider)
+      throw new ArbSdkError('Signer not connected to provider.')
   }
 
   /**
@@ -543,13 +537,8 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
         ARB_RETRYABLE_TX_ADDRESS,
         this.l2Signer
       )
-      const feeData = await this.l2Provider.getFeeData()
 
-      // CHRIS: TODO: check what the default behaviour is for gasprice
-      // CHRIS: TODO: why are we using 1559 here, but not elsewhere? All tx should be - in many cases it may be ignored though/depend on the wallet
       const redeemTx = await arbRetryableTx.redeem(this.retryableCreationId, {
-        maxFeePerGas: feeData.maxFeePerGas!,
-        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas!,
         ...overrides,
       })
 
@@ -581,5 +570,70 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
         `Cannot cancel. Message status: ${status} must be: ${L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2}.`
       )
     }
+  }
+}
+
+/**
+ * A message for Eth deposits from L1 to L2
+ */
+export class EthDepositMessage {
+  public readonly l2DepositTxHash: string
+  private l2DepositTxReceipt: TransactionReceipt | undefined | null
+
+  public static calculateDepositTxId(
+    l2ChainId: number,
+    messageNumber: BigNumber,
+    toAddress: string,
+    value: BigNumber
+  ): string {
+    const formatNumber = (value: BigNumber): Uint8Array => {
+      return ethers.utils.stripZeros(value.toHexString())
+    }
+
+    const chainId = BigNumber.from(l2ChainId)
+    const msgNum = BigNumber.from(messageNumber)
+
+    const fields: any[] = [
+      formatNumber(chainId),
+      zeroPad(formatNumber(msgNum), 32),
+      toAddress,
+      formatNumber(value),
+    ]
+
+    // arbitrum eth deposit transactions have type 0x64
+    const rlpEnc = ethers.utils.hexConcat([
+      '0x64',
+      ethers.utils.RLP.encode(fields),
+    ])
+
+    return ethers.utils.keccak256(rlpEnc)
+  }
+
+  constructor(
+    private readonly l2Provider: Provider,
+    public readonly l2ChainId: number,
+    public readonly messageNumber: BigNumber,
+    public readonly to: string,
+    public readonly value: BigNumber
+  ) {
+    this.l2DepositTxHash = EthDepositMessage.calculateDepositTxId(
+      l2ChainId,
+      messageNumber,
+      to,
+      value
+    )
+  }
+
+  public async wait(confirmations?: number, timeout = 900000) {
+    if (!this.l2DepositTxReceipt) {
+      this.l2DepositTxReceipt = await getTransactionReceipt(
+        this.l2Provider,
+        this.l2DepositTxHash,
+        confirmations,
+        timeout
+      )
+    }
+
+    return this.l2DepositTxReceipt || null
   }
 }

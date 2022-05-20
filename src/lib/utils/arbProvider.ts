@@ -1,15 +1,10 @@
 import { JsonRpcProvider, Formatter } from '@ethersproject/providers'
 import {
-  ArbBatchConfirmations,
-  ArbBatchNumber,
   ArbBlock,
   ArbBlockWithTransactions,
   ArbTransactionReceipt,
 } from '../dataEntities/rpc'
-import { BigNumber, Contract } from 'ethers'
 import { Formats } from '@ethersproject/providers/lib/formatter'
-import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
-import { Interface } from 'ethers/lib/utils'
 
 class ArbFormatter extends Formatter {
   readonly formats!: Formats
@@ -65,71 +60,14 @@ class ArbFormatter extends Formatter {
  * @param txHash
  * @returns
  */
-export async function getArbTransactionReceipt<
-  TBatch extends boolean = false,
-  TConfirmations extends boolean = false
->(
+export async function getArbTransactionReceipt(
   l2Provider: JsonRpcProvider,
-  txHash: string,
-  fetchBatchNumber?: TBatch,
-  fetchBatchConfirmations?: TConfirmations
-): Promise<
-  | (ArbTransactionReceipt &
-      (TBatch extends true ? ArbBatchNumber : Record<string, never>) &
-      (TConfirmations extends true
-        ? ArbBatchConfirmations
-        : Record<string, never>))
-  | null
->
-export async function getArbTransactionReceipt<
-  TBatch extends boolean = false,
-  TConfirmations extends boolean = false
->(
-  l2Provider: JsonRpcProvider,
-  txHash: string,
-  fetchBatchNumber?: TBatch,
-  fetchBatchConfirmations?: TConfirmations
-): Promise<
-  | (ArbTransactionReceipt & Partial<ArbBatchConfirmations & ArbBatchNumber>)
-  | null
-> {
+  txHash: string
+): Promise<ArbTransactionReceipt | null> {
   const rec = await l2Provider.send('eth_getTransactionReceipt', [txHash])
   if (rec == null) return null
   const arbFormatter = new ArbFormatter()
-  const arbTxReceipt: ArbTransactionReceipt &
-    Partial<ArbBatchConfirmations & ArbBatchNumber> = arbFormatter.receipt(rec)
-
-  // CHRIS: TODO: use correct abis
-  const iface = new Interface([
-    'function findBatchContainingBlock(uint64 block) external view returns (uint64 batch)',
-    'function getL1Confirmations(bytes32 blockHash) external view returns (uint64 confirmations)',
-  ])
-  const nodeInterface = new Contract(NODE_INTERFACE_ADDRESS, iface, l2Provider)
-  if (fetchBatchNumber) {
-    // findBatchContainingBlock errors if block number does not exist
-    try {
-      const res = (
-        await nodeInterface.functions['findBatchContainingBlock'](
-          arbTxReceipt.blockNumber
-        )
-      )[0] as BigNumber
-      arbTxReceipt.l1BatchNumber = res.toNumber()
-    } catch (err) {
-      // do nothing - errors are expected here
-    }
-  }
-
-  if (fetchBatchConfirmations) {
-    // getL1Confirmations returns 0 if block has does not exist
-    const res = (
-      await nodeInterface.functions['getL1Confirmations'](
-        arbTxReceipt.blockHash
-      )
-    )[0] as BigNumber
-    arbTxReceipt.l1BatchConfirmations = res.toNumber()
-  }
-
-  return arbTxReceipt
+  return arbFormatter.receipt(rec)
 }
 
 /**
