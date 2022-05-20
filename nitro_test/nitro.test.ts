@@ -46,19 +46,76 @@ describe('Nitro', async () => {
     console.log('')
   })
 
-  it('Can Deploy NitroTest', async () => {
+  it('Can Deploy NitroTest with correct gas estimate and usage', async () => {
     const [signer] = await ethers.getSigners()
 
+    const balBeforeDeploy = await signer.getBalance()
     const Factory = await ethers.getContractFactory('NitroTest')
     const deployGasEstimate = await ethers.provider.estimateGas(
       Factory.getDeployTransaction()
     )
     const contract = await Factory.deploy({ gasLimit: deployGasEstimate })
 
+    const deployreceipt = await contract.deployTransaction.wait()
+    expect(balBeforeDeploy.sub(await signer.getBalance())).eq(
+      deployreceipt.gasUsed.mul(deployreceipt.effectiveGasPrice)
+    )
+    expect(deployreceipt.gasUsed).eq(deployGasEstimate)
+
+    const balBeforeFn = await signer.getBalance()
     const fnGasEstimate = await ethers.provider.estimateGas(
       await contract.populateTransaction.foo()
     )
     const tx = await contract.functions.foo({ gasLimit: fnGasEstimate })
+    const txreceipt = await tx.wait()
+    expect(balBeforeFn.sub(await signer.getBalance())).eq(
+      txreceipt.gasUsed.mul(txreceipt.effectiveGasPrice)
+    )
+    expect(txreceipt.gasUsed).eq(fnGasEstimate)
+  })
+
+  it('Can transfer 0 value with correct gas estimate and accounting', async () => {
+    const [signer] = await ethers.getSigners()
+
+    const balBeforeFn = await signer.getBalance()
+    const value = 0
+    const txdict = {
+      from: signer.address,
+      to: '0x0000000000000000000000000000000000000000',
+      value: value,
+    }
+    const fnGasEstimate = await ethers.provider.estimateGas(txdict)
+    const tx = await signer.sendTransaction({
+      ...txdict,
+      gasLimit: fnGasEstimate,
+    })
+    const txreceipt = await tx.wait()
+    expect(balBeforeFn.sub(value).sub(await signer.getBalance())).eq(
+      txreceipt.gasUsed.mul(txreceipt.effectiveGasPrice)
+    )
+    expect(txreceipt.gasUsed).eq(fnGasEstimate)
+  })
+
+  it('Can transfer >0 value with correct gas estimate and accounting', async () => {
+    const [signer] = await ethers.getSigners()
+
+    const balBeforeFn = await signer.getBalance()
+    const value = 100
+    const txdict = {
+      from: signer.address,
+      to: '0x0000000000000000000000000000000000000000',
+      value: value,
+    }
+    const fnGasEstimate = await ethers.provider.estimateGas(txdict)
+    const tx = await signer.sendTransaction({
+      ...txdict,
+      gasLimit: fnGasEstimate,
+    })
+    const txreceipt = await tx.wait()
+    expect(balBeforeFn.sub(value).sub(await signer.getBalance())).eq(
+      txreceipt.gasUsed.mul(txreceipt.effectiveGasPrice)
+    )
+    expect(txreceipt.gasUsed).eq(fnGasEstimate)
   })
 
   it('Suicide To', async () => {
