@@ -482,9 +482,11 @@ export class Erc20Bridger extends AssetBridger<
       l2MaxFeePerGas: estimates.maxFeePerGas,
       l2SubmissionFee: estimates.maxSubmissionFee,
       l2GasCostsMaxTotal: estimates.totalL2GasCosts,
-      to: this.l2Network.tokenBridge.l1GatewayRouter,
-      data: functionData,
-      value: estimates.totalL2GasCosts,
+      txRequest: {
+        to: this.l2Network.tokenBridge.l1GatewayRouter,
+        data: functionData,
+        value: estimates.totalL2GasCosts,
+      },
     }
   }
 
@@ -507,7 +509,7 @@ export class Erc20Bridger extends AssetBridger<
       : await this.getDepositRequest(params)
 
     return await params.l1Signer[estimate ? 'estimateGas' : 'sendTransaction']({
-      ...tokenDeposit,
+      ...tokenDeposit.txRequest,
       ...params.overrides,
     })
   }

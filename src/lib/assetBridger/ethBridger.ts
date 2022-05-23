@@ -108,7 +108,7 @@ export class EthBridger extends AssetBridger<
       : await this.getDepositRequest(params)
 
     return await params.l1Signer[estimate ? 'estimateGas' : 'sendTransaction']({
-      ...ethDeposit,
+      ...ethDeposit.txRequest,
       ...params.overrides,
     })
   }
@@ -132,9 +132,11 @@ export class EthBridger extends AssetBridger<
       l2GasCostsMaxTotal: BigNumber.from(0),
       l2MaxFeePerGas: BigNumber.from(0),
       l2SubmissionFee: BigNumber.from(0),
-      to: this.l2Network.ethBridge.inbox,
-      value: params.amount,
-      data: functionData,
+      txRequest: {
+        to: this.l2Network.ethBridge.inbox,
+        value: params.amount,
+        data: functionData,
+      },
     }
   }
 

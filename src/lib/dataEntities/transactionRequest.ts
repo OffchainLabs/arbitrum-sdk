@@ -14,8 +14,8 @@ type NonOptional<TType, TProps extends keyof TType> =
  * A transaction request for a transaction that will trigger some sort of
  * execution on the L2
  */
-export interface L1ToL2TransactionRequest
-  extends NonOptional<TransactionRequest, 'to' | 'data' | 'value'> {
+export interface L1ToL2TransactionRequest {
+  txRequest: NonOptional<TransactionRequest, 'to' | 'data' | 'value'>
   /**
    * The gas limit provided to this transactin when executed on L2 (units of gas)
    */
@@ -37,9 +37,7 @@ export interface L1ToL2TransactionRequest
 /**
  * Ensure the T is not of TransactionRequest type by ensure it doesnt have a specific TransactionRequest property
  */
-type IsNotTransactionRequest<T> = T extends { l2GasCostsMaxTotal: any }
-  ? never
-  : T
+type IsNotTransactionRequest<T> = T extends { txRequest: any } ? never : T
 
 /**
  * Check if an object is of L1ToL2TransactionRequest type
@@ -49,8 +47,5 @@ type IsNotTransactionRequest<T> = T extends { l2GasCostsMaxTotal: any }
 export const isL1ToL2TransactionRequest = <T>(
   possibleRequest: IsNotTransactionRequest<T> | L1ToL2TransactionRequest
 ): possibleRequest is L1ToL2TransactionRequest => {
-  return (
-    (possibleRequest as L1ToL2TransactionRequest).l2GasCostsMaxTotal !=
-    undefined
-  )
+  return (possibleRequest as L1ToL2TransactionRequest).txRequest != undefined
 }
