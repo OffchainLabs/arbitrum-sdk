@@ -121,11 +121,11 @@ export class EthBridger extends AssetBridger<
     const functionData = (
       inboxInterface as unknown as {
         encodeFunctionData(
-          functionFragment: 'depositEth',
+          functionFragment: 'depositEth()',
           values?: undefined
         ): string
       }
-    ).encodeFunctionData('depositEth')
+    ).encodeFunctionData('depositEth()')
 
     return {
       l2GasLimit: BigNumber.from(0),

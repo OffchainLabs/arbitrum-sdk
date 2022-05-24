@@ -48,6 +48,7 @@ import {
 } from '../dataEntities/message'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
 import { MessageDeliveredEvent } from '../abi/Bridge'
+import { Address } from '../dataEntities/address'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -238,12 +239,11 @@ export class L1TransactionReceipt implements TransactionReceipt {
       )
       .map(m => {
         const value = this.parseEthDepositData(m.inboxMessageEvent.data)
-
         return new EthDepositMessage(
           l2Provider,
           chainID,
           m.inboxMessageEvent.messageNum,
-          m.bridgeMessageEvent.sender,
+          new Address(m.bridgeMessageEvent.sender).applyAlias().value,
           value
         )
       })
