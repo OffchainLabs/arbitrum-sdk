@@ -33,14 +33,14 @@ jobs:
         run: |
           cd nitro
           ./test-node.bash --init --no-blockscout &
-      - name: Wait for nitro startup
-        run: |
-          cd sdk
-          ./waitForNitro.sh
       - name: Copy .env
         run: |
           cd sdk
           cp ./.env-sample ./.env
+      - name: Wait for nitro startup
+        run: |
+          cd sdk
+          ./waitForNitro.sh
       - name: Generate network file
         run: |
           cd sdk
