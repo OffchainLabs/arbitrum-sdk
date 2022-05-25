@@ -29,10 +29,14 @@ jobs:
           cd sdk
           yarn
           yarn build
-      - name: Start nitro test-node.bash
+      - name: Start background nitro test-node.bash
         run: |
           cd nitro
-          ./test-node.bash --init --no-blockscout
+          ./test-node.bash --init --no-blockscout &
+      - name: Wait for nitro startup
+        run: |
+          cd sdk
+          ./waitForNitro.sh
       - name: Generate network file
         run: |
           cd sdk
