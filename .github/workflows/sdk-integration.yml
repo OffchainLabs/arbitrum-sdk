@@ -3,6 +3,7 @@ name: Integration tests
 on:
   pull_request:
   branch:
+  push:
 
 jobs:
   coverage:
