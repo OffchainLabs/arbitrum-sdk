@@ -37,7 +37,7 @@ jobs:
         run: |
           cd sdk
           ./waitForNitro.sh
-      - name: CP .env
+      - name: Copy .env
         run: |
           cd sdk
           cp ./.env-sample ./.env
