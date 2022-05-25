@@ -18,7 +18,8 @@ jobs:
           repository: OffchainLabs/nitro
           submodules: 'recursive'
           path: 'nitro'
-      - uses: actions/setup-node@v3
+      - name: Setup node/yarn
+        uses: actions/setup-node@v3
         with:
           node-version: 16
           cache: 'yarn'
@@ -28,11 +29,15 @@ jobs:
           cd sdk
           yarn
           yarn build
-      - run: |
+      - name: Start nitro test-node.bash
+        run: |
           cd nitro
           ./test-node.bash --init --no-blockscout
-      - name: Cache nitro
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/nitro
+      - name: Generate network file
+        run: |
+          cd sdk
+          yarn gen:network
+      - name: Integration tests
+        run: |
+          cd sdk
+          yarn test:integration
