@@ -9,12 +9,23 @@ jobs:
     runs-on: ubuntu-20.04
     steps:
       - uses: actions/checkout@v3
+        with:
+          path: 'sdk'
+      - uses: actions/checkout@v3
+        with:
+          repository: OffchainLabs/nitro
+          submodules: 'recursive'
+          path: 'nitro'
       - uses: actions/setup-node@v3
         with:
           node-version: 16
           cache: 'yarn'
+          cache-dependency-path: '**/yarn.lock'
       - name: Install dependencies
         run: |
+          cd sdk
           yarn
           yarn build
-      - run: docker-compose up
+      - run: |
+          cd nitro
+          docker-compose up
