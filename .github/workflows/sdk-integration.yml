@@ -37,6 +37,10 @@ jobs:
         run: |
           cd sdk
           ./waitForNitro.sh
+      - name: CP .env
+        run: |
+          cd sdk
+          cp ./.env-sample ./.env
       - name: Generate network file
         run: |
           cd sdk
