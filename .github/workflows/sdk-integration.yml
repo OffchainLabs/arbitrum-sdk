@@ -16,3 +16,5 @@ jobs:
       - name: Install dependencies
         run: |
           yarn
+          yarn build
+      - run: docker-compose up
