@@ -8,10 +8,12 @@ jobs:
     name: Integration tests
     runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout sdk
+        uses: actions/checkout@v3
         with:
           path: 'sdk'
-      - uses: actions/checkout@v3
+      - name: Checkout nitro
+        uses: actions/checkout@v3
         with:
           repository: OffchainLabs/nitro
           submodules: 'recursive'
@@ -28,4 +30,9 @@ jobs:
           yarn build
       - run: |
           cd nitro
-          docker-compose up
+          ./test-node.bash --init --no-blockscout
+      - name: Cache nitro
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/nitro
