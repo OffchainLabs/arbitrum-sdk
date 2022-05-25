@@ -26,12 +26,23 @@ import {
   L2ToL1Message,
   L2ToL1MessageStatus,
 } from '../src/lib/message/L2ToL1Message'
-import { testSetup } from '../scripts/testSetup'
+import { config, testSetup } from '../scripts/testSetup'
+import { ArbitrumProvider } from '../src/lib/utils/arbProvider'
+import { InfuraProvider, JsonRpcProvider } from '@ethersproject/providers'
 dotenv.config()
 
 describe('Ether', async () => {
-  beforeEach('skipIfMainnet', async function () {
-    await skipIfMainnet(this)
+  // beforeEach('skipIfMainnet', async function () {
+  //   await skipIfMainnet(this)
+  // })
+
+  it.only("testy", async () => {
+    // const { l2Signer } = await testSetup()
+
+    const j= new JsonRpcProvider(config.arbUrl)
+    const prov = new ArbitrumProvider(j)
+    const q = await prov.getBlock("latest")
+    console.log(q)
   })
 
   it('transfers ether on l2', async () => {
