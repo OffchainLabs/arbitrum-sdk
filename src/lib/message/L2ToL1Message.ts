@@ -235,7 +235,9 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   ) {
     const parsedLog = this.parseNodeCreatedAssertion(log)
     const arbitrumProvider = new ArbitrumProvider(l2Provider)
-    const l2Block = await arbitrumProvider.getBlock(parsedLog.afterState.blockHash)
+    const l2Block = await arbitrumProvider.getBlock(
+      parsedLog.afterState.blockHash
+    )
     if (!l2Block) {
       throw new ArbSdkError(
         `Block not found. ${parsedLog.afterState.blockHash}`

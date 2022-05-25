@@ -1,10 +1,4 @@
-import {
-  JsonRpcProvider,
-  Formatter,
-  BaseProvider,
-  BlockTag,
-  Web3Provider,
-} from '@ethersproject/providers'
+import { JsonRpcProvider, Formatter, BlockTag } from '@ethersproject/providers'
 import {
   ArbBlock,
   ArbBlockWithTransactions,
