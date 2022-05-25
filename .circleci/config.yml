@@ -61,7 +61,7 @@ jobs:
           working_directory: /home/user/project/packages
       - run:
           name: Add sudo
-          command: apk add --no-cache sudo
+          command: apt-get install sudo
       - run:
           name: Install Docker Compose
           environment:
