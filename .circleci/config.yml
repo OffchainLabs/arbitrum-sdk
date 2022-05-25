@@ -59,30 +59,6 @@ jobs:
           name: Upload Coverage to Codecov
           command: codecovbash
           working_directory: /home/user/project/packages
-      - run:
-          name: Add sudo
-          command: apt-get install sudo
-      - run:
-          name: Install Docker Compose
-          environment:
-            COMPOSE_VERSION: '1.29.2'
-          command: |
-            curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o ~/docker-compose
-            chmod +x ~/docker-compose
-            sudo mv ~/docker-compose /usr/local/bin/docker-compose
-      - setup_remote_docker
-      - run:
-          name: Start all services declared in docker-compose.yml
-          command: docker-compose up -d
-      - run:
-          name: Copy .env
-          command: cp .env-sample .env
-      - run:
-          name: Gen network
-          command: yarn gen:network
-      - run:
-          name: Test
-          command: yarn test:integration
 
       - store_test_results:
           path: *test-path
