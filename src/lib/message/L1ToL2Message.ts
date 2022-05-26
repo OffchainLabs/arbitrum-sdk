@@ -480,6 +480,18 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   }
 
   /**
+   * The minimium lifetime of a retryable tx
+   * @returns
+   */
+  public static async getLifetime(l2Provider: Provider): Promise<BigNumber> {
+    const arbRetryableTx = ArbRetryableTx__factory.connect(
+      ARB_RETRYABLE_TX_ADDRESS,
+      l2Provider
+    )
+    return await arbRetryableTx.getLifetime()
+  }
+
+  /**
    * How long until this message expires
    * @returns
    */
@@ -528,7 +540,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
 
   /**
    * Manually redeem the retryable ticket.
-   * Throws if message status is not L1ToL2MessageStatus.NOT_YET_REDEEMED
+   * Throws if message status is not L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
    */
   public async redeem(overrides?: Overrides): Promise<RedeemTransaction> {
     const status = await this.status()
@@ -548,14 +560,14 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
       )
     } else {
       throw new ArbSdkError(
-        `Cannot redeem. Message status: ${status} must be: ${L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2}.`
+        `Cannot redeem as retryable does not exist. Message status: ${status} must be: ${L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2}.`
       )
     }
   }
 
   /**
    * Cancel the retryable ticket.
-   * Throws if message status is not L1ToL2MessageStatus.NOT_YET_REDEEMED
+   * Throws if message status is not L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
    */
   public async cancel(overrides?: Overrides): Promise<ContractTransaction> {
     const status = await this.status()
@@ -567,7 +579,26 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
       return await arbRetryableTx.cancel(this.retryableCreationId, overrides)
     } else {
       throw new ArbSdkError(
-        `Cannot cancel. Message status: ${status} must be: ${L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2}.`
+        `Cannot cancel as retryable does not exist. Message status: ${status} must be: ${L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2}.`
+      )
+    }
+  }
+
+  /**
+   * Increase the timeout of a retryable ticket.
+   * Throws if message status is not L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+   */
+  public async keepAlive(overrides?: Overrides): Promise<ContractTransaction> {
+    const status = await this.status()
+    if (status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
+      const arbRetryableTx = ArbRetryableTx__factory.connect(
+        ARB_RETRYABLE_TX_ADDRESS,
+        this.l2Signer
+      )
+      return await arbRetryableTx.keepalive(this.retryableCreationId, overrides)
+    } else {
+      throw new ArbSdkError(
+        `Cannot keep alive as retryable does not exist. Message status: ${status} must be: ${L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2}.`
       )
     }
   }
