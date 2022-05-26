@@ -388,7 +388,7 @@ export class Erc20Bridger extends AssetBridger<
     }
   }
 
-  private async getDepositParams(params: TokenDepositParams): Promise<{
+  public async getDepositParams(params: TokenDepositParams): Promise<{
     erc20L1Address: string
     amount: BigNumber
     depositCallValue: BigNumber
@@ -397,6 +397,12 @@ export class Erc20Bridger extends AssetBridger<
     l2GasLimit: BigNumber
     l2MaxFeePerGas: BigNumber
     destinationAddress: string
+    retryableCallData: string
+    retryableSender: string
+    retryableDestination: string
+    retryableExcessFeeRefundAddress: string
+    retryableCallValueRefundAddress: string
+    retryableValue: BigNumber
   }> {
     const { erc20L1Address, amount, l2Provider, l1Signer, destinationAddress } =
       params
@@ -439,19 +445,24 @@ export class Erc20Bridger extends AssetBridger<
     if (l1GatewayAddress === this.l2Network.tokenBridge.l1CustomGateway) {
       if (!tokenGasOverrides) tokenGasOverrides = {}
       if (!tokenGasOverrides.gasLimit) tokenGasOverrides.gasLimit = {}
-      tokenGasOverrides.gasLimit.min = Erc20Bridger.MIN_CUSTOM_DEPOSIT_GAS_LIMIT
+      if (!tokenGasOverrides.gasLimit.min) {
+        tokenGasOverrides.gasLimit.min =
+          Erc20Bridger.MIN_CUSTOM_DEPOSIT_GAS_LIMIT
+      }
     }
 
     // 2. get the gas estimates
     const baseFee = await getBaseFee(l1Signer.provider)
+    const excessFeeRefundAddress = sender
+    const callValueRefundAddress = sender
     const estimates = await gasEstimator.estimateAll(
       l1GatewayAddress,
       l2Dest,
       depositCalldata,
       estimateGasCallValue,
       baseFee,
-      sender,
-      sender,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
       l1Signer.provider,
       tokenGasOverrides
     )
@@ -470,6 +481,12 @@ export class Erc20Bridger extends AssetBridger<
       data: data,
       amount,
       erc20L1Address,
+      retryableCallData: depositCalldata,
+      retryableSender: l1GatewayAddress,
+      retryableDestination: l2Dest,
+      retryableExcessFeeRefundAddress: excessFeeRefundAddress,
+      retryableCallValueRefundAddress: callValueRefundAddress,
+      retryableValue: estimateGasCallValue,
     }
   }
 
