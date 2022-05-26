@@ -17,6 +17,7 @@
 'use strict'
 
 import { Signer } from '@ethersproject/abstract-signer'
+import { Provider } from '@ethersproject/abstract-provider'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
 import { BigNumber, ethers } from 'ethers'
 
@@ -36,7 +37,9 @@ import {
 } from '../message/L2Transaction'
 import {
   isL1ToL2TransactionRequest,
+  isL2ToL1TransactionRequest,
   L1ToL2TransactionRequest,
+  L2ToL1TransactionRequest,
 } from '../dataEntities/transactionRequest'
 
 export interface EthWithdrawParams {
@@ -83,12 +86,17 @@ export type L1ToL2TxReqAndSigner = L1ToL2TransactionRequest & {
   overrides?: Overrides
 }
 
+export type L2ToL1TxReqAndSigner = L2ToL1TransactionRequest & {
+  l2Signer: Signer
+  overrides?: Overrides
+}
+
 /**
  * Bridger for moving ETH back and forth betwen L1 to L2
  */
 export class EthBridger extends AssetBridger<
-  EthDepositParams,
-  EthWithdrawParams
+  EthDepositParams | L1ToL2TxReqAndSigner,
+  EthWithdrawParams | L2ToL1TxReqAndSigner
 > {
   private async depositTxOrGas<T extends boolean>(
     params: EthDepositParams | L1ToL2TxReqAndSigner,
@@ -121,11 +129,11 @@ export class EthBridger extends AssetBridger<
     const functionData = (
       inboxInterface as unknown as {
         encodeFunctionData(
-          functionFragment: 'depositEth',
+          functionFragment: 'depositEth()',
           values?: undefined
         ): string
       }
-    ).encodeFunctionData('depositEth')
+    ).encodeFunctionData('depositEth()')
 
     return {
       l2GasLimit: BigNumber.from(0),
@@ -163,14 +171,9 @@ export class EthBridger extends AssetBridger<
     return L1TransactionReceipt.monkeyPatchEthDepositWait(tx)
   }
 
-  private async withdrawTxOrGas<T extends boolean>(
-    params: EthWithdrawParams,
-    estimate: T
-  ): Promise<T extends true ? BigNumber : ethers.ContractTransaction>
-  private async withdrawTxOrGas<T extends boolean>(
-    params: EthWithdrawParams,
-    estimate: T
-  ): Promise<BigNumber | ethers.ContractTransaction> {
+  public async getWithdrawalRequest(
+    params: EthWithdrawParams
+  ): Promise<L2ToL1TransactionRequest> {
     if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
       throw new MissingProviderArbSdkError('l2Signer')
     }
@@ -178,15 +181,47 @@ export class EthBridger extends AssetBridger<
 
     const addr =
       params.destinationAddress || (await params.l2Signer.getAddress())
-    const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, params.l2Signer)
 
-    return (estimate ? arbSys.estimateGas : arbSys.functions).withdrawEth(
-      addr,
-      {
+    const iArbSys = ArbSys__factory.createInterface()
+    const functionData = iArbSys.encodeFunctionData('withdrawEth', [addr])
+
+    return {
+      txRequest: {
+        to: ARB_SYS_ADDRESS,
+        data: functionData,
         value: params.amount,
-        ...(params.overrides || {}),
-      }
-    )
+      },
+      // we make this async and expect a provider since we
+      // in the future we want to do proper estimation here
+      /* eslint-disable @typescript-eslint/no-unused-vars */
+      estimateL1GasLimit: async (l1Provider: Provider) => {
+        //  measured 126998 - add some padding
+        return BigNumber.from(130000)
+      },
+    }
+  }
+
+  private async withdrawTxOrGas<T extends boolean>(
+    params: EthWithdrawParams | L2ToL1TxReqAndSigner,
+    estimate: T
+  ): Promise<T extends true ? BigNumber : ethers.ContractTransaction>
+  private async withdrawTxOrGas<T extends boolean>(
+    params: EthWithdrawParams | L2ToL1TxReqAndSigner,
+    estimate: T
+  ): Promise<BigNumber | ethers.ContractTransaction> {
+    if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
+      throw new MissingProviderArbSdkError('l2Signer')
+    }
+    await this.checkL2Network(params.l2Signer)
+
+    const request = isL2ToL1TransactionRequest(params)
+      ? params
+      : await this.getWithdrawalRequest(params)
+
+    return await params.l2Signer[estimate ? 'estimateGas' : 'sendTransaction']({
+      ...request.txRequest,
+      ...params.overrides,
+    })
   }
 
   /**
@@ -195,7 +230,7 @@ export class EthBridger extends AssetBridger<
    * @returns
    */
   public async withdrawEstimateGas(
-    params: EthWithdrawParams
+    params: EthWithdrawParams | L2ToL1TxReqAndSigner
   ): Promise<BigNumber> {
     return await this.withdrawTxOrGas(params, true)
   }
@@ -206,7 +241,7 @@ export class EthBridger extends AssetBridger<
    * @returns
    */
   public async withdraw(
-    params: EthWithdrawParams
+    params: EthWithdrawParams | L2ToL1TxReqAndSigner
   ): Promise<L2ContractTransaction> {
     const tx = await this.withdrawTxOrGas(params, false)
     return L2TransactionReceipt.monkeyPatchWait(tx)

@@ -48,6 +48,7 @@ import {
 } from '../dataEntities/message'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
 import { MessageDeliveredEvent } from '../abi/Bridge'
+import { Address } from '../dataEntities/address'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -168,6 +169,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
         bridgeMessageEvent: bm,
       })
     }
+
     return messages
   }
 
@@ -243,7 +245,9 @@ export class L1TransactionReceipt implements TransactionReceipt {
           l2Provider,
           chainID,
           m.inboxMessageEvent.messageNum,
-          m.bridgeMessageEvent.sender,
+          // since we undoalias the address in the solidity before emitting
+          // the event we need to redo here to recover the correct receiver
+          new Address(m.bridgeMessageEvent.sender).applyAlias().value,
           value
         )
       })

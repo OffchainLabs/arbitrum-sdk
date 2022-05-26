@@ -96,28 +96,15 @@ describe('Ether', async () => {
 
     const waitResult = await rec.waitForL2(l2Signer.provider!)
 
-    const l1ToL2Messages = await rec.getL1ToL2Messages(l2Signer)
+    const l1ToL2Messages = await rec.getEthDepositMessages(l2Signer.provider!)
     expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
     const l1ToL2Message = l1ToL2Messages[0]
 
     const walletAddress = await l1Signer.getAddress()
-
-    for (const addr of [
-      l1ToL2Message.messageData.destAddress,
-      l1ToL2Message.messageData.excessFeeRefundAddress,
-      l1ToL2Message.messageData.callValueRefundAddress,
-    ]) {
-      expect(addr).to.eq(walletAddress, 'message inputs value error')
-    }
-
-    for (const value of [
-      l1ToL2Message.messageData.l2CallValue,
-      l1ToL2Message.messageData.gasLimit,
-      l1ToL2Message.messageData.maxFeePerGas,
-    ]) {
-      expect(value.isZero(), 'message inputs value error').to.be.true
-    }
-    expect(l1ToL2Message.messageData.data, 'empty call data').to.eq('0x')
+    expect(l1ToL2Message.to).to.eq(walletAddress, 'message inputs value error')
+    expect(l1ToL2Message.value.toString(), 'message inputs value error').to.eq(
+      ethToDeposit.toString()
+    )
 
     prettyLog('l2TxHash: ' + waitResult.message.l2DepositTxHash)
     prettyLog('l2 transaction found!')
@@ -126,7 +113,9 @@ describe('Ether', async () => {
     expect(waitResult.l2TxReceipt).to.not.be.null
 
     const testWalletL2EthBalance = await l2Signer.getBalance()
-    expect(testWalletL2EthBalance.gt(ethToDeposit), 'final balance').to.be.true
+    expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(
+      ethToDeposit.toString()
+    )
   })
 
   it('withdraw Ether transaction succeeds', async () => {
@@ -135,8 +124,14 @@ describe('Ether', async () => {
     await fundL1(l1Signer)
 
     const ethToWithdraw = parseEther('0.00000002')
-    // const initialBalance = await l2Signer.getBalance()
     const randomAddress = Wallet.createRandom().address
+    const request = await ethBridger.getWithdrawalRequest({
+      amount: ethToWithdraw,
+      l2Signer: l2Signer,
+      destinationAddress: randomAddress,
+    })
+    const l1GasEstimate = await request.estimateL1GasLimit(l1Signer.provider!)
+
     const withdrawEthRes = await ethBridger.withdraw({
       amount: ethToWithdraw,
       l2Signer: l2Signer,
@@ -191,7 +186,13 @@ describe('Ether', async () => {
     ).to.eq(L2ToL1MessageStatus.CONFIRMED)
 
     const execTx = await withdrawMessage.execute(l2Signer.provider!)
-    await execTx.wait()
+    const execRec = await execTx.wait()
+
+    expect(
+      execRec.gasUsed.toNumber(),
+      'Gas used greater than estimate'
+    ).to.be.lessThan(l1GasEstimate.toNumber())
+
     expect(
       await withdrawMessage.status(l2Signer.provider!),
       'executed status'

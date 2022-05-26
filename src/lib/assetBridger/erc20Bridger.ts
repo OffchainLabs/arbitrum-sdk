@@ -17,11 +17,15 @@
 'use strict'
 
 import { Signer } from '@ethersproject/abstract-signer'
-import { Provider, BlockTag } from '@ethersproject/abstract-provider'
+import {
+  Provider,
+  BlockTag,
+  TransactionRequest,
+} from '@ethersproject/abstract-provider'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
 import { Zero, MaxUint256 } from '@ethersproject/constants'
 import { ErrorCode, Logger } from '@ethersproject/logger'
-import { BigNumber, ethers } from 'ethers'
+import { BigNumber, BigNumberish, ethers, BytesLike } from 'ethers'
 
 import { L1GatewayRouter__factory } from '../abi/factories/L1GatewayRouter__factory'
 import { L2GatewayRouter__factory } from '../abi/factories/L2GatewayRouter__factory'
@@ -61,7 +65,10 @@ import {
 import { getBaseFee } from '../utils/lib'
 import {
   isL1ToL2TransactionRequest,
+  isL2ToL1TransactionRequest,
   L1ToL2TransactionRequest,
+  L2ToL1TransactionRequest,
+  NonOptional,
 } from '../dataEntities/transactionRequest'
 import { defaultAbiCoder } from 'ethers/lib/utils'
 
@@ -114,7 +121,7 @@ export interface Erc20DepositParams extends EthDepositParams {
   overrides?: Overrides
 }
 
-export interface TokenWithdrawParams extends EthWithdrawParams {
+export interface Erc20WithdrawParams extends EthWithdrawParams {
   /**
    * L1 address of the token ERC20 contract
    */
@@ -127,12 +134,17 @@ export type L1ToL2TxReqAndSignerProvider = L1ToL2TransactionRequest & {
   overrides?: Overrides
 }
 
+export type L2ToL1TxReqAndSigner = L2ToL1TransactionRequest & {
+  l2Signer: Signer
+  overrides?: Overrides
+}
+
 /**
  * Bridger for moving ERC20 tokens back and forth betwen L1 to L2
  */
 export class Erc20Bridger extends AssetBridger<
-  Erc20DepositParams,
-  TokenWithdrawParams
+  Erc20DepositParams | L1ToL2TxReqAndSignerProvider,
+  Erc20WithdrawParams | L2ToL1TransactionRequest
 > {
   public static MAX_APPROVAL = MaxUint256
   public static MIN_CUSTOM_DEPOSIT_GAS_LIMIT = BigNumber.from(275000)
@@ -181,13 +193,14 @@ export class Erc20Bridger extends AssetBridger<
   }
 
   /**
-   * Approve tokens for deposit to the bridge. The tokens will be approved for the relevant gateway.
+   * Get a tx request to approve tokens for deposit to the bridge.
+   * The tokens will be approved for the relevant gateway.
    * @param params
    * @returns
    */
-  public async approveToken(
+  public async getApproveTokenRequest(
     params: TokenApproveParams
-  ): Promise<ethers.ContractTransaction> {
+  ): Promise<NonOptional<TransactionRequest, 'to' | 'data' | 'value'>> {
     if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
       throw new MissingProviderArbSdkError('l1Signer')
     }
@@ -198,15 +211,57 @@ export class Erc20Bridger extends AssetBridger<
       params.erc20L1Address,
       params.l1Signer.provider
     )
-    const contract = await ERC20__factory.connect(
-      params.erc20L1Address,
-      params.l1Signer
-    )
-    return contract.functions.approve(
+
+    const iErc20Interface = ERC20__factory.createInterface()
+    const data = iErc20Interface.encodeFunctionData('approve', [
       gatewayAddress,
       params.amount || Erc20Bridger.MAX_APPROVAL,
-      params.overrides || {}
-    )
+    ])
+
+    return {
+      to: params.erc20L1Address,
+      data,
+      value: BigNumber.from(0),
+    }
+  }
+
+  private isApproveParams(
+    params:
+      | TokenApproveParams
+      | {
+          txRequest: NonOptional<TransactionRequest, 'to' | 'data' | 'value'>
+          l1Signer: Signer
+        }
+  ): params is TokenApproveParams {
+    return (params as TokenApproveParams).erc20L1Address != undefined
+  }
+
+  /**
+   * Approve tokens for deposit to the bridge. The tokens will be approved for the relevant gateway.
+   * @param params
+   * @returns
+   */
+  public async approveToken(
+    params:
+      | TokenApproveParams
+      | {
+          txRequest: NonOptional<TransactionRequest, 'to' | 'data' | 'value'>
+          l1Signer: Signer
+          overrides?: Overrides
+        }
+  ): Promise<ethers.ContractTransaction> {
+    if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
+      throw new MissingProviderArbSdkError('l1Signer')
+    }
+    await this.checkL1Network(params.l1Signer)
+
+    const approveRequest = this.isApproveParams(params)
+      ? await this.getApproveTokenRequest(params)
+      : params.txRequest
+    return await params.l1Signer.sendTransaction({
+      ...approveRequest,
+      ...params.overrides,
+    })
   }
 
   /**
@@ -537,14 +592,14 @@ export class Erc20Bridger extends AssetBridger<
     return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
-  private async withdrawTxOrGas<T extends boolean>(
-    params: TokenWithdrawParams,
-    estimate: T
-  ): Promise<T extends true ? BigNumber : ethers.ContractTransaction>
-  private async withdrawTxOrGas<T extends boolean>(
-    params: TokenWithdrawParams,
-    estimate: T
-  ): Promise<BigNumber | ethers.ContractTransaction> {
+  /**
+   * Get the arguments for calling the token withdrawal function
+   * @param params
+   * @returns
+   */
+  public async getWithdrawalParams(
+    params: Erc20WithdrawParams
+  ): Promise<L2ToL1TransactionRequest> {
     if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
       throw new MissingProviderArbSdkError('l2Signer')
     }
@@ -552,15 +607,60 @@ export class Erc20Bridger extends AssetBridger<
 
     const to = params.destinationAddress || (await params.l2Signer.getAddress())
 
-    const l2GatewayRouter = L2GatewayRouter__factory.connect(
-      this.l2Network.tokenBridge.l2GatewayRouter,
-      params.l2Signer
-    )
+    const routerInterface = L2GatewayRouter__factory.createInterface()
+    const functionData =
+      // we need to do this since typechain doesnt seem to correctly create
+      // encodeFunctionData for functions with overrides
+      (
+        routerInterface as unknown as {
+          encodeFunctionData(
+            functionFragment: 'outboundTransfer(address,address,uint256,bytes)',
+            values: [string, string, BigNumberish, BytesLike]
+          ): string
+        }
+      ).encodeFunctionData('outboundTransfer(address,address,uint256,bytes)', [
+        params.erc20l1Address,
+        to,
+        params.amount,
+        '0x',
+      ])
 
-    return (estimate ? l2GatewayRouter.estimateGas : l2GatewayRouter.functions)[
-      'outboundTransfer(address,address,uint256,bytes)'
-    ](params.erc20l1Address, to, params.amount, '0x', {
-      ...(params.overrides || {}),
+    return {
+      txRequest: {
+        data: functionData,
+        to: this.l2Network.tokenBridge.l2GatewayRouter,
+        value: BigNumber.from(0),
+      },
+      // we make this async and expect a provider since we
+      // in the future we want to do proper estimation here
+      /* eslint-disable @typescript-eslint/no-unused-vars */
+      estimateL1GasLimit: async (l1Provider: Provider) => {
+        // measured 157421 - add some padding
+        return BigNumber.from(160000)
+      },
+    }
+  }
+
+  private async withdrawTxOrGas<T extends boolean>(
+    params: Erc20WithdrawParams | L2ToL1TxReqAndSigner,
+    estimate: T
+  ): Promise<T extends true ? BigNumber : ethers.ContractTransaction>
+  private async withdrawTxOrGas<T extends boolean>(
+    params: Erc20WithdrawParams | L2ToL1TxReqAndSigner,
+    estimate: T
+  ): Promise<BigNumber | ethers.ContractTransaction> {
+    if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
+      throw new MissingProviderArbSdkError('l2Signer')
+    }
+    await this.checkL2Network(params.l2Signer)
+
+    const withdrawalRequest = isL2ToL1TransactionRequest(params)
+      ? params
+      : await this.getWithdrawalParams(params)
+
+    return await params.l2Signer[estimate ? 'estimateGas' : 'sendTransaction']({
+      ...withdrawalRequest.txRequest,
+      ...params.overrides,
     })
   }
 
@@ -570,18 +670,17 @@ export class Erc20Bridger extends AssetBridger<
    * @returns
    */
   public async withdrawEstimateGas(
-    params: TokenWithdrawParams
+    params: Erc20WithdrawParams | L2ToL1TxReqAndSigner
   ): Promise<BigNumber> {
     return this.withdrawTxOrGas(params, true)
   }
-
   /**
    * Withdraw tokens from L2 to L1
    * @param params
    * @returns
    */
   public async withdraw(
-    params: TokenWithdrawParams
+    params: Erc20WithdrawParams | L2ToL1TxReqAndSigner
   ): Promise<L2ContractTransaction> {
     const tx = await this.withdrawTxOrGas(params, false)
     return L2TransactionReceipt.monkeyPatchWait(tx)
