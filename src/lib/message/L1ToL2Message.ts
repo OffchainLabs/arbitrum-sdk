@@ -323,7 +323,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
         // We can skip by doing fromBlock.number + 1 on the first go
         // since creationBlock because it is covered by the `getAutoRedeem` shortcut
-        queriedRange.push({ from: fromBlock.number, to: toBlockNumber })
+        queriedRange.push({ from: fromBlock.number + 1, to: toBlockNumber })
         const redeemEvents = await eventFetcher.getEvents(
           ARB_RETRYABLE_TX_ADDRESS,
           ArbRetryableTx__factory,
