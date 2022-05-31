@@ -41,7 +41,7 @@ import {
 import { wait } from '../utils/lib'
 import { getL2Network } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
-import { getArbBlockByHash } from '../utils/arbProvider'
+import { ArbitrumProvider } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
 import { JsonRpcProvider } from '@ethersproject/providers'
 
@@ -234,8 +234,8 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     log: FetchedEvent<NodeCreatedEvent>
   ) {
     const parsedLog = this.parseNodeCreatedAssertion(log)
-    const l2Block = await getArbBlockByHash(
-      l2Provider,
+    const arbitrumProvider = new ArbitrumProvider(l2Provider)
+    const l2Block = await arbitrumProvider.getBlock(
       parsedLog.afterState.blockHash
     )
     if (!l2Block) {

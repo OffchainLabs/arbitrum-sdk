@@ -37,7 +37,7 @@ import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
 import { L2ToL1TxEvent } from '../abi/ArbSys'
 import { ArbSdkError } from '../dataEntities/errors'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
-import { getArbTransactionReceipt } from '../utils/arbProvider'
+import { ArbitrumProvider } from '../utils/arbProvider'
 
 export interface L2ContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<L2TransactionReceipt>
@@ -154,7 +154,8 @@ export class L2TransactionReceipt implements TransactionReceipt {
       NODE_INTERFACE_ADDRESS,
       l2Provider
     )
-    const rec = await getArbTransactionReceipt(l2Provider, this.transactionHash)
+    const arbProvider = new ArbitrumProvider(l2Provider)
+    const rec = await arbProvider.getTransactionReceipt(this.transactionHash)
     if (rec == null)
       throw new ArbSdkError(
         'No receipt receipt available for current transaction'
