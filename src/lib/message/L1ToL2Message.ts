@@ -17,7 +17,7 @@
 'use strict'
 
 import { TransactionReceipt } from '@ethersproject/providers'
-import { Provider } from '@ethersproject/abstract-provider'
+import { Provider, Block } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
@@ -30,13 +30,14 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
-import { ethers, Overrides } from 'ethers'
+import { ethers, Overrides, Transaction } from 'ethers'
 import { Address } from '../dataEntities/address'
 import { L2TransactionReceipt, RedeemTransaction } from './L2Transaction'
 import { getL2Network } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
 import { getTransactionReceipt } from '../utils/lib'
+import { EventFetcher } from '../utils/eventFetcher'
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -291,6 +292,104 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     return null
   }
 
+  private async getNextRange(
+    prevRange: { fromBlock: Block; toBlock: Block },
+    targetSeconds: number
+  ) {
+    const processedSeconds =
+      prevRange.toBlock.timestamp - prevRange.fromBlock.timestamp
+    if (processedSeconds <= 0) {
+      throw new ArbSdkError(
+        `Unexpected processing start and end block: ${prevRange.toBlock.number} ${prevRange.fromBlock.number} ${prevRange.toBlock.timestamp} ${prevRange.fromBlock.timestamp}`
+      )
+    }
+
+    // find the increment that is closest to targetSeconds
+    const prevIncrement = prevRange.toBlock.number - prevRange.fromBlock.number
+    const increment = Math.ceil(
+      prevIncrement * Math.ceil(targetSeconds / processedSeconds)
+    )
+    const currentBlock = (await this.l2Provider.getBlockNumber()) - 3
+    const fromBlock = await this.l2Provider.getBlock(
+      Math.min(prevRange.toBlock.number + 1, currentBlock)
+    )
+    return {
+      fromBlock: fromBlock,
+      toBlock: await this.l2Provider.getBlock(
+        Math.min(fromBlock.number + increment, currentBlock)
+      ),
+    }
+  }
+
+  private async findRedeemInWindow(startBlock: Block, endTime: number) {
+    let maxTime = endTime
+    const eventFetcher = new EventFetcher(this.l2Provider)
+    const targetSeconds = 86400
+
+    const currentBlock = (await this.l2Provider.getBlockNumber()) - 3
+    let range = {
+      fromBlock:
+        startBlock.number < currentBlock
+          ? startBlock
+          : await this.l2Provider.getBlock(currentBlock),
+      toBlock: await this.l2Provider.getBlock(
+        Math.min(startBlock.number + 1000, currentBlock)
+      ),
+    }
+    while (
+      range.fromBlock.timestamp < maxTime &&
+      range.fromBlock.number !== range.toBlock.number
+    ) {
+      const redeemEvents = await eventFetcher.getEvents(
+        ARB_RETRYABLE_TX_ADDRESS,
+        ArbRetryableTx__factory,
+        contract =>
+          contract.filters[
+            'RedeemScheduled(bytes32,bytes32,uint64,uint64,address)'
+          ](this.retryableCreationId),
+        {
+          fromBlock: range.fromBlock.number,
+          toBlock: range.toBlock.number,
+        }
+      )
+
+      const successfulRedeem = (
+        await Promise.all(
+          redeemEvents.map(e =>
+            this.l2Provider.getTransactionReceipt(e.event.retryTxHash)
+          )
+        )
+      ).filter(r => r.status === 1)
+      if (successfulRedeem.length > 1)
+        throw new ArbSdkError(
+          `Unexpected number of successful redeems. Expected only one redeem for ticket ${this.retryableCreationId}, but found ${successfulRedeem.length}.`
+        )
+
+      if (successfulRedeem.length == 1) return successfulRedeem[0]
+
+      // we didnt find any successful redeems in this window
+      // whilst we're here lets also check for any lifetime extended events
+      const lifetimeExtendedEvents = await eventFetcher.getEvents(
+        ARB_RETRYABLE_TX_ADDRESS,
+        ArbRetryableTx__factory,
+        contract => contract.filters.LifetimeExtended(this.retryableCreationId),
+        {
+          fromBlock: range.fromBlock.number,
+          toBlock: range.toBlock.number,
+        }
+      )
+      if (lifetimeExtendedEvents.length > 0) {
+        const latestLifeTimeExtendedFound =
+          lifetimeExtendedEvents[lifetimeExtendedEvents.length - 1]
+        maxTime = latestLifeTimeExtendedFound.event.newTimeout.toNumber()
+      }
+
+      range = await this.getNextRange(range, targetSeconds)
+    }
+
+    return null
+  }
+
   /**
    * Receipt for the successful l2 transaction created by this message.
    * @returns TransactionReceipt of the first successful redeem if exists, otherwise null
@@ -307,58 +406,13 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     // to do this we need to filter through the whole lifetime of the ticket looking
     // for relevant redeem scheduled events
     if (creationReceipt) {
-      const iFace = ArbRetryableTx__factory.createInterface()
-      const redeemTopic = iFace.getEventTopic('RedeemScheduled')
-
-      let increment = 1000
-      let fromBlock = await this.l2Provider.getBlock(
-        creationReceipt.blockNumber
-      )
       const creationBlock = await this.l2Provider.getBlock(
         creationReceipt.blockNumber
       )
-      const maxBlock = await this.l2Provider.getBlockNumber()
-      while (fromBlock.number < maxBlock) {
-        const toBlockNumber = Math.min(fromBlock.number + increment, maxBlock)
-
-        // We can skip by doing fromBlock.number + 1 on the first go
-        // since creationBlock because it is covered by the `getAutoRedeem` shortcut
-        const redeemEventLogs = await this.l2Provider.getLogs({
-          fromBlock: fromBlock.number + 1,
-          toBlock: toBlockNumber,
-          topics: [redeemTopic, this.retryableCreationId],
-        })
-        const redeemEvents = redeemEventLogs.map(
-          r => iFace.parseLog(r).args as RedeemScheduledEvent['args']
-        )
-        const successfulRedeem = (
-          await Promise.all(
-            redeemEvents.map(e =>
-              this.l2Provider.getTransactionReceipt(e.retryTxHash)
-            )
-          )
-        ).filter(r => r.status === 1)
-        if (successfulRedeem.length > 1)
-          throw new ArbSdkError(
-            `Unexpected number of successful redeems. Expected only one redeem for ticket ${this.retryableCreationId}, but found ${successfulRedeem.length}.`
-          )
-        if (successfulRedeem.length == 1) return successfulRedeem[0]
-
-        const toBlock = await this.l2Provider.getBlock(toBlockNumber)
-        // dont bother looking past the retryable lifetime of the ticket for now
-        if (
-          toBlock.timestamp - creationBlock.timestamp >
-          l2Network.retryableLifetimeSeconds
-        )
-          break
-        const processedSeconds = toBlock.timestamp - fromBlock.timestamp
-        if (processedSeconds != 0) {
-          // find the increment that cover ~ 1 day
-          increment *= Math.ceil(86400 / processedSeconds)
-        }
-
-        fromBlock = toBlock
-      }
+      return await this.findRedeemInWindow(
+        creationBlock,
+        creationBlock.timestamp + l2Network.retryableLifetimeSeconds
+      )
     }
     return null
   }
@@ -540,6 +594,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
 
       const redeemTx = await arbRetryableTx.redeem(this.retryableCreationId, {
         ...overrides,
+        gasLimit: 1000000,
       })
 
       return L2TransactionReceipt.toRedeemTransaction(
