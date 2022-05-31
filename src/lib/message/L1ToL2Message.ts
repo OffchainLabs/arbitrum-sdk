@@ -372,6 +372,8 @@ export class L1ToL2MessageReader extends L1ToL2Message {
             }
           }
           if (toBlock.timestamp > timeout) break
+          // It is possible to have another keepalive in the last range as it might include block after previous timeout
+          while (queriedRange.length > 1) queriedRange.shift()
         }
         const processedSeconds = toBlock.timestamp - fromBlock.timestamp
         if (processedSeconds != 0) {
