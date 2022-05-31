@@ -35,7 +35,10 @@ import { Address } from '../dataEntities/address'
 import { L2TransactionReceipt, RedeemTransaction } from './L2Transaction'
 import { getL2Network } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
-import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
+import {
+  LifetimeExtendedEvent,
+  RedeemScheduledEvent,
+} from '../abi/ArbRetryableTx'
 import { getTransactionReceipt } from '../utils/lib'
 
 export enum L2TxnType {
@@ -317,6 +320,8 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       const creationBlock = await this.l2Provider.getBlock(
         creationReceipt.blockNumber
       )
+      let timeout = creationBlock.timestamp + l2Network.retryableLifetimeSeconds
+      const queriedRange: { from: number; to: number }[] = []
       const maxBlock = await this.l2Provider.getBlockNumber()
       while (fromBlock.number < maxBlock) {
         const toBlockNumber = Math.min(fromBlock.number + increment, maxBlock)
@@ -328,6 +333,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
           toBlock: toBlockNumber,
           topics: [redeemTopic, this.retryableCreationId],
         })
+        queriedRange.push({ from: fromBlock.number, to: toBlockNumber })
         const redeemEvents = redeemEventLogs.map(
           r => iFace.parseLog(r).args as RedeemScheduledEvent['args']
         )
@@ -345,12 +351,29 @@ export class L1ToL2MessageReader extends L1ToL2Message {
         if (successfulRedeem.length == 1) return successfulRedeem[0]
 
         const toBlock = await this.l2Provider.getBlock(toBlockNumber)
-        // dont bother looking past the retryable lifetime of the ticket for now
-        if (
-          toBlock.timestamp - creationBlock.timestamp >
-          l2Network.retryableLifetimeSeconds
-        )
-          break
+        if (toBlock.timestamp > timeout) {
+          // Check for LifetimeExtended event
+          const keepaliveTopic = iFace.getEventTopic('LifetimeExtended')
+          while (queriedRange.length > 0) {
+            const blockRange = queriedRange.shift()
+            const keepaliveEventLogs = await this.l2Provider.getLogs({
+              fromBlock: blockRange!.from,
+              toBlock: blockRange!.to,
+              topics: [keepaliveTopic, this.retryableCreationId],
+            })
+            if (keepaliveEventLogs.length > 0) {
+              const keepaliveEvents = keepaliveEventLogs.map(
+                r => iFace.parseLog(r).args as LifetimeExtendedEvent['args']
+              )
+              timeout = keepaliveEvents
+                .map(e => e.newTimeout.toNumber())
+                .sort()
+                .reverse()[0]
+              break
+            }
+          }
+          if (toBlock.timestamp > timeout) break
+        }
         const processedSeconds = toBlock.timestamp - fromBlock.timestamp
         if (processedSeconds != 0) {
           // find the increment that cover ~ 1 day
