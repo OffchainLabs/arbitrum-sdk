@@ -321,17 +321,18 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       while (fromBlock.number < maxBlock) {
         const toBlockNumber = Math.min(fromBlock.number + increment, maxBlock)
 
-        // We can skip by doing fromBlock.number + 1 on the first go
-        // since creationBlock because it is covered by the `getAutoRedeem` shortcut
-        queriedRange.push({ from: fromBlock.number + 1, to: toBlockNumber })
+        // using fromBlock.number would lead to 1 block overlap
+        // not fixing it here to keep the code simple
+        const blockRange = { from: fromBlock.number, to: toBlockNumber }
+        queriedRange.push(blockRange)
         const redeemEvents = await eventFetcher.getEvents(
           ARB_RETRYABLE_TX_ADDRESS,
           ArbRetryableTx__factory,
           contract =>
             contract.filters.RedeemScheduled(this.retryableCreationId),
           {
-            fromBlock: fromBlock.number + 1,
-            toBlock: toBlockNumber,
+            fromBlock: blockRange.from,
+            toBlock: blockRange.to,
           }
         )
         const successfulRedeem = (
