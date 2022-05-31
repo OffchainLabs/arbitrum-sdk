@@ -35,11 +35,8 @@ import { Address } from '../dataEntities/address'
 import { L2TransactionReceipt, RedeemTransaction } from './L2Transaction'
 import { getL2Network } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
-import {
-  LifetimeExtendedEvent,
-  RedeemScheduledEvent,
-} from '../abi/ArbRetryableTx'
 import { getTransactionReceipt } from '../utils/lib'
+import { EventFetcher } from '../utils/eventFetcher'
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -300,6 +297,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    */
   public async getSuccessfulRedeem(): Promise<TransactionReceipt | null> {
     const l2Network = await getL2Network(this.l2Provider)
+    const eventFetcher = new EventFetcher(this.l2Provider)
     const creationReceipt = await this.getRetryableCreationReceipt()
 
     // check the auto redeem, if that worked we dont need to do costly log queries
@@ -310,9 +308,6 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     // to do this we need to filter through the whole lifetime of the ticket looking
     // for relevant redeem scheduled events
     if (creationReceipt) {
-      const iFace = ArbRetryableTx__factory.createInterface()
-      const redeemTopic = iFace.getEventTopic('RedeemScheduled')
-
       let increment = 1000
       let fromBlock = await this.l2Provider.getBlock(
         creationReceipt.blockNumber
@@ -328,19 +323,21 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
         // We can skip by doing fromBlock.number + 1 on the first go
         // since creationBlock because it is covered by the `getAutoRedeem` shortcut
-        const redeemEventLogs = await this.l2Provider.getLogs({
-          fromBlock: fromBlock.number + 1,
-          toBlock: toBlockNumber,
-          topics: [redeemTopic, this.retryableCreationId],
-        })
         queriedRange.push({ from: fromBlock.number, to: toBlockNumber })
-        const redeemEvents = redeemEventLogs.map(
-          r => iFace.parseLog(r).args as RedeemScheduledEvent['args']
+        const redeemEvents = await eventFetcher.getEvents(
+          ARB_RETRYABLE_TX_ADDRESS,
+          ArbRetryableTx__factory,
+          contract =>
+            contract.filters.RedeemScheduled(this.retryableCreationId),
+          {
+            fromBlock: fromBlock.number + 1,
+            toBlock: toBlockNumber,
+          }
         )
         const successfulRedeem = (
           await Promise.all(
             redeemEvents.map(e =>
-              this.l2Provider.getTransactionReceipt(e.retryTxHash)
+              this.l2Provider.getTransactionReceipt(e.event.retryTxHash)
             )
           )
         ).filter(r => r.status === 1)
@@ -353,20 +350,21 @@ export class L1ToL2MessageReader extends L1ToL2Message {
         const toBlock = await this.l2Provider.getBlock(toBlockNumber)
         if (toBlock.timestamp > timeout) {
           // Check for LifetimeExtended event
-          const keepaliveTopic = iFace.getEventTopic('LifetimeExtended')
           while (queriedRange.length > 0) {
             const blockRange = queriedRange.shift()
-            const keepaliveEventLogs = await this.l2Provider.getLogs({
-              fromBlock: blockRange!.from,
-              toBlock: blockRange!.to,
-              topics: [keepaliveTopic, this.retryableCreationId],
-            })
-            if (keepaliveEventLogs.length > 0) {
-              const keepaliveEvents = keepaliveEventLogs.map(
-                r => iFace.parseLog(r).args as LifetimeExtendedEvent['args']
-              )
+            const keepaliveEvents = await eventFetcher.getEvents(
+              ARB_RETRYABLE_TX_ADDRESS,
+              ArbRetryableTx__factory,
+              contract =>
+                contract.filters.LifetimeExtended(this.retryableCreationId),
+              {
+                fromBlock: blockRange!.from,
+                toBlock: blockRange!.to,
+              }
+            )
+            if (keepaliveEvents.length > 0) {
               timeout = keepaliveEvents
-                .map(e => e.newTimeout.toNumber())
+                .map(e => e.event.newTimeout.toNumber())
                 .sort()
                 .reverse()[0]
               break
