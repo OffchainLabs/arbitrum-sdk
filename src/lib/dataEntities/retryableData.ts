@@ -15,9 +15,17 @@ export interface RetryableData {
 }
 
 /**
- * Tools for parsing retryable data from errors
+ * Tools for parsing retryable data from errors.
+ * When calling createRetryableTicket on Inbox.sol special values
+ * can be passed for gasLimit and maxFeePerGas. This causes the call to revert
+ * with the info needed to estimate the gas needed for a retryable ticket using
+ * L1ToL2GasPriceEstimator.
  */
 export class RetryableDataTools {
+  /**
+   * The parameters that should be passed to createRetryableTicket in order to induce
+   * a revert with retryable data
+   */
   public static ErrorTriggeringParams = {
     gasLimit: BigNumber.from(1),
     maxFeePerGas: BigNumber.from(1),
