@@ -312,10 +312,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       let fromBlock = await this.l2Provider.getBlock(
         creationReceipt.blockNumber
       )
-      const creationBlock = await this.l2Provider.getBlock(
-        creationReceipt.blockNumber
-      )
-      let timeout = creationBlock.timestamp + l2Network.retryableLifetimeSeconds
+      let timeout = fromBlock.timestamp + l2Network.retryableLifetimeSeconds
       const queriedRange: { from: number; to: number }[] = []
       const maxBlock = await this.l2Provider.getBlockNumber()
       while (fromBlock.number < maxBlock) {
@@ -378,7 +375,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
         const processedSeconds = toBlock.timestamp - fromBlock.timestamp
         if (processedSeconds != 0) {
           // find the increment that cover ~ 1 day
-          increment *= Math.ceil(86400 / processedSeconds)
+          increment = Math.ceil((increment * 86400) / processedSeconds)
         }
 
         fromBlock = toBlock
