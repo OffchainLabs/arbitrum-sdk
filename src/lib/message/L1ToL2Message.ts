@@ -35,8 +35,8 @@ import { Address } from '../dataEntities/address'
 import { L2TransactionReceipt, RedeemTransaction } from './L2Transaction'
 import { getL2Network } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
-import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
 import { getTransactionReceipt } from '../utils/lib'
+import { EventFetcher } from '../utils/eventFetcher'
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -297,6 +297,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    */
   public async getSuccessfulRedeem(): Promise<TransactionReceipt | null> {
     const l2Network = await getL2Network(this.l2Provider)
+    const eventFetcher = new EventFetcher(this.l2Provider)
     const creationReceipt = await this.getRetryableCreationReceipt()
 
     // check the auto redeem, if that worked we dont need to do costly log queries
@@ -307,34 +308,34 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     // to do this we need to filter through the whole lifetime of the ticket looking
     // for relevant redeem scheduled events
     if (creationReceipt) {
-      const iFace = ArbRetryableTx__factory.createInterface()
-      const redeemTopic = iFace.getEventTopic('RedeemScheduled')
-
       let increment = 1000
       let fromBlock = await this.l2Provider.getBlock(
         creationReceipt.blockNumber
       )
-      const creationBlock = await this.l2Provider.getBlock(
-        creationReceipt.blockNumber
-      )
+      let timeout = fromBlock.timestamp + l2Network.retryableLifetimeSeconds
+      const queriedRange: { from: number; to: number }[] = []
       const maxBlock = await this.l2Provider.getBlockNumber()
       while (fromBlock.number < maxBlock) {
         const toBlockNumber = Math.min(fromBlock.number + increment, maxBlock)
 
-        // We can skip by doing fromBlock.number + 1 on the first go
-        // since creationBlock because it is covered by the `getAutoRedeem` shortcut
-        const redeemEventLogs = await this.l2Provider.getLogs({
-          fromBlock: fromBlock.number + 1,
-          toBlock: toBlockNumber,
-          topics: [redeemTopic, this.retryableCreationId],
-        })
-        const redeemEvents = redeemEventLogs.map(
-          r => iFace.parseLog(r).args as RedeemScheduledEvent['args']
+        // using fromBlock.number would lead to 1 block overlap
+        // not fixing it here to keep the code simple
+        const blockRange = { from: fromBlock.number, to: toBlockNumber }
+        queriedRange.push(blockRange)
+        const redeemEvents = await eventFetcher.getEvents(
+          ARB_RETRYABLE_TX_ADDRESS,
+          ArbRetryableTx__factory,
+          contract =>
+            contract.filters.RedeemScheduled(this.retryableCreationId),
+          {
+            fromBlock: blockRange.from,
+            toBlock: blockRange.to,
+          }
         )
         const successfulRedeem = (
           await Promise.all(
             redeemEvents.map(e =>
-              this.l2Provider.getTransactionReceipt(e.retryTxHash)
+              this.l2Provider.getTransactionReceipt(e.event.retryTxHash)
             )
           )
         ).filter(r => r.status === 1)
@@ -345,16 +346,36 @@ export class L1ToL2MessageReader extends L1ToL2Message {
         if (successfulRedeem.length == 1) return successfulRedeem[0]
 
         const toBlock = await this.l2Provider.getBlock(toBlockNumber)
-        // dont bother looking past the retryable lifetime of the ticket for now
-        if (
-          toBlock.timestamp - creationBlock.timestamp >
-          l2Network.retryableLifetimeSeconds
-        )
-          break
+        if (toBlock.timestamp > timeout) {
+          // Check for LifetimeExtended event
+          while (queriedRange.length > 0) {
+            const blockRange = queriedRange.shift()
+            const keepaliveEvents = await eventFetcher.getEvents(
+              ARB_RETRYABLE_TX_ADDRESS,
+              ArbRetryableTx__factory,
+              contract =>
+                contract.filters.LifetimeExtended(this.retryableCreationId),
+              {
+                fromBlock: blockRange!.from,
+                toBlock: blockRange!.to,
+              }
+            )
+            if (keepaliveEvents.length > 0) {
+              timeout = keepaliveEvents
+                .map(e => e.event.newTimeout.toNumber())
+                .sort()
+                .reverse()[0]
+              break
+            }
+          }
+          if (toBlock.timestamp > timeout) break
+          // It is possible to have another keepalive in the last range as it might include block after previous timeout
+          while (queriedRange.length > 1) queriedRange.shift()
+        }
         const processedSeconds = toBlock.timestamp - fromBlock.timestamp
         if (processedSeconds != 0) {
           // find the increment that cover ~ 1 day
-          increment *= Math.ceil(86400 / processedSeconds)
+          increment = Math.ceil((increment * 86400) / processedSeconds)
         }
 
         fromBlock = toBlock
