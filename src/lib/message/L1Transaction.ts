@@ -20,6 +20,7 @@ import { TransactionReceipt } from '@ethersproject/providers'
 import { Log } from '@ethersproject/abstract-provider'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
+import { Provider } from '@ethersproject/abstract-provider'
 import { L1ToL2MessageStatus, L1ToL2MessageWaitResult } from './L1ToL2Message'
 
 import { L1ERC20Gateway__factory } from '../abi/factories/L1ERC20Gateway__factory'
@@ -27,11 +28,16 @@ import { DepositInitiatedEvent } from '../abi/L1ERC20Gateway'
 import { SignerOrProvider } from '../dataEntities/signerOrProvider'
 import * as classic from '@arbitrum/sdk-classic'
 import * as nitro from '@arbitrum/sdk-nitro'
+import { L1EthDepositTransactionReceipt as NitroL1EthDepositTransactionReceipt } from '@arbitrum/sdk-nitro/dist/lib/message/L1Transaction'
+import { EthDepositMessageWaitResult as NitroEthDepositMessageWaitResult } from '@arbitrum/sdk-nitro/dist/lib/message/L1ToL2Message'
+import { L1EthDepositTransactionReceipt as ClassicL1EthDepositTransactionReceipt } from '@arbitrum/sdk-classic/dist/lib/message/L1Transaction'
 import {
   isNitroL2,
   IL1ToL2MessageReaderOrWriter,
   IL1ToL2MessageReader,
   IL1ToL2MessageWriter,
+  toNitroEthDepositMessage,
+  EthDepositMessage,
 } from '../utils/migration_types'
 
 export interface L1ContractTransaction<
@@ -206,26 +212,38 @@ export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
    * If `complete` is true then this message is in the terminal state.
    * For eth deposits complete this is when the status is FUNDS_DEPOSITED, EXPIRED or REDEEMED.
    */
-  public async waitForL2<T extends SignerOrProvider>(
-    l2SignerOrProvider: T,
+  public async waitForL2(
+    l2Provider: Provider,
     confirmations?: number,
     timeout = 900000
   ): Promise<
     {
       complete: boolean
-      message: IL1ToL2MessageReaderOrWriter<T>
-    } & L1ToL2MessageWaitResult
+      message: EthDepositMessage
+    } & NitroEthDepositMessageWaitResult
   > {
-    const message = (await this.getL1ToL2Messages(l2SignerOrProvider))[0]
-    const res = await message.waitForStatus(confirmations, timeout)
-
-    return {
-      complete:
-        res.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2 ||
-        res.status === L1ToL2MessageStatus.EXPIRED ||
-        res.status === L1ToL2MessageStatus.REDEEMED,
-      ...res,
-      message,
+    if (await isNitroL2(l2Provider)) {
+      const receipt = new NitroL1EthDepositTransactionReceipt(this)
+      return await receipt.waitForL2(l2Provider, confirmations, timeout)
+    } else {
+      const receipt = new ClassicL1EthDepositTransactionReceipt(this)
+      const classicWaitRes = await receipt.waitForL2(
+        l2Provider,
+        confirmations,
+        timeout
+      )
+      const ethDepositMessage = await toNitroEthDepositMessage(
+        classicWaitRes.message,
+        (
+          await l2Provider.getNetwork()
+        ).chainId
+      )
+      const txReceipt = await ethDepositMessage.wait()
+      return {
+        message: ethDepositMessage,
+        complete: classicWaitRes.complete,
+        l2TxReceipt: txReceipt,
+      }
     }
   }
 }

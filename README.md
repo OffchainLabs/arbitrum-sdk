@@ -36,9 +36,11 @@ const l1TxnReceipt = new L1TransactionReceipt(
   txnReceipt /** <-- ethers-js TransactionReceipt of an ethereum tx that triggered an L1 to L2 message (say depositting a token via a bridge)  */
 )
 
-const l1ToL2Message = (await l1TxnReceipt.getL1ToL2Messages(
-  l2Signer /** <-- connected ethers-js Wallet */
-))[0]
+const l1ToL2Message = (
+  await l1TxnReceipt.getL1ToL2Messages(
+    l2Signer /** <-- connected ethers-js Wallet */
+  )
+)[0]
 
 const res = await l1ToL2Message.waitForStatus()
 
@@ -61,11 +63,10 @@ const l2TxnReceipt = new L2TransactionReceipt(
 )
 
 /** Wait 3 minutes: */
-await new Promise(resolve => setTimeout(resolve, 1000 * 60 * 3000));
+await new Promise(resolve => setTimeout(resolve, 1000 * 60 * 3000))
 
 // if dataIsOnL1, sequencer has posted it and it inherits full rollup/L1 security
 const dataIsOnL1 = await l2TxnReceipt.isDataAvailable(l2Provider, l1Provider)
-
 ```
 
 ### Bridging assets
