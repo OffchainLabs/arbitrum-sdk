@@ -35,9 +35,8 @@ import { Address } from '../dataEntities/address'
 import { L2TransactionReceipt, RedeemTransaction } from './L2Transaction'
 import { getL2Network } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
-import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
 import { getTransactionReceipt } from '../utils/lib'
-import { EventArgs } from '../dataEntities/event'
+import { EventFetcher } from '../utils/eventFetcher'
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -308,9 +307,6 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     // to do this we need to filter through the whole lifetime of the ticket looking
     // for relevant redeem scheduled events
     if (creationReceipt) {
-      const iFace = ArbRetryableTx__factory.createInterface()
-      const redeemTopic = iFace.getEventTopic('RedeemScheduled')
-
       let increment = 1000
       let fromBlock = await this.l2Provider.getBlock(
         creationReceipt.blockNumber
@@ -324,19 +320,23 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
         // We can skip by doing fromBlock.number + 1 on the first go
         // since creationBlock because it is covered by the `getAutoRedeem` shortcut
-        const redeemEventLogs = await this.l2Provider.getLogs({
-          fromBlock: fromBlock.number + 1,
-          toBlock: toBlockNumber,
-          topics: [redeemTopic, this.retryableCreationId],
-        })
-        const redeemEvents = redeemEventLogs.map(
-          r =>
-            iFace.parseLog(r).args as unknown as EventArgs<RedeemScheduledEvent>
+        const eventFetcher = new EventFetcher(this.l2Provider)
+        const redeemEvents = await eventFetcher.getEvents(
+          undefined,
+          ArbRetryableTx__factory,
+          contract =>
+            contract.filters[
+              'RedeemScheduled(bytes32,bytes32,uint64,uint64,address)'
+            ](this.retryableCreationId),
+          {
+            fromBlock: fromBlock.number + 1,
+            toBlock: toBlockNumber,
+          }
         )
         const successfulRedeem = (
           await Promise.all(
             redeemEvents.map(e =>
-              this.l2Provider.getTransactionReceipt(e.retryTxHash)
+              this.l2Provider.getTransactionReceipt(e.event.retryTxHash)
             )
           )
         ).filter(r => r.status === 1)
