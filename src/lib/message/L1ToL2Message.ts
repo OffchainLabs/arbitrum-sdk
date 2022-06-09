@@ -322,7 +322,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
         // since creationBlock because it is covered by the `getAutoRedeem` shortcut
         const eventFetcher = new EventFetcher(this.l2Provider)
         const redeemEvents = await eventFetcher.getEvents(
-          undefined,
+          ARB_RETRYABLE_TX_ADDRESS,
           ArbRetryableTx__factory,
           contract =>
             contract.filters[
