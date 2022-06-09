@@ -1,6 +1,6 @@
 import * as classic from '@arbitrum/sdk-classic'
 import * as nitro from '@arbitrum/sdk-nitro'
-import { BigNumber, ContractTransaction, Overrides } from 'ethers'
+import { BigNumber, ContractTransaction, ethers, Overrides } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import {
   ARB_SYS_ADDRESS,
@@ -26,6 +26,7 @@ import { L2Network as NitroL2Network } from '@arbitrum/sdk-nitro'
 import { Inbox__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/Inbox__factory'
 import { Bridge__factory as NitroBridgeFactory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/Bridge__factory'
 import { RollupUserLogic__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/RollupUserLogic__factory'
+import { L1ToL2MessageReader as ClassicL1ToL2MessageReader } from '@arbitrum/sdk-classic/dist/index'
 
 import { l2Networks as classicL2Networks } from '@arbitrum/sdk-classic/dist/lib/dataEntities/networks'
 import { l2Networks as nitroL2Networks } from '@arbitrum/sdk-nitro/dist/lib/dataEntities/networks'
@@ -368,3 +369,40 @@ export type ClassicForceInclusionParams =
   FetchedEvent<ClassicMessageDeliveredEvent> & {
     delayedAcc: string
   }
+
+/**
+ * Nitro compatible EthDepositMessage
+ */
+export interface EthDepositMessage {
+  readonly l2ChainId: number
+  readonly messageNumber: BigNumber
+  readonly to: string
+  readonly value: BigNumber
+  readonly l2DepositTxHash: string
+  wait(
+    confirmations?: number,
+    timeout?: number
+  ): Promise<ethers.providers.TransactionReceipt | null>
+}
+
+export const toNitroEthDepositMessage = async (
+  message: ClassicL1ToL2MessageReader,
+  l2ChainId: number
+): Promise<EthDepositMessage> => {
+  const inputs = await message.getInputs()
+  return {
+    l2ChainId: l2ChainId,
+    l2DepositTxHash: message.l2TxHash,
+    messageNumber: message.messageNumber,
+    to: inputs.destinationAddress,
+    value: inputs.l2CallValue,
+
+    wait: async (confirmations?: number, timeout?: number) => {
+      const statusRes = await message.waitForStatus(confirmations, timeout)
+
+      if (statusRes.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
+        return await message.getRetryableCreationReceipt()
+      } else return null
+    },
+  }
+}

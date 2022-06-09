@@ -30,7 +30,6 @@ import {
   L2ToL1Message,
   L2ToL1MessageStatus,
 } from '../src/lib/message/L2ToL1Message'
-import { L1ToL2MessageStatus } from '../src/lib/message/L1ToL2Message'
 import { testSetup } from '../scripts/testSetup'
 import { isNitroL2 } from '../src/lib/utils/migration_types'
 dotenv.config()
@@ -92,13 +91,8 @@ describe('Ether', async () => {
     const l1ToL2Messages = await rec.getL1ToL2Messages(l2Signer)
     expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
 
-    prettyLog('l2TxHash: ' + waitResult.message.retryableCreationId)
     prettyLog('l2 transaction found!')
     expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
-    expect(waitResult.status).to.eq(
-      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
-      'eth deposit l2 transaction not found'
-    )
 
     const testWalletL2EthBalance = await l2Signer.getBalance()
     if (await isNitroL2(l2Signer)) {
