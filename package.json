@@ -10,13 +10,17 @@
     "type": "git",
     "url": "git+https://github.com/offchainlabs/arbitrum-sdk.git"
   },
+  "engines": {
+    "npm": "please-use-yarn",
+    "yarn": ">= 1.0.0"
+  },
   "bugs": {
     "url": "https://github.com/offchainlabs/arbitrum-sdk/issues"
   },
   "homepage": "https://offchainlabs.com",
   "scripts": {
     "audit:ci": "audit-ci -l -a 1067409 1067487 1067486",
-    "prepare": "node ./scripts/genAbi.js",
+    "prepare": "yarn run gen:abi",
     "gen:abi": "node ./scripts/genAbi.js",
     "prepublishOnly": "yarn build && yarn format",
     "preversion": "yarn lint",
