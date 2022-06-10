@@ -127,7 +127,7 @@ export class EthBridger extends AssetBridger<
     // We could alternatively set the submission price to zero here and use the refunds instead, but that
     // would be confusing for users tracking activity in block explorers.
     // This is fixed with nitro's new depositEth message
-    if (submissionPrice >= params.amount)
+    if (submissionPrice.gte(params.amount))
       throw new ArbSdkError('Not enough amount for submission cost')
 
     const inbox = Inbox__factory.connect(
