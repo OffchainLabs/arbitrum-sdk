@@ -391,7 +391,7 @@ export class Erc20Bridger extends AssetBridger<
    * @returns
    */
   public async getDepositRequest(
-    params: Erc20DepositParams
+    params: Omit<Erc20DepositParams, 'overrides'>
   ): Promise<L1ToL2TransactionRequest> {
     const {
       retryableGasOverrides,
@@ -482,7 +482,7 @@ export class Erc20Bridger extends AssetBridger<
       l2MaxFeePerGas: estimates.maxFeePerGas,
       l2SubmissionFee: estimates.maxSubmissionFee,
       l2GasCostsMaxTotal: estimates.totalL2GasCosts,
-      txRequest: {
+      txRequestCore: {
         to: this.l2Network.tokenBridge.l1GatewayRouter,
         data: functionData,
         value: estimates.totalL2GasCosts,
@@ -509,7 +509,7 @@ export class Erc20Bridger extends AssetBridger<
       : await this.getDepositRequest(params)
 
     return await params.l1Signer[estimate ? 'estimateGas' : 'sendTransaction']({
-      ...tokenDeposit.txRequest,
+      ...tokenDeposit.txRequestCore,
       ...params.overrides,
     })
   }

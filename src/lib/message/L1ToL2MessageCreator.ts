@@ -115,7 +115,7 @@ export class L1ToL2MessageCreator {
       l2MaxFeePerGas: estimates.maxFeePerGas,
       l2SubmissionFee: estimates.maxSubmissionFee,
       l2GasCostsMaxTotal: estimates.totalL2GasCosts,
-      txRequest: {
+      txRequestCore: {
         to: l2Network.ethBridge.inbox,
         data: functionData,
         value: estimates.totalL2GasCosts.add(params.l2CallValue),

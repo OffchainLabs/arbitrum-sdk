@@ -49,24 +49,3 @@ export const getTransactionReceipt = async (
     return receipt || null
   }
 }
-
-/**
- * Ethersjs checks that we dont send unknown keys when trying to populate a transaction
- * So we need a list of accepted keys so that we can strip out the unknown ones.
- */
-export const ethersJsTransactionKeys: string[] = [
-  'accessList',
-  'ccipReadEnabled',
-  'chainId',
-  'customData',
-  'data',
-  'from',
-  'gasLimit',
-  'gasPrice',
-  'maxFeePerGas',
-  'maxPriorityFeePerGas',
-  'nonce',
-  'to',
-  'type',
-  'value',
-]
