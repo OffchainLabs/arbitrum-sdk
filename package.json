@@ -12,7 +12,8 @@
   },
   "engines": {
     "node": ">=v11",
-    "yarn": ">=1 <2"
+    "npm": "please-use-yarn",
+    "yarn": ">= 1.0.0"
   },
   "bugs": {
     "url": "https://github.com/offchainlabs/arbitrum-sdk/issues"
@@ -20,7 +21,7 @@
   "homepage": "https://offchainlabs.com",
   "scripts": {
     "audit:ci": "audit-ci -l -a 1067409 1067487 1067486",
-    "postinstall": "node ./scripts/genAbi.js",
+    "prepare": "yarn run gen:abi",
     "gen:abi": "node ./scripts/genAbi.js",
     "gen:network": "ts-node ./scripts/genNetwork.ts",
     "prepublishOnly": "yarn build && yarn format",
@@ -44,22 +45,22 @@
     "bridgeStandardToken": "ts-node scripts/deployStandard.ts"
   },
   "dependencies": {
-    "@arbitrum/nitro-contracts": "^1.0.0-beta.2",
-    "@arbitrum/sdk-classic": "npm:@arbitrum/sdk@1.1.4",
-    "@arbitrum/sdk-nitro": "npm:@arbitrum/sdk@3.0.0-beta.0",
+    "@arbitrum/sdk-classic": "npm:@arbitrum/sdk@1.1.6",
+    "@arbitrum/sdk-nitro": "npm:@arbitrum/sdk@3.0.0-beta.2",
     "@ethersproject/address": "^5.0.8",
     "@ethersproject/bignumber": "^5.1.1",
     "@ethersproject/bytes": "^5.0.8",
     "@typechain/ethers-v5": "9.0.0",
     "@types/prompts": "^2.0.14",
     "@types/yargs": "^17.0.9",
-    "arb-bridge-peripherals": "1.0.9",
     "dotenv": "^10.0.0",
     "ethers": "^5.1.0",
     "ts-node": "^10.2.1",
     "typechain": "7.0.0"
   },
   "devDependencies": {
+    "arb-bridge-peripherals": "1.0.10",
+    "@arbitrum/nitro-contracts": "^1.0.0-beta.5",
     "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@types/chai": "^4.2.11",
     "@types/mocha": "^9.0.0",
@@ -86,7 +87,6 @@
     "yargs": "^17.3.1"
   },
   "files": [
-    "dist/**/*",
-    "scripts/genAbi.js"
+    "dist/**/*"
   ]
 }
