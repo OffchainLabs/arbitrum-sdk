@@ -48,10 +48,10 @@
     "@ethersproject/address": "^5.0.8",
     "@ethersproject/bignumber": "^5.1.1",
     "@ethersproject/bytes": "^5.0.8",
-    "ethers": "^5.1.0",
-    "ts-node": "^10.2.1"
+    "ethers": "^5.1.0"
   },
   "devDependencies": {
+    "ts-node": "^10.2.1",
     "dotenv": "^10.0.0",
     "@typechain/ethers-v5": "9.0.0",
     "@types/yargs": "^17.0.9",
