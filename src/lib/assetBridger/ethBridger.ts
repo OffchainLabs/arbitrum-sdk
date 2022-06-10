@@ -29,7 +29,7 @@ import {
   PercentIncrease,
 } from '../message/L1ToL2MessageGasEstimator'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
-import { MissingProviderArbTsError } from '../dataEntities/errors'
+import { ArbSdkError, MissingProviderArbTsError } from '../dataEntities/errors'
 import { AssetBridger } from './assetBridger'
 import {
   L1EthDepositTransaction,
@@ -122,6 +122,13 @@ export class EthBridger extends AssetBridger<
         params.retryableGasOverrides?.maxSubmissionPrice
       )
     ).submissionPrice
+
+    // The submission cost of the eth deposit is more than the amount to be deposited.
+    // We could alternatively set the submission price to zero here and use the refunds instead, but that
+    // would be confusing for users tracking activity in block explorers.
+    // This is fixed with nitro's new depositEth message
+    if (submissionPrice >= params.amount)
+      throw new ArbSdkError('Not enough amount for submission cost')
 
     const inbox = Inbox__factory.connect(
       this.l2Network.ethBridge.inbox,

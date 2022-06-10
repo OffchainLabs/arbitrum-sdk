@@ -17,11 +17,25 @@
 'use strict'
 
 /**
+ * @deprecated in favour of ArbSdkError
  * Errors originating in ArbTs
  */
 export class ArbTsError extends Error {
   constructor(message?: string) {
     super(message)
+  }
+}
+
+/**
+ * Errors originating in Arbitrum SDK
+ */
+export class ArbSdkError extends Error {
+  constructor(message: string, public readonly innner?: Error) {
+    super(message)
+
+    if (innner) {
+      this.stack += '\nCaused By: ' + innner.stack
+    }
   }
 }
 
