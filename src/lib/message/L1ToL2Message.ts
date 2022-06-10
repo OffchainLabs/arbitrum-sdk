@@ -712,7 +712,7 @@ export class EthDepositMessage {
     const parsed = ethers.utils.defaultAbiCoder.decode(
       ['uint256'],
       eventData
-    ) as BigNumber[]
+    ) as [BigNumber]
 
     return parsed[0]
   }
