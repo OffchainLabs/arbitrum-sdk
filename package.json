@@ -45,7 +45,7 @@
     "bridgeStandardToken": "ts-node scripts/deployStandard.ts"
   },
   "dependencies": {
-    "@arbitrum/sdk-classic": "npm:@arbitrum/sdk@1.1.6",
+    "@arbitrum/sdk-classic": "npm:@arbitrum/sdk@1.1.7",
     "@arbitrum/sdk-nitro": "npm:@arbitrum/sdk@3.0.0-beta.2",
     "@ethersproject/address": "^5.0.8",
     "@ethersproject/bignumber": "^5.1.1",
