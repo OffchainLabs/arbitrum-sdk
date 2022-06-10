@@ -48,15 +48,14 @@
     "@ethersproject/address": "^5.0.8",
     "@ethersproject/bignumber": "^5.1.1",
     "@ethersproject/bytes": "^5.0.8",
-    "@typechain/ethers-v5": "9.0.0",
-    "@types/prompts": "^2.0.14",
-    "@types/yargs": "^17.0.9",
     "dotenv": "^10.0.0",
     "ethers": "^5.1.0",
-    "ts-node": "^10.2.1",
-    "typechain": "7.0.0"
+    "ts-node": "^10.2.1"
   },
   "devDependencies": {
+    "@typechain/ethers-v5": "9.0.0",
+    "@types/yargs": "^17.0.9",
+    "typechain": "7.0.0",
     "@arbitrum/nitro-contracts": "1.0.0-beta.5",
     "arb-bridge-peripherals": "1.0.6",
     "@nomiclabs/hardhat-ethers": "^2.0.4",
