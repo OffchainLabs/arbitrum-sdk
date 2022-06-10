@@ -45,7 +45,6 @@
     "bridgeStandardToken": "ts-node scripts/deployStandard.ts"
   },
   "dependencies": {
-    "@arbitrum/nitro-contracts": "1.0.0-beta.5",
     "@ethersproject/address": "^5.0.8",
     "@ethersproject/bignumber": "^5.1.1",
     "@ethersproject/bytes": "^5.0.8",
@@ -58,9 +57,8 @@
     "typechain": "7.0.0"
   },
   "devDependencies": {
-    "arb-bridge-eth": "0.7.5",
+    "@arbitrum/nitro-contracts": "1.0.0-beta.5",
     "arb-bridge-peripherals": "1.0.6",
-    "arbos-precompiles": "1.0.2",
     "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@types/chai": "^4.2.11",
     "@types/mocha": "^9.0.0",
