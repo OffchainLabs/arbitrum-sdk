@@ -708,6 +708,7 @@ export class EthDepositMessage {
    * @returns
    */
   private static parseEthDepositData(eventData: string): BigNumber {
+    // https://github.com/OffchainLabs/nitro/blob/9f16d082496aef9de66b9e8653531d467d685560/contracts/src/bridge/Inbox.sol#L230
     const parsed = ethers.utils.defaultAbiCoder.decode(
       ['uint256'],
       eventData
