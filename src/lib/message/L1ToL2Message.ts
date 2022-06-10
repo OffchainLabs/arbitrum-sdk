@@ -710,6 +710,8 @@ export class EthDepositMessage {
       l2Provider,
       chainId,
       messageNumber,
+      // arb-os always applies an alias to the address it gets from the event
+      // before it forms that into a transaction
       new Address(senderAddr).applyAlias().value,
       value
     )
