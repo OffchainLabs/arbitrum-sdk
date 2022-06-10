@@ -673,6 +673,58 @@ export class EthDepositMessage {
     return ethers.utils.keccak256(rlpEnc)
   }
 
+  /**
+   * Parse the data field in
+   * event InboxMessageDelivered(uint256 indexed messageNum, bytes data);
+   * @param eventData
+   * @returns
+   */
+  private static parseEthDepositData(eventData: string): BigNumber {
+    // https://github.com/OffchainLabs/nitro/blob/9f16d082496aef9de66b9e8653531d467d685560/contracts/src/bridge/Inbox.sol#L230
+    const parsed = ethers.utils.defaultAbiCoder.decode(
+      ['uint256'],
+      eventData
+    ) as [BigNumber]
+
+    return parsed[0]
+  }
+
+  /**
+   * Create an EthDepositMessage from data emitted in event when calling ethDeposit on Inbox.sol
+   * @param l2Provider
+   * @param messageNumber The message number in the Inbox.InboxMessageDelivered event
+   * @param senderAddr The sender address from Bridge.MessageDelivered event
+   * @param inboxMessageEventData The data field from the Inbox.InboxMessageDelivered event
+   * @returns
+   */
+  public static async fromEventComponents(
+    l2Provider: Provider,
+    messageNumber: BigNumber,
+    senderAddr: string,
+    inboxMessageEventData: string
+  ) {
+    const chainId = (await l2Provider.getNetwork()).chainId
+    const value = EthDepositMessage.parseEthDepositData(inboxMessageEventData)
+
+    return new EthDepositMessage(
+      l2Provider,
+      chainId,
+      messageNumber,
+      // arb-os always applies an alias to the address it gets from the event
+      // before it forms that into a transaction
+      new Address(senderAddr).applyAlias().value,
+      value
+    )
+  }
+
+  /**
+   *
+   * @param l2Provider
+   * @param l2ChainId
+   * @param messageNumber
+   * @param to Recipient address of the ETH on L2
+   * @param value
+   */
   constructor(
     private readonly l2Provider: Provider,
     public readonly l2ChainId: number,
