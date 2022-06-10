@@ -40,8 +40,7 @@ import {
 } from '../dataEntities/message'
 import { getTransactionReceipt } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
-import { InboxMessageDeliveredEvent } from '../abi/Inbox'
-import { MessageDeliveredEvent } from '../abi/Bridge'
+import { L1TransactionReceipt } from './L1Transaction'
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -679,6 +678,67 @@ export class EthDepositMessage {
   }
 
   /**
+   * Parse the data field in
+   * event InboxMessageDelivered(uint256 indexed messageNum, bytes data);
+   * @param eventData
+   * @returns
+   */
+  private static parseEthDepositData(eventData: string): BigNumber {
+    // https://github.com/OffchainLabs/nitro/blob/9f16d082496aef9de66b9e8653531d467d685560/contracts/src/bridge/Inbox.sol#L230
+    const parsed = ethers.utils.defaultAbiCoder.decode(
+      ['uint256'],
+      eventData
+    ) as [BigNumber]
+
+    return parsed[0]
+  }
+
+  /**
+   * Create an eth deposit messages from a transaction receipt that called ethDeposit
+   * in Inbox.sol
+   * @param l2Provider
+   * @param chainId
+   * @param txReceipt Transaction receipt for a transaction that called ethDeposit
+   * @returns
+   */
+  public static async fromTxReceipt(
+    l2Provider: Provider,
+    txReceipt: L1TransactionReceipt
+  ) {
+    const chainId = (await l2Provider.getNetwork()).chainId
+    return txReceipt
+      .getMessageEvents()
+      .filter(
+        e =>
+          e.bridgeMessageEvent.kind ===
+          InboxMessageKind.L1MessageType_ethDeposit
+      )
+      .map(m => {
+        const value = EthDepositMessage.parseEthDepositData(
+          m.inboxMessageEvent.data
+        )
+
+        // we need to apply an alias to the sender to get the to address, but only if the sender was an EoA
+        // https://github.com/OffchainLabs/nitro/blob/a4eb505ae4f47967fa0ec18e85a43aa4602540c5/contracts/src/bridge/Inbox.sol#L216
+        const aliasedSender = new Address(
+          m.bridgeMessageEvent.sender
+        ).applyAlias().value
+        const to =
+          txReceipt.from.toLowerCase() === aliasedSender.toLowerCase()
+            ? aliasedSender
+            : m.bridgeMessageEvent.sender
+
+        return new EthDepositMessage(
+          l2Provider,
+          chainId,
+          m.inboxMessageEvent.messageNum,
+          to,
+          value
+        )
+      })
+  }
+
+  /**
    *
    * @param l2Provider
    * @param l2ChainId
@@ -696,73 +756,6 @@ export class EthDepositMessage {
     this.l2DepositTxHash = EthDepositMessage.calculateDepositTxId(
       l2ChainId,
       messageNumber,
-      to,
-      value
-    )
-  }
-
-  /**
-   * Parse the data field in
-   * event InboxMessageDelivered(uint256 indexed messageNum, bytes data);
-   * @param eventData
-   * @returns
-   */
-  private static parseEthDepositData(eventData: string): BigNumber {
-    // https://github.com/OffchainLabs/nitro/blob/9f16d082496aef9de66b9e8653531d467d685560/contracts/src/bridge/Inbox.sol#L230
-    const parsed = ethers.utils.defaultAbiCoder.decode(
-      ['uint256'],
-      eventData
-    ) as [BigNumber]
-
-    return parsed[0]
-  }
-
-  /**
-   * Create an eth deposit message from a transaction receipt that called ethDeposit
-   * in Inbox.sol
-   * @param l2Provider
-   * @param chainId
-   * @param txReceipt Receipt for the transaction originating the events
-   * @param inboxMessageEvent The InboxMessageDeliveredEvent emitted from the depositing transaction
-   * @param bridgeMessageEvent The MessageDeliveredEvent emitted from Bridge.sol in the depositing transaction
-   * @returns
-   */
-  public static fromTxReceipt(
-    l2Provider: Provider,
-    chainId: number,
-    txReceipt: TransactionReceipt,
-    inboxMessageEvent: InboxMessageDeliveredEvent['args'],
-    bridgeMessageEvent: MessageDeliveredEvent['args']
-  ) {
-    if (bridgeMessageEvent.kind !== InboxMessageKind.L1MessageType_ethDeposit) {
-      throw new ArbSdkError(
-        `Bridge message kind no EthDeposit type. ${bridgeMessageEvent.kind}`
-      )
-    }
-
-    if (!inboxMessageEvent.messageNum.eq(bridgeMessageEvent.messageIndex)) {
-      throw new ArbSdkError(
-        `Unexpected events. Bridge message index not equal inbox message number. ${
-          bridgeMessageEvent.messageIndex.toString
-        } ${inboxMessageEvent.messageNum.toString()}`
-      )
-    }
-
-    const value = this.parseEthDepositData(inboxMessageEvent.data)
-
-    // we need to apply an alias to the sender to get the to address, but only if the sender was an EoA
-    // https://github.com/OffchainLabs/nitro/blob/a4eb505ae4f47967fa0ec18e85a43aa4602540c5/contracts/src/bridge/Inbox.sol#L216
-    const aliasedSender = new Address(bridgeMessageEvent.sender).applyAlias()
-      .value
-    const to =
-      txReceipt.from.toLowerCase() === aliasedSender.toLowerCase()
-        ? aliasedSender
-        : bridgeMessageEvent.sender
-
-    return new EthDepositMessage(
-      l2Provider,
-      chainId,
-      inboxMessageEvent.messageNum,
       to,
       value
     )

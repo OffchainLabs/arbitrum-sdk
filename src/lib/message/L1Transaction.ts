@@ -219,23 +219,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
   public async getEthDepositMessages(
     l2Provider: Provider
   ): Promise<EthDepositMessage[]> {
-    const chainID = (await l2Provider.getNetwork()).chainId
-
-    return this.getMessageEvents()
-      .filter(
-        e =>
-          e.bridgeMessageEvent.kind ===
-          InboxMessageKind.L1MessageType_ethDeposit
-      )
-      .map(m =>
-        EthDepositMessage.fromTxReceipt(
-          l2Provider,
-          chainID,
-          this,
-          m.inboxMessageEvent,
-          m.bridgeMessageEvent
-        )
-      )
+    return EthDepositMessage.fromTxReceipt(l2Provider, this)
   }
 
   /**
