@@ -701,6 +701,12 @@ export class EthDepositMessage {
     )
   }
 
+  /**
+   * Parse the data field in
+   * event InboxMessageDelivered(uint256 indexed messageNum, bytes data);
+   * @param eventData 
+   * @returns 
+   */
   private static parseEthDepositData(eventData: string): BigNumber {
     const parsed = ethers.utils.defaultAbiCoder.decode(
       ['uint256'],
