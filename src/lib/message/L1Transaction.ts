@@ -108,6 +108,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     const messageDeliveredTopic = iface.getEventTopic(
       iface.getEvent('MessageDelivered')
     )
+
     return this.logs
       .filter(log => log.topics[0] === messageDeliveredTopic)
       .map(l => iface.parseLog(l).args as MessageDeliveredEvent['args'])
@@ -215,38 +216,25 @@ export class L1TransactionReceipt implements TransactionReceipt {
     }
   }
 
-  private parseEthDepositData(eventData: string): BigNumber {
-    const parsed = ethers.utils.defaultAbiCoder.decode(
-      ['uint256'],
-      // decode from the first 9 words
-      eventData.substring(0, 64 * 9 + 2)
-    ) as BigNumber[]
-
-    return parsed[0]
-  }
-
   public async getEthDepositMessages(
     l2Provider: Provider
   ): Promise<EthDepositMessage[]> {
-    const chainID = (await l2Provider.getNetwork()).chainId
-
-    return this.getMessageEvents()
-      .filter(
-        e =>
-          e.bridgeMessageEvent.kind ===
-          InboxMessageKind.L1MessageType_ethDeposit
-      )
-      .map(m => {
-        const value = this.parseEthDepositData(m.inboxMessageEvent.data)
-
-        return new EthDepositMessage(
-          l2Provider,
-          chainID,
-          m.inboxMessageEvent.messageNum,
-          m.bridgeMessageEvent.sender,
-          value
+    return Promise.all(
+      this.getMessageEvents()
+        .filter(
+          e =>
+            e.bridgeMessageEvent.kind ===
+            InboxMessageKind.L1MessageType_ethDeposit
         )
-      })
+        .map(m =>
+          EthDepositMessage.fromEventComponents(
+            l2Provider,
+            m.inboxMessageEvent.messageNum,
+            m.bridgeMessageEvent.sender,
+            m.inboxMessageEvent.data
+          )
+        )
+    )
   }
 
   /**
