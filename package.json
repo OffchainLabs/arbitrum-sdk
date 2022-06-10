@@ -1,6 +1,6 @@
 {
   "name": "@arbitrum/sdk",
-  "version": "1.1.5",
+  "version": "1.1.6",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -55,8 +55,8 @@
     "typechain": "7.0.0"
   },
   "devDependencies": {
-    "arb-bridge-eth": "0.7.5",
-    "arb-bridge-peripherals": "1.0.6",
+    "arb-bridge-eth": "0.7.7",
+    "arb-bridge-peripherals": "1.0.10",
     "arbos-precompiles": "1.0.2",
     "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@types/chai": "^4.2.11",
