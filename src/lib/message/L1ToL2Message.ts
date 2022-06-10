@@ -34,13 +34,9 @@ import { ethers, Overrides } from 'ethers'
 import { Address } from '../dataEntities/address'
 import { L2TransactionReceipt, RedeemTransaction } from './L2Transaction'
 import { getL2Network } from '../../lib/dataEntities/networks'
-import {
-  InboxMessageKind,
-  RetryableMessageParams,
-} from '../dataEntities/message'
+import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
-import { L1TransactionReceipt } from './L1Transaction'
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -694,48 +690,29 @@ export class EthDepositMessage {
   }
 
   /**
-   * Create an eth deposit messages from a transaction receipt that called ethDeposit
-   * in Inbox.sol
+   * Create an EthDepositMessage from data emitted in event when calling ethDeposit on Inbox.sol
    * @param l2Provider
-   * @param chainId
-   * @param txReceipt Transaction receipt for a transaction that called ethDeposit
+   * @param messageNumber The message number in the Inbox.InboxMessageDelivered event
+   * @param senderAddr The sender address from Bridge.MessageDelivered event
+   * @param inboxMessageEventData The data field from the Inbox.InboxMessageDelivered event
    * @returns
    */
-  public static async fromTxReceipt(
+  public static async fromEventComponents(
     l2Provider: Provider,
-    txReceipt: L1TransactionReceipt
+    messageNumber: BigNumber,
+    senderAddr: string,
+    inboxMessageEventData: string
   ) {
     const chainId = (await l2Provider.getNetwork()).chainId
-    return txReceipt
-      .getMessageEvents()
-      .filter(
-        e =>
-          e.bridgeMessageEvent.kind ===
-          InboxMessageKind.L1MessageType_ethDeposit
-      )
-      .map(m => {
-        const value = EthDepositMessage.parseEthDepositData(
-          m.inboxMessageEvent.data
-        )
+    const value = EthDepositMessage.parseEthDepositData(inboxMessageEventData)
 
-        // we need to apply an alias to the sender to get the to address, but only if the sender was an EoA
-        // https://github.com/OffchainLabs/nitro/blob/a4eb505ae4f47967fa0ec18e85a43aa4602540c5/contracts/src/bridge/Inbox.sol#L216
-        const aliasedSender = new Address(
-          m.bridgeMessageEvent.sender
-        ).applyAlias().value
-        const to =
-          txReceipt.from.toLowerCase() === aliasedSender.toLowerCase()
-            ? aliasedSender
-            : m.bridgeMessageEvent.sender
-
-        return new EthDepositMessage(
-          l2Provider,
-          chainId,
-          m.inboxMessageEvent.messageNum,
-          to,
-          value
-        )
-      })
+    return new EthDepositMessage(
+      l2Provider,
+      chainId,
+      messageNumber,
+      new Address(senderAddr).applyAlias().value,
+      value
+    )
   }
 
   /**
