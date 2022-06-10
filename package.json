@@ -1,6 +1,6 @@
 {
   "name": "@arbitrum/sdk",
-  "version": "3.0.0-beta.1",
+  "version": "3.0.0-beta.2",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -58,7 +58,7 @@
   },
   "devDependencies": {
     "@arbitrum/nitro-contracts": "1.0.0-beta.5",
-    "arb-bridge-peripherals": "1.0.6",
+    "arb-bridge-peripherals": "1.0.10",
     "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@types/chai": "^4.2.11",
     "@types/mocha": "^9.0.0",

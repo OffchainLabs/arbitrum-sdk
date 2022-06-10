@@ -1211,24 +1211,24 @@ append-transform@^2.0.0:
   dependencies:
     default-require-extensions "^3.0.0"
 
-arb-bridge-eth@0.7.6:
-  version "0.7.6"
-  resolved "https://registry.yarnpkg.com/arb-bridge-eth/-/arb-bridge-eth-0.7.6.tgz#76cfa217c43bb03d488af58f646dee9fa27bb153"
-  integrity sha512-PvEB15QOSd9QZf4cW6bJ+yuZHOiCJWYz+DK9yqk1UQIzZ6wOz3HuvUJezzKznVtOd9MOSen0kg1vo3khgPL4tw==
+arb-bridge-eth@0.7.7:
+  version "0.7.7"
+  resolved "https://registry.yarnpkg.com/arb-bridge-eth/-/arb-bridge-eth-0.7.7.tgz#9a6251c3000701b94770f97a33d5074bd8587536"
+  integrity sha512-2acKHyMF40G668Tz3Akqw2ERiur5BDbUxQ8ZG31can/HA0cMpU14wCP7vSPIO3BkD0x9wPhqG1kxTrSrkRYqzA==
   dependencies:
     "@openzeppelin/contracts" "3.4.2"
     "@openzeppelin/contracts-0.8" "npm:@openzeppelin/contracts@^4.3.2"
     "@openzeppelin/contracts-upgradeable" "3.4.2"
     hardhat "^2.6.1"
 
-arb-bridge-peripherals@1.0.9:
-  version "1.0.9"
-  resolved "https://registry.yarnpkg.com/arb-bridge-peripherals/-/arb-bridge-peripherals-1.0.9.tgz#a1a766375c0db0a10b42a821d2ca5dd208433a13"
-  integrity sha512-PStSozLTJxE8hw1l8T27E9JuRpKMfqYXGhy8RP6KYTfsJELJEuk/PHjbq3Gl8JFkfD7H08w434/tqKkOSBjZXA==
+arb-bridge-peripherals@1.0.10:
+  version "1.0.10"
+  resolved "https://registry.yarnpkg.com/arb-bridge-peripherals/-/arb-bridge-peripherals-1.0.10.tgz#9b400331352b626d4fdec074d46a9e1cef5c5fcf"
+  integrity sha512-iNhpbwN22Bco3DM5y8NJDMiDAqoGJ0VgUD7GSPvGk6ox8otp1aYX92ZEbbIm414qS5+dhi9kv5tZrvVO6tpfZQ==
   dependencies:
     "@openzeppelin/contracts" "3.4.2"
     "@openzeppelin/contracts-upgradeable" "3.4.2"
-    arb-bridge-eth "0.7.6"
+    arb-bridge-eth "0.7.7"
     arbos-precompiles "^1.0.2"
     hardhat "^2.6.1"
   optionalDependencies:
