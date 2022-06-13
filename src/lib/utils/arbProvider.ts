@@ -171,7 +171,8 @@ const getBatch = async (
 
   // find the batch containing the seq number
   const batch = events.filter(
-    b => b.event.firstMessageNum <= seqNum && b.event.newMessageCount > seqNum
+    b =>
+      b.event.firstMessageNum.lte(seqNum) && b.event.newMessageCount.gt(seqNum)
   )[0]
 
   if (!batch) return null
