@@ -1,6 +1,7 @@
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { ArbTsError, MissingProviderArbTsError } from '../dataEntities/errors'
+import { isDefined } from '../utils/lib'
 
 export type SignerOrProvider = Signer | Provider
 
@@ -43,7 +44,7 @@ export class SignerProviderUtils {
   public static signerHasProvider(
     signer: Signer
   ): signer is Signer & { provider: Provider } {
-    return typeof signer.provider !== 'undefined'
+    return isDefined(signer.provider)
   }
 
   /**
