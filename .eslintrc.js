@@ -23,6 +23,33 @@ module.exports = {
     {
       files: ['*.ts', '*.tsx'],
       parser: '@typescript-eslint/parser',
+      extends: [
+        'eslint:recommended',
+        'plugin:@typescript-eslint/recommended',
+        'plugin:prettier/recommended',
+      ],
+      plugins: ['@typescript-eslint', 'prettier'],
+      rules: {
+        'no-empty-pattern': 'warn',
+        'prettier/prettier': ['error', { singleQuote: true }],
+        '@typescript-eslint/member-delimiter-style': ['off'],
+        '@typescript-eslint/no-explicit-any': ['off'],
+        '@typescript-eslint/no-use-before-define': ['off'],
+        '@typescript-eslint/no-non-null-assertion': ['off'],
+        '@typescript-eslint/ban-ts-comment': ['warn'],
+        '@typescript-eslint/no-unused-vars': [
+          'warn',
+          {
+            argsIgnorePattern: '^_',
+            varsIgnorePattern: '^_',
+            caughtErrorsIgnorePattern: '^_',
+          },
+        ],
+      },
+    },
+    {
+      files: ['src/**/*.ts', 'src/**/*.tsx'],
+      parser: '@typescript-eslint/parser',
       parserOptions: {
         project: 'tsconfig.json',
       },
