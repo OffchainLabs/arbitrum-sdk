@@ -35,9 +35,8 @@ import { Address } from '../dataEntities/address'
 import { L2TransactionReceipt, RedeemTransaction } from './L2Transaction'
 import { getL2Network } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
-import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
 import { getTransactionReceipt } from '../utils/lib'
-import { EventArgs } from '../dataEntities/event'
+import { parseTypedLogs } from '../dataEntities/event'
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -329,9 +328,10 @@ export class L1ToL2MessageReader extends L1ToL2Message {
           toBlock: toBlockNumber,
           topics: [redeemTopic, this.retryableCreationId],
         })
-        const redeemEvents = redeemEventLogs.map(
-          r =>
-            iFace.parseLog(r).args as unknown as EventArgs<RedeemScheduledEvent>
+        const redeemEvents = parseTypedLogs(
+          ArbRetryableTx__factory,
+          redeemEventLogs,
+          'RedeemScheduled'
         )
         const successfulRedeem = (
           await Promise.all(

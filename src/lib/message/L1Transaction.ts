@@ -32,7 +32,6 @@ import {
 } from './L1ToL2Message'
 
 import { L1ERC20Gateway__factory } from '../abi/factories/L1ERC20Gateway__factory'
-import { DepositInitiatedEvent } from '../abi/L1ERC20Gateway'
 import {
   SignerProviderUtils,
   SignerOrProvider,
@@ -48,7 +47,7 @@ import {
 } from '../dataEntities/message'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
 import { MessageDeliveredEvent } from '../abi/Bridge'
-import { EventArgs } from '../dataEntities/event'
+import { EventArgs, parseTypedLogs } from '../dataEntities/event'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -105,34 +104,19 @@ export class L1TransactionReceipt implements TransactionReceipt {
    * @returns
    */
   public getMessageDeliveredEvents(): EventArgs<MessageDeliveredEvent>[] {
-    const iface = Bridge__factory.createInterface()
-    const messageDeliveredTopic = iface.getEventTopic(
-      iface.getEvent('MessageDelivered')
-    )
-    return this.logs
-      .filter(log => log.topics[0] === messageDeliveredTopic)
-      .map(
-        l =>
-          iface.parseLog(l).args as unknown as EventArgs<MessageDeliveredEvent>
-      )
+    return parseTypedLogs(Bridge__factory, this.logs, 'MessageDelivered')
   }
 
   /**
    * Get any InboxMessageDelivered events that were emitted during this transaction
    * @returns
    */
-  public getInboxMessageDeliveredEvent(): EventArgs<InboxMessageDeliveredEvent>[] {
-    const iFace = Inbox__factory.createInterface()
-    const inboxMessageDeliveredTopic = iFace.getEventTopic(
-      iFace.events['InboxMessageDelivered(uint256,bytes)']
+  public getInboxMessageDeliveredEvent() {
+    return parseTypedLogs(
+      Inbox__factory,
+      this.logs,
+      'InboxMessageDelivered(uint256,bytes)'
     )
-    return this.logs
-      .filter(log => log.topics[0] === inboxMessageDeliveredTopic)
-      .map(
-        l =>
-          iFace.parseLog(l)
-            .args as unknown as EventArgs<InboxMessageDeliveredEvent>
-      )
   }
 
   /**
@@ -296,14 +280,11 @@ export class L1TransactionReceipt implements TransactionReceipt {
    * Get any token deposit events created by this transaction
    * @returns
    */
-  public getTokenDepositEvents(): EventArgs<DepositInitiatedEvent>[] {
-    const iface = L1ERC20Gateway__factory.createInterface()
-    const event = iface.getEvent('DepositInitiated')
-    const eventTopic = iface.getEventTopic(event)
-    const logs = this.logs.filter(log => log.topics[0] === eventTopic)
-    return logs.map(
-      log =>
-        iface.parseLog(log).args as unknown as EventArgs<DepositInitiatedEvent>
+  public getTokenDepositEvents() {
+    return parseTypedLogs(
+      L1ERC20Gateway__factory,
+      this.logs,
+      'DepositInitiated'
     )
   }
 
