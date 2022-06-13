@@ -68,7 +68,7 @@ import {
   isL2ToL1TransactionRequest,
   L1ToL2TransactionRequest,
   L2ToL1TransactionRequest,
-  NonOptional,
+  IRetryableData,
 } from '../dataEntities/transactionRequest'
 import { defaultAbiCoder } from 'ethers/lib/utils'
 
@@ -200,7 +200,7 @@ export class Erc20Bridger extends AssetBridger<
    */
   public async getApproveTokenRequest(
     params: TokenApproveParams
-  ): Promise<NonOptional<TransactionRequest, 'to' | 'data' | 'value'>> {
+  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
     if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
       throw new MissingProviderArbSdkError('l1Signer')
     }
@@ -229,7 +229,7 @@ export class Erc20Bridger extends AssetBridger<
     params:
       | TokenApproveParams
       | {
-          txRequest: NonOptional<TransactionRequest, 'to' | 'data' | 'value'>
+          txRequest: Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
           l1Signer: Signer
         }
   ): params is TokenApproveParams {
@@ -245,7 +245,7 @@ export class Erc20Bridger extends AssetBridger<
     params:
       | TokenApproveParams
       | {
-          txRequest: NonOptional<TransactionRequest, 'to' | 'data' | 'value'>
+          txRequest: Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
           l1Signer: Signer
           overrides?: Overrides
         }
@@ -446,8 +446,8 @@ export class Erc20Bridger extends AssetBridger<
    * @returns
    */
   public async getDepositRequest(
-    params: Erc20DepositParams
-  ): Promise<L1ToL2TransactionRequest> {
+    params: Omit<Erc20DepositParams, 'overrides'>
+  ): Promise<L1ToL2TransactionRequest & { retryableData: IRetryableData }> {
     const {
       retryableGasOverrides,
       erc20L1Address,
@@ -459,6 +459,7 @@ export class Erc20Bridger extends AssetBridger<
 
     await this.checkL1Network(params.l1Signer)
     await this.checkL2Network(params.l2Provider)
+
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
       throw new MissingProviderArbSdkError('l1Signer')
     }
@@ -496,19 +497,24 @@ export class Erc20Bridger extends AssetBridger<
     if (l1GatewayAddress === this.l2Network.tokenBridge.l1CustomGateway) {
       if (!tokenGasOverrides) tokenGasOverrides = {}
       if (!tokenGasOverrides.gasLimit) tokenGasOverrides.gasLimit = {}
-      tokenGasOverrides.gasLimit.min = Erc20Bridger.MIN_CUSTOM_DEPOSIT_GAS_LIMIT
+      if (!tokenGasOverrides.gasLimit.min) {
+        tokenGasOverrides.gasLimit.min =
+          Erc20Bridger.MIN_CUSTOM_DEPOSIT_GAS_LIMIT
+      }
     }
 
     // 2. get the gas estimates
     const baseFee = await getBaseFee(l1Signer.provider)
+    const excessFeeRefundAddress = sender
+    const callValueRefundAddress = sender
     const estimates = await gasEstimator.estimateAll(
       l1GatewayAddress,
       l2Dest,
       depositCalldata,
       estimateGasCallValue,
       baseFee,
-      sender,
-      sender,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
       l1Signer.provider,
       tokenGasOverrides
     )
@@ -537,10 +543,18 @@ export class Erc20Bridger extends AssetBridger<
       l2MaxFeePerGas: estimates.maxFeePerGas,
       l2SubmissionFee: estimates.maxSubmissionFee,
       l2GasCostsMaxTotal: estimates.totalL2GasCosts,
-      txRequest: {
+      txRequestCore: {
         to: this.l2Network.tokenBridge.l1GatewayRouter,
         data: functionData,
         value: estimates.totalL2GasCosts,
+      },
+      retryableData: {
+        callData: depositCalldata,
+        sender: l1GatewayAddress,
+        destination: l2Dest,
+        excessFeeRefundAddress: excessFeeRefundAddress,
+        callValueRefundAddress: callValueRefundAddress,
+        value: estimateGasCallValue,
       },
     }
   }
@@ -559,12 +573,18 @@ export class Erc20Bridger extends AssetBridger<
       throw new MissingProviderArbSdkError('l1Signer')
     }
 
+    if ((params.overrides as PayableOverrides | undefined)?.value) {
+      throw new ArbSdkError(
+        'L1 call value should be set through l1CallValue param'
+      )
+    }
+
     const tokenDeposit = isL1ToL2TransactionRequest(params)
       ? params
       : await this.getDepositRequest(params)
 
     return await params.l1Signer[estimate ? 'estimateGas' : 'sendTransaction']({
-      ...tokenDeposit.txRequest,
+      ...tokenDeposit.txRequestCore,
       ...params.overrides,
     })
   }
