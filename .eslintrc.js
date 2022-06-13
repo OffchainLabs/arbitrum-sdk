@@ -21,6 +21,7 @@ module.exports = {
   },
   overrides: [
     {
+      // this config is run against test files (same as the one bellow but not limited to `src` folder)
       files: ['*.ts', '*.tsx'],
       parser: '@typescript-eslint/parser',
       extends: [
@@ -45,6 +46,7 @@ module.exports = {
             caughtErrorsIgnorePattern: '^_',
           },
         ],
+        'no-implicit-coercion': 'error',
       },
     },
     {
@@ -76,7 +78,7 @@ module.exports = {
           },
         ],
         '@typescript-eslint/tslint/config': [
-          'warn',
+          'error',
           {
             rules: { 'strict-comparisons': true },
           },
