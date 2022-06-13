@@ -43,7 +43,7 @@ export class SignerProviderUtils {
   public static signerHasProvider(
     signer: Signer
   ): signer is Signer & { provider: Provider } {
-    return !!signer.provider
+    return isDefined(signer.provider)
   }
 
   /**
