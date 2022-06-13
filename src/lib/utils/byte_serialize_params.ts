@@ -122,7 +122,7 @@ const formatPrimative = (value: PrimativeType) => {
     return toUint(value ? 1 : 0, 1)
   } else if (
     typeof value === 'number' ||
-    +value ||
+    Number(value) ||
     BigNumber.isBigNumber(value)
   ) {
     return toUint(value, 32)

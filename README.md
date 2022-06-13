@@ -126,8 +126,8 @@ Bridging new a token to L2 (i.e., deploying a new token contract) through the st
 5. `yarn bridgeStandardToken`
 
 Required CL params:
-`networkID`:number — Chain ID of L1 network
+`networkID`:number — Chain ID of L2 network
 `l1TokenAddress`:string — address of L1 token to be bridged
 
 Ex:
-`yarn bridgeStandardToken --networkID 4 --l1TokenAddress 0xdf032bc4b9dc2782bb09352007d4c57b75160b15 --amount 3`
+`yarn bridgeStandardToken --networkID 421611 --l1TokenAddress 0xdf032bc4b9dc2782bb09352007d4c57b75160b15 --amount 3`
