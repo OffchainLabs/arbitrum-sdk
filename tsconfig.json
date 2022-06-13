@@ -16,5 +16,6 @@
     "esModuleInterop": true,
     "experimentalDecorators": true
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.js"]
+  "include": ["src/**/*", "scripts/**/*", "*_test/**/*", "hardhat.config.ts"],
+  "exclude": ["node_modules", "**/*.spec.ts"]
 }

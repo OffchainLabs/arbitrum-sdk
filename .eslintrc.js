@@ -23,12 +23,15 @@ module.exports = {
     {
       files: ['*.ts', '*.tsx'],
       parser: '@typescript-eslint/parser',
+      parserOptions: {
+        project: 'tsconfig.json',
+      },
       extends: [
         'eslint:recommended',
         'plugin:@typescript-eslint/recommended',
         'plugin:prettier/recommended',
       ],
-      plugins: ['@typescript-eslint', 'prettier'],
+      plugins: ['@typescript-eslint', 'prettier', '@typescript-eslint/tslint'],
       rules: {
         'no-empty-pattern': 'warn',
         'prettier/prettier': ['error', { singleQuote: true }],
@@ -43,6 +46,12 @@ module.exports = {
             argsIgnorePattern: '^_',
             varsIgnorePattern: '^_',
             caughtErrorsIgnorePattern: '^_',
+          },
+        ],
+        '@typescript-eslint/tslint/config': [
+          'warn',
+          {
+            rules: { 'strict-comparisons': true },
           },
         ],
       },
