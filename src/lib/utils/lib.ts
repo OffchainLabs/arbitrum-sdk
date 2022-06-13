@@ -49,5 +49,6 @@ export const getTransactionReceipt = async (
     return receipt || null
   }
 }
+
 export const isDefined = (val: unknown): boolean =>
   typeof val !== 'undefined' && val !== null
