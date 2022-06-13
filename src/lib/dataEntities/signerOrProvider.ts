@@ -1,6 +1,7 @@
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { ArbSdkError, MissingProviderArbSdkError } from '../dataEntities/errors'
+import { isDefined } from '../utils/lib'
 
 export type SignerOrProvider = Signer | Provider
 
