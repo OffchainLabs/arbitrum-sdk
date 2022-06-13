@@ -1,2 +1,4 @@
+cache/**
 dist/**
+src/lib/abi/**
 .nyc_output
