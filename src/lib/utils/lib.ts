@@ -13,3 +13,6 @@ export const getBaseFee = async (provider: Provider) => {
   }
   return baseFee
 }
+
+export const isDefined = (val: unknown): boolean =>
+  typeof val !== 'undefined' && val !== null

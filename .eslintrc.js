@@ -21,6 +21,7 @@ module.exports = {
   },
   overrides: [
     {
+      // this config is run against test files (same as the one bellow but not limited to `src` folder)
       files: ['*.ts', '*.tsx'],
       parser: '@typescript-eslint/parser',
       extends: [
@@ -45,6 +46,44 @@ module.exports = {
             caughtErrorsIgnorePattern: '^_',
           },
         ],
+        'no-implicit-coercion': 'error',
+      },
+    },
+    {
+      files: ['src/**/*.ts', 'src/**/*.tsx'],
+      parser: '@typescript-eslint/parser',
+      parserOptions: {
+        project: 'tsconfig.json',
+      },
+      extends: [
+        'eslint:recommended',
+        'plugin:@typescript-eslint/recommended',
+        'plugin:prettier/recommended',
+      ],
+      plugins: ['@typescript-eslint', 'prettier', '@typescript-eslint/tslint'],
+      rules: {
+        'no-empty-pattern': 'warn',
+        'prettier/prettier': ['error', { singleQuote: true }],
+        '@typescript-eslint/member-delimiter-style': ['off'],
+        '@typescript-eslint/no-explicit-any': ['off'],
+        '@typescript-eslint/no-use-before-define': ['off'],
+        '@typescript-eslint/no-non-null-assertion': ['off'],
+        '@typescript-eslint/ban-ts-comment': ['warn'],
+        '@typescript-eslint/no-unused-vars': [
+          'warn',
+          {
+            argsIgnorePattern: '^_',
+            varsIgnorePattern: '^_',
+            caughtErrorsIgnorePattern: '^_',
+          },
+        ],
+        '@typescript-eslint/tslint/config': [
+          'error',
+          {
+            rules: { 'strict-comparisons': true },
+          },
+        ],
+        'no-implicit-coercion': 'error',
       },
     },
   ],
