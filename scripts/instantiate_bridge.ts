@@ -30,6 +30,7 @@ import {
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
+import { isDefined } from '../src/lib/utils/lib'
 
 dotenv.config()
 
@@ -72,8 +73,8 @@ export const instantiateBridge = (
 
     networkID = defaultNetworkId
   }
-  const isL1 = !!l1Networks[networkID]
-  const isL2 = !!l2Networks[networkID]
+  const isL1 = isDefined(l1Networks[networkID])
+  const isL2 = isDefined(l2Networks[networkID])
   if (!isL1 && !isL2) {
     throw new Error(`Unrecognized network ID: ${networkID}`)
   }

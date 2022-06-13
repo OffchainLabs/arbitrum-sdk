@@ -34,6 +34,7 @@ import {
   L2ToL1MessageWriter,
 } from './L2ToL1Message'
 import { getRawArbTransactionReceipt } from '../..'
+import { isDefined } from '../utils/lib'
 
 export interface L2ContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<L2TransactionReceipt>
@@ -136,7 +137,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
 
     // Data is made available in batches, if the batch info is
     // available then so is the tx data
-    return !!arbReceipt?.l1InboxBatchInfo
+    return isDefined(arbReceipt?.l1InboxBatchInfo)
   }
 
   /**
