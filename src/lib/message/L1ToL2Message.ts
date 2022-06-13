@@ -37,6 +37,7 @@ import { getL2Network } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt } from '../utils/lib'
 import { parseTypedLogs } from '../dataEntities/event'
+import { EventFetcher } from '../utils/eventFetcher'
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -297,6 +298,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    */
   public async getSuccessfulRedeem(): Promise<TransactionReceipt | null> {
     const l2Network = await getL2Network(this.l2Provider)
+    const eventFetcher = new EventFetcher(this.l2Provider)
     const creationReceipt = await this.getRetryableCreationReceipt()
 
     // check the auto redeem, if that worked we dont need to do costly log queries
@@ -307,36 +309,34 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     // to do this we need to filter through the whole lifetime of the ticket looking
     // for relevant redeem scheduled events
     if (creationReceipt) {
-      const iFace = ArbRetryableTx__factory.createInterface()
-      const redeemTopic = iFace.getEventTopic('RedeemScheduled')
-
       let increment = 1000
       let fromBlock = await this.l2Provider.getBlock(
         creationReceipt.blockNumber
       )
-      const creationBlock = await this.l2Provider.getBlock(
-        creationReceipt.blockNumber
-      )
+      let timeout = fromBlock.timestamp + l2Network.retryableLifetimeSeconds
+      const queriedRange: { from: number; to: number }[] = []
       const maxBlock = await this.l2Provider.getBlockNumber()
       while (fromBlock.number < maxBlock) {
         const toBlockNumber = Math.min(fromBlock.number + increment, maxBlock)
 
-        // We can skip by doing fromBlock.number + 1 on the first go
-        // since creationBlock because it is covered by the `getAutoRedeem` shortcut
-        const redeemEventLogs = await this.l2Provider.getLogs({
-          fromBlock: fromBlock.number + 1,
-          toBlock: toBlockNumber,
-          topics: [redeemTopic, this.retryableCreationId],
-        })
-        const redeemEvents = parseTypedLogs(
+        // using fromBlock.number would lead to 1 block overlap
+        // not fixing it here to keep the code simple
+        const blockRange = { from: fromBlock.number, to: toBlockNumber }
+        queriedRange.push(blockRange)
+        const redeemEvents = await eventFetcher.getEvents(
+          ARB_RETRYABLE_TX_ADDRESS,
           ArbRetryableTx__factory,
-          redeemEventLogs,
-          'RedeemScheduled'
+          contract =>
+            contract.filters.RedeemScheduled(this.retryableCreationId),
+          {
+            fromBlock: blockRange.from,
+            toBlock: blockRange.to,
+          }
         )
         const successfulRedeem = (
           await Promise.all(
             redeemEvents.map(e =>
-              this.l2Provider.getTransactionReceipt(e.retryTxHash)
+              this.l2Provider.getTransactionReceipt(e.event.retryTxHash)
             )
           )
         ).filter(r => r.status === 1)
@@ -347,16 +347,36 @@ export class L1ToL2MessageReader extends L1ToL2Message {
         if (successfulRedeem.length == 1) return successfulRedeem[0]
 
         const toBlock = await this.l2Provider.getBlock(toBlockNumber)
-        // dont bother looking past the retryable lifetime of the ticket for now
-        if (
-          toBlock.timestamp - creationBlock.timestamp >
-          l2Network.retryableLifetimeSeconds
-        )
-          break
+        if (toBlock.timestamp > timeout) {
+          // Check for LifetimeExtended event
+          while (queriedRange.length > 0) {
+            const blockRange = queriedRange.shift()
+            const keepaliveEvents = await eventFetcher.getEvents(
+              ARB_RETRYABLE_TX_ADDRESS,
+              ArbRetryableTx__factory,
+              contract =>
+                contract.filters.LifetimeExtended(this.retryableCreationId),
+              {
+                fromBlock: blockRange!.from,
+                toBlock: blockRange!.to,
+              }
+            )
+            if (keepaliveEvents.length > 0) {
+              timeout = keepaliveEvents
+                .map(e => e.event.newTimeout.toNumber())
+                .sort()
+                .reverse()[0]
+              break
+            }
+          }
+          if (toBlock.timestamp > timeout) break
+          // It is possible to have another keepalive in the last range as it might include block after previous timeout
+          while (queriedRange.length > 1) queriedRange.shift()
+        }
         const processedSeconds = toBlock.timestamp - fromBlock.timestamp
         if (processedSeconds != 0) {
           // find the increment that cover ~ 1 day
-          increment *= Math.ceil(86400 / processedSeconds)
+          increment = Math.ceil((increment * 86400) / processedSeconds)
         }
 
         fromBlock = toBlock
@@ -482,6 +502,18 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   }
 
   /**
+   * The minimium lifetime of a retryable tx
+   * @returns
+   */
+  public static async getLifetime(l2Provider: Provider): Promise<BigNumber> {
+    const arbRetryableTx = ArbRetryableTx__factory.connect(
+      ARB_RETRYABLE_TX_ADDRESS,
+      l2Provider
+    )
+    return await arbRetryableTx.getLifetime()
+  }
+
+  /**
    * How long until this message expires
    * @returns
    */
@@ -530,7 +562,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
 
   /**
    * Manually redeem the retryable ticket.
-   * Throws if message status is not L1ToL2MessageStatus.NOT_YET_REDEEMED
+   * Throws if message status is not L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
    */
   public async redeem(overrides?: Overrides): Promise<RedeemTransaction> {
     const status = await this.status()
@@ -550,14 +582,18 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
       )
     } else {
       throw new ArbSdkError(
-        `Cannot redeem. Message status: ${status} must be: ${L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2}.`
+        `Cannot redeem as retryable does not exist. Message status: ${
+          L1ToL2MessageStatus[status]
+        } must be: ${
+          L1ToL2MessageStatus[L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2]
+        }.`
       )
     }
   }
 
   /**
    * Cancel the retryable ticket.
-   * Throws if message status is not L1ToL2MessageStatus.NOT_YET_REDEEMED
+   * Throws if message status is not L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
    */
   public async cancel(overrides?: Overrides): Promise<ContractTransaction> {
     const status = await this.status()
@@ -569,7 +605,34 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
       return await arbRetryableTx.cancel(this.retryableCreationId, overrides)
     } else {
       throw new ArbSdkError(
-        `Cannot cancel. Message status: ${status} must be: ${L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2}.`
+        `Cannot cancel as retryable does not exist. Message status: ${
+          L1ToL2MessageStatus[status]
+        } must be: ${
+          L1ToL2MessageStatus[L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2]
+        }.`
+      )
+    }
+  }
+
+  /**
+   * Increase the timeout of a retryable ticket.
+   * Throws if message status is not L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+   */
+  public async keepAlive(overrides?: Overrides): Promise<ContractTransaction> {
+    const status = await this.status()
+    if (status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
+      const arbRetryableTx = ArbRetryableTx__factory.connect(
+        ARB_RETRYABLE_TX_ADDRESS,
+        this.l2Signer
+      )
+      return await arbRetryableTx.keepalive(this.retryableCreationId, overrides)
+    } else {
+      throw new ArbSdkError(
+        `Cannot keep alive as retryable does not exist. Message status: ${
+          L1ToL2MessageStatus[status]
+        } must be: ${
+          L1ToL2MessageStatus[L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2]
+        }.`
       )
     }
   }
@@ -611,6 +674,58 @@ export class EthDepositMessage {
     return ethers.utils.keccak256(rlpEnc)
   }
 
+  /**
+   * Parse the data field in
+   * event InboxMessageDelivered(uint256 indexed messageNum, bytes data);
+   * @param eventData
+   * @returns
+   */
+  private static parseEthDepositData(eventData: string): BigNumber {
+    // https://github.com/OffchainLabs/nitro/blob/9f16d082496aef9de66b9e8653531d467d685560/contracts/src/bridge/Inbox.sol#L230
+    const parsed = ethers.utils.defaultAbiCoder.decode(
+      ['uint256'],
+      eventData
+    ) as [BigNumber]
+
+    return parsed[0]
+  }
+
+  /**
+   * Create an EthDepositMessage from data emitted in event when calling ethDeposit on Inbox.sol
+   * @param l2Provider
+   * @param messageNumber The message number in the Inbox.InboxMessageDelivered event
+   * @param senderAddr The sender address from Bridge.MessageDelivered event
+   * @param inboxMessageEventData The data field from the Inbox.InboxMessageDelivered event
+   * @returns
+   */
+  public static async fromEventComponents(
+    l2Provider: Provider,
+    messageNumber: BigNumber,
+    senderAddr: string,
+    inboxMessageEventData: string
+  ) {
+    const chainId = (await l2Provider.getNetwork()).chainId
+    const value = EthDepositMessage.parseEthDepositData(inboxMessageEventData)
+
+    return new EthDepositMessage(
+      l2Provider,
+      chainId,
+      messageNumber,
+      // arb-os always applies an alias to the address it gets from the event
+      // before it forms that into a transaction
+      new Address(senderAddr).applyAlias().value,
+      value
+    )
+  }
+
+  /**
+   *
+   * @param l2Provider
+   * @param l2ChainId
+   * @param messageNumber
+   * @param to Recipient address of the ETH on L2
+   * @param value
+   */
   constructor(
     private readonly l2Provider: Provider,
     public readonly l2ChainId: number,

@@ -36,8 +36,12 @@ import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
 import { ArbSdkError } from '../dataEntities/errors'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
+<<<<<<< HEAD
 import { getArbTransactionReceipt } from '../utils/arbProvider'
 import { EventArgs, parseTypedLogs } from '../dataEntities/event'
+=======
+import { ArbitrumProvider } from '../utils/arbProvider'
+>>>>>>> c-nitro-deposit-2
 
 export interface L2ContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<L2TransactionReceipt>
@@ -143,7 +147,8 @@ export class L2TransactionReceipt implements TransactionReceipt {
       NODE_INTERFACE_ADDRESS,
       l2Provider
     )
-    const rec = await getArbTransactionReceipt(l2Provider, this.transactionHash)
+    const arbProvider = new ArbitrumProvider(l2Provider)
+    const rec = await arbProvider.getTransactionReceipt(this.transactionHash)
     if (rec == null)
       throw new ArbSdkError(
         'No receipt receipt available for current transaction'

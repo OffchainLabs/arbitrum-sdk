@@ -34,7 +34,10 @@ import {
   L2ContractTransaction,
   L2TransactionReceipt,
 } from '../message/L2Transaction'
-import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
+import {
+  isL1ToL2TransactionRequest,
+  L1ToL2TransactionRequest,
+} from '../dataEntities/transactionRequest'
 
 export interface EthWithdrawParams {
   /**
@@ -100,45 +103,41 @@ export class EthBridger extends AssetBridger<
     }
     await this.checkL1Network(params.l1Signer)
 
-    const ethDeposit = this.isDepositRequest(params)
+    const ethDeposit = isL1ToL2TransactionRequest(params)
       ? params
       : await this.getDepositRequest(params)
 
     return await params.l1Signer[estimate ? 'estimateGas' : 'sendTransaction']({
-      ...ethDeposit,
+      ...ethDeposit.txRequestCore,
       ...params.overrides,
     })
   }
 
   public async getDepositRequest(
-    params: EthDepositParams
+    params: Omit<EthDepositParams, 'overrides'>
   ): Promise<L1ToL2TransactionRequest> {
     const inboxInterface = Inbox__factory.createInterface()
 
     const functionData = (
       inboxInterface as unknown as {
         encodeFunctionData(
-          functionFragment: 'depositEth',
+          functionFragment: 'depositEth()',
           values?: undefined
         ): string
       }
-    ).encodeFunctionData('depositEth')
+    ).encodeFunctionData('depositEth()')
 
     return {
       l2GasLimit: BigNumber.from(0),
       l2GasCostsMaxTotal: BigNumber.from(0),
       l2MaxFeePerGas: BigNumber.from(0),
       l2SubmissionFee: BigNumber.from(0),
-      to: this.l2Network.ethBridge.inbox,
-      value: params.amount,
-      data: functionData,
+      txRequestCore: {
+        to: this.l2Network.ethBridge.inbox,
+        value: params.amount,
+        data: functionData,
+      },
     }
-  }
-
-  private isDepositRequest(
-    params: EthDepositParams | L1ToL2TransactionRequest
-  ): params is L1ToL2TransactionRequest {
-    return (params as L1ToL2TransactionRequest).l2GasCostsMaxTotal != undefined
   }
 
   /**
