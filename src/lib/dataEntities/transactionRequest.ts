@@ -36,6 +36,36 @@ export interface L1ToL2TransactionRequest {
 }
 
 /**
+ * Parameters that will be used to create the retryable ticket for this l1 to l2 message
+ */
+export interface IRetryableData {
+  /**
+   * The call data that will be sent on L2
+   */
+  callData: string
+  /**
+   * The sender of the retryable
+   */
+  sender: string
+  /**
+   * The L2 destination of the retryable
+   */
+  destination: string
+  /**
+   * The address any excess fees will be refunded to
+   */
+  excessFeeRefundAddress: string
+  /**
+   * The address the call value will be refunded to in event of failure
+   */
+  callValueRefundAddress: string
+  /**
+   * The value of the retryable
+   */
+  value: BigNumber
+}
+
+/**
  * Ensure the T is not of TransactionRequest type by ensure it doesnt have a specific TransactionRequest property
  */
 type IsNotTransactionRequest<T> = T extends { txRequest: any } ? never : T

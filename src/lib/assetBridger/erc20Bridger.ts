@@ -62,6 +62,7 @@ import { getBaseFee } from '../utils/lib'
 import {
   isL1ToL2TransactionRequest,
   L1ToL2TransactionRequest,
+  IRetryableData,
 } from '../dataEntities/transactionRequest'
 import { defaultAbiCoder } from 'ethers/lib/utils'
 
@@ -392,7 +393,7 @@ export class Erc20Bridger extends AssetBridger<
    */
   public async getDepositRequest(
     params: Omit<Erc20DepositParams, 'overrides'>
-  ): Promise<L1ToL2TransactionRequest> {
+  ): Promise<L1ToL2TransactionRequest & { retryableData: IRetryableData }> {
     const {
       retryableGasOverrides,
       erc20L1Address,
@@ -404,6 +405,7 @@ export class Erc20Bridger extends AssetBridger<
 
     await this.checkL1Network(params.l1Signer)
     await this.checkL2Network(params.l2Provider)
+
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
       throw new MissingProviderArbSdkError('l1Signer')
     }
@@ -441,19 +443,24 @@ export class Erc20Bridger extends AssetBridger<
     if (l1GatewayAddress === this.l2Network.tokenBridge.l1CustomGateway) {
       if (!tokenGasOverrides) tokenGasOverrides = {}
       if (!tokenGasOverrides.gasLimit) tokenGasOverrides.gasLimit = {}
-      tokenGasOverrides.gasLimit.min = Erc20Bridger.MIN_CUSTOM_DEPOSIT_GAS_LIMIT
+      if (!tokenGasOverrides.gasLimit.min) {
+        tokenGasOverrides.gasLimit.min =
+          Erc20Bridger.MIN_CUSTOM_DEPOSIT_GAS_LIMIT
+      }
     }
 
     // 2. get the gas estimates
     const baseFee = await getBaseFee(l1Signer.provider)
+    const excessFeeRefundAddress = sender
+    const callValueRefundAddress = sender
     const estimates = await gasEstimator.estimateAll(
       l1GatewayAddress,
       l2Dest,
       depositCalldata,
       estimateGasCallValue,
       baseFee,
-      sender,
-      sender,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
       l1Signer.provider,
       tokenGasOverrides
     )
@@ -487,6 +494,14 @@ export class Erc20Bridger extends AssetBridger<
         data: functionData,
         value: estimates.totalL2GasCosts,
       },
+      retryableData: {
+        callData: depositCalldata,
+        sender: l1GatewayAddress,
+        destination: l2Dest,
+        excessFeeRefundAddress: excessFeeRefundAddress,
+        callValueRefundAddress: callValueRefundAddress,
+        value: estimateGasCallValue,
+      },
     }
   }
 
@@ -502,6 +517,12 @@ export class Erc20Bridger extends AssetBridger<
     await this.checkL2Network(params.l2Provider)
     if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
       throw new MissingProviderArbSdkError('l1Signer')
+    }
+
+    if ((params.overrides as PayableOverrides | undefined)?.value) {
+      throw new ArbSdkError(
+        'L1 call value should be set through l1CallValue param'
+      )
     }
 
     const tokenDeposit = isL1ToL2TransactionRequest(params)
