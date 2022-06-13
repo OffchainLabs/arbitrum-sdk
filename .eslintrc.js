@@ -54,6 +54,7 @@ module.exports = {
             rules: { 'strict-comparisons': true },
           },
         ],
+        'no-implicit-coercion': 'error',
       },
     },
   ],

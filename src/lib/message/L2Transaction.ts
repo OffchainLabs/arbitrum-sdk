@@ -136,7 +136,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
 
     // Data is made available in batches, if the batch info is
     // available then so is the tx data
-    return !!arbReceipt?.l1InboxBatchInfo
+    return typeof arbReceipt?.l1InboxBatchInfo !== 'undefined'
   }
 
   /**
