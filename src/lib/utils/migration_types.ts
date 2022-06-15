@@ -406,3 +406,25 @@ export const toNitroEthDepositMessage = async (
     },
   }
 }
+
+export const toClassicRetryableParams = async (
+  params: nitro.L1ToL2MessageReader['messageData']
+): ReturnType<classic.L1ToL2MessageReader['getInputs']> => {
+  if (params.data.length < 2 || params.data.length % 2 !== 0) {
+    throw new ArbSdkError('Unxpected params data: `${params.data}')
+  }
+  return {
+    callDataLength: BigNumber.from(
+      (params.data.startsWith('0x')
+        ? params.data.length - 2
+        : params.data.length) / 2
+    ),
+    callValueRefundAddress: params.callValueRefundAddress,
+    destinationAddress: params.destAddress,
+    excessFeeRefundAddress: params.excessFeeRefundAddress,
+    gasPriceBid: params.maxFeePerGas,
+    l2CallValue: params.l2CallValue,
+    maxGas: params.gasLimit,
+    maxSubmissionCost: params.maxSubmissionFee,
+  }
+}

@@ -35,6 +35,7 @@ import * as nitro from '@arbitrum/sdk-nitro'
 import {
   IL1ToL2MessageReader,
   IL1ToL2MessageWriter,
+  toClassicRetryableParams,
 } from '../utils/migration_types'
 
 export enum L2TxnType {
@@ -182,6 +183,17 @@ export class L1ToL2MessageReader
     return this.nitroReader
       ? this.nitroReader.status()
       : this.classicReader!.status()
+  }
+
+  /**
+   * Get and format inputs provided in calldata for retryable messsage (message type 9)
+   */
+  public async getInputs(): ReturnType<
+    classic.L1ToL2MessageReader['getInputs']
+  > {
+    return this.nitroReader
+      ? toClassicRetryableParams(this.nitroReader.messageData)
+      : await this.classicReader!.getInputs()
   }
 
   /**
