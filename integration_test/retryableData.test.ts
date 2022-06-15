@@ -182,7 +182,7 @@ describe.only('RevertData', () => {
       )
 
       expect(parsed.l2CallValue.toString(), 'l2CallValue').to.eq(
-        depositParams.retryableData.value.toString()
+        depositParams.retryableData.l2CallValue.toString()
       )
 
       expect(parsed.maxFeePerGas.toString(), 'maxFeePerGas').to.eq(

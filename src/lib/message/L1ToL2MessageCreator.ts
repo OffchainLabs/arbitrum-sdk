@@ -5,11 +5,10 @@ import {
   GasOverrides,
   L1ToL2MessageGasEstimator,
 } from './L1ToL2MessageGasEstimator'
-import { L1TransactionReceipt } from './L1Transaction'
+import { L1ContractTransaction, L1TransactionReceipt } from './L1Transaction'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { getL2Network } from '../dataEntities/networks'
 import { PayableOverrides } from '@ethersproject/contracts'
-import { BigNumber } from 'ethers'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getBaseFee } from '../utils/lib'
@@ -17,38 +16,32 @@ import {
   isL1ToL2TransactionRequest,
   L1ToL2TransactionRequest,
 } from '../dataEntities/transactionRequest'
+import { RetryableData } from '../dataEntities/retryableData'
 
-interface L1ToL2MessageParams {
+/**
+ * Omit doesnt enforce that the seconds generic is a keyof the first
+ * OmitTyped guard against the underlying type prop names
+ * being refactored, and not being updated in the usage of OmitTyped
+ */
+type OmitTyped<T, K extends keyof T> = Omit<T, K>
+
+/**
+ * Make the specified properties optional
+ */
+type PartialPick<T, K extends keyof T> = OmitTyped<T, K> & Partial<T>
+
+type L1ToL2MessageParams = PartialPick<
+  OmitTyped<
+    RetryableData,
+    'deposit' | 'from' | 'maxSubmissionCost' | 'maxFeePerGas'
+  >,
+  'excessFeeRefundAddress' | 'callValueRefundAddress'
+> & {
   l2Provider: Provider
   /**
-   * The address to be called on L2
+   * Options for estimating L1ToL2 gas parameters
    */
-  l2CallTo: string
-  /**
-   * The data to call the L2 address with
-   */
-  l2CallData: string
-  /**
-   * The value to call the L2 address with
-   */
-  l2CallValue: BigNumber
-  /**
-   * Retryable ticket options
-   */
-  options?: {
-    /**
-     * The address to return the any gas that was not spent on fees
-     */
-    excessFeeRefundAddress?: string
-    /**
-     * The address to refund the call value to in the event the transaction fails
-     */
-    callValueRefundAddress?: string
-    /**
-     * Options for estimating L1ToL2 gas parameters
-     */
-    gasEstimationOptions?: GasOverrides
-  }
+  retryableGasOverrides?: GasOverrides
 }
 
 /**
@@ -74,24 +67,22 @@ export class L1ToL2MessageCreator {
     params: L1ToL2MessageParams
   ): Promise<L1ToL2TransactionRequest> {
     const sender = await this.l1Signer.getAddress()
-    const excessFeeRefundAddress =
-      params.options?.excessFeeRefundAddress || sender
-    const callValueRefundAddress =
-      params.options?.callValueRefundAddress || sender
+    const excessFeeRefundAddress = params.excessFeeRefundAddress || sender
+    const callValueRefundAddress = params.callValueRefundAddress || sender
     const l1Provider = SignerProviderUtils.getProviderOrThrow(this.l1Signer)
 
     const gasEstimator = new L1ToL2MessageGasEstimator(params.l2Provider)
     const baseFee = await getBaseFee(l1Provider)
     const estimates = await gasEstimator.estimateAll(
       sender,
-      params.l2CallTo,
-      params.l2CallData,
+      params.to,
+      params.data,
       params.l2CallValue,
       baseFee,
       excessFeeRefundAddress,
       callValueRefundAddress,
       l1Provider,
-      params.options?.gasEstimationOptions
+      params.retryableGasOverrides
     )
 
     const l2Network = await getL2Network(params.l2Provider)
@@ -99,14 +90,14 @@ export class L1ToL2MessageCreator {
     const functionData = inboxInterface.encodeFunctionData(
       'createRetryableTicket',
       [
-        params.l2CallTo,
+        params.to,
         params.l2CallValue,
         estimates.maxSubmissionFee,
         excessFeeRefundAddress,
         callValueRefundAddress,
         estimates.gasLimit,
         estimates.maxFeePerGas,
-        params.l2CallData,
+        params.data,
       ]
     )
 
@@ -115,10 +106,20 @@ export class L1ToL2MessageCreator {
       l2MaxFeePerGas: estimates.maxFeePerGas,
       l2SubmissionFee: estimates.maxSubmissionFee,
       l2GasCostsMaxTotal: estimates.totalL2GasCosts,
-      txRequestCore: {
+      core: {
         to: l2Network.ethBridge.inbox,
         data: functionData,
         value: estimates.totalL2GasCosts.add(params.l2CallValue),
+      },
+      isValid: async () => {
+        const reEstimated = await this.getTicketCreationRequest({
+          ...params,
+          retryableGasOverrides: undefined,
+        })
+        return (
+          estimates.maxFeePerGas.gte(reEstimated.l2MaxFeePerGas) &&
+          estimates.maxSubmissionFee.gte(reEstimated.l2SubmissionFee)
+        )
       },
     }
   }
@@ -130,7 +131,7 @@ export class L1ToL2MessageCreator {
     params:
       | (L1ToL2MessageParams & { overrides?: PayableOverrides })
       | (L1ToL2TransactionRequest & { overrides?: PayableOverrides })
-  ): Promise<L1TransactionReceipt> {
+  ): Promise<L1ContractTransaction> {
     const createRequest = isL1ToL2TransactionRequest(params)
       ? params
       : await this.getTicketCreationRequest(params)
@@ -140,8 +141,6 @@ export class L1ToL2MessageCreator {
       ...params.overrides,
     })
 
-    const receipt = await tx.wait()
-
-    return new L1TransactionReceipt(receipt)
+    return L1TransactionReceipt.monkeyPatchWait(tx)
   }
 }

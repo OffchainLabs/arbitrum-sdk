@@ -7,9 +7,9 @@ import { BigNumber } from 'ethers'
  */
 export interface L1ToL2TransactionRequest {
   /**
-   * Core fields needed to forma transaction request: `to`, `data`, `from`
+   * Core fields needed to form a transaction request: `to`, `data`, `value`
    */
-  txRequestCore: Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
+  core: Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
   /**
    * The gas limit provided to this transactin when executed on L2 (units of gas)
    */
@@ -30,9 +30,13 @@ export interface L1ToL2TransactionRequest {
    */
   l2SubmissionFee: BigNumber
   /**
-   * The maximum total amount of eth that could be spent on L2 (wei)
+   * The maximum total amount of eth that could be spent on L2 gas (wei)
    */
   l2GasCostsMaxTotal: BigNumber
+  /**
+   * If this request were sent now, would it have enough margin to reliably succeed
+   */
+  isValid(): Promise<boolean>
 }
 
 /**
@@ -52,17 +56,17 @@ export interface IRetryableData {
    */
   destination: string
   /**
-   * The address any excess fees will be refunded to
+   * The L2 address any excess fees will be refunded to
    */
   excessFeeRefundAddress: string
   /**
-   * The address the call value will be refunded to in event of failure
+   * The L2 address the call value will be refunded to in event of failure
    */
   callValueRefundAddress: string
   /**
-   * The value of the retryable
+   * The L2 call value of the retryable
    */
-  value: BigNumber
+  l2CallValue: BigNumber
 }
 
 /**
@@ -78,7 +82,5 @@ type IsNotTransactionRequest<T> = T extends { txRequest: any } ? never : T
 export const isL1ToL2TransactionRequest = <T>(
   possibleRequest: IsNotTransactionRequest<T> | L1ToL2TransactionRequest
 ): possibleRequest is L1ToL2TransactionRequest => {
-  return (
-    (possibleRequest as L1ToL2TransactionRequest).txRequestCore != undefined
-  )
+  return (possibleRequest as L1ToL2TransactionRequest).core != undefined
 }
