@@ -40,6 +40,7 @@ import {
 } from '../utils/migration_types'
 import { Interface } from 'ethers/lib/utils'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
+import { isDefined } from '../utils/lib'
 
 export type L2ToL1TransactionEvent =
   | ClassicL2ToL1TransactionEvent['args']
@@ -76,7 +77,7 @@ export class L2ToL1Message {
   protected isClassic(
     e: L2ToL1TransactionEvent
   ): e is ClassicL2ToL1TransactionEvent['args'] {
-    return !!(e as ClassicL2ToL1TransactionEvent['args']).indexInBatch
+    return isDefined((e as ClassicL2ToL1TransactionEvent['args']).indexInBatch)
   }
 
   public static fromEvent<T extends SignerOrProvider>(
