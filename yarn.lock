@@ -1275,16 +1275,6 @@ arb-bridge-eth@0.7.6:
     "@openzeppelin/contracts-upgradeable" "3.4.2"
     hardhat "^2.6.1"
 
-arb-bridge-eth@0.7.7:
-  version "0.7.7"
-  resolved "https://registry.yarnpkg.com/arb-bridge-eth/-/arb-bridge-eth-0.7.7.tgz#9a6251c3000701b94770f97a33d5074bd8587536"
-  integrity sha512-2acKHyMF40G668Tz3Akqw2ERiur5BDbUxQ8ZG31can/HA0cMpU14wCP7vSPIO3BkD0x9wPhqG1kxTrSrkRYqzA==
-  dependencies:
-    "@openzeppelin/contracts" "3.4.2"
-    "@openzeppelin/contracts-0.8" "npm:@openzeppelin/contracts@^4.3.2"
-    "@openzeppelin/contracts-upgradeable" "3.4.2"
-    hardhat "^2.6.1"
-
 arb-bridge-peripherals@1.0.9:
   version "1.0.9"
   resolved "https://registry.yarnpkg.com/arb-bridge-peripherals/-/arb-bridge-peripherals-1.0.9.tgz#a1a766375c0db0a10b42a821d2ca5dd208433a13"
@@ -1298,7 +1288,7 @@ arb-bridge-peripherals@1.0.9:
   optionalDependencies:
     "@openzeppelin/upgrades-core" "^1.7.6"
 
-arbos-precompiles@1.0.2, arbos-precompiles@^1.0.2:
+arbos-precompiles@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/arbos-precompiles/-/arbos-precompiles-1.0.2.tgz#7bebd5963aef972cd259eb41f3116ea065013ea6"
   integrity sha512-1dOFYFJUN0kKoofh6buZJ8qCqTs+oLGSsGzHI0trA/Pka/TCERflCRsNVxez2lihOvK7MT/a2RA8AepKtBXdPQ==
