@@ -25,7 +25,10 @@ import { L1ToL2MessageStatus, L1ToL2MessageWaitResult } from './L1ToL2Message'
 
 import { L1ERC20Gateway__factory } from '../abi/factories/L1ERC20Gateway__factory'
 import { DepositInitiatedEvent } from '../abi/L1ERC20Gateway'
-import { SignerOrProvider } from '../dataEntities/signerOrProvider'
+import {
+  SignerOrProvider,
+  SignerProviderUtils,
+} from '../dataEntities/signerOrProvider'
 import * as classic from '@arbitrum/sdk-classic'
 import * as nitro from '@arbitrum/sdk-nitro'
 import { L1EthDepositTransactionReceipt as NitroL1EthDepositTransactionReceipt } from '@arbitrum/sdk-nitro/dist/lib/message/L1Transaction'
@@ -123,16 +126,25 @@ export class L1TransactionReceipt implements TransactionReceipt {
   public async getL1ToL2Message<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
     messageNumberIndex?: number
-  ): Promise<IL1ToL2MessageReaderOrWriter<T>>
+  ): Promise<IL1ToL2MessageReaderOrWriter<T> | EthDepositMessage>
   public async getL1ToL2Message<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
     messageIndex?: number
-  ): Promise<IL1ToL2MessageReader | IL1ToL2MessageWriter> {
-    return (await isNitroL2(l2SignerOrProvider))
-      ? (await this.nitroReceipt.getL1ToL2Messages(l2SignerOrProvider))[
-          messageIndex || 0
-        ]
-      : this.classicReceipt.getL1ToL2Message(l2SignerOrProvider, messageIndex)
+  ): Promise<IL1ToL2MessageReader | IL1ToL2MessageWriter | EthDepositMessage> {
+    if (await isNitroL2(l2SignerOrProvider)) {
+      const res = [
+        ...(await this.nitroReceipt.getL1ToL2Messages(l2SignerOrProvider)),
+        ...(await this.nitroReceipt.getEthDepositMessages(
+          SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
+        )),
+      ]
+      return res[messageIndex || 0]
+    } else {
+      return this.classicReceipt.getL1ToL2Message(
+        l2SignerOrProvider,
+        messageIndex
+      )
+    }
   }
 
   /**
