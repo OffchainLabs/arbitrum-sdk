@@ -231,6 +231,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
           EthDepositMessage.fromEventComponents(
             l2Provider,
             m.inboxMessageEvent.messageNum,
+            m.bridgeMessageEvent.sender,
             m.inboxMessageEvent.data
           )
         )
