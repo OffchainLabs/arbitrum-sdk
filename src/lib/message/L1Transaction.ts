@@ -96,6 +96,14 @@ export class L1TransactionReceipt implements TransactionReceipt {
     this.nitroReceipt = new nitro.L1TransactionReceipt(tx)
   }
 
+  public async getAllDeposits<T extends SignerOrProvider>(l2SignerOrProvider: T) {
+    if (await isNitroL2(l2SignerOrProvider)) {
+      return this.nitroReceipt.getAllDeposits(l2SignerOrProvider)
+    } else {
+      return this.classicReceipt.getL1ToL2Messages(l2SignerOrProvider)
+    }
+  }
+
   /**
    * Get any l1tol2 messages created by this transaction
    * @param l2SignerOrProvider
