@@ -217,10 +217,18 @@ export class L1TransactionReceipt implements TransactionReceipt {
     }
   }
 
+  public async getAllDeposits<T extends SignerOrProvider>(l2SignerOrProvider: T) {
+    const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
+    return await Promise.all([
+      this.getEthDepositMessages(provider),
+      this.getL1ToL2Messages(l2SignerOrProvider)
+    ]).then(arr => arr.flat(1))
+  }
+
   public async getEthDepositMessages(
     l2Provider: Provider
   ): Promise<EthDepositMessage[]> {
-    return Promise.all(
+    return await Promise.all(
       this.getMessageEvents()
         .filter(
           e =>
