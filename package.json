@@ -58,7 +58,6 @@
   },
   "devDependencies": {
     "@arbitrum/nitro-contracts": "1.0.0-beta.5",
-    "arb-bridge-peripherals": "1.0.10",
     "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@types/chai": "^4.2.11",
     "@types/mocha": "^9.0.0",
@@ -66,9 +65,7 @@
     "@typescript-eslint/eslint-plugin": "^5.14.0",
     "@typescript-eslint/eslint-plugin-tslint": "^5.27.1",
     "@typescript-eslint/parser": "^5.14.0",
-    "arb-bridge-eth": "0.7.7",
     "arb-bridge-peripherals": "1.0.10",
-    "arbos-precompiles": "1.0.2",
     "audit-ci": "^5.1.2",
     "axios": "^0.21.3",
     "chai": "^4.2.0",
