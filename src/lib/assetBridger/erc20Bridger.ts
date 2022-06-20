@@ -347,36 +347,31 @@ export class Erc20Bridger extends AssetBridger<
 
   /**
    * Get the corresponding L1 for the provided L2 token
-   * @param erc20L1Address
+   * Validates the returned address against the l2 router to ensure it is correctly mapped to the provided erc20L2Address
+   * @param erc20L2Address
    * @param l2Provider
-   * @param l1Provider Used to check that the returned l1 address is indeed registered with the L1 gateway
    * @returns
    */
   public async getL1ERC20Address(
     erc20L2Address: string,
-    l2Provider: Provider,
-    l1Provider?: Provider
+    l2Provider: Provider
   ): Promise<string> {
     await this.checkL2Network(l2Provider)
 
     const arbERC20 = L2GatewayToken__factory.connect(erc20L2Address, l2Provider)
     const l1Address = await arbERC20.functions.l1Address().then(([res]) => res)
 
-    // @deprecated: for the next breaking change make the l1Provider required and always do the check below
-    if (l1Provider) {
-      await this.checkL1Network(l1Provider)
-      // check that this l1 address is indeed registered to this l2 token
-      const l1GatewayRouter = L1GatewayRouter__factory.connect(
-        this.l2Network.tokenBridge.l1GatewayRouter,
-        l1Provider
-      )
+    // check that this l1 address is indeed registered to this l2 token
+    const l2GatewayRouter = L2GatewayRouter__factory.connect(
+      this.l2Network.tokenBridge.l2GatewayRouter,
+      l2Provider
+    )
 
-      const l2Address = await l1GatewayRouter.calculateL2TokenAddress(l1Address)
-      if (l2Address.toLowerCase() !== erc20L2Address.toLowerCase()) {
-        throw new ArbSdkError(
-          `Unexpected l1 address. L1 address from token is not registered to the provided l2 address. ${l1Address} ${l2Address} ${erc20L2Address}`
-        )
-      }
+    const l2Address = await l2GatewayRouter.calculateL2TokenAddress(l1Address)
+    if (l2Address.toLowerCase() !== erc20L2Address.toLowerCase()) {
+      throw new ArbSdkError(
+        `Unexpected l1 address. L1 address from token is not registered to the provided l2 address. ${l1Address} ${l2Address} ${erc20L2Address}`
+      )
     }
 
     return l1Address
