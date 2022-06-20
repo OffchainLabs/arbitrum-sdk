@@ -296,6 +296,9 @@ export class Erc20Bridger extends AssetBridger<
 
   /**
    * Get the L2 token contract at the provided address
+   * Note: This function just returns a typed ethers object for the provided address, it doesnt
+   * check the underlying form of the contract bytecode to see if it's an erc20, and doesn't ensure the validity
+   * of any of the underlying functions on that contract.
    * @param l2Provider
    * @param l2TokenAddr
    * @returns
@@ -309,6 +312,9 @@ export class Erc20Bridger extends AssetBridger<
 
   /**
    * Get the L1 token contract at the provided address
+   * Note: This function just returns a typed ethers object for the provided address, it doesnt
+   * check the underlying form of the contract bytecode to see if it's an erc20, and doesn't ensure the validity
+   * of any of the underlying functions on that contract.
    * @param l1Provider
    * @param l1TokenAddr
    * @returns
@@ -354,11 +360,11 @@ export class Erc20Bridger extends AssetBridger<
     await this.checkL2Network(l2Provider)
 
     const arbERC20 = L2GatewayToken__factory.connect(erc20L2Address, l2Provider)
-
     const l1Address = await arbERC20.functions.l1Address().then(([res]) => res)
 
     // @deprecated: for the next breaking change make the l1Provider required and always do the check below
     if (l1Provider) {
+      await this.checkL1Network(l2Provider)
       // check that this l1 address is indeed registered to this l2 token
       const l1GatewayRouter = L1GatewayRouter__factory.connect(
         this.l2Network.tokenBridge.l1GatewayRouter,
