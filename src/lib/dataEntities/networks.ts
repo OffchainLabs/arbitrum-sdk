@@ -16,12 +16,9 @@
 /* eslint-env node */
 'use strict'
 
-import dotenv from 'dotenv'
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
 import { SEVEN_DAYS_IN_SECONDS } from './constants'
-
-dotenv.config()
 
 export interface L1Network extends Network {
   partnerChainIDs: number[]
@@ -40,7 +37,6 @@ export interface Network {
   chainID: number
   name: string
   explorerUrl: string
-  rpcURL: string
   gif?: string
   isCustom: boolean
 }
@@ -135,7 +131,6 @@ export const l1Networks: L1Networks = {
     explorerUrl: 'https://etherscan.io',
     partnerChainIDs: [42161],
     blockTime: 14,
-    rpcURL: process.env['MAINNET_RPC'] as string,
     isCustom: false,
   },
   1338: {
@@ -144,7 +139,6 @@ export const l1Networks: L1Networks = {
     explorerUrl: 'https://etherscan.io',
     partnerChainIDs: [42161],
     blockTime: 1,
-    rpcURL: 'http://127.0.0.1:8545/',
     isCustom: false,
   },
   4: {
@@ -153,7 +147,6 @@ export const l1Networks: L1Networks = {
     explorerUrl: 'https://rinkeby.etherscan.io',
     partnerChainIDs: [421611],
     blockTime: 15,
-    rpcURL: process.env['RINKEBY_RPC'] as string,
     isCustom: false,
   },
 }
@@ -168,7 +161,6 @@ export const l2Networks: L2Networks = {
     tokenBridge: mainnetTokenBridge,
     ethBridge: mainnetETHBridge,
     confirmPeriodBlocks: 45818,
-    rpcURL: process.env['ARB_ONE_RPC'] || 'https://arb1.arbitrum.io/rpc',
     isCustom: false,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
   },
@@ -181,7 +173,6 @@ export const l2Networks: L2Networks = {
     tokenBridge: rinkebyTokenBridge,
     ethBridge: rinkebyETHBridge,
     confirmPeriodBlocks: 6545, // TODO
-    rpcURL: process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc',
     isCustom: false,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
   },
