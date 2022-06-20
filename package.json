@@ -45,7 +45,7 @@
     "bridgeStandardToken": "ts-node scripts/deployStandard.ts"
   },
   "dependencies": {
-    "@arbitrum/sdk-classic": "npm:@arbitrum/sdk@1.1.8",
+    "@arbitrum/sdk-classic": "npm:@arbitrum/sdk@1.1.9",
     "@arbitrum/sdk-nitro": "npm:@arbitrum/sdk@3.0.0-beta.2",
     "@ethersproject/address": "^5.0.8",
     "@ethersproject/bignumber": "^5.1.1",
@@ -59,7 +59,6 @@
     "typechain": "7.0.0"
   },
   "devDependencies": {
-    "arb-bridge-peripherals": "1.0.10",
     "@arbitrum/nitro-contracts": "^1.0.0-beta.5",
     "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@types/chai": "^4.2.11",
@@ -67,6 +66,7 @@
     "@types/prompts": "^2.0.14",
     "@typescript-eslint/eslint-plugin": "^5.14.0",
     "@typescript-eslint/parser": "^5.14.0",
+    "arb-bridge-peripherals": "1.0.10",
     "audit-ci": "^5.1.2",
     "axios": "^0.21.3",
     "chai": "^4.2.0",

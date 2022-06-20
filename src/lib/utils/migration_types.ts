@@ -286,6 +286,7 @@ export interface IL1ToL2MessageReader {
   ): Promise<L1ToL2MessageWaitResult>
   getTimeout(): Promise<BigNumber>
   getBeneficiary(): Promise<string>
+  getInputs(): ReturnType<classic.L1ToL2MessageReader['getInputs']>
 }
 
 export interface IL1ToL2MessageWriter extends IL1ToL2MessageReader {
