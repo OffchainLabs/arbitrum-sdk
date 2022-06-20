@@ -40,7 +40,7 @@ import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
-import { getL1Network, getL2Network } from '../dataEntities/networks'
+import { getL2Network } from '../dataEntities/networks'
 import { wait } from '../utils/lib'
 
 export interface MessageBatchProofInfo {
