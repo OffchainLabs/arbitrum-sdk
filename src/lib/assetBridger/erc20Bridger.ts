@@ -364,7 +364,7 @@ export class Erc20Bridger extends AssetBridger<
 
     // @deprecated: for the next breaking change make the l1Provider required and always do the check below
     if (l1Provider) {
-      await this.checkL1Network(l2Provider)
+      await this.checkL1Network(l1Provider)
       // check that this l1 address is indeed registered to this l2 token
       const l1GatewayRouter = L1GatewayRouter__factory.connect(
         this.l2Network.tokenBridge.l1GatewayRouter,
