@@ -29,7 +29,7 @@ import { Inbox__factory } from '../src/lib/abi/factories/Inbox__factory'
 import { GasOverrides } from '../src/lib/message/L1ToL2MessageGasEstimator'
 const depositAmount = BigNumber.from(100)
 
-describe.only('RevertData', () => {
+describe('RevertData', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
