@@ -220,7 +220,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
   public async getEthDepositMessages(
     l2Provider: Provider
   ): Promise<EthDepositMessage[]> {
-    return await Promise.all(
+    return Promise.all(
       this.getMessageEvents()
         .filter(
           e =>
