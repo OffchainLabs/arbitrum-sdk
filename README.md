@@ -1,7 +1,5 @@
 # Arbitrum SDK
 
-> **Note**: The master branch in this repository points to a legacy 1.x.x version of the SDK. The current recommended version of the package is 2.x.x which can be found on the c-nitro-migration branch.This migration version will work both pre and post the nitro upgrade, and is available to download via npm.
-
 Typescript library for client-side interactions with Arbitrum. Arbitrum SDK provides common helper functionaliy as well access to the underlying smart contract interfaces.
 
 Below is an overview of the Arbitrum SDK functionality. See the [tutorials](https://github.com/OffchainLabs/arbitrum-tutorials) for further examples of how to use these classes.
