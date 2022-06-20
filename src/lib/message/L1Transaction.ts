@@ -48,6 +48,7 @@ import {
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
 import { MessageDeliveredEvent } from '../abi/Bridge'
 import { EventArgs, parseTypedLogs } from '../dataEntities/event'
+import { isDefined } from '../utils/lib'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -354,7 +355,7 @@ export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
     const res = await message.wait(confirmations, timeout)
 
     return {
-      complete: Boolean(res),
+      complete: isDefined(res),
       l2TxReceipt: res,
       message,
     }

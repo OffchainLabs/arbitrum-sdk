@@ -1,16 +1,48 @@
 import { Interface } from '@ethersproject/abi'
 import { BigNumber } from 'ethers'
 
+const errorInterface = new Interface([
+  'error RetryableData(address from, address to, uint256 l2CallValue, uint256 deposit, uint256 maxSubmissionCost, address excessFeeRefundAddress, address callValueRefundAddress, uint256 gasLimit, uint256 maxFeePerGas, bytes data)',
+])
+// CAUTION: this type mirrors the error type above
+// The property names must exactly match those above
 export interface RetryableData {
   from: string
+  /**
+   * The address to be called on L2
+   */
   to: string
+  /**
+   * The value to call the L2 address with
+   */
   l2CallValue: BigNumber
+  /**
+   * The total amount to deposit on L2, includes gas fees and l2 call value
+   */
   deposit: BigNumber
+  /**
+   * The maximum cost to be paif for submitting the transaction
+   */
   maxSubmissionCost: BigNumber
+  /**
+   * The address to return the any gas that was not spent on fees
+   */
   excessFeeRefundAddress: string
+  /**
+   * The address to refund the call value to in the event the retryable is cancelled, or expires
+   */
   callValueRefundAddress: string
+  /**
+   * The L2 gas limit
+   */
   gasLimit: BigNumber
+  /**
+   * The max gas price to pay on L2
+   */
   maxFeePerGas: BigNumber
+  /**
+   * The data to call the L2 address with
+   */
   data: string
 }
 
@@ -82,11 +114,6 @@ export class RetryableDataTools {
   ): RetryableData | null {
     const errorData = this.tryGetErrorData(ethersJsErrorOrData)
     if (!errorData) return null
-
-    const errorInterface = new Interface([
-      'error RetryableData(address from, address to, uint256 l2CallValue, uint256 deposit, uint256 maxSubmissionCost, address excessFeeRefundAddress, address callValueRefundAddress, uint256 gasLimit, uint256 maxFeePerGas, bytes data)',
-    ])
-
     return errorInterface.parseError(errorData).args as unknown as RetryableData
   }
 }

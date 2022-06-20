@@ -433,7 +433,7 @@ export class Erc20Bridger extends AssetBridger<
     // The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
     // Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
     const isWeth = await this.isWethGateway(l1GatewayAddress, l1Signer.provider)
-    const estimateGasCallValue = isWeth ? amount : Zero
+    const l2CallValue = isWeth ? amount : Zero
 
     const l2Dest = await l1Gateway.counterpartGateway()
     const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
@@ -458,7 +458,7 @@ export class Erc20Bridger extends AssetBridger<
       l1GatewayAddress,
       l2Dest,
       depositCalldata,
-      estimateGasCallValue,
+      l2CallValue,
       baseFee,
       excessFeeRefundAddress,
       callValueRefundAddress,
@@ -490,10 +490,10 @@ export class Erc20Bridger extends AssetBridger<
       l2MaxFeePerGas: estimates.maxFeePerGas,
       l2SubmissionFee: estimates.maxSubmissionFee,
       l2GasCostsMaxTotal: estimates.totalL2GasCosts,
-      txRequestCore: {
+      core: {
         to: this.l2Network.tokenBridge.l1GatewayRouter,
         data: functionData,
-        value: estimates.totalL2GasCosts,
+        value: estimates.totalL2GasCosts.add(l2CallValue),
       },
       retryableData: {
         callData: depositCalldata,
@@ -501,7 +501,17 @@ export class Erc20Bridger extends AssetBridger<
         destination: l2Dest,
         excessFeeRefundAddress: excessFeeRefundAddress,
         callValueRefundAddress: callValueRefundAddress,
-        value: estimateGasCallValue,
+        l2CallValue: l2CallValue,
+      },
+      isValid: async () => {
+        const reEstimated = await this.getDepositRequest({
+          ...params,
+          retryableGasOverrides: undefined,
+        })
+        return (
+          estimates.maxFeePerGas.gte(reEstimated.l2MaxFeePerGas) &&
+          estimates.maxSubmissionFee.gte(reEstimated.l2SubmissionFee)
+        )
       },
     }
   }
@@ -531,7 +541,7 @@ export class Erc20Bridger extends AssetBridger<
       : await this.getDepositRequest(params)
 
     return await params.l1Signer[estimate ? 'estimateGas' : 'sendTransaction']({
-      ...tokenDeposit.txRequestCore,
+      ...tokenDeposit.core,
       ...params.overrides,
     })
   }
