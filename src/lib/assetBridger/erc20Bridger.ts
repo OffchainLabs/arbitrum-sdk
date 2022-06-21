@@ -362,7 +362,7 @@ export class Erc20Bridger extends AssetBridger<
     let l1Address
     try {
       l1Address = (await arbERC20.functions.l1Address())[0]
-    } catch(error) {
+    } catch (error) {
       throw new ArbSdkError(`Unable to get l1 address of ${erc20L2Address}`)
     }
 
