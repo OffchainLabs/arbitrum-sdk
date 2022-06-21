@@ -33,6 +33,7 @@ import {
   getOutboxAddr,
   IL2ToL1MessageReaderOrWriter,
 } from '../utils/migration_types'
+import { isDefined } from '../utils/lib'
 
 export interface L2ContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<L2TransactionReceipt>
@@ -101,7 +102,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
   private isClassic(
     e: L2ToL1TransactionEvent
   ): e is ClassicL2ToL1TransactionEvent['args'] {
-    return !!(e as ClassicL2ToL1TransactionEvent['args']).indexInBatch
+    return isDefined((e as ClassicL2ToL1TransactionEvent['args']).indexInBatch)
   }
 
   /**

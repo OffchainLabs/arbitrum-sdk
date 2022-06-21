@@ -89,8 +89,8 @@ export const getOutboxAddr = (
   // is greater than the supplied batch
   const res = Object.entries(network.ethBridge.outboxes)
     .sort((a, b) => {
-      if (a[1] < b[1]) return -1
-      else if (a[1] === b[1]) return 0
+      if (a[1].lt(b[1])) return -1
+      else if (a[1].eq(b[1])) return 0
       else return 1
     })
     .find(

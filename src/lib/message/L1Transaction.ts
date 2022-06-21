@@ -29,7 +29,10 @@ import {
 
 import { L1ERC20Gateway__factory } from '../abi/factories/L1ERC20Gateway__factory'
 import { DepositInitiatedEvent } from '../abi/L1ERC20Gateway'
-import { SignerOrProvider } from '../dataEntities/signerOrProvider'
+import {
+  SignerOrProvider,
+  SignerProviderUtils,
+} from '../dataEntities/signerOrProvider'
 import * as classic from '@arbitrum/sdk-classic'
 import * as nitro from '@arbitrum/sdk-nitro'
 import { L1EthDepositTransactionReceipt as NitroL1EthDepositTransactionReceipt } from '@arbitrum/sdk-nitro/dist/lib/message/L1Transaction'
@@ -100,6 +103,53 @@ export class L1TransactionReceipt implements TransactionReceipt {
     this.nitroReceipt = new nitro.L1TransactionReceipt(tx)
   }
 
+  private async looksLikeEthDeposit(message: classic.L1ToL2MessageReader) {
+    const inputs = await message.getInputs()
+    return (
+      inputs.maxGas.eq(0) &&
+      inputs.gasPriceBid.eq(0) &&
+      inputs.callDataLength.eq(0)
+    )
+  }
+
+  /**
+   * Get any eth deposit messages created by this transaction
+   * @param l2SignerOrProvider
+   */
+  public async getEthDepositMessages(
+    l2SignerOrProvider: SignerOrProvider
+  ): Promise<EthDepositMessage[]> {
+    if (await isNitroL2(l2SignerOrProvider)) {
+      return this.nitroReceipt.getEthDepositMessages(
+        SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
+      )
+    } else {
+      // get all the l1tol2messages that are eth deposits
+      const l1ToL2Messages = await this.classicReceipt.getL1ToL2Messages(
+        l2SignerOrProvider
+      )
+
+      const typedMessages = await Promise.all(
+        l1ToL2Messages.map(async l => ({
+          isEthDeposit: await this.looksLikeEthDeposit(l),
+          message: l,
+        }))
+      )
+
+      const chainId = (
+        await SignerProviderUtils.getProviderOrThrow(
+          l2SignerOrProvider
+        ).getNetwork()
+      ).chainId
+
+      return Promise.all(
+        typedMessages
+          .filter(t => t.isEthDeposit)
+          .map(async t => await toNitroEthDepositMessage(t.message, chainId))
+      )
+    }
+  }
+
   /**
    * Get any l1tol2 messages created by this transaction
    * @param l2SignerOrProvider
@@ -115,7 +165,21 @@ export class L1TransactionReceipt implements TransactionReceipt {
         await this.nitroReceipt.getL1ToL2Messages(l2SignerOrProvider)
       ).map(r => L1ToL2Message.fromNitro(r))
     } else {
-      return await this.classicReceipt.getL1ToL2Messages(l2SignerOrProvider)
+      // get all the l1tol2messages that are not eth deposits
+      const l1ToL2Messages = await this.classicReceipt.getL1ToL2Messages(
+        l2SignerOrProvider
+      )
+
+      const typedMessages = await Promise.all(
+        l1ToL2Messages.map(async l => ({
+          isEthDeposit: await this.looksLikeEthDeposit(l),
+          message: l,
+        }))
+      )
+
+      return Promise.all(
+        typedMessages.filter(t => !t.isEthDeposit).map(t => t.message)
+      )
     }
   }
 
@@ -134,13 +198,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     l2SignerOrProvider: T,
     messageIndex?: number
   ): Promise<IL1ToL2MessageReader | IL1ToL2MessageWriter> {
-    return (await isNitroL2(l2SignerOrProvider))
-      ? L1ToL2Message.fromNitro(
-          (await this.nitroReceipt.getL1ToL2Messages(l2SignerOrProvider))[
-            messageIndex || 0
-          ]
-        )
-      : this.classicReceipt.getL1ToL2Message(l2SignerOrProvider, messageIndex)
+    return (await this.getL1ToL2Messages(l2SignerOrProvider))[messageIndex || 0]
   }
 
   /**
