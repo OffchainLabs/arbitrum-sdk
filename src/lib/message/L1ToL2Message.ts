@@ -31,7 +31,9 @@ import { Overrides } from 'ethers'
 import { RetryableMessageParams } from '../dataEntities/message'
 
 import * as classic from '@arbitrum/sdk-classic'
+import { L1ToL2MessageReaderOrWriter as ClassicL1ToL2MessageReaderOrWriter } from '@arbitrum/sdk-classic/dist/lib/message/L1ToL2Message'
 import * as nitro from '@arbitrum/sdk-nitro'
+import { L1ToL2MessageReaderOrWriter as NitroL1ToL2MessageReaderOrWriter } from '@arbitrum/sdk-nitro/dist/lib/message/L1ToL2Message'
 import {
   IL1ToL2MessageReader,
   IL1ToL2MessageWriter,
@@ -81,6 +83,30 @@ export type L1ToL2MessageReaderOrWriter<T extends SignerOrProvider> =
   T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
 
 export abstract class L1ToL2Message {
+  public static fromClassic<T extends SignerOrProvider>(
+    readerOrWriter: ClassicL1ToL2MessageReaderOrWriter<T>
+  ) {
+    if (Boolean((readerOrWriter as classic.L1ToL2MessageWriter).l2Signer)) {
+      return L1ToL2MessageWriter.fromClassic(
+        readerOrWriter as classic.L1ToL2MessageWriter
+      )
+    } else {
+      return L1ToL2MessageReader.fromClassic(readerOrWriter)
+    }
+  }
+
+  public static fromNitro<T extends SignerOrProvider>(
+    readerOrWriter: NitroL1ToL2MessageReaderOrWriter<T>
+  ) {
+    if (Boolean((readerOrWriter as nitro.L1ToL2MessageWriter).l2Signer)) {
+      return L1ToL2MessageWriter.fromNitro(
+        readerOrWriter as nitro.L1ToL2MessageWriter
+      )
+    } else {
+      return L1ToL2MessageReader.fromNitro(readerOrWriter)
+    }
+  }
+
   public static fromTxComponents<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
     chainId: number,
@@ -129,6 +155,30 @@ export class L1ToL2MessageReader
   extends L1ToL2Message
   implements IL1ToL2MessageReader
 {
+  public static fromClassic(classicReader: classic.L1ToL2MessageReader) {
+    return new L1ToL2MessageReader(
+      classicReader.l2Provider,
+      undefined,
+      undefined,
+      classicReader.messageNumber,
+      undefined,
+      undefined,
+      classicReader.retryableCreationId
+    )
+  }
+
+  public static fromNitro(nitroReader: nitro.L1ToL2MessageReader) {
+    return new L1ToL2MessageReader(
+      nitroReader.l2Provider,
+      nitroReader.chainId,
+      nitroReader.sender,
+      undefined,
+      nitroReader.l1BaseFee,
+      nitroReader.messageData,
+      undefined
+    )
+  }
+
   private readonly classicReader?: classic.L1ToL2MessageReader
   private readonly nitroReader?: nitro.L1ToL2MessageReader
   /**
@@ -245,6 +295,30 @@ export class L1ToL2MessageWriter
 {
   private readonly nitroWriter?: nitro.L1ToL2MessageWriter
   private readonly classicWriter?: classic.L1ToL2MessageWriter
+
+  public static fromClassic(classicWriter: classic.L1ToL2MessageWriter) {
+    return new L1ToL2MessageWriter(
+      classicWriter.l2Signer,
+      undefined,
+      undefined,
+      classicWriter.messageNumber,
+      undefined,
+      undefined,
+      classicWriter.retryableCreationId
+    )
+  }
+
+  public static fromNitro(nitroWriter: nitro.L1ToL2MessageWriter) {
+    return new L1ToL2MessageWriter(
+      nitroWriter.l2Signer,
+      nitroWriter.chainId,
+      nitroWriter.sender,
+      undefined,
+      nitroWriter.l1BaseFee,
+      nitroWriter.messageData,
+      undefined
+    )
+  }
 
   public constructor(
     public readonly l2Signer: Signer,
