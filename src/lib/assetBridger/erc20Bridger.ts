@@ -65,6 +65,7 @@ import {
   L2ContractTransaction,
   L2TransactionReceipt,
 } from '../message/L2Transaction'
+import { L2ERC20Gateway__factory } from '../abi/factories/L2ERC20Gateway__factory'
 
 export interface TokenApproveParams {
   /**
@@ -374,9 +375,19 @@ export class Erc20Bridger extends AssetBridger<
 
     const l2Address = await l2GatewayRouter.calculateL2TokenAddress(l1Address)
     if (l2Address.toLowerCase() !== erc20L2Address.toLowerCase()) {
-      throw new ArbSdkError(
-        `Unexpected l1 address. L1 address from token is not registered to the provided l2 address. ${l1Address} ${l2Address} ${erc20L2Address}`
+      // also check with the standard gateway
+      const l2ERC20Gateway = L2ERC20Gateway__factory.connect(
+        this.l2Network.tokenBridge.l2ERC20Gateway,
+        l2Provider
       )
+      const l2AddressStd = await l2ERC20Gateway.calculateL2TokenAddress(
+        l1Address
+      )
+      if (l2AddressStd.toLowerCase() !== erc20L2Address.toLowerCase()) {
+        throw new ArbSdkError(
+          `Unexpected l1 address. L1 address from token is not registered to the provided l2 address. ${l1Address} ${l2Address} ${erc20L2Address}`
+        )
+      }
     }
 
     return l1Address
