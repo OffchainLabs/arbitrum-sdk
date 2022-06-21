@@ -86,7 +86,7 @@ export abstract class L1ToL2Message {
   public static fromClassic<T extends SignerOrProvider>(
     readerOrWriter: ClassicL1ToL2MessageReaderOrWriter<T>
   ) {
-    if (Boolean((readerOrWriter as classic.L1ToL2MessageWriter).l2Signer)) {
+    if ((readerOrWriter as classic.L1ToL2MessageWriter).l2Signer) {
       return L1ToL2MessageWriter.fromClassic(
         readerOrWriter as classic.L1ToL2MessageWriter
       )
@@ -98,7 +98,7 @@ export abstract class L1ToL2Message {
   public static fromNitro<T extends SignerOrProvider>(
     readerOrWriter: NitroL1ToL2MessageReaderOrWriter<T>
   ) {
-    if (Boolean((readerOrWriter as nitro.L1ToL2MessageWriter).l2Signer)) {
+    if ((readerOrWriter as nitro.L1ToL2MessageWriter).l2Signer) {
       return L1ToL2MessageWriter.fromNitro(
         readerOrWriter as nitro.L1ToL2MessageWriter
       )
