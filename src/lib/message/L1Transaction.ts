@@ -39,7 +39,6 @@ import { L1EthDepositTransactionReceipt as NitroL1EthDepositTransactionReceipt }
 import { EthDepositMessageWaitResult as NitroEthDepositMessageWaitResult } from '@arbitrum/sdk-nitro/dist/lib/message/L1ToL2Message'
 import { L1EthDepositTransactionReceipt as ClassicL1EthDepositTransactionReceipt } from '@arbitrum/sdk-classic/dist/lib/message/L1Transaction'
 import {
-  isNitroL2,
   IL1ToL2MessageReaderOrWriter,
   IL1ToL2MessageReader,
   IL1ToL2MessageWriter,
@@ -113,13 +112,22 @@ export class L1TransactionReceipt implements TransactionReceipt {
   }
 
   /**
+   * Classic and nitro message events have different signatures. This means that if this tx
+   * has a classic event, it cant have had a nitro one
+   * @returns 
+   */
+  public hasClassicMessages() {
+    return this.classicReceipt.getMessages().length > 0
+  }
+
+  /**
    * Get any eth deposit messages created by this transaction
    * @param l2SignerOrProvider
    */
   public async getEthDepositMessages(
     l2SignerOrProvider: SignerOrProvider
   ): Promise<EthDepositMessage[]> {
-    if (await isNitroL2(l2SignerOrProvider)) {
+    if (!this.hasClassicMessages()) {
       return this.nitroReceipt.getEthDepositMessages(
         SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
       )
@@ -160,8 +168,8 @@ export class L1TransactionReceipt implements TransactionReceipt {
   public async getL1ToL2Messages<T extends SignerOrProvider>(
     l2SignerOrProvider: T
   ): Promise<IL1ToL2MessageReader[] | IL1ToL2MessageWriter[]> {
-    if (await isNitroL2(l2SignerOrProvider)) {
-      return (
+    if (!this.hasClassicMessages()) {
+      return  (
         await this.nitroReceipt.getL1ToL2Messages(l2SignerOrProvider)
       ).map(r => L1ToL2Message.fromNitro(r))
     } else {
@@ -288,7 +296,7 @@ export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
       message: EthDepositMessage
     } & NitroEthDepositMessageWaitResult
   > {
-    if (await isNitroL2(l2Provider)) {
+    if (!this.hasClassicMessages()) {
       const receipt = new NitroL1EthDepositTransactionReceipt(this)
       return await receipt.waitForL2(l2Provider, confirmations, timeout)
     } else {
