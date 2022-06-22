@@ -101,8 +101,8 @@ describe('Ether', async () => {
     const l1ToL2Message = l1ToL2Messages[0]
 
     const walletAddress = await l1Signer.getAddress()
-    expect(l1ToL2Message.to, "Incorrect to address").to.eq(walletAddress)
-    expect(l1ToL2Message.value.eq(ethToDeposit), "Incorrect value").to.be.true;
+    expect(l1ToL2Message.to, 'Incorrect to address').to.eq(walletAddress)
+    expect(l1ToL2Message.value.eq(ethToDeposit), 'Incorrect value').to.be.true
 
     prettyLog('l2TxHash: ' + waitResult.message.l2DepositTxHash)
     prettyLog('l2 transaction found!')
