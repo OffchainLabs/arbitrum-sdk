@@ -368,12 +368,11 @@ export class Erc20Bridger extends AssetBridger<
         '0xda10009cbd5d07dd0cecc66161fc93d7c9000da1'
       ) {
         // hardcoding DAI here since it does not implement IArbToken
-        const chainId = (await l2Provider.getNetwork()).chainId
-        if (chainId === 42161) {
+        if (this.l2Network.chainID === 42161) {
           // arbitrum mainnet
           // the l1Address will still be validated with router
           l1Address = '0x6b175474e89094c44da98b954eedeac495271d0f'
-        } else if (chainId === 421611) {
+        } else if (this.l2Network.chainID === 421611) {
           // arbitrum rinkeby
           // note that DAI's custom gateway was not registered to our router yet
           // this l1Address will fail the validation
