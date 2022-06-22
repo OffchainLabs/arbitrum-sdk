@@ -199,8 +199,18 @@ export class L1TransactionReceipt implements TransactionReceipt {
     l2SignerOrProvider: T,
     messageIndex?: number
   ): Promise<IL1ToL2MessageReader | IL1ToL2MessageWriter> {
-    const message = (await this.getL1ToL2Messages(l2SignerOrProvider))[messageIndex || 0]
-    if(message == undefined) throw new ArbSdkError(`No message found for index: ${messageIndex || 0}`)
+    const messages = await this.getL1ToL2Messages(l2SignerOrProvider)
+    if (messages.length > 1 && messageIndex == undefined)
+      throw new ArbSdkError(
+        `More than one message found, but no message index supplied: ${messages.length} ${this.transactionHash}`
+      )
+    const message = messages[messageIndex || 0]
+    if (message == undefined)
+      throw new ArbSdkError(
+        `No message found for index: ${messageIndex || 0} ${
+          this.transactionHash
+        }`
+      )
     return message
   }
 
