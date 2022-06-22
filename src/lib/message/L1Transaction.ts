@@ -46,6 +46,7 @@ import {
   toNitroEthDepositMessage,
   EthDepositMessage,
 } from '../utils/migration_types'
+import { ArbSdkError } from '../dataEntities/errors'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -198,7 +199,9 @@ export class L1TransactionReceipt implements TransactionReceipt {
     l2SignerOrProvider: T,
     messageIndex?: number
   ): Promise<IL1ToL2MessageReader | IL1ToL2MessageWriter> {
-    return (await this.getL1ToL2Messages(l2SignerOrProvider))[messageIndex || 0]
+    const message = (await this.getL1ToL2Messages(l2SignerOrProvider))[messageIndex || 0]
+    if(message == undefined) throw new ArbSdkError(`No message found for index: ${messageIndex || 0}`)
+    return message
   }
 
   /**
