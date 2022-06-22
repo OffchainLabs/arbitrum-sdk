@@ -364,7 +364,24 @@ export class Erc20Bridger extends AssetBridger<
     try {
       l1Address = (await arbERC20.functions.l1Address())[0]
     } catch (error) {
-      throw new ArbSdkError(`Unable to get l1 address of ${erc20L2Address}`)
+      if (erc20L2Address.toLowerCase() === '0xda10009cbd5d07dd0cecc66161fc93d7c9000da1'){
+        // hardcoding DAI here since it does not implement IArbToken
+        const chainId = (await l2Provider.getNetwork()).chainId
+        if (chainId === 42161){
+          // arbitrum mainnet
+          // the l1Address will still be validated with router
+          l1Address = '0x6b175474e89094c44da98b954eedeac495271d0f'
+        } else if (chainId === 421611){
+          // arbitrum rinkeby
+          // note that DAI's custom gateway was not registered to our router yet
+          // this l1Address will fail the validation
+          l1Address = '0xd9e66a2f546880ea4d800f189d6f12cc15bff281'
+        } else {
+          throw new ArbSdkError(`Unable to get l1 address of ${erc20L2Address}`)
+        }
+      } else {
+        throw new ArbSdkError(`Unable to get l1 address of ${erc20L2Address}`)
+      }
     }
 
     // check that this l1 address is indeed registered to this l2 token
