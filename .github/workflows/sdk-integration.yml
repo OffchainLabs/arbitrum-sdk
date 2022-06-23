@@ -30,6 +30,9 @@ jobs:
           cd sdk
           yarn
           yarn build
+      - name: Cache the docker build
+        uses: satackey/action-docker-layer-caching@v0.0.11
+        continue-on-error: true
       - name: Start background nitro test-node.bash
         run: |
           cd nitro
