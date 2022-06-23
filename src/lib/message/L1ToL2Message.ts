@@ -22,6 +22,7 @@ import { Signer } from '@ethersproject/abstract-signer'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
 import { zeroPad } from '@ethersproject/bytes'
+import { getAddress } from '@ethersproject/address'
 
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
 import { ARB_RETRYABLE_TX_ADDRESS } from '../dataEntities/constants'
@@ -647,6 +648,7 @@ export class EthDepositMessage {
   public static calculateDepositTxId(
     l2ChainId: number,
     messageNumber: BigNumber,
+    fromAddress: string,
     toAddress: string,
     value: BigNumber
   ): string {
@@ -657,10 +659,12 @@ export class EthDepositMessage {
     const chainId = BigNumber.from(l2ChainId)
     const msgNum = BigNumber.from(messageNumber)
 
-    const fields: any[] = [
+    // https://github.com/OffchainLabs/go-ethereum/blob/07e017aa73e32be92aadb52fa327c552e1b7b118/core/types/arb_types.go#L302-L308
+    const fields = [
       formatNumber(chainId),
       zeroPad(formatNumber(msgNum), 32),
-      toAddress,
+      getAddress(fromAddress),
+      getAddress(toAddress),
       formatNumber(value),
     ]
 
@@ -677,16 +681,19 @@ export class EthDepositMessage {
    * Parse the data field in
    * event InboxMessageDelivered(uint256 indexed messageNum, bytes data);
    * @param eventData
-   * @returns
+   * @returns destination and amount
    */
-  private static parseEthDepositData(eventData: string): BigNumber {
-    // https://github.com/OffchainLabs/nitro/blob/9f16d082496aef9de66b9e8653531d467d685560/contracts/src/bridge/Inbox.sol#L230
+  private static parseEthDepositData(eventData: string): {
+    to: string
+    value: BigNumber
+  } {
+    // https://github.com/OffchainLabs/nitro/blob/aa84e899cbc902bf6da753b1d66668a1def2c106/contracts/src/bridge/Inbox.sol#L242
     const parsed = ethers.utils.defaultAbiCoder.decode(
-      ['uint256'],
+      ['address', 'uint256'],
       eventData
-    ) as [BigNumber]
+    ) as [string, BigNumber]
 
-    return parsed[0]
+    return { to: parsed[0], value: parsed[1] }
   }
 
   /**
@@ -704,15 +711,16 @@ export class EthDepositMessage {
     inboxMessageEventData: string
   ) {
     const chainId = (await l2Provider.getNetwork()).chainId
-    const value = EthDepositMessage.parseEthDepositData(inboxMessageEventData)
+    const { to, value } = EthDepositMessage.parseEthDepositData(
+      inboxMessageEventData
+    )
 
     return new EthDepositMessage(
       l2Provider,
       chainId,
       messageNumber,
-      // arb-os always applies an alias to the address it gets from the event
-      // before it forms that into a transaction
-      new Address(senderAddr).applyAlias().value,
+      senderAddr,
+      to,
       value
     )
   }
@@ -729,15 +737,25 @@ export class EthDepositMessage {
     private readonly l2Provider: Provider,
     public readonly l2ChainId: number,
     public readonly messageNumber: BigNumber,
+    public readonly from: string,
     public readonly to: string,
     public readonly value: BigNumber
   ) {
     this.l2DepositTxHash = EthDepositMessage.calculateDepositTxId(
       l2ChainId,
       messageNumber,
+      from,
       to,
       value
     )
+  }
+
+  public async status(): Promise<L1ToL2MessageStatus> {
+    const receipt = await this.l2Provider.getTransactionReceipt(
+      this.l2DepositTxHash
+    )
+    if (receipt === null) return L1ToL2MessageStatus.NOT_YET_CREATED
+    else return L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
   }
 
   public async wait(confirmations?: number, timeout = 900000) {
