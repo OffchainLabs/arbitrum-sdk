@@ -2,6 +2,8 @@ import * as classic from '@arbitrum/sdk-classic'
 import * as nitro from '@arbitrum/sdk-nitro'
 import { BigNumber, ContractTransaction, ethers, Overrides } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
+import { Zero } from '@ethersproject/constants'
+import { ErrorCode, Logger } from '@ethersproject/logger'
 import {
   ARB_SYS_ADDRESS,
   SEVEN_DAYS_IN_SECONDS,
@@ -21,6 +23,10 @@ import {
 } from '../message/L1ToL2Message'
 import { L2ToL1MessageStatus } from '../message/L2ToL1Message'
 import { MessageDeliveredEvent as ClassicMessageDeliveredEvent } from '@arbitrum/sdk-classic/dist/lib/abi/Bridge'
+import { L1ERC20Gateway__factory as ClassicL1ERC20Gateway__factory } from '@arbitrum/sdk-classic/dist/lib/abi/factories/L1ERC20Gateway__factory'
+import { L1WethGateway__factory as ClassicL1WethGateway__factory } from '@arbitrum/sdk-classic/dist/lib/abi/factories/L1WethGateway__factory'
+import { L1ERC20Gateway__factory as NitroL1ERC20Gateway__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/L1ERC20Gateway__factory'
+import { L1WethGateway__factory as NitroL1WethGateway__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/L1WethGateway__factory'
 import { FetchedEvent } from './eventFetcher'
 import { L2Network as NitroL2Network } from '@arbitrum/sdk-nitro'
 import { Inbox__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/Inbox__factory'
@@ -30,7 +36,20 @@ import { L1ToL2MessageReader as ClassicL1ToL2MessageReader } from '@arbitrum/sdk
 
 import { l2Networks as classicL2Networks } from '@arbitrum/sdk-classic/dist/lib/dataEntities/networks'
 import { l2Networks as nitroL2Networks } from '@arbitrum/sdk-nitro/dist/lib/dataEntities/networks'
-import { ArbSdkError } from '../dataEntities/errors'
+import { ArbSdkError, MissingProviderArbTsError } from '../dataEntities/errors'
+import {
+  EthBridger,
+  EthDepositParams,
+  EthWithdrawParams,
+} from '../assetBridger/ethBridger'
+import { L2Network } from '../dataEntities/networks'
+import {
+  Erc20Bridger,
+  TokenDepositParams,
+  TokenWithdrawParams,
+} from '../assetBridger/erc20Bridger'
+import { GasOverrides } from '../message/L1ToL2MessageGasEstimator'
+import { defaultAbiCoder } from 'ethers/lib/utils'
 
 let isNitro = false
 
@@ -404,5 +423,341 @@ export const toNitroEthDepositMessage = async (
         return await message.getRetryableCreationReceipt()
       } else return null
     },
+  }
+}
+
+/**
+ * Temporary class for helping with x-chain message gas cost estimation.
+ * Will be removed in nitro as this functionality will be available on the bridgers
+ */
+export class DepositWithdrawEstimator {
+  public constructor(public readonly l2Network: L2Network) {}
+
+  public async ethDepositL1Gas(params: EthDepositParams) {
+    const ethBridger = new EthBridger(this.l2Network)
+
+    return await ethBridger.depositEstimateGas(params)
+  }
+
+  public async ethDepositL2GasCosts(l2Provider: Provider) {
+    if (await isNitroL2(l2Provider)) {
+      const estimator = new classic.L1ToL2MessageGasEstimator(l2Provider)
+      return {
+        maxGas: BigNumber.from(0),
+        maxSubmissionCost: await estimator.estimateSubmissionPrice(0),
+        maxGasPrice: BigNumber.from(0),
+      }
+    } else {
+      return {
+        maxGas: BigNumber.from(0),
+        maxSubmissionCost: BigNumber.from(0),
+        maxGasPrice: BigNumber.from(0),
+      }
+    }
+  }
+
+  public async ercDeposit20L1Gas(params: TokenDepositParams) {
+    const erc20Bridger = new Erc20Bridger(this.l2Network)
+
+    return await erc20Bridger.depositEstimateGas(params)
+  }
+
+  /**
+   * Does the provided address look like a weth gateway
+   * @param potentialWethGatewayAddress
+   * @param l1Provider
+   * @returns
+   */
+  private async classiclooksLikeWethGateway(
+    potentialWethGatewayAddress: string,
+    l1Provider: Provider
+  ) {
+    try {
+      const potentialWethGateway = ClassicL1WethGateway__factory.connect(
+        potentialWethGatewayAddress,
+        l1Provider
+      )
+      await potentialWethGateway.callStatic.l1Weth()
+      return true
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        (err as unknown as { code: ErrorCode }).code ===
+          Logger.errors.CALL_EXCEPTION
+      ) {
+        return false
+      } else {
+        throw err
+      }
+    }
+  }
+
+  /**
+   * Is this a known or unknown WETH gateway
+   * @param gatewayAddress
+   * @param l1Provider
+   * @returns
+   */
+  private async classicIsWethGateway(
+    gatewayAddress: string,
+    l1Provider: Provider
+  ): Promise<boolean> {
+    const wethAddress = this.l2Network.tokenBridge.l1WethGateway
+    if (this.l2Network.isCustom) {
+      // For custom network, we do an ad-hoc check to see if it's a WETH gateway
+      if (await this.classiclooksLikeWethGateway(gatewayAddress, l1Provider)) {
+        return true
+      }
+      // ...otherwise we directly check it against the config file
+    } else if (wethAddress === gatewayAddress) {
+      return true
+    }
+    return false
+  }
+
+  /**
+   * Does the provided address look like a weth gateway
+   * @param potentialWethGatewayAddress
+   * @param l1Provider
+   * @returns
+   */
+  private async nitroLooksLikeWethGateway(
+    potentialWethGatewayAddress: string,
+    l1Provider: Provider
+  ) {
+    try {
+      const potentialWethGateway = NitroL1WethGateway__factory.connect(
+        potentialWethGatewayAddress,
+        l1Provider
+      )
+      await potentialWethGateway.callStatic.l1Weth()
+      return true
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        (err as unknown as { code: ErrorCode }).code ===
+          Logger.errors.CALL_EXCEPTION
+      ) {
+        return false
+      } else {
+        throw err
+      }
+    }
+  }
+
+  /**
+   * Is this a known or unknown WETH gateway
+   * @param gatewayAddress
+   * @param l1Provider
+   * @returns
+   */
+  private async nitroIsWethGateway(
+    gatewayAddress: string,
+    l1Provider: Provider
+  ): Promise<boolean> {
+    const wethAddress = this.l2Network.tokenBridge.l1WethGateway
+    if (this.l2Network.isCustom) {
+      // For custom network, we do an ad-hoc check to see if it's a WETH gateway
+      if (await this.nitroLooksLikeWethGateway(gatewayAddress, l1Provider)) {
+        return true
+      }
+      // ...otherwise we directly check it against the config file
+    } else if (wethAddress === gatewayAddress) {
+      return true
+    }
+    return false
+  }
+
+  public async erc20DepositL2GasCosts(params: TokenDepositParams) {
+    if (await isNitroL2(params.l2Provider)) {
+      const {
+        erc20L1Address,
+        amount,
+        l2Provider,
+        l1Signer,
+        destinationAddress,
+      } = params
+      const { retryableGasOverrides } = params
+      const erc20Bridger = new Erc20Bridger(this.l2Network)
+
+      if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
+        throw new MissingProviderArbTsError('l1Signer')
+      }
+
+      // 1. get the params for a gas estimate
+      const l1GatewayAddress = await erc20Bridger.getL1GatewayAddress(
+        erc20L1Address,
+        l1Signer.provider
+      )
+      const l1Gateway = NitroL1ERC20Gateway__factory.connect(
+        l1GatewayAddress,
+        l1Signer.provider
+      )
+      const sender = await l1Signer.getAddress()
+      const to = destinationAddress ? destinationAddress : sender
+      const depositCalldata = await l1Gateway.getOutboundCalldata(
+        erc20L1Address,
+        sender,
+        to,
+        amount,
+        '0x'
+      )
+
+      // The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
+      // Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
+      const isWeth = await this.nitroIsWethGateway(
+        l1GatewayAddress,
+        l1Signer.provider
+      )
+      const estimateGasCallValue = isWeth ? amount : Zero
+
+      const l2Dest = await l1Gateway.counterpartGateway()
+      const gasEstimator = new nitro.L1ToL2MessageGasEstimator(l2Provider)
+
+      let tokenGasOverrides: GasOverrides | undefined = retryableGasOverrides
+
+      // we also add a hardcoded minimum gas limit for custom gateway deposits
+      if (l1GatewayAddress === this.l2Network.tokenBridge.l1CustomGateway) {
+        if (!tokenGasOverrides) tokenGasOverrides = {}
+        if (!tokenGasOverrides.gasLimit) tokenGasOverrides.gasLimit = {}
+        if (!tokenGasOverrides.gasLimit.min) {
+          tokenGasOverrides.gasLimit.min =
+            Erc20Bridger.MIN_CUSTOM_DEPOSIT_GAS_LIMIT
+        }
+      }
+
+      // 2. get the gas estimates
+      const baseFee = (await l1Signer.provider.getBlock('latest')).baseFeePerGas
+      if (!baseFee) {
+        throw new ArbSdkError(
+          'Latest block did not contain base fee, ensure provider is connected to a network that supports EIP 1559.'
+        )
+      }
+      const excessFeeRefundAddress = sender
+      const callValueRefundAddress = sender
+      const estimates = await gasEstimator.estimateAll(
+        l1GatewayAddress,
+        l2Dest,
+        depositCalldata,
+        estimateGasCallValue,
+        baseFee,
+        excessFeeRefundAddress,
+        callValueRefundAddress,
+        l1Signer.provider,
+        tokenGasOverrides
+      )
+
+      return {
+        maxGas: estimates.gasLimit,
+        maxSubmissionCost: estimates.maxSubmissionFee,
+        maxGasPrice: estimates.maxFeePerGas,
+      }
+    } else {
+      const {
+        erc20L1Address,
+        amount,
+        l2Provider,
+        l1Signer,
+        destinationAddress,
+      } = params
+      const { retryableGasOverrides } = params
+      const erc20Bridger = new Erc20Bridger(this.l2Network)
+
+      if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
+        throw new MissingProviderArbTsError('l1Signer')
+      }
+
+      // 1. get the params for a gas estimate
+      const l1GatewayAddress = await erc20Bridger.getL1GatewayAddress(
+        erc20L1Address,
+        l1Signer.provider
+      )
+      const l1Gateway = ClassicL1ERC20Gateway__factory.connect(
+        l1GatewayAddress,
+        l1Signer.provider
+      )
+      const sender = await l1Signer.getAddress()
+      const to = destinationAddress ? destinationAddress : sender
+      const depositCalldata = await l1Gateway.getOutboundCalldata(
+        erc20L1Address,
+        sender,
+        to,
+        amount,
+        '0x'
+      )
+      // The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
+      // Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
+      const estimateGasCallValue = (await this.classicIsWethGateway(
+        l1GatewayAddress,
+        l1Signer.provider
+      ))
+        ? amount
+        : Zero
+
+      const l2Dest = await l1Gateway.counterpartGateway()
+      const gasEstimator = new classic.L1ToL2MessageGasEstimator(l2Provider)
+
+      let tokenGasOverrides: ClassicGasOverrides | undefined =
+        convertGasOverrides(retryableGasOverrides)
+      if (!tokenGasOverrides) tokenGasOverrides = {}
+      // we never send l2 call value from l1 for tokens
+      // since we check in the router that the value is submission cost
+      // + gas price * gas
+      tokenGasOverrides.sendL2CallValueFromL1 = false
+
+      // we also add a hardcoded minimum maxgas for custom gateway deposits
+      if (l1GatewayAddress === this.l2Network.tokenBridge.l1CustomGateway) {
+        if (!tokenGasOverrides.maxGas) tokenGasOverrides.maxGas = {}
+        tokenGasOverrides.maxGas.min =
+          classic.Erc20Bridger.MIN_CUSTOM_DEPOSIT_MAXGAS
+      }
+
+      // 2. get the gas estimates
+      const estimates = await gasEstimator.estimateMessage(
+        l1GatewayAddress,
+        l2Dest,
+        depositCalldata,
+        estimateGasCallValue,
+        tokenGasOverrides
+      )
+
+      return {
+        maxGas: estimates.maxGasBid,
+        maxSubmissionCost: estimates.maxSubmissionPriceBid,
+        maxGasPrice: estimates.maxGasPriceBid,
+      }
+    }
+  }
+
+  public async ethWithdrawalL1Gas(l2Provider: Provider) {
+    if (await isNitroL2(l2Provider)) {
+      //  measured 126998 - add some padding
+      return BigNumber.from(130000)
+    } else {
+      // measured 161743 - add some padding
+      return BigNumber.from(165000)
+    }
+  }
+
+  public async ethWithdrawalL2Gas(params: EthWithdrawParams) {
+    const ethBridger = new EthBridger(this.l2Network)
+
+    return await ethBridger.withdrawEstimateGas(params)
+  }
+
+  public async erc20WithdrawalL1Gas(l2Provider: Provider) {
+    if (await isNitroL2(l2Provider)) {
+      // measured 157421 - add some padding
+      return BigNumber.from(160000)
+    } else {
+      // measured 218196 - added some padding
+      return BigNumber.from(225000)
+    }
+  }
+
+  public async erc20WithdrawalL2Gas(params: TokenWithdrawParams) {
+    const ethBridger = new Erc20Bridger(this.l2Network)
+
+    return await ethBridger.withdrawEstimateGas(params)
   }
 }
