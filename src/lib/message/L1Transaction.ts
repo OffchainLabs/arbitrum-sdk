@@ -21,7 +21,11 @@ import { Log } from '@ethersproject/abstract-provider'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Provider } from '@ethersproject/abstract-provider'
-import { L1ToL2MessageStatus, L1ToL2MessageWaitResult } from './L1ToL2Message'
+import {
+  L1ToL2Message,
+  L1ToL2MessageStatus,
+  L1ToL2MessageWaitResult,
+} from './L1ToL2Message'
 
 import { L1ERC20Gateway__factory } from '../abi/factories/L1ERC20Gateway__factory'
 import { DepositInitiatedEvent } from '../abi/L1ERC20Gateway'
@@ -42,6 +46,7 @@ import {
   toNitroEthDepositMessage,
   EthDepositMessage,
 } from '../utils/migration_types'
+import { ArbSdkError } from '../dataEntities/errors'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -157,7 +162,9 @@ export class L1TransactionReceipt implements TransactionReceipt {
     l2SignerOrProvider: T
   ): Promise<IL1ToL2MessageReader[] | IL1ToL2MessageWriter[]> {
     if (await isNitroL2(l2SignerOrProvider)) {
-      return this.nitroReceipt.getL1ToL2Messages(l2SignerOrProvider)
+      return (
+        await this.nitroReceipt.getL1ToL2Messages(l2SignerOrProvider)
+      ).map(r => L1ToL2Message.fromNitro(r))
     } else {
       // get all the l1tol2messages that are not eth deposits
       const l1ToL2Messages = await this.classicReceipt.getL1ToL2Messages(
@@ -192,9 +199,19 @@ export class L1TransactionReceipt implements TransactionReceipt {
     l2SignerOrProvider: T,
     messageIndex?: number
   ): Promise<IL1ToL2MessageReader | IL1ToL2MessageWriter> {
-    return (await isNitroL2(l2SignerOrProvider))
-      ? (await this.getL1ToL2Messages(l2SignerOrProvider))[messageIndex || 0]
-      : this.classicReceipt.getL1ToL2Message(l2SignerOrProvider, messageIndex)
+    const messages = await this.getL1ToL2Messages(l2SignerOrProvider)
+    if (messages.length > 1 && messageIndex == undefined)
+      throw new ArbSdkError(
+        `More than one message found, but no message index supplied: ${messages.length} ${this.transactionHash}`
+      )
+    const message = messages[messageIndex || 0]
+    if (message == undefined)
+      throw new ArbSdkError(
+        `No message found for index: ${messageIndex || 0} ${
+          this.transactionHash
+        }`
+      )
+    return message
   }
 
   /**

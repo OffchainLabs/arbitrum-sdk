@@ -286,6 +286,7 @@ export interface IL1ToL2MessageReader {
   ): Promise<L1ToL2MessageWaitResult>
   getTimeout(): Promise<BigNumber>
   getBeneficiary(): Promise<string>
+  getInputs(): ReturnType<classic.L1ToL2MessageReader['getInputs']>
 }
 
 export interface IL1ToL2MessageWriter extends IL1ToL2MessageReader {
@@ -404,5 +405,27 @@ export const toNitroEthDepositMessage = async (
         return await message.getRetryableCreationReceipt()
       } else return null
     },
+  }
+}
+
+export const toClassicRetryableParams = async (
+  params: nitro.L1ToL2MessageReader['messageData']
+): ReturnType<classic.L1ToL2MessageReader['getInputs']> => {
+  if (params.data.length < 2 || params.data.length % 2 !== 0) {
+    throw new ArbSdkError('Unxpected params data: `${params.data}')
+  }
+  return {
+    callDataLength: BigNumber.from(
+      (params.data.startsWith('0x')
+        ? params.data.length - 2
+        : params.data.length) / 2
+    ),
+    callValueRefundAddress: params.callValueRefundAddress,
+    destinationAddress: params.destAddress,
+    excessFeeRefundAddress: params.excessFeeRefundAddress,
+    gasPriceBid: params.maxFeePerGas,
+    l2CallValue: params.l2CallValue,
+    maxGas: params.gasLimit,
+    maxSubmissionCost: params.maxSubmissionFee,
   }
 }

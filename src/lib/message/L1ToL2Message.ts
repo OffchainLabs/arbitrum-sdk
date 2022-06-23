@@ -31,10 +31,13 @@ import { Overrides } from 'ethers'
 import { RetryableMessageParams } from '../dataEntities/message'
 
 import * as classic from '@arbitrum/sdk-classic'
+import { L1ToL2MessageReaderOrWriter as ClassicL1ToL2MessageReaderOrWriter } from '@arbitrum/sdk-classic/dist/lib/message/L1ToL2Message'
 import * as nitro from '@arbitrum/sdk-nitro'
+import { L1ToL2MessageReaderOrWriter as NitroL1ToL2MessageReaderOrWriter } from '@arbitrum/sdk-nitro/dist/lib/message/L1ToL2Message'
 import {
   IL1ToL2MessageReader,
   IL1ToL2MessageWriter,
+  toClassicRetryableParams,
 } from '../utils/migration_types'
 
 export enum L2TxnType {
@@ -80,6 +83,30 @@ export type L1ToL2MessageReaderOrWriter<T extends SignerOrProvider> =
   T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
 
 export abstract class L1ToL2Message {
+  public static fromClassic<T extends SignerOrProvider>(
+    readerOrWriter: ClassicL1ToL2MessageReaderOrWriter<T>
+  ) {
+    if ((readerOrWriter as classic.L1ToL2MessageWriter).l2Signer) {
+      return L1ToL2MessageWriter.fromClassic(
+        readerOrWriter as classic.L1ToL2MessageWriter
+      )
+    } else {
+      return L1ToL2MessageReader.fromClassic(readerOrWriter)
+    }
+  }
+
+  public static fromNitro<T extends SignerOrProvider>(
+    readerOrWriter: NitroL1ToL2MessageReaderOrWriter<T>
+  ) {
+    if ((readerOrWriter as nitro.L1ToL2MessageWriter).l2Signer) {
+      return L1ToL2MessageWriter.fromNitro(
+        readerOrWriter as nitro.L1ToL2MessageWriter
+      )
+    } else {
+      return L1ToL2MessageReader.fromNitro(readerOrWriter)
+    }
+  }
+
   public static fromTxComponents<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
     chainId: number,
@@ -128,6 +155,30 @@ export class L1ToL2MessageReader
   extends L1ToL2Message
   implements IL1ToL2MessageReader
 {
+  public static fromClassic(classicReader: classic.L1ToL2MessageReader) {
+    return new L1ToL2MessageReader(
+      classicReader.l2Provider,
+      undefined,
+      undefined,
+      classicReader.messageNumber,
+      undefined,
+      undefined,
+      classicReader.retryableCreationId
+    )
+  }
+
+  public static fromNitro(nitroReader: nitro.L1ToL2MessageReader) {
+    return new L1ToL2MessageReader(
+      nitroReader.l2Provider,
+      nitroReader.chainId,
+      nitroReader.sender,
+      nitroReader.messageNumber,
+      nitroReader.l1BaseFee,
+      nitroReader.messageData,
+      undefined
+    )
+  }
+
   private readonly classicReader?: classic.L1ToL2MessageReader
   private readonly nitroReader?: nitro.L1ToL2MessageReader
   /**
@@ -185,6 +236,17 @@ export class L1ToL2MessageReader
   }
 
   /**
+   * Get and format inputs provided in calldata for retryable messsage (message type 9)
+   */
+  public async getInputs(): ReturnType<
+    classic.L1ToL2MessageReader['getInputs']
+  > {
+    return this.nitroReader
+      ? toClassicRetryableParams(this.nitroReader.messageData)
+      : await this.classicReader!.getInputs()
+  }
+
+  /**
    * Wait for the retryable ticket to be created, for it to be redeemed, and for the l2Tx to be executed.
    * Note: The terminal status of a transaction that only does an eth deposit is FUNDS_DEPOSITED_ON_L2 as
    * no L2 transaction needs to be executed, however the terminal state of any other transaction is REDEEMED
@@ -233,6 +295,30 @@ export class L1ToL2MessageWriter
 {
   private readonly nitroWriter?: nitro.L1ToL2MessageWriter
   private readonly classicWriter?: classic.L1ToL2MessageWriter
+
+  public static fromClassic(classicWriter: classic.L1ToL2MessageWriter) {
+    return new L1ToL2MessageWriter(
+      classicWriter.l2Signer,
+      undefined,
+      undefined,
+      classicWriter.messageNumber,
+      undefined,
+      undefined,
+      classicWriter.retryableCreationId
+    )
+  }
+
+  public static fromNitro(nitroWriter: nitro.L1ToL2MessageWriter) {
+    return new L1ToL2MessageWriter(
+      nitroWriter.l2Signer,
+      nitroWriter.chainId,
+      nitroWriter.sender,
+      nitroWriter.messageNumber,
+      nitroWriter.l1BaseFee,
+      nitroWriter.messageData,
+      undefined
+    )
+  }
 
   public constructor(
     public readonly l2Signer: Signer,
