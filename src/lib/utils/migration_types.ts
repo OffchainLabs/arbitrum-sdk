@@ -49,7 +49,6 @@ import {
   TokenWithdrawParams,
 } from '../assetBridger/erc20Bridger'
 import { GasOverrides } from '../message/L1ToL2MessageGasEstimator'
-import { defaultAbiCoder } from 'ethers/lib/utils'
 
 let isNitro = false
 
