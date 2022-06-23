@@ -37,6 +37,9 @@ import { deployErc20AndInit } from './deployBridge'
 import * as path from 'path'
 import * as fs from 'fs'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
+import { Inbox__factory } from '../src/lib/abi/factories/Inbox__factory'
+import { SequencerInbox__factory } from '../src/lib/abi/factories/SequencerInbox__factory'
+import { assert } from 'chai'
 
 dotenv.config()
 
@@ -56,15 +59,33 @@ export const getCustomNetworks = async (
 }> => {
   const l1Provider = new JsonRpcProvider(l1Url)
   const l2Provider = new JsonRpcProvider(l2Url)
-  const deploymentData = execSync(
-    'docker exec nitro_sequencer_1 cat /config/deployment.json'
-  ).toString()
+  const deploymentData = `{
+    "bridge": "0x9903A892Da86c1e04522d63B08e5514a921E81Df",
+    "inbox": "0x1FdBBcC914e84aF593884bf8e8Dd6877c29035A2",
+    "sequencer-inbox": "0xb32f4257e05C56C53D46bbEC9e85770eB52425D6",
+    "rollup": "0x767CfF8D8de386d7cbe91DbD39675132ba2f5967"
+  }`
   const parsedDeploymentData = JSON.parse(deploymentData) as {
     bridge: string
     inbox: string
     ['sequencer-inbox']: string
     rollup: string
   }
+
+  const inbox = Inbox__factory.connect(parsedDeploymentData.inbox, l1Provider)
+  assert(
+    (await inbox.bridge()).toLowerCase() ===
+      parsedDeploymentData.bridge.toLowerCase()
+  )
+
+  const sequencerInbox = SequencerInbox__factory.connect(
+    parsedDeploymentData['sequencer-inbox'],
+    l1Provider
+  )
+  assert(
+    (await sequencerInbox.delayedBridge()).toLowerCase() ===
+      parsedDeploymentData.bridge.toLowerCase()
+  )
 
   const rollup = RollupAdminLogic__factory.connect(
     parsedDeploymentData.rollup,
