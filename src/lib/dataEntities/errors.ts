@@ -20,11 +20,11 @@
  * Errors originating in Arbitrum SDK
  */
 export class ArbSdkError extends Error {
-  constructor(message: string, public readonly innner?: Error) {
+  constructor(message: string, public readonly inner?: Error) {
     super(message)
 
-    if (innner) {
-      this.stack += '\nCaused By: ' + innner.stack
+    if (inner) {
+      this.stack += '\nCaused By: ' + inner.stack
     }
   }
 }

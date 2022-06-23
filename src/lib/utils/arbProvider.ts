@@ -1,11 +1,11 @@
 import { JsonRpcProvider, Formatter, BlockTag } from '@ethersproject/providers'
+import { Formats } from '@ethersproject/providers/lib/formatter'
+import { Networkish } from '@ethersproject/networks'
 import {
   ArbBlock,
   ArbBlockWithTransactions,
   ArbTransactionReceipt,
 } from '../dataEntities/rpc'
-import { Formats } from '@ethersproject/providers/lib/formatter'
-import { Networkish } from '@ethersproject/networks'
 
 class ArbFormatter extends Formatter {
   readonly formats!: Formats
