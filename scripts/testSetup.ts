@@ -39,6 +39,7 @@ import * as fs from 'fs'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import { Inbox__factory } from '../src/lib/abi/factories/Inbox__factory'
 import { assert } from 'chai'
+import { SequencerInbox__factory } from '../src/lib/abi/factories/SequencerInbox__factory'
 
 dotenv.config()
 
@@ -77,7 +78,7 @@ export const getCustomNetworks = async (
       parsedDeploymentData.bridge.toLowerCase()
   )
 
-  const sequencerInbox = Inbox__factory.connect(
+  const sequencerInbox = SequencerInbox__factory.connect(
     parsedDeploymentData['sequencer-inbox'],
     l1Provider
   )
