@@ -226,7 +226,9 @@ export class InboxTools {
       return null
     }
 
-    const delayedAcc = await bridge.inboxAccs(eventInfo.event.messageIndex)
+    const delayedAcc = await bridge.delayedInboxAccs(
+      eventInfo.event.messageIndex
+    )
 
     return { ...eventInfo, delayedAcc: delayedAcc }
   }
