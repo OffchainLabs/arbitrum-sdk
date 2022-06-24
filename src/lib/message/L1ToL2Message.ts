@@ -437,7 +437,10 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       // this can happen due to a race condition that
       // the retryable is redeemed/expired in between the calls
       const successfulRedeemReceiptRetry = await this.getSuccessfulRedeem()
-      if (successfulRedeemReceiptRetry && successfulRedeemReceiptRetry.status === 1) {
+      if (
+        successfulRedeemReceiptRetry &&
+        successfulRedeemReceiptRetry.status === 1
+      ) {
         return L1ToL2MessageStatus.REDEEMED
       }
       return L1ToL2MessageStatus.EXPIRED
