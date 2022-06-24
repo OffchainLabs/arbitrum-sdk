@@ -126,16 +126,13 @@ export abstract class L1ToL2Message {
       return ethers.utils.stripZeros(value.toHexString())
     }
 
-    const addressAlias = new Address(fromAddress)
-
-    const from = addressAlias.applyAlias()
     const chainId = BigNumber.from(l2ChainId)
     const msgNum = BigNumber.from(messageNumber)
 
     const fields: any[] = [
       formatNumber(chainId),
       zeroPad(formatNumber(msgNum), 32),
-      from.value,
+      fromAddress,
       formatNumber(l1BaseFee),
 
       formatNumber(l1Value),
