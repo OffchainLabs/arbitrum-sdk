@@ -429,7 +429,17 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     }
 
     // not redeemed, has it now expired
-    if (await this.isExpired()) {
+    try {
+      if (await this.isExpired()) {
+        return L1ToL2MessageStatus.EXPIRED
+      }
+    } catch (error) {
+      // this can happen due to a race condition that
+      // the retryable is redeemed/expired in between the calls
+      const successfulRedeemReceiptRetry = await this.getSuccessfulRedeem()
+      if (successfulRedeemReceiptRetry && successfulRedeemReceiptRetry.status === 1) {
+        return L1ToL2MessageStatus.REDEEMED
+      }
       return L1ToL2MessageStatus.EXPIRED
     }
 
