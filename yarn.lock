@@ -19,9 +19,9 @@
     "@openzeppelin/contracts-upgradeable" "4.5.2"
     hardhat "^2.6.6"
 
-"@arbitrum/nitro-contracts@https://gitpkg.now.sh/OffchainLabs/nitro/contracts?master":
+"@arbitrum/nitro-contracts@https://gitpkg.now.sh/OffchainLabs/nitro/contracts?expose-outbox-isspent":
   version "1.0.0-beta.5"
-  resolved "https://gitpkg.now.sh/OffchainLabs/nitro/contracts?master#f4cd3fa00335b94b9346c70c5e57ed7b20e81c32"
+  resolved "https://gitpkg.now.sh/OffchainLabs/nitro/contracts?expose-outbox-isspent#47069a151c59a26efad04764c9c56e33af22bfe1"
   dependencies:
     "@openzeppelin/contracts" "4.5.0"
     "@openzeppelin/contracts-upgradeable" "4.5.2"

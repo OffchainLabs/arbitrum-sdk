@@ -204,11 +204,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       this.l1Provider
     )
 
-    throw new ArbSdkError('NOT IMPLEMENTED')
-    // TODO: calculate the spent index based on
-    // https://github.com/OffchainLabs/nitro/pull/623
-    // or add a helper function to the contract
-    // return outbox.callStatic.spent(this.event.position)
+    return outbox.callStatic.isSpent(this.event.position)
   }
 
   /**

@@ -51,7 +51,7 @@
     "ethers": "^5.1.0"
   },
   "devDependencies": {
-    "@arbitrum/nitro-contracts": "https://gitpkg.now.sh/OffchainLabs/nitro/contracts?master",
+    "@arbitrum/nitro-contracts": "https://gitpkg.now.sh/OffchainLabs/nitro/contracts?expose-outbox-isspent",
     "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@typechain/ethers-v5": "9.0.0",
     "@types/chai": "^4.2.11",
