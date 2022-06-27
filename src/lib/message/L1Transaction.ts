@@ -17,10 +17,11 @@
 'use strict'
 
 import { TransactionReceipt } from '@ethersproject/providers'
-import { Log } from '@ethersproject/abstract-provider'
+import { Provider, Log } from '@ethersproject/abstract-provider'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
-import { Provider } from '@ethersproject/abstract-provider'
+import { getAddress } from '@ethersproject/address'
+import { hexZeroPad } from '@ethersproject/bytes'
 import {
   L1ToL2Message,
   L1ToL2MessageStatus,
@@ -45,8 +46,10 @@ import {
   IL1ToL2MessageWriter,
   toNitroEthDepositMessage,
   EthDepositMessage,
+  classicGetInboxMessageDeliveredEvents,
 } from '../utils/migration_types'
 import { ArbSdkError } from '../dataEntities/errors'
+import { defaultAbiCoder } from 'ethers/lib/utils'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -104,13 +107,65 @@ export class L1TransactionReceipt implements TransactionReceipt {
     this.nitroReceipt = new nitro.L1TransactionReceipt(tx)
   }
 
-  private async looksLikeEthDeposit(message: classic.L1ToL2MessageReader) {
-    const inputs = await message.getInputs()
-    return (
-      inputs.maxGas.eq(0) &&
-      inputs.gasPriceBid.eq(0) &&
-      inputs.callDataLength.eq(0)
+  private async looksLikeEthDeposit(
+    gasLimit: BigNumber,
+    gasPrice: BigNumber,
+    callDataLength: number
+  ) {
+    return gasLimit.eq(0) && gasPrice.eq(0) && callDataLength === 0
+  }
+
+  private parseRetryableMessageData(eventData: string) {
+    // parse the event
+    // uint256(uint160(bytes20(destinationAddress))),
+    // uint256(0),
+    // msg.value,
+    // maxSubmissionCost,
+    // uint256(uint160(bytes20(destinationAddress))),
+    // uint256(uint160(bytes20(destinationAddress))),
+    // uint256(0),
+    // uint256(0),
+    // uint256(0),
+    // ""
+
+    // decode the data field - is been packed so we cant decode the bytes field this way
+    const parsed = defaultAbiCoder.decode(
+      [
+        'uint256',
+        'uint256',
+        'uint256',
+        'uint256',
+        'uint256',
+        'uint256',
+        'uint256',
+        'uint256',
+        'uint256', // data length
+      ],
+      // decode from the first 9 words
+      eventData.substring(0, 64 * 9 + 2)
     )
+    const addressFromBigNumber = (bn: BigNumber) =>
+      getAddress(hexZeroPad(bn.toHexString(), 20))
+    const destAddress = addressFromBigNumber(parsed[0])
+    const l2CallValue = parsed[1] as BigNumber
+    const l1Value = parsed[2] as BigNumber
+    const maxSubmissionFee = parsed[3] as BigNumber
+    const excessFeeRefundAddress = addressFromBigNumber(parsed[4])
+    const callValueRefundAddress = addressFromBigNumber(parsed[5])
+    const gasLimit = parsed[6] as BigNumber
+    const maxFeePerGas = parsed[7] as BigNumber
+    const data = '0x' + eventData.substring(64 * 9 + 2)
+    return {
+      destAddress,
+      l2CallValue,
+      l1Value,
+      maxSubmissionFee: maxSubmissionFee,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
+      gasLimit,
+      maxFeePerGas,
+      data,
+    }
   }
 
   /**
@@ -130,10 +185,33 @@ export class L1TransactionReceipt implements TransactionReceipt {
         l2SignerOrProvider
       )
 
+      const inboxMessageDeliveredEvents =
+        classicGetInboxMessageDeliveredEvents(this)
+      const pairings = l1ToL2Messages
+        .map(m => {
+          const pairedEvent = inboxMessageDeliveredEvents.filter(i =>
+            i.messageNum.eq(m.messageNumber)
+          )[0]
+          if (!pairedEvent) return undefined
+
+          const parsedEvent = this.parseRetryableMessageData(pairedEvent.data)
+
+          return {
+            message: m,
+            inboxEvent: parsedEvent,
+          }
+        })
+        .filter(i => i != undefined)
+        .map(i => i!)
+
       const typedMessages = await Promise.all(
-        l1ToL2Messages.map(async l => ({
-          isEthDeposit: await this.looksLikeEthDeposit(l),
-          message: l,
+        pairings.map(async l => ({
+          isEthDeposit: await this.looksLikeEthDeposit(
+            l.inboxEvent.gasLimit,
+            l.inboxEvent.maxFeePerGas,
+            l.inboxEvent.data.length - 2
+          ),
+          message: l.message,
         }))
       )
 
@@ -171,10 +249,33 @@ export class L1TransactionReceipt implements TransactionReceipt {
         l2SignerOrProvider
       )
 
+      const inboxMessageDeliveredEvents =
+        classicGetInboxMessageDeliveredEvents(this)
+      const pairings = l1ToL2Messages
+        .map(m => {
+          const pairedEvent = inboxMessageDeliveredEvents.filter(i =>
+            i.messageNum.eq(m.messageNumber)
+          )[0]
+          if (!pairedEvent) return undefined
+
+          const parsedEvent = this.parseRetryableMessageData(pairedEvent.data)
+
+          return {
+            message: m,
+            inboxEvent: parsedEvent,
+          }
+        })
+        .filter(i => i != undefined)
+        .map(i => i!)
+
       const typedMessages = await Promise.all(
-        l1ToL2Messages.map(async l => ({
-          isEthDeposit: await this.looksLikeEthDeposit(l),
-          message: l,
+        pairings.map(async l => ({
+          isEthDeposit: await this.looksLikeEthDeposit(
+            l.inboxEvent.gasLimit,
+            l.inboxEvent.maxFeePerGas,
+            l.inboxEvent.data.length - 2
+          ),
+          message: l.message,
         }))
       )
 
