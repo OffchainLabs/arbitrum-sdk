@@ -438,7 +438,7 @@ export class DepositWithdrawEstimator {
     return await ethBridger.depositEstimateGas(params)
   }
 
-  public async ethDepositL2GasCosts(l2Provider: Provider) {
+  public async ethDepositL2Gas(l2Provider: Provider) {
     if (await isNitroL2(l2Provider)) {
       const estimator = new classic.L1ToL2MessageGasEstimator(l2Provider)
       return {
@@ -455,7 +455,7 @@ export class DepositWithdrawEstimator {
     }
   }
 
-  public async ercDeposit20L1Gas(params: TokenDepositParams) {
+  public async erc20Deposit20L1Gas(params: TokenDepositParams) {
     const erc20Bridger = new Erc20Bridger(this.l2Network)
 
     return await erc20Bridger.depositEstimateGas(params)
@@ -567,7 +567,7 @@ export class DepositWithdrawEstimator {
     return false
   }
 
-  public async erc20DepositL2GasCosts(params: TokenDepositParams) {
+  public async erc20DepositL2Gas(params: TokenDepositParams) {
     if (await isNitroL2(params.l2Provider)) {
       const {
         erc20L1Address,
