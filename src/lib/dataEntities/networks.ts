@@ -216,12 +216,14 @@ export const getL2Network = (
 export const addCustomNetwork = ({
   customL1Network,
   customL2Network,
+  force = false
 }: {
   customL1Network?: L1Network
   customL2Network: L2Network
+  force?: boolean
 }): void => {
   if (customL1Network) {
-    if (l1Networks[customL1Network.chainID]) {
+    if (l1Networks[customL1Network.chainID] && !force) {
       throw new ArbSdkError(
         `Network ${customL1Network.chainID} already included`
       )
@@ -234,7 +236,7 @@ export const addCustomNetwork = ({
     }
   }
 
-  if (l2Networks[customL2Network.chainID])
+  if (l2Networks[customL2Network.chainID] && !force)
     throw new ArbSdkError(`Network ${customL2Network.chainID} already included`)
   else if (!customL2Network.isCustom) {
     throw new ArbSdkError(

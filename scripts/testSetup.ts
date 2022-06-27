@@ -173,6 +173,7 @@ export const setupNetworks = async (
   addCustomNetwork({
     customL1Network: l1Network,
     customL2Network: l2Network,
+    force: true
   })
 
   // also register the weth gateway
@@ -246,6 +247,7 @@ export const testSetup = async (): Promise<{
       addCustomNetwork({
         customL1Network: l1Network,
         customL2Network: l2Network,
+        force: true
       })
       setL1Network = l1Network
       setL2Network = l2Network
