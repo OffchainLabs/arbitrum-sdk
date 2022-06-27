@@ -304,6 +304,7 @@ export interface IL1ToL2MessageReader {
   ): Promise<L1ToL2MessageWaitResult>
   getTimeout(): Promise<BigNumber>
   getBeneficiary(): Promise<string>
+  getInputs(): ReturnType<classic.L1ToL2MessageReader['getInputs']>
 }
 
 export interface IL1ToL2MessageWriter extends IL1ToL2MessageReader {
@@ -425,6 +426,28 @@ export const toNitroEthDepositMessage = async (
   }
 }
 
+export const toClassicRetryableParams = async (
+  params: nitro.L1ToL2MessageReader['messageData']
+): ReturnType<classic.L1ToL2MessageReader['getInputs']> => {
+  if (params.data.length < 2 || params.data.length % 2 !== 0) {
+    throw new ArbSdkError('Unxpected params data: `${params.data}')
+  }
+  return {
+    callDataLength: BigNumber.from(
+      (params.data.startsWith('0x')
+        ? params.data.length - 2
+        : params.data.length) / 2
+    ),
+    callValueRefundAddress: params.callValueRefundAddress,
+    destinationAddress: params.destAddress,
+    excessFeeRefundAddress: params.excessFeeRefundAddress,
+    gasPriceBid: params.maxFeePerGas,
+    l2CallValue: params.l2CallValue,
+    maxGas: params.gasLimit,
+    maxSubmissionCost: params.maxSubmissionFee,
+  }
+}
+
 /**
  * Temporary class for helping with x-chain message gas cost estimation.
  * Will be removed in nitro as this functionality will be available on the bridgers
@@ -440,16 +463,17 @@ export class DepositWithdrawEstimator {
 
   public async ethDepositL2Gas(l2Provider: Provider) {
     if (await isNitroL2(l2Provider)) {
-      const estimator = new classic.L1ToL2MessageGasEstimator(l2Provider)
-      return {
-        maxGas: BigNumber.from(0),
-        maxSubmissionCost: await estimator.estimateSubmissionPrice(0),
-        maxGasPrice: BigNumber.from(0),
-      }
-    } else {
       return {
         maxGas: BigNumber.from(0),
         maxSubmissionCost: BigNumber.from(0),
+        maxGasPrice: BigNumber.from(0),
+      }
+    } else {
+      const estimator = new classic.L1ToL2MessageGasEstimator(l2Provider)
+      return {
+        maxGas: BigNumber.from(0),
+        maxSubmissionCost: (await estimator.estimateSubmissionPrice(0))
+          .submissionPrice,
         maxGasPrice: BigNumber.from(0),
       }
     }
