@@ -10,10 +10,10 @@
     "@jridgewell/gen-mapping" "^0.1.0"
     "@jridgewell/trace-mapping" "^0.3.9"
 
-"@arbitrum/nitro-contracts@1.0.0-beta.5":
-  version "1.0.0-beta.5"
-  resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.0.0-beta.5.tgz#b4ca2a8d99b8a108e7dc412f6c2cb74818d5099a"
-  integrity sha512-hEpRXIL8S6AfTt6dqJsKCa84JufhuXuRgm2BnximdRrhJ8ukqR6Pt/mndYMa4nWRRTBMYkIxy6EA5iYxDwxWAQ==
+"@arbitrum/nitro-contracts@1.0.0-beta.6":
+  version "1.0.0-beta.6"
+  resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.0.0-beta.6.tgz#86b4997ea373a5410fbc42c6a9097f0ab07dfa34"
+  integrity sha512-UyCqUsd5ew0DUZ+MxgfP7fdyGBDoOujeXbjhdg4agJW1ld3lg+E7dgKfN6S0j2v2l/+Yd63HqEp24O5bgSzxTg==
   dependencies:
     "@openzeppelin/contracts" "4.5.0"
     "@openzeppelin/contracts-upgradeable" "4.5.2"
@@ -1288,7 +1288,7 @@ arb-bridge-peripherals@1.0.10:
   optionalDependencies:
     "@openzeppelin/upgrades-core" "^1.7.6"
 
-arbos-precompiles@1.0.2, arbos-precompiles@^1.0.2:
+arbos-precompiles@^1.0.2:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/arbos-precompiles/-/arbos-precompiles-1.0.2.tgz#7bebd5963aef972cd259eb41f3116ea065013ea6"
   integrity sha512-1dOFYFJUN0kKoofh6buZJ8qCqTs+oLGSsGzHI0trA/Pka/TCERflCRsNVxez2lihOvK7MT/a2RA8AepKtBXdPQ==
