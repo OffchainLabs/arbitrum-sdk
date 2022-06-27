@@ -303,16 +303,9 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     const l2Network = await getL2Network(this.l2Provider)
     const eventFetcher = new EventFetcher(this.l2Provider)
     const creationReceipt = await this.getRetryableCreationReceipt()
-    if (creationReceipt) {
-      if (!(await this.retryableExists())) {
-        // the retryable was created, but no longer exists
-        // so it must have expired
-        return {
-          redeemReceipt: null,
-          expired: true,
-        }
-      }
-    }
+    // if retryable was created but no longer exists then we know that it was either
+    // redeemed or expired
+    const redeemWasSuccessfulOrExpired = creationReceipt && !await this.retryableExists()
 
     // check the auto redeem, if that worked we dont need to do costly log queries
     const autoRedeem = await this.getAutoRedeemAttempt()
@@ -398,6 +391,14 @@ export class L1ToL2MessageReader extends L1ToL2Message {
         }
 
         fromBlock = toBlock
+      }
+
+      // we didnt find a redeem transaction
+      if(redeemWasSuccessfulOrExpired) {
+        return {
+          expired: true,
+          redeemReceipt: null
+        }
       }
     }
     return { redeemReceipt: null, expired: false }
