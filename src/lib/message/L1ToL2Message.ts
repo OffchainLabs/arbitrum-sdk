@@ -172,7 +172,7 @@ export class L1ToL2MessageReader
       nitroReader.l2Provider,
       nitroReader.chainId,
       nitroReader.sender,
-      undefined,
+      nitroReader.messageNumber,
       nitroReader.l1BaseFee,
       nitroReader.messageData,
       undefined
@@ -313,7 +313,7 @@ export class L1ToL2MessageWriter
       nitroWriter.l2Signer,
       nitroWriter.chainId,
       nitroWriter.sender,
-      undefined,
+      nitroWriter.messageNumber,
       nitroWriter.l1BaseFee,
       nitroWriter.messageData,
       undefined
