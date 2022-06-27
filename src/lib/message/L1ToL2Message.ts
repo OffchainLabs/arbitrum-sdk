@@ -93,15 +93,15 @@ export abstract class L1ToL2Message {
    * The submit retryable transactions use the typed transaction envelope 2718.
    * The id of these transactions is the hash of the RLP encoded transaction.
    * @param l2ChainId
-   * @param fromAddress
+   * @param fromAddress the address that called the L1 inbox. This is expected to be the non-aliased address, since this function will apply the alias.
    * @param messageNumber
    * @param l1BaseFee
    * @param destAddress
    * @param l2CallValue
    * @param l1Value
    * @param maxSubmissionFee
-   * @param excessFeeRefundAddress
-   * @param callValueRefundAddress
+   * @param excessFeeRefundAddress refund address specified in the retryable creation. Note the L1 inbox aliases this address if it is a L1 smart contract. The user is expected to provide this value already aliased when needed.
+   * @param callValueRefundAddress refund address specified in the retryable creation. Note the L1 inbox aliases this address if it is a L1 smart contract. The user is expected to provide this value already aliased when needed.
    * @param gasLimit
    * @param maxFeePerGas
    * @param data
@@ -112,7 +112,6 @@ export abstract class L1ToL2Message {
     fromAddress: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
-
     destAddress: string,
     l2CallValue: BigNumber,
     l1Value: BigNumber,
