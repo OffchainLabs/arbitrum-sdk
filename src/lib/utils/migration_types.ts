@@ -430,7 +430,7 @@ export const toClassicRetryableParams = async (
   params: nitro.L1ToL2MessageReader['messageData']
 ): ReturnType<classic.L1ToL2MessageReader['getInputs']> => {
   if (params.data.length < 2 || params.data.length % 2 !== 0) {
-    throw new ArbSdkError('Unxpected params data: `${params.data}')
+    throw new ArbSdkError(`Unxpected params data: ${params.data}.`)
   }
   return {
     callDataLength: BigNumber.from(
