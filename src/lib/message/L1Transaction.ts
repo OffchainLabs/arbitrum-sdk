@@ -211,6 +211,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
             l.inboxEvent.maxFeePerGas,
             l.inboxEvent.data.length - 2
           ),
+          eventData: l.inboxEvent,
           message: l.message,
         }))
       )
@@ -224,7 +225,15 @@ export class L1TransactionReceipt implements TransactionReceipt {
       return Promise.all(
         typedMessages
           .filter(t => t.isEthDeposit)
-          .map(async t => await toNitroEthDepositMessage(t.message, chainId))
+          .map(
+            async t =>
+              await toNitroEthDepositMessage(
+                t.message,
+                chainId,
+                t.eventData.destAddress,
+                t.eventData.l2CallValue
+              )
+          )
       )
     }
   }
@@ -412,11 +421,14 @@ export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
         confirmations,
         timeout
       )
+      const inputs = await classicWaitRes.message.getInputs()
       const ethDepositMessage = await toNitroEthDepositMessage(
         classicWaitRes.message,
         (
           await l2Provider.getNetwork()
-        ).chainId
+        ).chainId,
+        inputs.destinationAddress,
+        inputs.l2CallValue
       )
       const txReceipt = await ethDepositMessage.wait()
       return {

@@ -408,15 +408,16 @@ export interface EthDepositMessage {
 
 export const toNitroEthDepositMessage = async (
   message: ClassicL1ToL2MessageReader,
-  l2ChainId: number
+  l2ChainId: number,
+  destinationAddress: string,
+  l2CallValue: BigNumber
 ): Promise<EthDepositMessage> => {
-  const inputs = await message.getInputs()
   return {
     l2ChainId: l2ChainId,
     l2DepositTxHash: message.l2TxHash,
     messageNumber: message.messageNumber,
-    to: inputs.destinationAddress,
-    value: inputs.l2CallValue,
+    to: destinationAddress,
+    value: l2CallValue,
 
     wait: async (confirmations?: number, timeout?: number) => {
       const statusRes = await message.waitForStatus(confirmations, timeout)
