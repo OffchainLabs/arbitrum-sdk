@@ -114,7 +114,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
   /**
    * Classic and nitro message events have different signatures. This means that if this tx
    * has a classic event, it cant have had a nitro one
-   * @returns 
+   * @returns
    */
   public hasClassicMessages() {
     return this.classicReceipt.getMessages().length > 0
@@ -169,7 +169,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     l2SignerOrProvider: T
   ): Promise<IL1ToL2MessageReader[] | IL1ToL2MessageWriter[]> {
     if (!this.hasClassicMessages()) {
-      return  (
+      return (
         await this.nitroReceipt.getL1ToL2Messages(l2SignerOrProvider)
       ).map(r => L1ToL2Message.fromNitro(r))
     } else {
