@@ -60,10 +60,10 @@ export const getCustomNetworks = async (
   const l1Provider = new JsonRpcProvider(l1Url)
   const l2Provider = new JsonRpcProvider(l2Url)
   const deploymentData = `{
-    "bridge": "0x9801dce4a2ac3a3768c2460c933167a384304130",
-    "inbox": "0x9cd5b23b73c38fd1f6c33f22bbb1535f64293c3d",
-    "sequencer-inbox": "0x760eff3c7d2b5cf9895fc3e9dc27f0ed75a57395",
-    "rollup": "0xb16acffbf934e94171966717f3310ab99ae15b2e"
+    "bridge": "0xc1ebd02f738644983b6c4b2d440b8e77dde276bd",
+    "inbox": "0xc4448b71118c9071bcb9734a0eac55d18a153949",
+    "sequencer-inbox": "0x211e1c4c7f1bf5351ac850ed10fd68cffcf6c21b",
+    "rollup": "0xfb209827c58283535b744575e11953dcc4bead88"
   }`
   const parsedDeploymentData = JSON.parse(deploymentData) as {
     bridge: string
