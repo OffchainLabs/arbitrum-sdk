@@ -57,7 +57,7 @@
     "typechain": "7.0.0"
   },
   "devDependencies": {
-    "@arbitrum/nitro-contracts": "1.0.0-beta.5",
+    "@arbitrum/nitro-contracts": "1.0.0-beta.6",
     "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@types/chai": "^4.2.11",
     "@types/mocha": "^9.0.0",
