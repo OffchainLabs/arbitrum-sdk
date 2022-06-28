@@ -292,29 +292,31 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    * @returns TransactionReceipt of the first successful redeem if exists, otherwise null.
    * Returns expired true if retryable expired without being redeemed, otherwise false.
    */
-  public async getSuccessfulRedeem(): Promise<
-    | { redeemReceipt: TransactionReceipt | null; expired: false }
-    | { redeemReceipt: null; expired: true }
-  > {
+  public async getSuccessfulRedeem(): Promise<L1ToL2MessageWaitResult> {
     const l2Network = await getL2Network(this.l2Provider)
     const eventFetcher = new EventFetcher(this.l2Provider)
     const creationReceipt = await this.getRetryableCreationReceipt()
+
     if (!isDefined(creationReceipt)) {
       // retryable was never created, or not created yet
       // therefore it cant have been redeemed or be expired
-      return { redeemReceipt: null, expired: false }
+      return { status: L1ToL2MessageStatus.NOT_YET_CREATED }
+    }
+
+    if (creationReceipt.status === 0) {
+      return { status: L1ToL2MessageStatus.CREATION_FAILED }
     }
 
     // check the auto redeem first to avoid doing costly log queries in the happy case
     const autoRedeem = await this.getAutoRedeemAttempt()
     if (autoRedeem && autoRedeem.status === 1) {
-      return { redeemReceipt: autoRedeem, expired: false }
+      return { l2TxReceipt: autoRedeem, status: L1ToL2MessageStatus.REDEEMED }
     }
 
     if (await this.retryableExists()) {
       // the retryable was created and still exists
       // therefore it cant have been redeemed or be expired
-      return { redeemReceipt: null, expired: false }
+      return { status: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2 }
     }
 
     // from this point on we know that the retryable was created but does not exist,
@@ -356,7 +358,10 @@ export class L1ToL2MessageReader extends L1ToL2Message {
           `Unexpected number of successful redeems. Expected only one redeem for ticket ${this.retryableCreationId}, but found ${successfulRedeem.length}.`
         )
       if (successfulRedeem.length == 1)
-        return { redeemReceipt: successfulRedeem[0], expired: false }
+        return {
+          l2TxReceipt: successfulRedeem[0],
+          status: L1ToL2MessageStatus.REDEEMED,
+        }
 
       const toBlock = await this.l2Provider.getBlock(toBlockNumber)
       if (toBlock.timestamp > timeout) {
@@ -395,7 +400,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
     // we know from earlier that the retryable no longer exists, so if we havent found the redemption
     // we know that it must have expired
-    return { expired: true, redeemReceipt: null }
+    return { status: L1ToL2MessageStatus.EXPIRED }
   }
 
   /**
@@ -422,63 +427,8 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     }
   }
 
-  protected async receiptsToStatus(
-    retryableCreationReceipt: TransactionReceipt | null,
-    redeemInfo:
-      | { redeemReceipt: TransactionReceipt | null; expired: false }
-      | { redeemReceipt: null; expired: true }
-  ): Promise<L1ToL2MessageStatus> {
-    // happy path for non auto redeemable messages
-    // NOT_YET_CREATED -> FUNDS_DEPOSITED
-    // these will later either transition to EXPIRED after the timeout
-    // (this is what happens to eth deposits since they don't need to be
-    // redeemed) or to REDEEMED if the retryable is manually redeemed
-
-    // happy path for auto redeemable messages
-    // NOT_YET_CREATED -> FUNDS_DEPOSITED -> REDEEMED
-    // an attempt to auto redeem executable messages is made immediately
-    // after the retryable is created - which if successful will transition
-    // the status to REDEEMED. If the auto redeem fails then the ticket
-    // will transition to REDEEMED if manually redeemed, or EXPIRE
-    // after the timeout is reached and the ticket is not redeemed
-
-    // we test the retryable receipt first as if this doesnt exist there's
-    // no point looking to see if expired
-    if (!retryableCreationReceipt) {
-      return L1ToL2MessageStatus.NOT_YET_CREATED
-    }
-    if (retryableCreationReceipt.status === 0) {
-      return L1ToL2MessageStatus.CREATION_FAILED
-    }
-
-    // ticket created, has it been auto redeemed?
-    if (redeemInfo.redeemReceipt && redeemInfo.redeemReceipt.status === 1) {
-      return L1ToL2MessageStatus.REDEEMED
-    }
-
-    // not redeemed, has it now expired
-    if (redeemInfo.expired) return L1ToL2MessageStatus.EXPIRED
-
-    // ticket was created but not redeemed
-    // this could be because
-    // a) the ticket is non auto redeemable (l2GasPrice == 0 || l2GasLimit == 0) -
-    //    this is usually an eth deposit. But in some rare case the
-    //    user may still want to manually redeem it
-    // b) the ticket is auto redeemable, but the auto redeem failed
-
-    // the fact that the auto redeem failed isn't usually useful to the user
-    // if they're doing an eth deposit they don't care about redemption
-    // and if they do want execution to occur they will know that they're
-    // here because the auto redeem failed. If they really want to check
-    // they can fetch the auto redeem receipt and check the status on it
-    return L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
-  }
-
   public async status(): Promise<L1ToL2MessageStatus> {
-    return this.receiptsToStatus(
-      await this.getRetryableCreationReceipt(),
-      await this.getSuccessfulRedeem()
-    )
+    return (await this.getSuccessfulRedeem()).status
   }
 
   /**
@@ -498,29 +448,11 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     timeout = 900000
   ): Promise<L1ToL2MessageWaitResult> {
     // try to wait for the retryable ticket to be created
-    const retryableCreationReceipt = await this.getRetryableCreationReceipt(
+    const _retryableCreationReceipt = await this.getRetryableCreationReceipt(
       confirmations,
       timeout
     )
-
-    // get the successful redeem transaction, if one exists
-    const l2TxReceipt = await this.getSuccessfulRedeem()
-
-    const status = await this.receiptsToStatus(
-      retryableCreationReceipt,
-      l2TxReceipt
-    )
-    if (status === L1ToL2MessageStatus.REDEEMED) {
-      return {
-        // if the status is redeemed we know the l2TxReceipt must exist
-        l2TxReceipt: l2TxReceipt.redeemReceipt!,
-        status,
-      }
-    } else {
-      return {
-        status,
-      }
-    }
+    return await this.getSuccessfulRedeem()
   }
 
   /**
