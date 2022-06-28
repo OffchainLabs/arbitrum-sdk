@@ -44,7 +44,11 @@ describe('SubmitRetryableMessageDataParser', () => {
     ).to.be.true
   })
 
-  it('does parse eth deposit message', async () => {
+  // left a separate test here for eth deposits done via a retryable
+  // we dont normally use this method for depositing eth - we have a separate message type for that
+  // but depositing eth via retryables is still valid so I've left this test here
+  it('does parse eth deposit in an l1 to l2 message', async () => {
+    
     const messageDataParser = new SubmitRetryableMessageDataParser()
     // taken from https://etherscan.io/tx/0xfe54a8166c62cf65468234c728249c28997904d6988913625ca5c4e249d06058#eventlog
     const retryableData =
