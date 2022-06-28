@@ -289,8 +289,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
   /**
    * Receipt for the successful l2 transaction created by this message.
-   * @returns TransactionReceipt of the first successful redeem if exists, otherwise null.
-   * Returns expired true if retryable expired without being redeemed, otherwise false.
+   * @returns TransactionReceipt of the first successful redeem if exists, otherwise the current status of the message.
    */
   public async getSuccessfulRedeem(): Promise<L1ToL2MessageWaitResult> {
     const l2Network = await getL2Network(this.l2Provider)
