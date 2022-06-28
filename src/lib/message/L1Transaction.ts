@@ -20,8 +20,6 @@ import { TransactionReceipt } from '@ethersproject/providers'
 import { Provider, Log } from '@ethersproject/abstract-provider'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
-import { getAddress } from '@ethersproject/address'
-import { hexZeroPad } from '@ethersproject/bytes'
 import {
   L1ToL2Message,
   L1ToL2MessageStatus,
@@ -48,7 +46,6 @@ import {
   classicGetInboxMessageDeliveredEvents,
 } from '../utils/migration_types'
 import { ArbSdkError } from '../dataEntities/errors'
-import { defaultAbiCoder } from 'ethers/lib/utils'
 import { SubmitRetryableMessageDataParser } from './messageDataParser'
 
 export interface L1ContractTransaction<
