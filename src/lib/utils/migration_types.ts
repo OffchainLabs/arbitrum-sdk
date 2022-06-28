@@ -414,7 +414,7 @@ export const toNitroEthDepositMessage = async (
 ): Promise<EthDepositMessage> => {
   return {
     l2ChainId: l2ChainId,
-    l2DepositTxHash: message.l2TxHash,
+    l2DepositTxHash: message.retryableCreationId,
     messageNumber: message.messageNumber,
     to: destinationAddress,
     value: l2CallValue,
