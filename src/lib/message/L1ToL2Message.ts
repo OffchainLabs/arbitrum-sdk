@@ -292,30 +292,25 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    * @returns TransactionReceipt of the first successful redeem if exists, otherwise null.
    * Returns expired true if retryable expired without being redeemed, otherwise false.
    */
-  public async getSuccessfulRedeem(): Promise<
-    | { redeemReceipt: TransactionReceipt | null; expired: false }
-    | { redeemReceipt: null; expired: true }
-  > {
+  public async getSuccessfulRedeem(): Promise<TransactionReceipt | "expired" | "not created" | "redeemable"> {
     const l2Network = await getL2Network(this.l2Provider)
     const eventFetcher = new EventFetcher(this.l2Provider)
     const creationReceipt = await this.getRetryableCreationReceipt()
+
+    if(!creationReceipt) return "not created"
+    if(await this.retryableExists()) return "redeemable"
+
     // if retryable was created but no longer exists then we know that it was either
     // redeemed or expired
-    const redeemWasSuccessfulOrExpired =
-      creationReceipt && !(await this.retryableExists())
 
     // check the auto redeem, if that worked we dont need to do costly log queries
     const autoRedeem = await this.getAutoRedeemAttempt()
-    if (autoRedeem && autoRedeem.status === 1)
-      return {
-        redeemReceipt: autoRedeem,
-        expired: false,
-      }
+    if (autoRedeem && autoRedeem.status === 1) return autoRedeem
 
     // the auto redeem didnt exist or wasnt successful, look for a later manual redeem
     // to do this we need to filter through the whole lifetime of the ticket looking
     // for relevant redeem scheduled events
-    if (creationReceipt) {
+
       let increment = 1000
       let fromBlock = await this.l2Provider.getBlock(
         creationReceipt.blockNumber
@@ -351,8 +346,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
           throw new ArbSdkError(
             `Unexpected number of successful redeems. Expected only one redeem for ticket ${this.retryableCreationId}, but found ${successfulRedeem.length}.`
           )
-        if (successfulRedeem.length == 1)
-          return { redeemReceipt: successfulRedeem[0], expired: false }
+        if (successfulRedeem.length == 1) return successfulRedeem[0]
 
         const toBlock = await this.l2Provider.getBlock(toBlockNumber)
         if (toBlock.timestamp > timeout) {
@@ -391,14 +385,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       }
 
       // we didnt find a redeem transaction
-      if (redeemWasSuccessfulOrExpired) {
-        return {
-          expired: true,
-          redeemReceipt: null,
-        }
-      }
-    }
-    return { redeemReceipt: null, expired: false }
+      return "expired"
   }
 
   /**
