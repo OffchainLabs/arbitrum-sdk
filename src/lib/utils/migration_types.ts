@@ -434,27 +434,6 @@ export const toNitroEthDepositMessage = async (
   }
 }
 
-// public async status(): Promise<L1ToL2MessageStatus> {
-//   const receipt = await this.l2Provider.getTransactionReceipt(
-//     this.l2DepositTxHash
-//   )
-//   if (receipt === null) return L1ToL2MessageStatus.NOT_YET_CREATED
-//   else return L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
-// }
-
-// public async wait(confirmations?: number, timeout = 900000) {
-//   if (!this.l2DepositTxReceipt) {
-//     this.l2DepositTxReceipt = await getTransactionReceipt(
-//       this.l2Provider,
-//       this.l2DepositTxHash,
-//       confirmations,
-//       timeout
-//     )
-//   }
-
-//   return this.l2DepositTxReceipt || null
-// }
-
 export const toClassicRetryableParams = async (
   params: nitro.L1ToL2MessageReader['messageData']
 ): ReturnType<classic.L1ToL2MessageReader['getInputs']> => {
