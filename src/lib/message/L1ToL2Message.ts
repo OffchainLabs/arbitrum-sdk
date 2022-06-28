@@ -316,11 +316,9 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
     // check the auto redeem, if that worked we dont need to do costly log queries
     const autoRedeem = await this.getAutoRedeemAttempt()
-    if (autoRedeem && autoRedeem.status === 1)
-      return {
-        redeemReceipt: autoRedeem,
-        expired: false,
-      }
+    if (autoRedeem && autoRedeem.status === 1) {
+      return { redeemReceipt: autoRedeem, expired: false }
+    }
 
     // the auto redeem didnt exist or wasnt successful, look for a later manual redeem
     // to do this we need to filter through the whole lifetime of the ticket looking
@@ -397,10 +395,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
     // we know from earlier that the retryable no longer exists, so if we havent found the redemption
     // we know that it must have expired
-    return {
-      expired: true,
-      redeemReceipt: null,
-    }
+    return { expired: true, redeemReceipt: null }
   }
 
   /**
