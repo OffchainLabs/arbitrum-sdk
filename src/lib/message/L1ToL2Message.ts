@@ -292,13 +292,13 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    * @returns TransactionReceipt of the first successful redeem if exists, otherwise null.
    * Returns expired true if retryable expired without being redeemed, otherwise false.
    */
-  public async getSuccessfulRedeem(): Promise<TransactionReceipt | "expired" | "not created" | "redeemable"> {
+  public async getSuccessfulRedeem(): Promise<TransactionReceipt | L1ToL2MessageStatus> {
     const l2Network = await getL2Network(this.l2Provider)
     const eventFetcher = new EventFetcher(this.l2Provider)
     const creationReceipt = await this.getRetryableCreationReceipt()
 
-    if(!creationReceipt) return "not created"
-    if(await this.retryableExists()) return "redeemable"
+    if(!creationReceipt) return L1ToL2MessageStatus.NOT_YET_CREATED;
+    if(await this.retryableExists()) return L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2;
 
     // if retryable was created but no longer exists then we know that it was either
     // redeemed or expired
@@ -385,7 +385,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       }
 
       // we didnt find a redeem transaction
-      return "expired"
+      return L1ToL2MessageStatus.EXPIRED;
   }
 
   /**
