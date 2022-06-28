@@ -49,6 +49,7 @@ import {
 } from '../utils/migration_types'
 import { ArbSdkError } from '../dataEntities/errors'
 import { defaultAbiCoder } from 'ethers/lib/utils'
+import { SubmitRetryableMessageDataParser } from './messageDataParser'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -114,59 +115,6 @@ export class L1TransactionReceipt implements TransactionReceipt {
     return gasLimit.eq(0) && gasPrice.eq(0) && callDataLength === 0
   }
 
-  private parseRetryableMessageData(eventData: string) {
-    // parse the event
-    // uint256(uint160(bytes20(destinationAddress))),
-    // uint256(0),
-    // msg.value,
-    // maxSubmissionCost,
-    // uint256(uint160(bytes20(destinationAddress))),
-    // uint256(uint160(bytes20(destinationAddress))),
-    // uint256(0),
-    // uint256(0),
-    // uint256(0),
-    // ""
-
-    // decode the data field - is been packed so we cant decode the bytes field this way
-    const parsed = defaultAbiCoder.decode(
-      [
-        'uint256',
-        'uint256',
-        'uint256',
-        'uint256',
-        'uint256',
-        'uint256',
-        'uint256',
-        'uint256',
-        'uint256', // data length
-      ],
-      // decode from the first 9 words
-      eventData.substring(0, 64 * 9 + 2)
-    )
-    const addressFromBigNumber = (bn: BigNumber) =>
-      getAddress(hexZeroPad(bn.toHexString(), 20))
-    const destAddress = addressFromBigNumber(parsed[0])
-    const l2CallValue = parsed[1] as BigNumber
-    const l1Value = parsed[2] as BigNumber
-    const maxSubmissionFee = parsed[3] as BigNumber
-    const excessFeeRefundAddress = addressFromBigNumber(parsed[4])
-    const callValueRefundAddress = addressFromBigNumber(parsed[5])
-    const gasLimit = parsed[6] as BigNumber
-    const maxFeePerGas = parsed[7] as BigNumber
-    const data = '0x' + eventData.substring(64 * 9 + 2)
-    return {
-      destAddress,
-      l2CallValue,
-      l1Value,
-      maxSubmissionFee: maxSubmissionFee,
-      excessFeeRefundAddress,
-      callValueRefundAddress,
-      gasLimit,
-      maxFeePerGas,
-      data,
-    }
-  }
-
   /**
    * Classic and nitro message events have different signatures. This means that if this tx
    * has a classic event, it cant have had a nitro one
@@ -202,7 +150,8 @@ export class L1TransactionReceipt implements TransactionReceipt {
           )[0]
           if (!pairedEvent) return undefined
 
-          const parsedEvent = this.parseRetryableMessageData(pairedEvent.data)
+          const retryableMessageParser = new SubmitRetryableMessageDataParser()
+          const parsedEvent = retryableMessageParser.parse(pairedEvent.data)
 
           return {
             message: m,
@@ -275,7 +224,8 @@ export class L1TransactionReceipt implements TransactionReceipt {
           )[0]
           if (!pairedEvent) return undefined
 
-          const parsedEvent = this.parseRetryableMessageData(pairedEvent.data)
+          const retryableMessageParser = new SubmitRetryableMessageDataParser()
+          const parsedEvent = retryableMessageParser.parse(pairedEvent.data)
 
           return {
             message: m,
