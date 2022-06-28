@@ -93,7 +93,7 @@ export abstract class L1ToL2Message {
    * The submit retryable transactions use the typed transaction envelope 2718.
    * The id of these transactions is the hash of the RLP encoded transaction.
    * @param l2ChainId
-   * @param fromAddress the address that called the L1 inbox. This is expected to be the non-aliased address, since this function will apply the alias.
+   * @param fromAddress the aliased address that called the L1 inbox as emitted in the bridge event.
    * @param messageNumber
    * @param l1BaseFee
    * @param destAddress
