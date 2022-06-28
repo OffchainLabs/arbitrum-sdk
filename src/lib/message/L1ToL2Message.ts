@@ -300,12 +300,14 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     const eventFetcher = new EventFetcher(this.l2Provider)
     const creationReceipt = await this.getRetryableCreationReceipt()
     if (!isDefined(creationReceipt)) {
-      // retryable was never created
+      // retryable was never created, or not created yet
+      // therefore it cant have been redeemed or be expired
       return { redeemReceipt: null, expired: false }
     }
 
     if (await this.retryableExists()) {
-      // if the retryable still exists then then it cant have been redeemed or be expired
+      // the retryable was created and still exists
+      // therefore it cant have been redeemed or be expired
       return { redeemReceipt: null, expired: false }
     }
 
@@ -378,15 +380,9 @@ export class L1ToL2MessageReader extends L1ToL2Message {
             break
           }
         }
-        // we will have updated the timestamp by this point to the current timeout
-        // if we've already surpassed that then we've checked the full range and not found
-        // a redeem, so we must have expired
-        if (toBlock.timestamp > timeout) {
-          return {
-            expired: true,
-            redeemReceipt: null,
-          }
-        }
+        // the retryable no longer exists, but we've searched beyond the timeout
+        // so it must have expired
+        if (toBlock.timestamp > timeout) break
         // It is possible to have another keepalive in the last range as it might include block after previous timeout
         while (queriedRange.length > 1) queriedRange.shift()
       }
@@ -399,11 +395,10 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       fromBlock = toBlock
     }
 
-    // if we're here it means that we were trying to search beyond the current block number
-    // that means that means the timeout window hasnt closed yet. The transaction has neither
-    // been redeemed nor expired, but could do either in the future
+    // we know from earlier that the retryable no longer exists, so if we havent found the redemption
+    // we know that it must have expired
     return {
-      expired: false,
+      expired: true,
       redeemReceipt: null,
     }
   }
