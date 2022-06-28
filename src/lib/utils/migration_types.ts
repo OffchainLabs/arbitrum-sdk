@@ -1,7 +1,7 @@
 import * as classic from '@arbitrum/sdk-classic'
 import * as nitro from '@arbitrum/sdk-nitro'
 import { BigNumber, ContractTransaction, ethers, Overrides } from 'ethers'
-import { JsonRpcProvider } from '@ethersproject/providers'
+import { JsonRpcProvider, TransactionReceipt } from '@ethersproject/providers'
 import { Zero } from '@ethersproject/constants'
 import { ErrorCode, Logger } from '@ethersproject/logger'
 import {
@@ -29,7 +29,9 @@ import { L1ERC20Gateway__factory as NitroL1ERC20Gateway__factory } from '@arbitr
 import { L1WethGateway__factory as NitroL1WethGateway__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/L1WethGateway__factory'
 import { FetchedEvent } from './eventFetcher'
 import { L2Network as NitroL2Network } from '@arbitrum/sdk-nitro'
-import { Inbox__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/Inbox__factory'
+import { Inbox__factory as NitroInbox__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/Inbox__factory'
+import { Inbox__factory as ClassicInbox__factory } from '@arbitrum/sdk-classic/dist/lib/abi/factories/Inbox__factory'
+import { InboxMessageDeliveredEvent as ClassicInboxMessageDeliveredEvent } from '@arbitrum/sdk-classic/dist/lib/abi/Inbox'
 import { Bridge__factory as NitroBridgeFactory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/Bridge__factory'
 import { RollupUserLogic__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/RollupUserLogic__factory'
 import { L1ToL2MessageReader as ClassicL1ToL2MessageReader } from '@arbitrum/sdk-classic/dist/index'
@@ -59,7 +61,7 @@ export const generateL2NitroNetwork = async (
   // we know the inbox hasnt changed
   const inboxAddr = existingNitroL2Network.ethBridge.inbox
 
-  const inbox = Inbox__factory.connect(inboxAddr, l1Provider)
+  const inbox = NitroInbox__factory.connect(inboxAddr, l1Provider)
   const bridgeAddr = await inbox.bridge()
 
   // the rollup is the bridge owner
@@ -148,7 +150,7 @@ export const isNitroL1 = async (l1Provider: SignerOrProvider) => {
       throw new ArbSdkError(`No l2 network found with chain id ${partner}`)
     try {
       const inboxAddr = l2Network.ethBridge.inbox
-      const inbox = Inbox__factory.connect(inboxAddr, l1Provider)
+      const inbox = NitroInbox__factory.connect(inboxAddr, l1Provider)
       const bridgeAddr = await inbox.bridge()
       const bridge = Bridge__factory.connect(bridgeAddr, l1Provider)
       const rollupAdd = await bridge.owner()
@@ -406,15 +408,16 @@ export interface EthDepositMessage {
 
 export const toNitroEthDepositMessage = async (
   message: ClassicL1ToL2MessageReader,
-  l2ChainId: number
+  l2ChainId: number,
+  destinationAddress: string,
+  l2CallValue: BigNumber
 ): Promise<EthDepositMessage> => {
-  const inputs = await message.getInputs()
   return {
     l2ChainId: l2ChainId,
-    l2DepositTxHash: message.l2TxHash,
+    l2DepositTxHash: message.retryableCreationId,
     messageNumber: message.messageNumber,
-    to: inputs.destinationAddress,
-    value: inputs.l2CallValue,
+    to: destinationAddress,
+    value: l2CallValue,
 
     wait: async (confirmations?: number, timeout?: number) => {
       const statusRes = await message.waitForStatus(confirmations, timeout)
@@ -430,7 +433,7 @@ export const toClassicRetryableParams = async (
   params: nitro.L1ToL2MessageReader['messageData']
 ): ReturnType<classic.L1ToL2MessageReader['getInputs']> => {
   if (params.data.length < 2 || params.data.length % 2 !== 0) {
-    throw new ArbSdkError('Unxpected params data: `${params.data}')
+    throw new ArbSdkError(`Unxpected params data: ${params.data}.`)
   }
   return {
     callDataLength: BigNumber.from(
@@ -783,4 +786,22 @@ export class DepositWithdrawEstimator {
 
     return await ethBridger.withdrawEstimateGas(params)
   }
+}
+
+/**
+ * Get any InboxMessageDelivered events that were emitted during this transaction
+ * @returns
+ */
+export const classicGetInboxMessageDeliveredEvents = (
+  receipt: TransactionReceipt
+): ClassicInboxMessageDeliveredEvent['args'][] => {
+  const iFace = ClassicInbox__factory.createInterface()
+  const inboxMessageDeliveredTopic = iFace.getEventTopic(
+    iFace.events['InboxMessageDelivered(uint256,bytes)']
+  )
+  return receipt.logs
+    .filter(log => log.topics[0] === inboxMessageDeliveredTopic)
+    .map(
+      l => iFace.parseLog(l).args as ClassicInboxMessageDeliveredEvent['args']
+    )
 }
