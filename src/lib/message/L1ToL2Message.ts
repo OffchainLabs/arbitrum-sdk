@@ -292,100 +292,109 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    * @returns TransactionReceipt of the first successful redeem if exists, otherwise null.
    * Returns expired true if retryable expired without being redeemed, otherwise false.
    */
-  public async getSuccessfulRedeem(): Promise<TransactionReceipt | L1ToL2MessageStatus> {
+  public async getSuccessfulRedeem(): Promise<
+    | { redeemReceipt: TransactionReceipt | null; status: L1ToL2MessageStatus.REDEEMED }
+    | {
+      redeemReceipt: null;
+        status:
+          | L1ToL2MessageStatus.EXPIRED
+          | L1ToL2MessageStatus.CREATION_FAILED
+          | L1ToL2MessageStatus.NOT_YET_CREATED
+          | L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+      }
+  > {
     const l2Network = await getL2Network(this.l2Provider)
     const eventFetcher = new EventFetcher(this.l2Provider)
     const creationReceipt = await this.getRetryableCreationReceipt()
 
-    if(!creationReceipt) return L1ToL2MessageStatus.NOT_YET_CREATED;
-    if(await this.retryableExists()) return L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2;
+    if (!creationReceipt) return { redeemReceipt: null, status: L1ToL2MessageStatus.NOT_YET_CREATED}
+    if (creationReceipt.status === 0) return { redeemReceipt: null, status: L1ToL2MessageStatus.CREATION_FAILED}
+    if (await this.retryableExists())
+      return { redeemReceipt: null, status: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2}
 
     // if retryable was created but no longer exists then we know that it was either
     // redeemed or expired
 
     // check the auto redeem, if that worked we dont need to do costly log queries
     const autoRedeem = await this.getAutoRedeemAttempt()
-    if (autoRedeem && autoRedeem.status === 1) return autoRedeem
+    if (autoRedeem && autoRedeem.status === 1) return { redeemReceipt: autoRedeem, status: L1ToL2MessageStatus.REDEEMED }
 
     // the auto redeem didnt exist or wasnt successful, look for a later manual redeem
     // to do this we need to filter through the whole lifetime of the ticket looking
     // for relevant redeem scheduled events
 
-      let increment = 1000
-      let fromBlock = await this.l2Provider.getBlock(
-        creationReceipt.blockNumber
+    let increment = 1000
+    let fromBlock = await this.l2Provider.getBlock(creationReceipt.blockNumber)
+    let timeout = fromBlock.timestamp + l2Network.retryableLifetimeSeconds
+    const queriedRange: { from: number; to: number }[] = []
+    const maxBlock = await this.l2Provider.getBlockNumber()
+    while (fromBlock.number < maxBlock) {
+      const toBlockNumber = Math.min(fromBlock.number + increment, maxBlock)
+
+      // using fromBlock.number would lead to 1 block overlap
+      // not fixing it here to keep the code simple
+      const blockRange = { from: fromBlock.number, to: toBlockNumber }
+      queriedRange.push(blockRange)
+      const redeemEvents = await eventFetcher.getEvents(
+        ARB_RETRYABLE_TX_ADDRESS,
+        ArbRetryableTx__factory,
+        contract => contract.filters.RedeemScheduled(this.retryableCreationId),
+        {
+          fromBlock: blockRange.from,
+          toBlock: blockRange.to,
+        }
       )
-      let timeout = fromBlock.timestamp + l2Network.retryableLifetimeSeconds
-      const queriedRange: { from: number; to: number }[] = []
-      const maxBlock = await this.l2Provider.getBlockNumber()
-      while (fromBlock.number < maxBlock) {
-        const toBlockNumber = Math.min(fromBlock.number + increment, maxBlock)
-
-        // using fromBlock.number would lead to 1 block overlap
-        // not fixing it here to keep the code simple
-        const blockRange = { from: fromBlock.number, to: toBlockNumber }
-        queriedRange.push(blockRange)
-        const redeemEvents = await eventFetcher.getEvents(
-          ARB_RETRYABLE_TX_ADDRESS,
-          ArbRetryableTx__factory,
-          contract =>
-            contract.filters.RedeemScheduled(this.retryableCreationId),
-          {
-            fromBlock: blockRange.from,
-            toBlock: blockRange.to,
-          }
+      const successfulRedeem = (
+        await Promise.all(
+          redeemEvents.map(e =>
+            this.l2Provider.getTransactionReceipt(e.event.retryTxHash)
+          )
         )
-        const successfulRedeem = (
-          await Promise.all(
-            redeemEvents.map(e =>
-              this.l2Provider.getTransactionReceipt(e.event.retryTxHash)
-            )
-          )
-        ).filter(r => r.status === 1)
-        if (successfulRedeem.length > 1)
-          throw new ArbSdkError(
-            `Unexpected number of successful redeems. Expected only one redeem for ticket ${this.retryableCreationId}, but found ${successfulRedeem.length}.`
-          )
-        if (successfulRedeem.length == 1) return successfulRedeem[0]
+      ).filter(r => r.status === 1)
+      if (successfulRedeem.length > 1)
+        throw new ArbSdkError(
+          `Unexpected number of successful redeems. Expected only one redeem for ticket ${this.retryableCreationId}, but found ${successfulRedeem.length}.`
+        )
+      if (successfulRedeem.length == 1) return { redeemReceipt: successfulRedeem[0], status: L1ToL2MessageStatus.REDEEMED }
 
-        const toBlock = await this.l2Provider.getBlock(toBlockNumber)
-        if (toBlock.timestamp > timeout) {
-          // Check for LifetimeExtended event
-          while (queriedRange.length > 0) {
-            const blockRange = queriedRange.shift()
-            const keepaliveEvents = await eventFetcher.getEvents(
-              ARB_RETRYABLE_TX_ADDRESS,
-              ArbRetryableTx__factory,
-              contract =>
-                contract.filters.LifetimeExtended(this.retryableCreationId),
-              {
-                fromBlock: blockRange!.from,
-                toBlock: blockRange!.to,
-              }
-            )
-            if (keepaliveEvents.length > 0) {
-              timeout = keepaliveEvents
-                .map(e => e.event.newTimeout.toNumber())
-                .sort()
-                .reverse()[0]
-              break
+      const toBlock = await this.l2Provider.getBlock(toBlockNumber)
+      if (toBlock.timestamp > timeout) {
+        // Check for LifetimeExtended event
+        while (queriedRange.length > 0) {
+          const blockRange = queriedRange.shift()
+          const keepaliveEvents = await eventFetcher.getEvents(
+            ARB_RETRYABLE_TX_ADDRESS,
+            ArbRetryableTx__factory,
+            contract =>
+              contract.filters.LifetimeExtended(this.retryableCreationId),
+            {
+              fromBlock: blockRange!.from,
+              toBlock: blockRange!.to,
             }
+          )
+          if (keepaliveEvents.length > 0) {
+            timeout = keepaliveEvents
+              .map(e => e.event.newTimeout.toNumber())
+              .sort()
+              .reverse()[0]
+            break
           }
-          if (toBlock.timestamp > timeout) break
-          // It is possible to have another keepalive in the last range as it might include block after previous timeout
-          while (queriedRange.length > 1) queriedRange.shift()
         }
-        const processedSeconds = toBlock.timestamp - fromBlock.timestamp
-        if (processedSeconds != 0) {
-          // find the increment that cover ~ 1 day
-          increment = Math.ceil((increment * 86400) / processedSeconds)
-        }
-
-        fromBlock = toBlock
+        if (toBlock.timestamp > timeout) break
+        // It is possible to have another keepalive in the last range as it might include block after previous timeout
+        while (queriedRange.length > 1) queriedRange.shift()
+      }
+      const processedSeconds = toBlock.timestamp - fromBlock.timestamp
+      if (processedSeconds != 0) {
+        // find the increment that cover ~ 1 day
+        increment = Math.ceil((increment * 86400) / processedSeconds)
       }
 
-      // we didnt find a redeem transaction
-      return L1ToL2MessageStatus.EXPIRED;
+      fromBlock = toBlock
+    }
+
+    // we didnt find a redeem transaction
+    return { redeemReceipt: null, status: L1ToL2MessageStatus.EXPIRED }
   }
 
   /**
@@ -412,63 +421,8 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     }
   }
 
-  protected async receiptsToStatus(
-    retryableCreationReceipt: TransactionReceipt | null,
-    redeemInfo:
-      | { redeemReceipt: TransactionReceipt | null; expired: false }
-      | { redeemReceipt: null; expired: true }
-  ): Promise<L1ToL2MessageStatus> {
-    // happy path for non auto redeemable messages
-    // NOT_YET_CREATED -> FUNDS_DEPOSITED
-    // these will later either transition to EXPIRED after the timeout
-    // (this is what happens to eth deposits since they don't need to be
-    // redeemed) or to REDEEMED if the retryable is manually redeemed
-
-    // happy path for auto redeemable messages
-    // NOT_YET_CREATED -> FUNDS_DEPOSITED -> REDEEMED
-    // an attempt to auto redeem executable messages is made immediately
-    // after the retryable is created - which if successful will transition
-    // the status to REDEEMED. If the auto redeem fails then the ticket
-    // will transition to REDEEMED if manually redeemed, or EXPIRE
-    // after the timeout is reached and the ticket is not redeemed
-
-    // we test the retryable receipt first as if this doesnt exist there's
-    // no point looking to see if expired
-    if (!retryableCreationReceipt) {
-      return L1ToL2MessageStatus.NOT_YET_CREATED
-    }
-    if (retryableCreationReceipt.status === 0) {
-      return L1ToL2MessageStatus.CREATION_FAILED
-    }
-
-    // ticket created, has it been auto redeemed?
-    if (redeemInfo.redeemReceipt && redeemInfo.redeemReceipt.status === 1) {
-      return L1ToL2MessageStatus.REDEEMED
-    }
-
-    // not redeemed, has it now expired
-    if (redeemInfo.expired) return L1ToL2MessageStatus.EXPIRED
-
-    // ticket was created but not redeemed
-    // this could be because
-    // a) the ticket is non auto redeemable (l2GasPrice == 0 || l2GasLimit == 0) -
-    //    this is usually an eth deposit. But in some rare case the
-    //    user may still want to manually redeem it
-    // b) the ticket is auto redeemable, but the auto redeem failed
-
-    // the fact that the auto redeem failed isn't usually useful to the user
-    // if they're doing an eth deposit they don't care about redemption
-    // and if they do want execution to occur they will know that they're
-    // here because the auto redeem failed. If they really want to check
-    // they can fetch the auto redeem receipt and check the status on it
-    return L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
-  }
-
   public async status(): Promise<L1ToL2MessageStatus> {
-    return this.receiptsToStatus(
-      await this.getRetryableCreationReceipt(),
-      await this.getSuccessfulRedeem()
-    )
+    return (await this.getSuccessfulRedeem()).status
   }
 
   /**
@@ -496,19 +450,15 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     // get the successful redeem transaction, if one exists
     const l2TxReceipt = await this.getSuccessfulRedeem()
 
-    const status = await this.receiptsToStatus(
-      retryableCreationReceipt,
-      l2TxReceipt
-    )
-    if (status === L1ToL2MessageStatus.REDEEMED) {
+    if (l2TxReceipt.status === L1ToL2MessageStatus.REDEEMED) {
       return {
         // if the status is redeemed we know the l2TxReceipt must exist
         l2TxReceipt: l2TxReceipt.redeemReceipt!,
-        status,
+        status: l2TxReceipt.status,
       }
     } else {
       return {
-        status,
+        status: l2TxReceipt.status,
       }
     }
   }
