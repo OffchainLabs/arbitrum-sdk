@@ -289,16 +289,27 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
   /**
    * Receipt for the successful l2 transaction created by this message.
-   * @returns TransactionReceipt of the first successful redeem if exists, otherwise null
+   * @returns TransactionReceipt of the first successful redeem if exists, otherwise null.
+   * Returns expired true if retryable expired without being redeemed, otherwise false.
    */
-  public async getSuccessfulRedeem(): Promise<TransactionReceipt | null> {
+  public async getSuccessfulRedeem(): Promise<
+    | { redeemReceipt: TransactionReceipt | null; expired: false }
+    | { redeemReceipt: null; expired: true }
+  > {
     const l2Network = await getL2Network(this.l2Provider)
     const eventFetcher = new EventFetcher(this.l2Provider)
     const creationReceipt = await this.getRetryableCreationReceipt()
+    // if retryable was created but no longer exists then we know that it was either
+    // redeemed or expired
+    const redeemWasSuccessfulOrExpired = creationReceipt && !await this.retryableExists()
 
     // check the auto redeem, if that worked we dont need to do costly log queries
     const autoRedeem = await this.getAutoRedeemAttempt()
-    if (autoRedeem && autoRedeem.status === 1) return autoRedeem
+    if (autoRedeem && autoRedeem.status === 1)
+      return {
+        redeemReceipt: autoRedeem,
+        expired: false,
+      }
 
     // the auto redeem didnt exist or wasnt successful, look for a later manual redeem
     // to do this we need to filter through the whole lifetime of the ticket looking
@@ -339,7 +350,8 @@ export class L1ToL2MessageReader extends L1ToL2Message {
           throw new ArbSdkError(
             `Unexpected number of successful redeems. Expected only one redeem for ticket ${this.retryableCreationId}, but found ${successfulRedeem.length}.`
           )
-        if (successfulRedeem.length == 1) return successfulRedeem[0]
+        if (successfulRedeem.length == 1)
+          return { redeemReceipt: successfulRedeem[0], expired: false }
 
         const toBlock = await this.l2Provider.getBlock(toBlockNumber)
         if (toBlock.timestamp > timeout) {
@@ -376,28 +388,47 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
         fromBlock = toBlock
       }
+
+      // we didnt find a redeem transaction
+      if(redeemWasSuccessfulOrExpired) {
+        return {
+          expired: true,
+          redeemReceipt: null
+        }
+      }
     }
-    return null
+    return { redeemReceipt: null, expired: false }
   }
 
   /**
    * Has this message expired. Once expired the retryable ticket can no longer be redeemed.
+   * @deprecated Will be removed in v3.0.0
    * @returns
    */
   public async isExpired(): Promise<boolean> {
-    const currentTimestamp = BigNumber.from(
-      (await this.l2Provider.getBlock('latest')).timestamp
-    )
-    const timeoutTimestamp = await this.getTimeout()
+    return await this.retryableExists()
+  }
 
-    // timeoutTimestamp returns the timestamp at which the retryable ticket expires
-    // it can also return 0 if the ticket l2Tx does not exist
-    return currentTimestamp.gte(timeoutTimestamp)
+  private async retryableExists(): Promise<boolean> {
+    try {
+      const timeoutTimestamp = await this.getTimeout()
+      const currentTimestamp = BigNumber.from(
+        (await this.l2Provider.getBlock('latest')).timestamp
+      )
+
+      // timeoutTimestamp returns the timestamp at which the retryable ticket expires
+      // it can also return 0 if the ticket l2Tx does not exist
+      return currentTimestamp.gte(timeoutTimestamp)
+    } catch (err) {
+      return false
+    }
   }
 
   protected async receiptsToStatus(
     retryableCreationReceipt: TransactionReceipt | null,
-    successfulRedeemReceipt: TransactionReceipt | null
+    redeemInfo:
+      | { redeemReceipt: TransactionReceipt | null; expired: false }
+      | { redeemReceipt: null; expired: true }
   ): Promise<L1ToL2MessageStatus> {
     // happy path for non auto redeemable messages
     // NOT_YET_CREATED -> FUNDS_DEPOSITED
@@ -423,27 +454,12 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     }
 
     // ticket created, has it been auto redeemed?
-    if (successfulRedeemReceipt && successfulRedeemReceipt.status === 1) {
+    if (redeemInfo.redeemReceipt && redeemInfo.redeemReceipt.status === 1) {
       return L1ToL2MessageStatus.REDEEMED
     }
 
     // not redeemed, has it now expired
-    try {
-      if (await this.isExpired()) {
-        return L1ToL2MessageStatus.EXPIRED
-      }
-    } catch (error) {
-      // this can happen due to a race condition that
-      // the retryable is redeemed/expired in between the calls
-      const successfulRedeemReceiptRetry = await this.getSuccessfulRedeem()
-      if (
-        successfulRedeemReceiptRetry &&
-        successfulRedeemReceiptRetry.status === 1
-      ) {
-        return L1ToL2MessageStatus.REDEEMED
-      }
-      return L1ToL2MessageStatus.EXPIRED
-    }
+    if (redeemInfo.expired) return L1ToL2MessageStatus.EXPIRED
 
     // ticket was created but not redeemed
     // this could be because
@@ -499,7 +515,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     if (status === L1ToL2MessageStatus.REDEEMED) {
       return {
         // if the status is redeemed we know the l2TxReceipt must exist
-        l2TxReceipt: l2TxReceipt!,
+        l2TxReceipt: l2TxReceipt.redeemReceipt!,
         status,
       }
     } else {
