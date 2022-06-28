@@ -406,6 +406,8 @@ export interface EthDepositMessage {
   ): Promise<ethers.providers.TransactionReceipt | null>
 }
 
+import { getTransactionReceipt } from '@arbitrum/sdk-nitro/dist/lib/utils/lib'
+
 export const toNitroEthDepositMessage = async (
   message: ClassicL1ToL2MessageReader,
   l2ChainId: number,
@@ -420,14 +422,38 @@ export const toNitroEthDepositMessage = async (
     value: l2CallValue,
 
     wait: async (confirmations?: number, timeout?: number) => {
-      const statusRes = await message.waitForStatus(confirmations, timeout)
-
-      if (statusRes.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
-        return await message.getRetryableCreationReceipt()
-      } else return null
+      return (
+        (await getTransactionReceipt(
+          message.l2Provider,
+          message.retryableCreationId,
+          confirmations,
+          timeout
+        )) || null
+      )
     },
   }
 }
+
+// public async status(): Promise<L1ToL2MessageStatus> {
+//   const receipt = await this.l2Provider.getTransactionReceipt(
+//     this.l2DepositTxHash
+//   )
+//   if (receipt === null) return L1ToL2MessageStatus.NOT_YET_CREATED
+//   else return L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+// }
+
+// public async wait(confirmations?: number, timeout = 900000) {
+//   if (!this.l2DepositTxReceipt) {
+//     this.l2DepositTxReceipt = await getTransactionReceipt(
+//       this.l2Provider,
+//       this.l2DepositTxHash,
+//       confirmations,
+//       timeout
+//     )
+//   }
+
+//   return this.l2DepositTxReceipt || null
+// }
 
 export const toClassicRetryableParams = async (
   params: nitro.L1ToL2MessageReader['messageData']
