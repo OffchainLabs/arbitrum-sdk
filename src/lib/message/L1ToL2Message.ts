@@ -298,7 +298,8 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     const creationReceipt = await this.getRetryableCreationReceipt()
 
     if (!creationReceipt) return { status: L1ToL2MessageStatus.NOT_YET_CREATED }
-    if (creationReceipt.status === 0) return { status: L1ToL2MessageStatus.CREATION_FAILED}
+    if (creationReceipt.status === 0)
+      return { status: L1ToL2MessageStatus.CREATION_FAILED }
     if (await this.retryableExists())
       return { status: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2 }
 
@@ -307,7 +308,8 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
     // check the auto redeem, if that worked we dont need to do costly log queries
     const autoRedeem = await this.getAutoRedeemAttempt()
-    if (autoRedeem && autoRedeem.status === 1) return { l2TxReceipt: autoRedeem, status: L1ToL2MessageStatus.REDEEMED }
+    if (autoRedeem && autoRedeem.status === 1)
+      return { l2TxReceipt: autoRedeem, status: L1ToL2MessageStatus.REDEEMED }
 
     // the auto redeem didnt exist or wasnt successful, look for a later manual redeem
     // to do this we need to filter through the whole lifetime of the ticket looking
@@ -345,7 +347,11 @@ export class L1ToL2MessageReader extends L1ToL2Message {
         throw new ArbSdkError(
           `Unexpected number of successful redeems. Expected only one redeem for ticket ${this.retryableCreationId}, but found ${successfulRedeem.length}.`
         )
-      if (successfulRedeem.length == 1) return { l2TxReceipt: successfulRedeem[0], status: L1ToL2MessageStatus.REDEEMED }
+      if (successfulRedeem.length == 1)
+        return {
+          l2TxReceipt: successfulRedeem[0],
+          status: L1ToL2MessageStatus.REDEEMED,
+        }
 
       const toBlock = await this.l2Provider.getBlock(toBlockNumber)
       if (toBlock.timestamp > timeout) {
@@ -432,7 +438,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     timeout = 900000
   ): Promise<L1ToL2MessageWaitResult> {
     // try to wait for the retryable ticket to be created
-    const retryableCreationReceipt = await this.getRetryableCreationReceipt(
+    const _retryableCreationReceipt = await this.getRetryableCreationReceipt(
       confirmations,
       timeout
     )
