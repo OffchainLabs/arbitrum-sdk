@@ -17,10 +17,9 @@
 'use strict'
 
 import { TransactionReceipt } from '@ethersproject/providers'
-import { Log } from '@ethersproject/abstract-provider'
+import { Provider, Log } from '@ethersproject/abstract-provider'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
-import { Provider } from '@ethersproject/abstract-provider'
 import {
   L1ToL2Message,
   L1ToL2MessageStatus,
@@ -44,8 +43,10 @@ import {
   IL1ToL2MessageWriter,
   toNitroEthDepositMessage,
   EthDepositMessage,
+  classicGetInboxMessageDeliveredEvents,
 } from '../utils/migration_types'
 import { ArbSdkError } from '../dataEntities/errors'
+import { SubmitRetryableMessageDataParser } from './messageDataParser'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -103,13 +104,12 @@ export class L1TransactionReceipt implements TransactionReceipt {
     this.nitroReceipt = new nitro.L1TransactionReceipt(tx)
   }
 
-  private async looksLikeEthDeposit(message: classic.L1ToL2MessageReader) {
-    const inputs = await message.getInputs()
-    return (
-      inputs.maxGas.eq(0) &&
-      inputs.gasPriceBid.eq(0) &&
-      inputs.callDataLength.eq(0)
-    )
+  private async looksLikeEthDeposit(
+    gasLimit: BigNumber,
+    gasPrice: BigNumber,
+    callDataLength: number
+  ) {
+    return gasLimit.eq(0) && gasPrice.eq(0) && callDataLength === 0
   }
 
   /**
@@ -138,10 +138,35 @@ export class L1TransactionReceipt implements TransactionReceipt {
         l2SignerOrProvider
       )
 
+      const inboxMessageDeliveredEvents =
+        classicGetInboxMessageDeliveredEvents(this)
+      const pairings = l1ToL2Messages
+        .map(m => {
+          const pairedEvent = inboxMessageDeliveredEvents.filter(i =>
+            i.messageNum.eq(m.messageNumber)
+          )[0]
+          if (!pairedEvent) return undefined
+
+          const retryableMessageParser = new SubmitRetryableMessageDataParser()
+          const parsedEvent = retryableMessageParser.parse(pairedEvent.data)
+
+          return {
+            message: m,
+            inboxEvent: parsedEvent,
+          }
+        })
+        .filter(i => i != undefined)
+        .map(i => i!)
+
       const typedMessages = await Promise.all(
-        l1ToL2Messages.map(async l => ({
-          isEthDeposit: await this.looksLikeEthDeposit(l),
-          message: l,
+        pairings.map(async l => ({
+          isEthDeposit: await this.looksLikeEthDeposit(
+            l.inboxEvent.gasLimit,
+            l.inboxEvent.maxFeePerGas,
+            l.inboxEvent.data.length - 2
+          ),
+          eventData: l.inboxEvent,
+          message: l.message,
         }))
       )
 
@@ -154,7 +179,15 @@ export class L1TransactionReceipt implements TransactionReceipt {
       return Promise.all(
         typedMessages
           .filter(t => t.isEthDeposit)
-          .map(async t => await toNitroEthDepositMessage(t.message, chainId))
+          .map(
+            async t =>
+              await toNitroEthDepositMessage(
+                t.message,
+                chainId,
+                t.eventData.destAddress,
+                t.eventData.l2CallValue
+              )
+          )
       )
     }
   }
@@ -179,10 +212,34 @@ export class L1TransactionReceipt implements TransactionReceipt {
         l2SignerOrProvider
       )
 
+      const inboxMessageDeliveredEvents =
+        classicGetInboxMessageDeliveredEvents(this)
+      const pairings = l1ToL2Messages
+        .map(m => {
+          const pairedEvent = inboxMessageDeliveredEvents.filter(i =>
+            i.messageNum.eq(m.messageNumber)
+          )[0]
+          if (!pairedEvent) return undefined
+
+          const retryableMessageParser = new SubmitRetryableMessageDataParser()
+          const parsedEvent = retryableMessageParser.parse(pairedEvent.data)
+
+          return {
+            message: m,
+            inboxEvent: parsedEvent,
+          }
+        })
+        .filter(i => i != undefined)
+        .map(i => i!)
+
       const typedMessages = await Promise.all(
-        l1ToL2Messages.map(async l => ({
-          isEthDeposit: await this.looksLikeEthDeposit(l),
-          message: l,
+        pairings.map(async l => ({
+          isEthDeposit: await this.looksLikeEthDeposit(
+            l.inboxEvent.gasLimit,
+            l.inboxEvent.maxFeePerGas,
+            l.inboxEvent.data.length - 2
+          ),
+          message: l.message,
         }))
       )
 
@@ -319,11 +376,14 @@ export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
         confirmations,
         timeout
       )
+      const inputs = await classicWaitRes.message.getInputs()
       const ethDepositMessage = await toNitroEthDepositMessage(
         classicWaitRes.message,
         (
           await l2Provider.getNetwork()
-        ).chainId
+        ).chainId,
+        inputs.destinationAddress,
+        inputs.l2CallValue
       )
       const txReceipt = await ethDepositMessage.wait()
       return {
