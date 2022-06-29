@@ -12,7 +12,6 @@ import { GasOverrides as ClassicGasOverrides } from '@arbitrum/sdk-classic/dist/
 import { GasOverrides as NitroGasOverrides } from '@arbitrum/sdk-nitro/dist/lib/message/L1ToL2MessageGasEstimator'
 import { Provider } from '@ethersproject/abstract-provider'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
-import { Bridge__factory } from '../abi/factories/Bridge__factory'
 import {
   SignerOrProvider,
   SignerProviderUtils,
@@ -33,7 +32,7 @@ import { Inbox__factory as NitroInbox__factory } from '@arbitrum/sdk-nitro/dist/
 import { Inbox__factory as ClassicInbox__factory } from '@arbitrum/sdk-classic/dist/lib/abi/factories/Inbox__factory'
 import { InboxMessageDeliveredEvent as ClassicInboxMessageDeliveredEvent } from '@arbitrum/sdk-classic/dist/lib/abi/Inbox'
 import { Bridge__factory as NitroBridgeFactory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/Bridge__factory'
-import { RollupUserLogic__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/RollupUserLogic__factory'
+import { RollupUserLogic__factory as NitroRollupUserLogic__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/RollupUserLogic__factory'
 import { L1ToL2MessageReader as ClassicL1ToL2MessageReader } from '@arbitrum/sdk-classic/dist/index'
 
 import { l2Networks as classicL2Networks } from '@arbitrum/sdk-classic/dist/lib/dataEntities/networks'
@@ -66,10 +65,10 @@ export const generateL2NitroNetwork = async (
 
   // the rollup is the bridge owner
   const bridge = NitroBridgeFactory.connect(bridgeAddr, l1Provider)
-  const rollupAddr = await bridge.owner()
+  const rollupAddr = await bridge.rollup()
 
-  const rollup = RollupUserLogic__factory.connect(rollupAddr, l1Provider)
-  const sequencerInboxAddr = await rollup.sequencerBridge()
+  const rollup = NitroRollupUserLogic__factory.connect(rollupAddr, l1Provider)
+  const sequencerInboxAddr = await rollup.sequencerInbox()
   const outboxAddr = await rollup.outbox()
 
   return {
@@ -152,9 +151,12 @@ export const isNitroL1 = async (l1Provider: SignerOrProvider) => {
       const inboxAddr = l2Network.ethBridge.inbox
       const inbox = NitroInbox__factory.connect(inboxAddr, l1Provider)
       const bridgeAddr = await inbox.bridge()
-      const bridge = Bridge__factory.connect(bridgeAddr, l1Provider)
-      const rollupAdd = await bridge.owner()
-      const rollup = RollupUserLogic__factory.connect(rollupAdd, l1Provider)
+      const bridge = NitroBridgeFactory.connect(bridgeAddr, l1Provider)
+      const rollupAdd = await bridge.rollup()
+      const rollup = NitroRollupUserLogic__factory.connect(
+        rollupAdd,
+        l1Provider
+      )
       // this will error if we're not nitro
       await rollup.wasmModuleRoot()
 
