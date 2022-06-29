@@ -420,7 +420,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
       // timeoutTimestamp returns the timestamp at which the retryable ticket expires
       // it can also return 0 if the ticket l2Tx does not exist
-      return currentTimestamp.gte(timeoutTimestamp)
+      return currentTimestamp.lte(timeoutTimestamp)
     } catch (err) {
       return false
     }
@@ -641,12 +641,12 @@ export class EthDepositMessage {
     value: BigNumber
   } {
     // https://github.com/OffchainLabs/nitro/blob/aa84e899cbc902bf6da753b1d66668a1def2c106/contracts/src/bridge/Inbox.sol#L242
-    const parsed = ethers.utils.defaultAbiCoder.decode(
-      ['address', 'uint256'],
-      eventData
-    ) as [string, BigNumber]
+    // ethers.defaultAbiCoder doesnt decode packed args, so we do a hardcoded parsing
+    const addressEnd = 2 + 20 * 2
+    const to = getAddress('0x' + eventData.substring(2, addressEnd))
+    const value = BigNumber.from('0x' + eventData.substring(addressEnd))
 
-    return { to: parsed[0], value: parsed[1] }
+    return { to, value }
   }
 
   /**
