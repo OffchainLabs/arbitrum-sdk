@@ -50,6 +50,9 @@ class ArbFormatter extends Formatter {
   }
 
   public blockWithTransactions(block: any): ArbBlock {
+    // ethersjs chose the wrong type for the super - it should have been BlockWithTransactions
+    // but was instead just Block. This means that when we override we cant use ArbBlockWithTransactions
+    // but must instead use just ArbBlock.
     return super.blockWithTransactions(block) as ArbBlock
   }
 }
@@ -60,6 +63,11 @@ class ArbFormatter extends Formatter {
 export class ArbitrumProvider extends JsonRpcProvider {
   private static arbFormatter = new ArbFormatter()
 
+  /**
+   * Arbitrum specific formats
+   * @param provider Must be connected to an Arbitrum network
+   * @param network Must be an Arbitrum network
+   */
   public constructor(provider: JsonRpcProvider, network?: Networkish) {
     super(provider.connection, network)
   }
