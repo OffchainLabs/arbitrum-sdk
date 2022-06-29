@@ -420,7 +420,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
       // timeoutTimestamp returns the timestamp at which the retryable ticket expires
       // it can also return 0 if the ticket l2Tx does not exist
-      return currentTimestamp.gte(timeoutTimestamp)
+      return currentTimestamp.lte(timeoutTimestamp)
     } catch (err) {
       return false
     }
