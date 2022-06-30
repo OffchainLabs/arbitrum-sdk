@@ -175,11 +175,16 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     super(event)
   }
 
-  public async getOutboxProof(l2Provider: Provider) {
-    const { sendRootSize } = await this.getSendProps(l2Provider)
-    if (!sendRootSize)
-      throw new ArbSdkError('Node not yet confirmed, cannot get proof.')
-
+  public async getOutboxProof(l2Provider: Provider, requireConfirmed = true) {
+    const { sendRootSize } = await this.getSendProps(
+      l2Provider,
+      requireConfirmed
+    )
+    if (!sendRootSize) {
+      if (requireConfirmed)
+        throw new ArbSdkError('Node not yet confirmed, cannot get proof.')
+      throw new ArbSdkError('Node not yet created, cannot get proof.')
+    }
     const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
       l2Provider
@@ -298,7 +303,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     return this.l1BatchNumber
   }
 
-  protected async getSendProps(l2Provider: Provider) {
+  protected async getSendProps(l2Provider: Provider, requireConfirmed = true) {
     if (!this.sendRootHash) {
       const l2Network = await getL2Network(l2Provider)
 
@@ -307,10 +312,12 @@ export class L2ToL1MessageReader extends L2ToL1Message {
         this.l1Provider
       )
 
-      const latestConfirmedNodeNum = await rollup.callStatic.latestConfirmed()
+      const latestNodeNum = requireConfirmed
+        ? await rollup.callStatic.latestConfirmed()
+        : await rollup.callStatic.latestNodeCreated()
       const l2Block = await this.getBlockFromNodeNum(
         rollup,
-        latestConfirmedNodeNum,
+        latestNodeNum,
         l2Provider
       )
 
