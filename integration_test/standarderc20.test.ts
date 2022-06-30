@@ -37,6 +37,7 @@ import { Signer } from 'ethers'
 import { TestERC20 } from '../src/lib/abi/TestERC20'
 import { testSetup } from '../scripts/testSetup'
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
+import { parseEther } from 'ethers/lib/utils'
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
@@ -57,7 +58,7 @@ describe('standard ERC20', () => {
   before('init', async () => {
     const setup = await testSetup()
     await fundL1(setup.l1Signer)
-    await fundL2(setup.l2Signer)
+    await fundL2(setup.l2Signer, parseEther("100"))
 
     const deployErc20 = new TestERC20__factory().connect(setup.l1Signer)
     const testToken = await deployErc20.deploy()
@@ -132,7 +133,7 @@ describe('standard ERC20', () => {
     await redeemAndTest(waitRes.message, 1)
   })
 
-  it('deposit with low funds, fails first redeem, succeeds seconds', async () => {
+  it.only('deposit with low funds, fails first redeem, succeeds seconds', async () => {
     const { waitRes } = await depositToken(
       depositAmount,
       testState.l1Token.address,

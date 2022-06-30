@@ -525,6 +525,37 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
         this.l2Signer
       )
 
+      const timeout = await arbRetryableTx.getTimeout(this.retryableCreationId)
+      const currentTimestamp = BigNumber.from(
+        (await this.l2Provider.getBlock('latest')).timestamp
+      )
+      console.log(
+        currentTimestamp.toString(),
+        timeout.toString(),
+        currentTimestamp.lt(timeout)
+      )
+      console.log("signer balance", await (await this.l2Signer.getBalance()).toString(), await this.l2Signer.getAddress())
+      const encodedData = arbRetryableTx.interface.encodeFunctionData("redeem", [
+        this.retryableCreationId
+      ])
+      try {
+        const result = await this.l2Signer.provider!.estimateGas({
+          from: await this.l2Signer.getAddress(),
+          to: ARB_RETRYABLE_TX_ADDRESS,
+          data: encodedData
+        })
+        console.log(result)
+      } catch(err) {
+        console.log(err)
+        throw err
+      }
+      
+
+      const estimate = await arbRetryableTx.estimateGas.redeem(
+        this.retryableCreationId,
+        { from: await this.l2Signer.getAddress() }
+      )
+      console.log(estimate.toString())
       const redeemTx = await arbRetryableTx.redeem(this.retryableCreationId, {
         ...overrides,
       })

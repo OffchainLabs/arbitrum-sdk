@@ -28,6 +28,8 @@ import {
   L2ToL1MessageStatus,
 } from '../src/lib/message/L2ToL1Message'
 import { testSetup } from '../scripts/testSetup'
+import { ARB_GAS_INFO } from '../src/lib/dataEntities/constants'
+import { ArbGasInfo__factory } from '../src/lib/abi/factories/ArbGasInfo__factory'
 dotenv.config()
 
 describe('Ether', async () => {
@@ -36,40 +38,56 @@ describe('Ether', async () => {
   })
 
   it('transfers ether on l2', async () => {
-    const { l2Signer } = await testSetup()
+    const { l2Signer, l1Signer } = await testSetup()
 
-    await fundL2(l2Signer)
-    const randomAddress = Wallet.createRandom().address
-    const amountToSend = parseEther('0.000005')
+    await fundL2(l2Signer, parseEther('1'))
 
-    const balanceBefore = await l2Signer.provider!.getBalance(
-      await l2Signer.getAddress()
-    )
+    let count = 0
+    while (true) {
+      const randomAddress = Wallet.createRandom().address
+      const amountToSend = parseEther('0.000005')
 
-    const rec = await (
-      await l2Signer.sendTransaction({
-        to: randomAddress,
-        value: amountToSend,
-        maxFeePerGas: 15000000000,
-        maxPriorityFeePerGas: 0,
-      })
-    ).wait()
+      const arbGas = ArbGasInfo__factory.connect(ARB_GAS_INFO, l2Signer)
 
-    const balanceAfter = await l2Signer.provider!.getBalance(
-      await l2Signer.getAddress()
-    )
-    const randomBalanceAfter = await l2Signer.provider!.getBalance(
-      randomAddress
-    )
-    expect(randomBalanceAfter.toString(), 'random address balance after').to.eq(
-      amountToSend.toString()
-    )
-    expect(balanceAfter.toString(), 'l2 balance after').to.eq(
-      balanceBefore
-        .sub(rec.gasUsed.mul(rec.effectiveGasPrice))
-        .sub(amountToSend)
-        .toString()
-    )
+      console.log(
+        'arbgas',
+        count++,
+        (await l1Signer.getGasPrice()).toString(),
+        (await l1Signer.provider!.getBlock('latest')).baseFeePerGas!.toString(),
+        (await arbGas.getL1BaseFeeEstimate()).toString(),
+        (await arbGas.getL1BaseFeeEstimateInertia()).toString()
+      )
+
+      const balanceBefore = await l2Signer.provider!.getBalance(
+        await l2Signer.getAddress()
+      )
+
+      const rec = await (
+        await l2Signer.sendTransaction({
+          to: randomAddress,
+          value: amountToSend,
+          maxFeePerGas: 15000000000,
+          maxPriorityFeePerGas: 0,
+        })
+      ).wait()
+
+      const balanceAfter = await l2Signer.provider!.getBalance(
+        await l2Signer.getAddress()
+      )
+      const randomBalanceAfter = await l2Signer.provider!.getBalance(
+        randomAddress
+      )
+      expect(
+        randomBalanceAfter.toString(),
+        'random address balance after'
+      ).to.eq(amountToSend.toString())
+      expect(balanceAfter.toString(), 'l2 balance after').to.eq(
+        balanceBefore
+          .sub(rec.gasUsed.mul(rec.effectiveGasPrice))
+          .sub(amountToSend)
+          .toString()
+      )
+    }
   })
 
   it('deposits ether', async () => {
