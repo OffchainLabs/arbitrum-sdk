@@ -546,9 +546,6 @@ export class Erc20Bridger extends AssetBridger<
   ): Promise<BigNumber | ethers.ContractTransaction> {
     await this.checkL1Network(params.l1SignerOrProvider)
     await this.checkL2Network(params.l2SignerOrProvider)
-    // if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
-    //   throw new MissingProviderArbSdkError('l1Signer')
-    // }
 
     if ((params.overrides as PayableOverrides | undefined)?.value) {
       throw new ArbSdkError(
