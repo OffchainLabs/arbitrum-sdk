@@ -45,7 +45,10 @@ describe('RevertData', () => {
       l2CallValue,
       data: hexlify(randomBytes(32)),
       maxSubmissionCost: maxSubmissionCost,
-      value: l2CallValue.add(maxSubmissionCost),
+      value: l2CallValue
+        .add(maxSubmissionCost)
+        .add(RetryableDataTools.ErrorTriggeringParams.gasLimit)
+        .add(RetryableDataTools.ErrorTriggeringParams.maxFeePerGas),
       gasLimit: RetryableDataTools.ErrorTriggeringParams.gasLimit,
       maxFeePerGas: RetryableDataTools.ErrorTriggeringParams.maxFeePerGas,
     }
