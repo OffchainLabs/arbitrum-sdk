@@ -18,7 +18,7 @@ jobs:
           repository: OffchainLabs/nitro
           submodules: 'recursive'
           path: 'nitro'
-          ref: 'redo-devnet-reinit-1'
+          ref: 'master'
       - name: Setup node/yarn
         uses: actions/setup-node@v3
         with:
@@ -40,8 +40,18 @@ jobs:
           cp ./.env-sample ./.env
       - name: Wait for nitro startup
         run: |
-          cd sdk
-          ./waitForNitro.sh
+          source .env
+
+          # poll the nitro endpoint until we get a 0 return code
+          while true
+          do
+            curl -X POST -H 'Content-Type: application/json' -d '{"jsonrpc":"2.0","id":45678,"method":"eth_chainId","params":[]}' $ARB_URL
+            if [ "$?" -eq "0" ]; then
+              exit 0
+            else
+              sleep 10
+            fi
+          done
       - name: Generate network file
         run: |
           cd sdk

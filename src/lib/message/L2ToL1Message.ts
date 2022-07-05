@@ -204,7 +204,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       this.l1Provider
     )
 
-    return outbox.callStatic.spent(this.event.position)
+    return outbox.callStatic.isSpent(this.event.position)
   }
 
   /**
