@@ -165,6 +165,7 @@ export class L2ToL1Message {
 export class L2ToL1MessageReader extends L2ToL1Message {
   protected sendRootHash?: string
   protected sendRootSize?: BigNumber
+  protected sendRootConfirmed?: boolean
   protected outboxAddress?: string
   protected l1BatchNumber?: number
 
@@ -175,14 +176,9 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     super(event)
   }
 
-  public async getOutboxProof(l2Provider: Provider, requireConfirmed = true) {
-    const { sendRootSize } = await this.getSendProps(
-      l2Provider,
-      requireConfirmed
-    )
+  public async getOutboxProof(l2Provider: Provider) {
+    const { sendRootSize } = await this.getSendProps(l2Provider)
     if (!sendRootSize) {
-      if (requireConfirmed)
-        throw new ArbSdkError('Node not yet confirmed, cannot get proof.')
       throw new ArbSdkError('Node not yet created, cannot get proof.')
     }
     const nodeInterface = NodeInterface__factory.connect(
@@ -218,8 +214,8 @@ export class L2ToL1MessageReader extends L2ToL1Message {
    * @returns
    */
   public async status(l2Provider: Provider): Promise<L2ToL1MessageStatus> {
-    const { sendRootHash } = await this.getSendProps(l2Provider)
-    if (!sendRootHash) return L2ToL1MessageStatus.UNCONFIRMED
+    const { sendRootConfirmed } = await this.getSendProps(l2Provider)
+    if (!sendRootConfirmed) return L2ToL1MessageStatus.UNCONFIRMED
     return (await this.hasExecuted(l2Provider))
       ? L2ToL1MessageStatus.EXECUTED
       : L2ToL1MessageStatus.CONFIRMED
@@ -303,8 +299,8 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     return this.l1BatchNumber
   }
 
-  protected async getSendProps(l2Provider: Provider, requireConfirmed = true) {
-    if (!this.sendRootHash) {
+  protected async getSendProps(l2Provider: Provider) {
+    if (!this.sendRootConfirmed) {
       const l2Network = await getL2Network(l2Provider)
 
       const rollup = RollupUserLogic__factory.connect(
@@ -312,24 +308,41 @@ export class L2ToL1MessageReader extends L2ToL1Message {
         this.l1Provider
       )
 
-      const latestNodeNum = requireConfirmed
-        ? await rollup.callStatic.latestConfirmed()
-        : await rollup.callStatic.latestNodeCreated()
-      const l2Block = await this.getBlockFromNodeNum(
+      const latestNodeNumConfirmed = await rollup.callStatic.latestConfirmed()
+      const l2BlockConfirmed = await this.getBlockFromNodeNum(
         rollup,
-        latestNodeNum,
+        latestNodeNumConfirmed,
         l2Provider
       )
 
-      const sendRootSize = BigNumber.from(l2Block.sendCount)
-      if (sendRootSize.gt(this.event.position)) {
-        this.sendRootSize = sendRootSize
-        this.sendRootHash = l2Block.sendRoot
+      const sendRootSizeConfirmed = BigNumber.from(l2BlockConfirmed.sendCount)
+      if (sendRootSizeConfirmed.gt(this.event.position)) {
+        this.sendRootSize = sendRootSizeConfirmed
+        this.sendRootHash = l2BlockConfirmed.sendRoot
+        this.sendRootConfirmed = true
+      } else {
+        // Check latest (possibly unconfirmed) node
+        const latestNodeNum = await rollup.callStatic.latestNodeCreated()
+        if (latestNodeNum.gt(latestNodeNumConfirmed)) {
+          // Only check if its newer than the confirmed node
+          const l2Block = await this.getBlockFromNodeNum(
+            rollup,
+            latestNodeNum,
+            l2Provider
+          )
+
+          const sendRootSize = BigNumber.from(l2Block.sendCount)
+          if (sendRootSize.gt(this.event.position)) {
+            this.sendRootSize = sendRootSize
+            this.sendRootHash = l2Block.sendRoot
+          }
+        }
       }
     }
     return {
       sendRootSize: this.sendRootSize,
       sendRootHash: this.sendRootHash,
+      sendRootConfirmed: this.sendRootConfirmed,
     }
   }
 
