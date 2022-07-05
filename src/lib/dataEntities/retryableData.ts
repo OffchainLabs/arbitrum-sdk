@@ -1,6 +1,8 @@
 import { Interface } from '@ethersproject/abi'
 import { BigNumber } from 'ethers'
+import { isDefined } from '../utils/lib'
 
+// TODO: add typechain support
 const errorInterface = new Interface([
   'error RetryableData(address from, address to, uint256 l2CallValue, uint256 deposit, uint256 maxSubmissionCost, address excessFeeRefundAddress, address callValueRefundAddress, uint256 gasLimit, uint256 maxFeePerGas, bytes data)',
 ])
@@ -66,7 +68,7 @@ export class RetryableDataTools {
   private static isErrorData(
     maybeErrorData: Error | { errorData: string }
   ): maybeErrorData is { errorData: string } {
-    return (maybeErrorData as { errorData: string }).errorData != undefined
+    return isDefined((maybeErrorData as { errorData: string }).errorData)
   }
 
   private static tryGetErrorData(ethersJsError: Error | { errorData: string }) {

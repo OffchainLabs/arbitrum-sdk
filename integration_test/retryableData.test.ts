@@ -27,6 +27,7 @@ import { testSetup } from '../scripts/testSetup'
 import { randomBytes } from 'ethers/lib/utils'
 import { Inbox__factory } from '../src/lib/abi/factories/Inbox__factory'
 import { GasOverrides } from '../src/lib/message/L1ToL2MessageGasEstimator'
+import { constants } from 'ethers'
 const depositAmount = BigNumber.from(100)
 
 describe('RevertData', () => {
@@ -149,7 +150,8 @@ describe('RevertData', () => {
     }
 
     const erc20Params = {
-      l1Signer: l1Signer,
+      from: await l1Signer.getAddress(),
+      l1Provider: l1Signer.provider!,
       l2Provider: l2Signer.provider!,
       erc20L1Address: l1TokenAddress,
       amount: depositAmount,
@@ -167,31 +169,29 @@ describe('RevertData', () => {
       if (!parsed) throw err
 
       expect(parsed.callValueRefundAddress, 'callValueRefundAddress').to.eq(
-        depositParams.retryableData.callValueRefundAddress
+        await l1Signer.getAddress()
       )
-      expect(parsed.data, 'data').to.eq(depositParams.retryableData.callData)
+      // expect(parsed.data, 'data').to.eq(depositParams.retryableData.callData)
       expect(parsed.deposit.toString(), 'deposit').to.eq(
-        depositParams.l2GasCostsMaxTotal.toString()
+        depositParams.core.value
       )
       expect(parsed.excessFeeRefundAddress, 'excessFeeRefundAddress').to.eq(
-        depositParams.retryableData.excessFeeRefundAddress
+        await l1Signer.getAddress()
       )
-      expect(parsed.from, 'from').to.eq(depositParams.retryableData.sender)
+      expect(parsed.from, 'from').to.eq(await l1Signer.getAddress())
       expect(parsed.gasLimit.toString(), 'gasLimit').to.eq(
-        depositParams.l2GasLimit.toString()
+        RetryableDataTools.ErrorTriggeringParams.gasLimit
       )
 
-      expect(parsed.l2CallValue.toString(), 'l2CallValue').to.eq(
-        depositParams.retryableData.l2CallValue.toString()
-      )
+      expect(parsed.l2CallValue.toString(), 'l2CallValue').to.eq(constants.Zero)
 
       expect(parsed.maxFeePerGas.toString(), 'maxFeePerGas').to.eq(
-        depositParams.l2MaxFeePerGas.toString()
+        RetryableDataTools.ErrorTriggeringParams.maxFeePerGas
       )
-      expect(parsed.maxSubmissionCost.toString(), 'maxSubmissionCost').to.eq(
-        depositParams.l2SubmissionFee.toString()
-      )
-      expect(parsed.to).to.eq(depositParams.retryableData.destination)
+      // expect(parsed.maxSubmissionCost.toString(), 'maxSubmissionCost').to.eq(
+      //   depositParams.l2SubmissionFee.toString()
+      // )
+      // expect(parsed.to).to.eq(depositParams.retryableData.destination)
     }
   })
 })

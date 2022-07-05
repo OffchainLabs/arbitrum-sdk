@@ -9,7 +9,10 @@ export interface L1ToL2TransactionRequest {
   /**
    * Core fields needed to form the L1 component of the transaction request
    */
-  l1TxFields: Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>> &
+  core: Required<
+    // TODO: should we include the nonce?
+    Pick<TransactionRequest, 'to' | 'data' | 'value'>
+  > &
     TransactionRequest
 
   /**
@@ -32,7 +35,7 @@ export const isL1ToL2TransactionRequest = <T>(
   possibleRequest: IsNotTransactionRequest<T> | L1ToL2TransactionRequest
 ): possibleRequest is L1ToL2TransactionRequest => {
   return (
-    isDefined((possibleRequest as L1ToL2TransactionRequest).l1TxFields) &&
+    isDefined((possibleRequest as L1ToL2TransactionRequest).core) &&
     isDefined((possibleRequest as L1ToL2TransactionRequest).isValid)
   )
 }

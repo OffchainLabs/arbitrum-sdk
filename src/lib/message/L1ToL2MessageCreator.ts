@@ -38,7 +38,7 @@ export type L1ToL2MessageNoGasParams = OmitTyped<
 >
 export type L1ToL2MessageParams = PartialPick<
   L1ToL2MessageNoGasParams,
-  'from' | 'excessFeeRefundAddress' | 'callValueRefundAddress'
+  'excessFeeRefundAddress' | 'callValueRefundAddress'
 >
 
 /**
@@ -70,26 +70,23 @@ export class L1ToL2MessageCreator {
 
   /**
    * Generate a transaction request for creating a retryable ticket
+   * @param params
+   * @param l1Provider
    * @param l2Provider
-   * @param l2CallTo
-   * @param l2CallData
-   * @param l2CallValue
    * @param options
    * @returns
    */
-  public async getTicketCreationRequest(
+  public static async getTicketCreationRequest(
     params: L1ToL2MessageParams,
+    l1Provider: Provider,
     l2Provider: Provider,
     options?: GasOverrides
   ): Promise<L1ToL2TransactionRequest> {
-    const l1Provider = SignerProviderUtils.getProviderOrThrow(this.l1Signer)
-    const from = await this.l1Signer.getAddress()
-    const excessFeeRefundAddress = params.excessFeeRefundAddress || from
-    const callValueRefundAddress = params.callValueRefundAddress || from
+    const excessFeeRefundAddress = params.excessFeeRefundAddress || params.from
+    const callValueRefundAddress = params.callValueRefundAddress || params.from
 
     const parsedParams: L1ToL2MessageNoGasParams = {
       ...params,
-      from,
       excessFeeRefundAddress,
       callValueRefundAddress,
     }
@@ -118,7 +115,7 @@ export class L1ToL2MessageCreator {
     )
 
     return {
-      l1TxFields: {
+      core: {
         to: l2Network.ethBridge.inbox,
         data: functionData,
         value: L1ToL2MessageGasEstimator.getExpectedRetryableL2Deposit({
@@ -148,9 +145,15 @@ export class L1ToL2MessageCreator {
     l2Provider: Provider,
     options?: GasOverrides
   ): Promise<L1ContractTransaction> {
+    const l1Provider = SignerProviderUtils.getProviderOrThrow(this.l1Signer)
     const createRequest = isL1ToL2TransactionRequest(params)
       ? params
-      : await this.getTicketCreationRequest(params, l2Provider, options)
+      : await L1ToL2MessageCreator.getTicketCreationRequest(
+          params,
+          l1Provider,
+          l2Provider,
+          options
+        )
 
     const tx = await this.l1Signer.sendTransaction({
       ...createRequest,

@@ -16,15 +16,17 @@
 /* eslint-env node */
 'use strict'
 
-import { Signer } from '@ethersproject/abstract-signer'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
 import { BigNumber, ethers } from 'ethers'
 
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
-import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
-import { MissingProviderArbSdkError } from '../dataEntities/errors'
+import {
+  SignerOrProvider,
+  SignerProviderUtils,
+} from '../dataEntities/signerOrProvider'
+import { ArbSdkError } from '../dataEntities/errors'
 import { AssetBridger } from './assetBridger'
 import {
   L1EthDepositTransaction,
@@ -41,9 +43,14 @@ import {
 
 export interface EthWithdrawParams {
   /**
-   * L2 signer who is sending the assets
+   * L2 provider
    */
-  l2Signer: Signer
+  l2SignerOrProvider: SignerOrProvider
+
+  /**
+   * address that is sending the assets
+   */
+  from: string
 
   /**
    * The amount of ETH or tokens to be withdrawn
@@ -63,9 +70,14 @@ export interface EthWithdrawParams {
 
 export type EthDepositParams = {
   /**
-   * The L1 entity depositing the assets
+   * The L1 provider or signer
    */
-  l1Signer: Signer
+  l1SignerOrProvider: SignerOrProvider
+
+  /**
+   * address that is depositing the assets
+   */
+  from: string
 
   /**
    * The amount of ETH or tokens to be deposited
@@ -79,7 +91,7 @@ export type EthDepositParams = {
 }
 
 export type L1ToL2TxReqAndSigner = L1ToL2TransactionRequest & {
-  l1Signer: Signer
+  l1SignerOrProvider: SignerOrProvider
   overrides?: Overrides
 }
 
@@ -98,19 +110,25 @@ export class EthBridger extends AssetBridger<
     params: EthDepositParams | L1ToL2TxReqAndSigner,
     estimate: T
   ): Promise<BigNumber | ethers.ContractTransaction> {
-    if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
-      throw new MissingProviderArbSdkError('l1Signer')
-    }
-    await this.checkL1Network(params.l1Signer)
+    await this.checkL1Network(params.l1SignerOrProvider)
 
     const ethDeposit = isL1ToL2TransactionRequest(params)
       ? params
       : await this.getDepositRequest(params)
 
-    return await params.l1Signer[estimate ? 'estimateGas' : 'sendTransaction']({
-      ...ethDeposit.l1TxFields,
-      ...params.overrides,
-    })
+    if (estimate) {
+      return await params.l1SignerOrProvider.estimateGas({
+        ...ethDeposit.core,
+        ...params.overrides,
+      })
+    } else {
+      if (!SignerProviderUtils.isSigner(params.l1SignerOrProvider))
+        throw new ArbSdkError('Please provide a signer instead')
+      return await params.l1SignerOrProvider.sendTransaction({
+        ...ethDeposit.core,
+        ...params.overrides,
+      })
+    }
   }
 
   public async getDepositRequest(
@@ -128,7 +146,7 @@ export class EthBridger extends AssetBridger<
     ).encodeFunctionData('depositEth()')
 
     return {
-      l1TxFields: {
+      core: {
         to: this.l2Network.ethBridge.inbox,
         value: params.amount,
         data: functionData,
@@ -168,14 +186,13 @@ export class EthBridger extends AssetBridger<
     params: EthWithdrawParams,
     estimate: T
   ): Promise<BigNumber | ethers.ContractTransaction> {
-    if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
-      throw new MissingProviderArbSdkError('l2Signer')
-    }
-    await this.checkL2Network(params.l2Signer)
+    await this.checkL2Network(params.l2SignerOrProvider)
 
-    const addr =
-      params.destinationAddress || (await params.l2Signer.getAddress())
-    const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, params.l2Signer)
+    const addr = params.destinationAddress || params.from
+    const arbSys = ArbSys__factory.connect(
+      ARB_SYS_ADDRESS,
+      params.l2SignerOrProvider
+    )
 
     return (estimate ? arbSys.estimateGas : arbSys.functions).withdrawEth(
       addr,
