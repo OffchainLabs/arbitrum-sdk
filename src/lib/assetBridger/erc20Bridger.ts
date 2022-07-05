@@ -62,9 +62,9 @@ import { getBaseFee } from '../utils/lib'
 import {
   isL1ToL2TransactionRequest,
   L1ToL2TransactionRequest,
-  IRetryableData,
 } from '../dataEntities/transactionRequest'
 import { defaultAbiCoder } from 'ethers/lib/utils'
+import { L1ToL2MessageGasParams } from '../message/L1ToL2MessageCreator'
 
 export interface TokenApproveParams {
   /**
@@ -386,14 +386,11 @@ export class Erc20Bridger extends AssetBridger<
     )
   }
 
-  /**
-   * Get the arguments for calling the deposit function
-   * @param params
-   * @returns
-   */
-  public async getDepositRequest(
-    params: Omit<Erc20DepositParams, 'overrides'>
-  ): Promise<L1ToL2TransactionRequest & { retryableData: IRetryableData }> {
+  protected async estimateDeposit(
+    params: Omit<Erc20DepositParams, 'overrides'>,
+    l1GatewayAddress: string,
+    l2CallValue: BigNumber
+  ): Promise<L1ToL2MessageGasParams> {
     const {
       retryableGasOverrides,
       erc20L1Address,
@@ -402,6 +399,8 @@ export class Erc20Bridger extends AssetBridger<
       l1Signer,
       destinationAddress,
     } = params
+    const sender = await l1Signer.getAddress()
+    const to = destinationAddress ? destinationAddress : sender
 
     await this.checkL1Network(params.l1Signer)
     await this.checkL2Network(params.l2Provider)
@@ -411,16 +410,12 @@ export class Erc20Bridger extends AssetBridger<
     }
 
     // 1. get the params for a gas estimate
-    const l1GatewayAddress = await this.getL1GatewayAddress(
-      erc20L1Address,
-      l1Signer.provider
-    )
+
     const l1Gateway = L1ERC20Gateway__factory.connect(
       l1GatewayAddress,
       l1Signer.provider
     )
-    const sender = await l1Signer.getAddress()
-    const to = destinationAddress ? destinationAddress : sender
+
     const depositCalldata = await l1Gateway.getOutboundCalldata(
       erc20L1Address,
       sender,
@@ -428,11 +423,6 @@ export class Erc20Bridger extends AssetBridger<
       amount,
       '0x'
     )
-
-    // The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
-    // Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
-    const isWeth = await this.isWethGateway(l1GatewayAddress, l1Signer.provider)
-    const l2CallValue = isWeth ? amount : Zero
 
     const l2Dest = await l1Gateway.counterpartGateway()
     const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
@@ -453,23 +443,64 @@ export class Erc20Bridger extends AssetBridger<
     const baseFee = await getBaseFee(l1Signer.provider)
     const excessFeeRefundAddress = sender
     const callValueRefundAddress = sender
-    const estimates = await gasEstimator.estimateAll(
-      l1GatewayAddress,
-      l2Dest,
-      depositCalldata,
-      l2CallValue,
+    return await gasEstimator.estimateAll(
+      {
+        from: l1GatewayAddress,
+        to: l2Dest,
+        data: depositCalldata,
+        l2CallValue,
+        excessFeeRefundAddress,
+        callValueRefundAddress,
+      },
       baseFee,
-      excessFeeRefundAddress,
-      callValueRefundAddress,
       l1Signer.provider,
       tokenGasOverrides
+    )
+  }
+
+  /**
+   * Get the arguments for calling the deposit function
+   * @param params
+   * @returns
+   */
+  public async getDepositRequest(
+    params: Omit<Erc20DepositParams, 'overrides'>
+  ): Promise<L1ToL2TransactionRequest> {
+    const {
+      erc20L1Address,
+      amount,
+      l1Signer,
+      destinationAddress,
+      retryableGasOverrides,
+    } = params
+    const sender = await l1Signer.getAddress()
+    const to = destinationAddress ? destinationAddress : sender
+
+    if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
+      throw new MissingProviderArbSdkError('l1Signer')
+    }
+
+    const l1GatewayAddress = await this.getL1GatewayAddress(
+      erc20L1Address,
+      l1Signer.provider
+    )
+
+    // The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
+    // Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
+    const isWeth = await this.isWethGateway(l1GatewayAddress, l1Signer.provider)
+    const l2CallValue = isWeth ? amount : Zero
+
+    const estimates = await this.estimateDeposit(
+      params,
+      l1GatewayAddress,
+      l2CallValue
     )
 
     const l1GatewayRouterInterface = L1GatewayRouter__factory.createInterface()
 
     const innerData = defaultAbiCoder.encode(
       ['uint256', 'bytes'],
-      [estimates.maxSubmissionFee, '0x']
+      [estimates.maxSubmissionCost, '0x']
     )
 
     const functionData = l1GatewayRouterInterface.encodeFunctionData(
@@ -484,34 +515,25 @@ export class Erc20Bridger extends AssetBridger<
       ]
     )
 
+    const deposit =
+      retryableGasOverrides?.deposit?.base ||
+      L1ToL2MessageGasEstimator.getExpectedRetryableL2Deposit({
+        gasLimit: estimates.gasLimit,
+        maxFeePerGas: estimates.maxFeePerGas,
+        maxSubmissionCost: estimates.maxSubmissionCost,
+        l2CallValue,
+      })
+
     return {
-      l2GasLimit: estimates.gasLimit,
-      l2MaxFeePerGas: estimates.maxFeePerGas,
-      l2SubmissionFee: estimates.maxSubmissionFee,
-      l2GasCostsMaxTotal: estimates.totalL2GasCosts,
-      core: {
+      l1TxFields: {
         to: this.l2Network.tokenBridge.l1GatewayRouter,
         data: functionData,
-        value: estimates.totalL2GasCosts.add(l2CallValue),
+        value: deposit,
       },
-      retryableData: {
-        callData: depositCalldata,
-        sender: l1GatewayAddress,
-        destination: l2Dest,
-        excessFeeRefundAddress: excessFeeRefundAddress,
-        callValueRefundAddress: callValueRefundAddress,
-        l2CallValue: l2CallValue,
-      },
-      isValid: async () => {
-        const reEstimated = await this.getDepositRequest({
-          ...params,
-          retryableGasOverrides: undefined,
-        })
-        return (
-          estimates.maxFeePerGas.gte(reEstimated.l2MaxFeePerGas) &&
-          estimates.maxSubmissionFee.gte(reEstimated.l2SubmissionFee)
-        )
-      },
+      isValid: () =>
+        L1ToL2MessageGasEstimator.isValid(estimates, () =>
+          this.estimateDeposit(params, l1GatewayAddress, l2CallValue)
+        ),
     }
   }
 
@@ -540,7 +562,7 @@ export class Erc20Bridger extends AssetBridger<
       : await this.getDepositRequest(params)
 
     return await params.l1Signer[estimate ? 'estimateGas' : 'sendTransaction']({
-      ...tokenDeposit.core,
+      ...tokenDeposit.l1TxFields,
       ...params.overrides,
     })
   }
@@ -682,15 +704,22 @@ export class AdminErc20Bridger extends Erc20Bridger {
     const l1SignerAddr = await l1Signer.getAddress()
     const baseFee = await getBaseFee(l1Signer.provider)
     const setTokenEstimates = await gasPriceEstimator.estimateAll(
-      this.l2Network.tokenBridge.l1CustomGateway,
-      this.l2Network.tokenBridge.l2CustomGateway,
-      l2SetTokenCallData,
-      Zero,
+      {
+        from: this.l2Network.tokenBridge.l1CustomGateway,
+        to: this.l2Network.tokenBridge.l2CustomGateway,
+        data: l2SetTokenCallData,
+        callValueRefundAddress: l1SignerAddr,
+        excessFeeRefundAddress: l1SignerAddr,
+        l2CallValue: Zero,
+      },
       baseFee,
-      l1SignerAddr,
-      l1SignerAddr,
       l1Signer.provider
     )
+    const setTokenDeposit =
+      L1ToL2MessageGasEstimator.getExpectedRetryableL2Deposit({
+        ...setTokenEstimates,
+        l2CallValue: ethers.constants.Zero,
+      })
 
     // 2. setGateway
     const iL2GatewayRouter = L2GatewayRouter__factory.createInterface()
@@ -700,31 +729,36 @@ export class AdminErc20Bridger extends Erc20Bridger {
     )
 
     const setGatwayEstimates = await gasPriceEstimator.estimateAll(
-      this.l2Network.tokenBridge.l1GatewayRouter,
-      this.l2Network.tokenBridge.l2GatewayRouter,
-      l2SetGatewaysCallData,
-      Zero,
+      {
+        from: this.l2Network.tokenBridge.l1GatewayRouter,
+        to: this.l2Network.tokenBridge.l2GatewayRouter,
+        data: l2SetGatewaysCallData,
+        l2CallValue: Zero,
+        callValueRefundAddress: l1SignerAddr,
+        excessFeeRefundAddress: l1SignerAddr,
+      },
       baseFee,
-      l1SignerAddr,
-      l1SignerAddr,
       l1Signer.provider
     )
+    const setGatewayDeposit =
+      L1ToL2MessageGasEstimator.getExpectedRetryableL2Deposit({
+        ...setGatwayEstimates,
+        l2CallValue: ethers.constants.Zero,
+      })
 
     // now execute the registration
     const customRegistrationTx = await l1Token.registerTokenOnL2(
       l2TokenAddress,
-      setTokenEstimates.maxSubmissionFee,
-      setGatwayEstimates.maxSubmissionFee,
+      setTokenEstimates.maxSubmissionCost,
+      setGatwayEstimates.maxSubmissionCost,
       setTokenEstimates.gasLimit,
       setGatwayEstimates.gasLimit,
       setGatwayEstimates.maxFeePerGas,
-      setTokenEstimates.totalL2GasCosts,
-      setGatwayEstimates.totalL2GasCosts,
+      setTokenDeposit,
+      setGatewayDeposit,
       l1SenderAddress,
       {
-        value: setTokenEstimates.totalL2GasCosts.add(
-          setGatwayEstimates.totalL2GasCosts
-        ),
+        value: setTokenDeposit.add(setGatewayDeposit),
       }
     )
 
@@ -797,7 +831,8 @@ export class AdminErc20Bridger extends Erc20Bridger {
   public async setGateways(
     l1Signer: Signer,
     l2Provider: Provider,
-    tokenGateways: TokenAndGateway[]
+    tokenGateways: TokenAndGateway[],
+    options?: GasOverrides
   ): Promise<L1ContractCallTransaction> {
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
       throw new MissingProviderArbSdkError('l1Signer')
@@ -819,15 +854,24 @@ export class AdminErc20Bridger extends Erc20Bridger {
 
     const l1SignerAddr = await l1Signer.getAddress()
     const estimates = await estimator.estimateAll(
-      this.l2Network.tokenBridge.l1GatewayRouter,
-      this.l2Network.tokenBridge.l2GatewayRouter,
-      l2SetGatewaysCallData,
-      Zero,
+      {
+        from: this.l2Network.tokenBridge.l1GatewayRouter,
+        to: this.l2Network.tokenBridge.l2GatewayRouter,
+        data: l2SetGatewaysCallData,
+        l2CallValue: Zero,
+        callValueRefundAddress: l1SignerAddr,
+        excessFeeRefundAddress: l1SignerAddr,
+      },
       baseFee,
-      l1SignerAddr,
-      l1SignerAddr,
-      l1Signer.provider
+      l1Signer.provider,
+      options
     )
+    const deposit =
+      options?.deposit?.base ||
+      L1ToL2MessageGasEstimator.getExpectedRetryableL2Deposit({
+        ...estimates,
+        l2CallValue: ethers.constants.Zero,
+      })
 
     const l1GatewayRouter = L1GatewayRouter__factory.connect(
       this.l2Network.tokenBridge.l1GatewayRouter,
@@ -839,8 +883,8 @@ export class AdminErc20Bridger extends Erc20Bridger {
       tokenGateways.map(tG => tG.gatewayAddr),
       estimates.gasLimit,
       estimates.maxFeePerGas,
-      estimates.maxSubmissionFee,
-      { value: estimates.totalL2GasCosts }
+      estimates.maxSubmissionCost,
+      { value: deposit }
     )
 
     return L1TransactionReceipt.monkeyPatchContractCallWait(res)

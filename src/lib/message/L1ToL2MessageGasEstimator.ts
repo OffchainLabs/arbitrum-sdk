@@ -6,6 +6,11 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { constants } from 'ethers'
 import { utils } from 'ethers'
 import { getL2Network } from '../dataEntities/networks'
+import {
+  L1ToL2MessageGasParams,
+  L1ToL2MessageNoGasParams,
+  L1ToL2MessageParams,
+} from './L1ToL2MessageCreator'
 
 /**
  * The default amount to increase the maximum submission cost. Submission cost is calculated
@@ -45,6 +50,10 @@ export interface GasOverrides {
   }
   maxSubmissionFee?: PercentIncrease
   maxFeePerGas?: PercentIncrease
+  /**
+   * funds deposited along with the retryable (ie the msg.value that called the inbox)
+   */
+  deposit?: Pick<PercentIncrease, 'base'>
 }
 
 const defaultL1ToL2MessageEstimateOptions = {
@@ -106,7 +115,7 @@ export class L1ToL2MessageGasEstimator {
     l1BaseFee: BigNumber,
     callDataSize: BigNumber | number,
     options?: PercentIncrease
-  ): Promise<BigNumber> {
+  ): Promise<L1ToL2MessageGasParams['maxSubmissionCost']> {
     const defaultedOptions = this.applySubmissionPriceDefaults(options)
 
     const network = await getL2Network(this.l2Provider)
@@ -121,38 +130,35 @@ export class L1ToL2MessageGasEstimator {
 
   /**
    * Estimate the amount of L2 gas required for putting the transaction in the L2 inbox, and executing it.
-   * @param sender
-   * @param destAddr
-   * @param l2CallValue
-   * @param excessFeeRefundAddress
-   * @param callValueRefundAddress
-   * @param calldata
+   * @param retryableData object containing retryable ticket data
    * @param senderDeposit we dont know how much gas the transaction will use when executing
    * so by default we supply a dummy amount of call value that will definately be more than we need
    * @returns
    */
   public async estimateRetryableTicketGasLimit(
-    sender: string,
-    destAddr: string,
-    l2CallValue: BigNumber,
-    excessFeeRefundAddress: string,
-    callValueRefundAddress: string,
-    calldata: string,
+    {
+      from,
+      to,
+      l2CallValue,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
+      data,
+    }: L1ToL2MessageNoGasParams,
     senderDeposit: BigNumber = utils.parseEther('1').add(l2CallValue)
-  ): Promise<BigNumber> {
+  ): Promise<L1ToL2MessageGasParams['gasLimit']> {
     const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
       this.l2Provider
     )
 
     return await nodeInterface.estimateGas.estimateRetryableTicket(
-      sender,
+      from,
       senderDeposit,
-      destAddr,
+      to,
       l2CallValue,
       excessFeeRefundAddress,
       callValueRefundAddress,
-      calldata
+      data
     )
   }
 
@@ -161,7 +167,9 @@ export class L1ToL2MessageGasEstimator {
    * @param options
    * @returns
    */
-  public async estimateMaxFeePerGas(options?: PercentIncrease) {
+  public async estimateMaxFeePerGas(
+    options?: PercentIncrease
+  ): Promise<L1ToL2MessageGasParams['maxFeePerGas']> {
     const maxFeePerGasDefaults = this.applyMaxFeePerGasDefaults(options)
 
     // estimate the l2 gas price
@@ -171,34 +179,47 @@ export class L1ToL2MessageGasEstimator {
     )
   }
 
+  public static getExpectedRetryableL2Deposit({
+    gasLimit,
+    maxFeePerGas,
+    maxSubmissionCost,
+    l2CallValue,
+  }: L1ToL2MessageGasParams & {
+    l2CallValue: L1ToL2MessageParams['l2CallValue']
+  }): BigNumber {
+    return gasLimit.mul(maxFeePerGas).add(maxSubmissionCost).add(l2CallValue)
+  }
+
+  public static async isValid(
+    estimates: L1ToL2MessageGasParams,
+    estimateFunc: () => Promise<L1ToL2MessageGasParams>
+  ): Promise<boolean> {
+    const reEstimated = await estimateFunc()
+    // the L1 base fee estimate may have changed, which would affect the L2 gas limit
+    // same goes for L2 base fee and minimum submission cost which affect the success of the tx
+    // TODO: deposit and nonce could also affect if valid
+    return (
+      estimates.gasLimit.gte(reEstimated.gasLimit) &&
+      estimates.maxFeePerGas.gte(reEstimated.maxFeePerGas) &&
+      estimates.maxSubmissionCost.gte(reEstimated.maxSubmissionCost)
+    )
+  }
+
   /**
    * Get gas limit, gas price and submission price estimates for sending an L1->L2 message
-   * @param sender Sender of the L1 to L2 transaction
-   * @param l2CallTo Destination L2 contract address
-   * @param l2CallData The hex call data to be sent in the request
-   * @param l2CallValue The value to be sent on L2 as part of the L2 transaction
+   * @param retryableData Data of retryable ticket transaction
    * @param l1BaseFee Current l1 base fee
-   * @param excessFeeRefundAddress The address to send excess fee refunds too
-   * @param callValueRefundAddress The address to send the call value
+   * @param l1Provider
    * @param options
    * @returns
    */
   public async estimateAll(
-    sender: string,
-    l2CallTo: string,
-    l2CallData: string,
-    l2CallValue: BigNumber,
+    retryableEstimateData: L1ToL2MessageNoGasParams,
     l1BaseFee: BigNumber,
-    excessFeeRefundAddress: string,
-    callValueRefundAddress: string,
     l1Provider: Provider,
     options?: GasOverrides
-  ): Promise<{
-    gasLimit: BigNumber
-    maxSubmissionFee: BigNumber
-    maxFeePerGas: BigNumber
-    totalL2GasCosts: BigNumber
-  }> {
+  ): Promise<L1ToL2MessageGasParams> {
+    const { data } = retryableEstimateData
     const gasLimitDefaults = this.applyGasLimitDefaults(options?.gasLimit)
 
     // estimate the l1 gas price
@@ -208,7 +229,7 @@ export class L1ToL2MessageGasEstimator {
     const maxSubmissionFee = await this.estimateSubmissionFee(
       l1Provider,
       l1BaseFee,
-      utils.hexDataLength(l2CallData),
+      utils.hexDataLength(data),
       options?.maxSubmissionFee
     )
 
@@ -216,12 +237,8 @@ export class L1ToL2MessageGasEstimator {
     const calculatedGasLimit = this.percentIncrease(
       gasLimitDefaults.base ||
         (await this.estimateRetryableTicketGasLimit(
-          sender,
-          l2CallTo,
-          l2CallValue,
-          excessFeeRefundAddress,
-          callValueRefundAddress,
-          l2CallData
+          retryableEstimateData,
+          options?.deposit?.base
         )),
       gasLimitDefaults.percentIncrease
     )
@@ -232,14 +249,10 @@ export class L1ToL2MessageGasEstimator {
       ? calculatedGasLimit
       : gasLimitDefaults.min
 
-    // estimate the total l2 gas costs
-    const totalL2GasCosts = maxSubmissionFee.add(maxFeePerGas.mul(gasLimit))
-
     return {
-      gasLimit,
-      maxSubmissionFee,
+      gasLimit: gasLimit,
+      maxSubmissionCost: maxSubmissionFee,
       maxFeePerGas: maxFeePerGas,
-      totalL2GasCosts,
     }
   }
 }
