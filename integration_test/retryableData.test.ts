@@ -133,7 +133,7 @@ describe('RevertData', () => {
     await (
       await erc20Bridger.approveToken({
         erc20L1Address: l1TokenAddress,
-        l1Signer: l1Signer,
+        l1SignerOrProvider: l1Signer,
       })
     ).wait()
 
@@ -151,8 +151,8 @@ describe('RevertData', () => {
 
     const erc20Params = {
       from: await l1Signer.getAddress(),
-      l1Provider: l1Signer.provider!,
-      l2Provider: l2Signer.provider!,
+      l1SignerOrProvider: l1Signer.provider!,
+      l2SignerOrProvider: l2Signer.provider!,
       erc20L1Address: l1TokenAddress,
       amount: depositAmount,
       retryableGasOverrides: retryableOverrides,
