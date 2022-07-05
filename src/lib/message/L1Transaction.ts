@@ -38,17 +38,13 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
-import { ethers } from 'ethers'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { InboxMessageDeliveredEvent } from '../abi/Inbox'
-import { hexZeroPad } from '@ethersproject/bytes'
-import {
-  InboxMessageKind,
-  RetryableMessageParams,
-} from '../dataEntities/message'
+import { InboxMessageKind } from '../dataEntities/message'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
 import { MessageDeliveredEvent } from '../abi/Bridge'
 import { isDefined } from '../utils/lib'
+import { SubmitRetryableMessageDataParser } from './messageDataParser'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -173,50 +169,10 @@ export class L1TransactionReceipt implements TransactionReceipt {
     return messages
   }
 
-  private parseRetryableMessageData(eventData: string): RetryableMessageParams {
-    // decode the data field - is been packed so we cant decode the bytes field this way
-    const parsed = ethers.utils.defaultAbiCoder.decode(
-      [
-        'uint256', // dest
-        'uint256', // l2 call balue
-        'uint256', // msg val
-        'uint256', // max submission
-        'uint256', // excess fee refund addr
-        'uint256', // call value refund addr
-        'uint256', // max gas
-        'uint256', // gas price bid
-        'uint256', // data length
-      ],
-      // decode from the first 9 words
-      eventData.substring(0, 64 * 9 + 2)
-    ) as BigNumber[]
-
-    const addressFromBigNumber = (bn: BigNumber) =>
-      ethers.utils.getAddress(hexZeroPad(bn.toHexString(), 20))
-
-    const destAddress = addressFromBigNumber(parsed[0])
-    const l2CallValue = parsed[1]
-    const l1Value = parsed[2]
-    const maxSubmissionFee = parsed[3]
-    const excessFeeRefundAddress = addressFromBigNumber(parsed[4])
-    const callValueRefundAddress = addressFromBigNumber(parsed[5])
-    const gasLimit = parsed[6]
-    const maxFeePerGas = parsed[7]
-    const data = '0x' + eventData.substring(64 * 9 + 2)
-
-    return {
-      destAddress,
-      l2CallValue,
-      l1Value,
-      maxSubmissionFee: maxSubmissionFee,
-      excessFeeRefundAddress,
-      callValueRefundAddress,
-      gasLimit,
-      maxFeePerGas,
-      data,
-    }
-  }
-
+  /**
+   * Get any eth deposit messages created by this transaction
+   * @param l2SignerOrProvider
+   */
   public async getEthDepositMessages(
     l2Provider: Provider
   ): Promise<EthDepositMessage[]> {
@@ -259,9 +215,11 @@ export class L1TransactionReceipt implements TransactionReceipt {
           InboxMessageKind.L1MessageType_submitRetryableTx
       )
       .map(mn => {
-        const inboxMessageData = this.parseRetryableMessageData(
+        const messageDataParser = new SubmitRetryableMessageDataParser()
+        const inboxMessageData = messageDataParser.parse(
           mn.inboxMessageEvent.data
         )
+
         return L1ToL2Message.fromTxComponents(
           l2SignerOrProvider,
           BigNumber.from(chainID).toNumber(),
