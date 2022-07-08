@@ -323,7 +323,8 @@ export class L2ToL1MessageReader extends L2ToL1Message {
         // Check latest (possibly unconfirmed) node
         const latestNodeNum = await rollup.callStatic.latestNodeCreated()
         if (latestNodeNum.gt(latestConfirmedNodeNum)) {
-          // Only check if its newer than the confirmed node
+          // In rare case latestNodeNum can be equal to latestConfirmedNodeNum
+          // We only check latest node if its newer than the confirmed node
           const l2Block = await this.getBlockFromNodeNum(
             rollup,
             latestNodeNum,
