@@ -320,11 +320,11 @@ export class L2ToL1MessageReader extends L2ToL1Message {
         this.sendRootHash = l2BlockConfirmed.sendRoot
         this.sendRootConfirmed = true
       } else {
-        // Check latest (possibly unconfirmed) node
+        // if the node has yet to be confirmed we'll still try to find proof info from unconfirmed nodes
         const latestNodeNum = await rollup.callStatic.latestNodeCreated()
         if (latestNodeNum.gt(latestConfirmedNodeNum)) {
           // In rare case latestNodeNum can be equal to latestConfirmedNodeNum
-          // We only check latest node if its newer than the confirmed node
+          // eg immediately after an upgrade, or at genesis, or on a chain where confirmation time = 0 like AnyTrust may have
           const l2Block = await this.getBlockFromNodeNum(
             rollup,
             latestNodeNum,
