@@ -178,9 +178,8 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
   public async getOutboxProof(l2Provider: Provider) {
     const { sendRootSize } = await this.getSendProps(l2Provider)
-    if (!sendRootSize) {
+    if (!sendRootSize)
       throw new ArbSdkError('Node not yet created, cannot get proof.')
-    }
     const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
       l2Provider
@@ -308,10 +307,10 @@ export class L2ToL1MessageReader extends L2ToL1Message {
         this.l1Provider
       )
 
-      const latestNodeNumConfirmed = await rollup.callStatic.latestConfirmed()
+      const latestConfirmedNodeNum = await rollup.callStatic.latestConfirmed()
       const l2BlockConfirmed = await this.getBlockFromNodeNum(
         rollup,
-        latestNodeNumConfirmed,
+        latestConfirmedNodeNum,
         l2Provider
       )
 
@@ -323,7 +322,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       } else {
         // Check latest (possibly unconfirmed) node
         const latestNodeNum = await rollup.callStatic.latestNodeCreated()
-        if (latestNodeNum.gt(latestNodeNumConfirmed)) {
+        if (latestNodeNum.gt(latestConfirmedNodeNum)) {
           // Only check if its newer than the confirmed node
           const l2Block = await this.getBlockFromNodeNum(
             rollup,
