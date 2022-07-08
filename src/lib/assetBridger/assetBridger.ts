@@ -59,24 +59,10 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   }
 
   /**
-   * Estimate gas for transfering assets from L1 to L2
-   * @param params
-   */
-  public abstract depositEstimateGas(params: DepositParams): Promise<BigNumber>
-
-  /**
    * Transfer assets from L1 to L2
    * @param params
    */
   public abstract deposit(params: DepositParams): Promise<L1ContractTransaction>
-
-  /**
-   * Estimate gas for transfering assets from L2 to L1
-   * @param params
-   */
-  public abstract withdrawEstimateGas(
-    params: WithdrawParams
-  ): Promise<BigNumber>
 
   /**
    * Transfer assets from L2 to L1
