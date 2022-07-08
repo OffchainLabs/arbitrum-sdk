@@ -219,7 +219,10 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       l2Provider
     )
     try {
-      return await nodeInterface.lookupMessageBatchProof(batchNumber, indexInBatch)
+      return await nodeInterface.lookupMessageBatchProof(
+        batchNumber,
+        indexInBatch
+      )
     } catch (e) {
       const expectedError = "batch doesn't exist"
       const err = e as Error & { error: Error }
