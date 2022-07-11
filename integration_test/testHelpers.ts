@@ -242,12 +242,12 @@ export const depositToken = async (
     expectedL1GatewayAddress
   )
   expect(
-    finalBridgeTokenBalance.sub(initialBridgeTokenBalance).toNumber(),
+    finalBridgeTokenBalance.toNumber(),
     'bridge balance not updated after L1 token deposit txn'
   ).to.eq(
     // for weth the eth is actually withdrawn, rather than transferred
     expectedGatewayType === GatewayType.WETH
-      ? 0
+      ? initialBridgeTokenBalance.toNumber()
       : initialBridgeTokenBalance.add(depositAmount).toNumber()
   )
   const userBalAfter = await l1Token.balanceOf(await l1Signer.getAddress())

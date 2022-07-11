@@ -36,7 +36,7 @@ import {
   GatewayType,
   withdrawToken,
 } from './testHelpers'
-import { L1ToL2MessageStatus, L2Network } from '../src'
+import { isNitroL1, L1ToL2MessageStatus, L2Network } from '../src'
 import { Signer, constants } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { testSetup } from '../scripts/testSetup'
@@ -65,7 +65,11 @@ describe('Custom ERC20', () => {
       l1CustomToken: {} as any,
     }
     await fundL1(testState.l1Signer, parseEther('0.01'))
-    await fundL2(testState.l2Signer)
+    if (await isNitroL1(testState.l1Signer)) {
+      await fundL2(testState.l2Signer, parseEther('0.5'))
+    } else {
+      await fundL2(testState.l2Signer)
+    }
   })
 
   it('register custom token', async () => {

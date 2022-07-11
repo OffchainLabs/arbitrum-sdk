@@ -36,7 +36,7 @@ import {
   L2ToL1MessageStatus,
 } from '../src/lib/message/L2ToL1Message'
 import { testSetup } from '../scripts/testSetup'
-import { isNitroL2 } from '../src/lib/utils/migration_types'
+import { isNitroL2, isNitroL1 } from '../src/lib/utils/migration_types'
 dotenv.config()
 
 describe('Ether', async () => {
@@ -45,9 +45,12 @@ describe('Ether', async () => {
   })
 
   it('transfers ether on l2', async () => {
-    const { l2Signer } = await testSetup()
-
-    await fundL2(l2Signer, parseEther('0.001'))
+    const { l2Signer, l1Signer } = await testSetup()
+    if (await isNitroL1(l1Signer)) {
+      await fundL2(l2Signer, parseEther('0.5'))
+    } else {
+      await fundL2(l2Signer, parseEther('0.001'))
+    }
 
     const randomAddress = Wallet.createRandom().address
     const amountToSend = parseEther('0.000005')
