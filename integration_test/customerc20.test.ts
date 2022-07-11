@@ -64,7 +64,7 @@ describe('Custom ERC20', () => {
       ...(await testSetup()),
       l1CustomToken: {} as any,
     }
-    await fundL1(testState.l1Signer, parseEther('0.2'))
+    await fundL1(testState.l1Signer, parseEther('0.01'))
     await fundL2(testState.l2Signer)
   })
 
