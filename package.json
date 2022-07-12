@@ -33,6 +33,7 @@
     "test:fork": "SHOULD_FORK=1 hardhat test fork_test/*.test.ts",
     "test:integration": "mocha integration_test/ --timeout 30000000 --bail",
     "test:integration:skipfinalise": "SKIP_FINALISE=true mocha integration_test/ --timeout 30000000 --bail",
+    "test:integration:shadow": "SHADOW=true SKIP_FINALISE=true mocha integration_test/ --timeout 30000000 --bail",
     "test:ci": "nyc --reporter=lcovonly mocha --reporter xunit",
     "lint": "eslint .",
     "format": "prettier './**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",

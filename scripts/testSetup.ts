@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { JsonRpcProvider } from '@ethersproject/providers'
+import { JsonRpcProvider, Provider } from '@ethersproject/providers'
 import { Wallet } from '@ethersproject/wallet'
 
 import dotenv from 'dotenv'
@@ -28,6 +28,10 @@ import {
   getL2Network,
   addCustomNetwork,
 } from '../src/lib/dataEntities/networks'
+import {
+  getL2Network as nitroGetL2Network,
+  getL1Network as nitroGetL1Network,
+} from '@arbitrum/sdk-nitro/dist/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { execSync } from 'child_process'
@@ -37,6 +41,7 @@ import { deployErc20AndInit } from './deployBridge'
 import * as path from 'path'
 import * as fs from 'fs'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
+import { isDefined } from '../src/lib/utils/lib'
 
 dotenv.config()
 
@@ -45,6 +50,7 @@ export const config = {
   ethUrl: process.env['ETH_URL'] as string,
   arbKey: process.env['ARB_KEY'] as string,
   ethKey: process.env['ETH_KEY'] as string,
+  shadow: process.env['SHADOW'] as string,
 }
 
 export const getCustomNetworks = async (
@@ -184,6 +190,33 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
   else return provider.getSigner(0)
 }
 
+const inferShadowNetworks = async (
+  l1Provider: Provider,
+  l2Provider: Provider
+) => {
+  const rinkebyL2 = await nitroGetL2Network(421611)
+  const mainnetL2 = await nitroGetL2Network(42161)
+  let l2Network: L2Network
+  if ((await l1Provider.getCode(rinkebyL2.ethBridge.inbox)).length > 2) {
+    l2Network = rinkebyL2
+  } else if ((await l1Provider.getCode(mainnetL2.ethBridge.inbox)).length > 2) {
+    l2Network = mainnetL2
+  } else throw new ArbSdkError('Could not infer shadow networks.')
+
+  const l1Network = await nitroGetL1Network(l2Network.partnerChainID)
+  const copiedNetworks: { l1Network: L1Network; l2Network: L2Network } = {
+    l1Network: { ...l1Network },
+    l2Network: { ...l2Network },
+  }
+
+  copiedNetworks.l2Network.chainID = (await l2Provider.getNetwork()).chainId
+  copiedNetworks.l2Network.isCustom = true
+  copiedNetworks.l1Network.chainID = (await l1Provider.getNetwork()).chainId
+  copiedNetworks.l1Network.isCustom = true
+
+  return { ...copiedNetworks }
+}
+
 export const testSetup = async (): Promise<{
   l1Network: L1Network
   l2Network: L2Network
@@ -207,39 +240,50 @@ export const testSetup = async (): Promise<{
   const l2Signer = seed.connect(arbProvider)
 
   let setL1Network: L1Network, setL2Network: L2Network
-  try {
-    const l1Network = await getL1Network(l1Deployer)
-    const l2Network = await getL2Network(l2Deployer)
-    setL1Network = l1Network
-    setL2Network = l2Network
-  } catch (err) {
-    // the networks havent been added yet
+  // are we shadow forking
+  if (isDefined(config.shadow)) {
+    const networks = await inferShadowNetworks(ethProvider, arbProvider)
+    setL1Network = networks.l1Network
+    setL2Network = networks.l2Network
+    addCustomNetwork({
+      customL2Network: setL2Network,
+      customL1Network: setL1Network,
+    })
+  } else {
+    try {
+      const l1Network = await getL1Network(l1Deployer)
+      const l2Network = await getL2Network(l2Deployer)
+      setL1Network = l1Network
+      setL2Network = l2Network
+    } catch (err) {
+      // the networks havent been added yet
 
-    // check if theres an existing network available
-    const localNetworkFile = path.join(__dirname, '..', 'localNetwork.json')
-    if (fs.existsSync(localNetworkFile)) {
-      const { l1Network, l2Network } = JSON.parse(
-        fs.readFileSync(localNetworkFile).toString()
-      ) as {
-        l1Network: L1Network
-        l2Network: L2Network
+      // check if theres an existing network available
+      const localNetworkFile = path.join(__dirname, '..', 'localNetwork.json')
+      if (fs.existsSync(localNetworkFile)) {
+        const { l1Network, l2Network } = JSON.parse(
+          fs.readFileSync(localNetworkFile).toString()
+        ) as {
+          l1Network: L1Network
+          l2Network: L2Network
+        }
+        addCustomNetwork({
+          customL1Network: l1Network,
+          customL2Network: l2Network,
+        })
+        setL1Network = l1Network
+        setL2Network = l2Network
+      } else {
+        // deploy a new network
+        const { l1Network, l2Network } = await setupNetworks(
+          l1Deployer,
+          l2Deployer,
+          config.ethUrl,
+          config.arbUrl
+        )
+        setL1Network = l1Network
+        setL2Network = l2Network
       }
-      addCustomNetwork({
-        customL1Network: l1Network,
-        customL2Network: l2Network,
-      })
-      setL1Network = l1Network
-      setL2Network = l2Network
-    } else {
-      // deploy a new network
-      const { l1Network, l2Network } = await setupNetworks(
-        l1Deployer,
-        l2Deployer,
-        config.ethUrl,
-        config.arbUrl
-      )
-      setL1Network = l1Network
-      setL2Network = l2Network
     }
   }
 
