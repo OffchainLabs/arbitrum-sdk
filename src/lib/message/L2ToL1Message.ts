@@ -387,6 +387,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       return BigNumber.from(network.confirmPeriodBlocks)
         .add(ASSERTION_CREATED_PADDING)
         .add(ASSERTION_CONFIRMED_PADDING)
+        .add(latestBlock)
 
     const rollupNode = await rollup.callStatic.getNode(events[0].nodeNum)
     const node = Node__factory.connect(rollupNode, this.l1Provider)
