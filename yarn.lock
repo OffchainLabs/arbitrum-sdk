@@ -19,10 +19,10 @@
     "@openzeppelin/contracts-upgradeable" "4.5.2"
     hardhat "^2.6.6"
 
-"@arbitrum/sdk-classic@npm:@arbitrum/sdk@1.1.10":
-  version "1.1.10"
-  resolved "https://registry.yarnpkg.com/@arbitrum/sdk/-/sdk-1.1.10.tgz#58d1baf646a37ecf76bab73781e3bc91ac8b803f"
-  integrity sha512-T+pscVnIhxwvtL9s93lb0mwWFi9rUFhMaHj8PwezVJtDZ/u1jCpF37dPLdSUs1LyVApm4gnp+LQvbe5yaUWyRw==
+"@arbitrum/sdk-classic@npm:@arbitrum/sdk@1.1.12":
+  version "1.1.12"
+  resolved "https://registry.yarnpkg.com/@arbitrum/sdk/-/sdk-1.1.12.tgz#2f805a864bd1bcc8a677fcccebab3ca442c28d7d"
+  integrity sha512-s8ku93/wQ9bIMNbO4HWp4+qndzakVc/ppH1l9z4TFHHqNHbD2ejKmiGQeHXdraJsgVs2JnFYVWtq/fVbCB5rDg==
   dependencies:
     "@ethersproject/address" "^5.0.8"
     "@ethersproject/bignumber" "^5.1.1"
