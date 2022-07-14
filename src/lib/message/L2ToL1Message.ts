@@ -344,10 +344,13 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
     const proof = await this.tryGetProof(l2Provider)
     // here we assume the L2 to L1 tx is actually valid, so the user needs to wait the max time.
-    if (proof === null)
+    if (proof === null) {
+      const latestBlock = await this.l1Provider.getBlockNumber()
       return BigNumber.from(network.confirmPeriodBlocks)
         .add(ASSERTION_CREATED_PADDING)
         .add(ASSERTION_CONFIRMED_PADDING)
+        .add(latestBlock)
+    }
     // we can't check if the L2 to L1 tx isSpent on the outbox, so we instead try executing it
     if (await this.hasExecuted(proof)) return BigNumber.from(0)
     const latestBlock = await this.l1Provider.getBlockNumber()
