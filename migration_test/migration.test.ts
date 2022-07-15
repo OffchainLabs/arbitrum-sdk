@@ -40,10 +40,19 @@ dotenv.config()
 
 const waitForNitro = async (l2Provider: Provider, minimum?: number) => {
   const now = Date.now()
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    try {
+      // isNitroL2 can throw an error during the migration
+      const isNitroNow =
+        (await isNitroL2(l2Provider)) &&
+        (!minimum || Date.now() - now > minimum)
 
-  while (
-    !((await isNitroL2(l2Provider)) && (!minimum || Date.now() - now > minimum))
-  ) {
+      if (isNitroNow) return
+    } catch (err) {
+      console.log('L2 node unavailable')
+    }
+
     await wait(30000)
     console.log('Waiting for nitro upgrade')
   }
