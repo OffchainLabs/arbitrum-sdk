@@ -35,6 +35,8 @@ import {
   getL2Network,
   Erc20Bridger,
   IL2ToL1MessageWriter,
+  IL1ToL2MessageWriter,
+  L1ToL2MessageStatus,
 } from '../src'
 dotenv.config()
 
@@ -219,7 +221,7 @@ class WethBalanceMigrationTest extends MigrationTest {
 
 /**
  * Check that an L1->L2 weth deposit initiated before the migration
- * can be finalised after the migration.
+ * can be redeemed after the migration.
  */
 class WethDepositMigrationTest extends MigrationTest {
   public constructor(testState: TestState) {
@@ -271,8 +273,13 @@ class WethDepositMigrationTest extends MigrationTest {
       l2Provider: this.testState.core.l2Signer.provider!,
       erc20L1Address: l1Weth.address,
       amount: amountToSend,
+      // set so that the deposit will fail on L2
+      retryableGasOverrides: {
+        gasLimit: { base: BigNumber.from(5) },
+        maxFeePerGas: { base: BigNumber.from(5) },
+      },
     })
-    await depositRes.wait()
+    const depositRec = await depositRes.wait()
 
     const finalBridgeTokenBalance = await l1Token.balanceOf(
       l2Network.tokenBridge.l1WethGateway
@@ -290,6 +297,11 @@ class WethDepositMigrationTest extends MigrationTest {
       userBalBefore.sub(amountToSend).toString()
     )
 
+    const depositMessage = (
+      await depositRec.getL1ToL2Messages(this.testState.core.l2Signer)
+    )[0]
+
+    this.testState.wethXChainDeposit.message = depositMessage
     this.testState.wethXChainDeposit.user = randomUser
     this.testState.wethXChainDeposit.balance = amountToSend
   }
@@ -303,10 +315,31 @@ class WethDepositMigrationTest extends MigrationTest {
       )
     )
 
+    // we need to manually redeem the message
+    const message = this.testState.wethXChainDeposit.message!
+    const status = await message.waitForStatus()
+    expect(status.status, 'Weth deposit does not exist as retryable').to.eq(
+      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+    )
+
+    const userBalanceBefore = await weth.balanceOf(
+      this.testState.wethXChainDeposit.user!.address
+    )
+    expect(userBalanceBefore.toString(), 'Weth balance before redeem').to.eq(
+      '0'
+    )
+
+    await (await message.redeem()).wait()
+
+    const statusAfter = await message.status()
+    expect(statusAfter, 'Weth deposit not redeemed.').to.eq(
+      L1ToL2MessageStatus.REDEEMED
+    )
+
     const userBalance = await weth.balanceOf(
       this.testState.wethXChainDeposit.user!.address
     )
-    expect(userBalance.toString(), 'Weth balance after xchain').to.eq(
+    expect(userBalance.toString(), 'Weth balance after redeem').to.eq(
       this.testState.wethXChainDeposit.balance!.toString()
     )
   }
@@ -554,6 +587,7 @@ interface TestState {
     balance?: BigNumber
   }
   wethXChainDeposit: {
+    message?: IL1ToL2MessageWriter
     user?: Wallet
     balance?: BigNumber
   }
@@ -628,12 +662,40 @@ describe('Migration tests', async () => {
   it('all together', async () => {
     const testState = await initialiseTestState()
     const multiTest = new MultiTest(testState, [
+      /**
+       * Check that a receiver of eth just before the migration
+       * still has it after the migration
+       */
       EthTransferMigrationTest,
+      /**
+       * Check that an ERC20 created just before the migration has the same
+       * symbol and name after the migration
+       */
       Erc20CreationMigrationTest,
+      /**
+       * Check that a user who deposits into the weth contract just before migration
+       * still has it after the migration
+       */
       WethBalanceMigrationTest,
+      /**
+       * Check that an L1->L2 weth deposit initiated before the migration
+       * can be redeemed after the migration.
+       */
       WethDepositMigrationTest,
+      /**
+       * Checks that a weth withdrawal that was started before the migration
+       * can be completed after the migration
+       */
       WethWithdrawalMigrationTest,
+      /**
+       * Check that an Eth withdrawal initiated before the migration
+       * completes successfully after the migration
+       */
       EthWithdrawalMigrationTest,
+      /**
+       * Check that an L1->L2 weth deposit initiated before the migration
+       * can be finalised after the migration.
+       */
       EthDepositMigrationTest,
     ])
 
