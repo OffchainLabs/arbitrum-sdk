@@ -21,17 +21,22 @@ import dotenv from 'dotenv'
 
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
-import { Zero } from '@ethersproject/constants'
 
 import { ArbGasInfo__factory } from '../src/lib/abi/factories/ArbGasInfo__factory'
-import { fundL1, fundL2, prettyLog, skipIfMainnet } from './testHelpers'
+import {
+  fundL1,
+  fundL2,
+  prettyLog,
+  shouldFinaliseWithdrawal,
+  skipIfMainnet,
+} from './testHelpers'
 import { ARB_GAS_INFO } from '../src/lib/dataEntities/constants'
 import {
   L2ToL1Message,
   L2ToL1MessageStatus,
 } from '../src/lib/message/L2ToL1Message'
 import { testSetup } from '../scripts/testSetup'
-import { isNitroL2 } from '../src/lib/utils/migration_types'
+import { isNitroL2, isNitroL1 } from '../src/lib/utils/migration_types'
 dotenv.config()
 
 describe('Ether', async () => {
@@ -40,9 +45,12 @@ describe('Ether', async () => {
   })
 
   it('transfers ether on l2', async () => {
-    const { l2Signer } = await testSetup()
-
-    await fundL2(l2Signer, parseEther('0.001'))
+    const { l2Signer, l1Signer } = await testSetup()
+    if (await isNitroL1(l1Signer)) {
+      await fundL2(l2Signer, parseEther('0.5'))
+    } else {
+      await fundL2(l2Signer, parseEther('0.001'))
+    }
 
     const randomAddress = Wallet.createRandom().address
     const amountToSend = parseEther('0.000005')
@@ -88,7 +96,7 @@ describe('Ether', async () => {
 
     const waitResult = await rec.waitForL2(l2Signer.provider!)
 
-    const l1ToL2Messages = await rec.getL1ToL2Messages(l2Signer)
+    const l1ToL2Messages = await rec.getEthDepositMessages(l2Signer)
     expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
 
     prettyLog('l2 transaction found!')
@@ -97,12 +105,16 @@ describe('Ether', async () => {
     const testWalletL2EthBalance = await l2Signer.getBalance()
     if (await isNitroL2(l2Signer)) {
       expect(
-        testWalletL2EthBalance.gte(ethToDeposit.sub(10000)),
+        testWalletL2EthBalance.gte(
+          initialInboxBalance.add(ethToDeposit).sub(10000)
+        ),
         `final balance: ${testWalletL2EthBalance.toString()}, ${ethToDeposit.toString()}`
       ).to.be.true
     } else {
       expect(
-        testWalletL2EthBalance.gt(Zero),
+        testWalletL2EthBalance.gte(
+          initialInboxBalance.add(ethToDeposit).sub(10000000000000)
+        ),
         'eth balance still 0 after deposit'
       ).to.be.true
     }
@@ -167,7 +179,7 @@ describe('Ether', async () => {
       .add(ethToWithdraw)
       .add(withdrawEthRec.gasUsed.mul(inWei[5]))
 
-    if (await isNitroL2(l2Signer)) {
+    if ((await isNitroL2(l2Signer)) && shouldFinaliseWithdrawal()) {
       await withdrawMessage.waitUntilReadyToExecute(l2Signer.provider!)
 
       expect(

@@ -32,6 +32,7 @@ import { GasOverrides } from '../src/lib/message/L1ToL2MessageGasEstimator'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import { ERC20 } from '../src/lib/abi/ERC20'
 import { isNitroL1 } from '../src/lib/utils/migration_types'
+import { isDefined } from '../src/lib/utils/lib'
 
 export const preFundAmount = parseEther('0.01')
 
@@ -59,6 +60,14 @@ interface WithdrawalParams {
   l2Signer: Signer
   l1Signer: Signer
   gatewayType: GatewayType
+}
+
+/**
+ * Returns true if the SKIP_FINALISE env var has not been set
+ * @returns
+ */
+export const shouldFinaliseWithdrawal = () => {
+  return !isDefined(process.env['SKIP_FINALISE'])
 }
 
 /**
@@ -129,7 +138,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   const balBefore = await params.l1Token.balanceOf(
     await params.l1Signer.getAddress()
   )
-  if (await isNitroL1(params.l1Signer)) {
+  if ((await isNitroL1(params.l1Signer)) && shouldFinaliseWithdrawal()) {
     await message.waitUntilReadyToExecute(params.l2Signer.provider!)
     expect(
       await message.status(params.l2Signer.provider!),
@@ -238,7 +247,7 @@ export const depositToken = async (
   ).to.eq(
     // for weth the eth is actually withdrawn, rather than transferred
     expectedGatewayType === GatewayType.WETH
-      ? 0
+      ? initialBridgeTokenBalance.toNumber()
       : initialBridgeTokenBalance.add(depositAmount).toNumber()
   )
   const userBalAfter = await l1Token.balanceOf(await l1Signer.getAddress())
