@@ -31,6 +31,8 @@
     "test": "mocha",
     "test:coverage": "nyc mocha",
     "test:fork": "SHOULD_FORK=1 hardhat test fork_test/*.test.ts",
+    "test:migration": "mocha migration_test/ --timeout 30000000 --bail",
+    "test:migration:shadow": "SHADOW=true mocha migration_test/ --timeout 30000000 --bail",
     "test:integration": "mocha integration_test/ --timeout 30000000 --bail",
     "test:integration:skipfinalise": "SKIP_FINALISE=true mocha integration_test/ --timeout 30000000 --bail",
     "test:integration:shadow": "SHADOW=true SKIP_FINALISE=true mocha integration_test/ --timeout 30000000 --bail",
