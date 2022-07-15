@@ -211,7 +211,9 @@ const inferShadowNetworks = async (
 
   copiedNetworks.l2Network.chainID = (await l2Provider.getNetwork()).chainId
   copiedNetworks.l2Network.isCustom = true
-  copiedNetworks.l1Network.chainID = (await l1Provider.getNetwork()).chainId
+  const l1ChainID = (await l1Provider.getNetwork()).chainId
+  copiedNetworks.l2Network.partnerChainID = l1ChainID
+  copiedNetworks.l1Network.chainID = l1ChainID
   copiedNetworks.l1Network.isCustom = true
 
   return { ...copiedNetworks }

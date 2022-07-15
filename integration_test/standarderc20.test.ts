@@ -169,6 +169,9 @@ describe('standard ERC20', () => {
     await redeemAndTest(testState.l2Signer.provider!, waitRes.message, 1)
   })
 
+  // we currently skip this test because we need to find a gas limit that allows
+  // for the redeem transaction to execute, but not the following scheduled l2 tx
+  // we should calculate this using the l2's view of the l1 base fee
   it.skip('deposit with low funds, fails first redeem, succeeds seconds', async () => {
     if (await isNitroL1(testState.l1Signer)) {
       const { waitRes } = await depositToken(
