@@ -451,6 +451,10 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       confirmations,
       timeout
     )
+    if (!_retryableCreationReceipt)
+      throw new ArbSdkError(
+        `Retryable creation receipt not found ${this.retryableCreationId}`
+      )
     return await this.getSuccessfulRedeem()
   }
 
