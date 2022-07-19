@@ -245,21 +245,22 @@ export const testSetup = async (): Promise<{
 
   let setL1Network: L1Network, setL2Network: L2Network
   // are we shadow forking
-  if (isDefined(config.shadow)) {
-    const networks = await inferShadowNetworks(ethProvider, arbProvider)
-    setL1Network = networks.l1Network
-    setL2Network = networks.l2Network
-    addCustomNetwork({
-      customL2Network: setL2Network,
-      customL1Network: setL1Network,
-    })
-  } else {
-    try {
-      const l1Network = await getL1Network(l1Deployer)
-      const l2Network = await getL2Network(l2Deployer)
-      setL1Network = l1Network
-      setL2Network = l2Network
-    } catch (err) {
+
+  try {
+    const l1Network = await getL1Network(l1Deployer)
+    const l2Network = await getL2Network(l2Deployer)
+    setL1Network = l1Network
+    setL2Network = l2Network
+  } catch (err) {
+    if (isDefined(config.shadow)) {
+      const networks = await inferShadowNetworks(ethProvider, arbProvider)
+      setL1Network = networks.l1Network
+      setL2Network = networks.l2Network
+      addCustomNetwork({
+        customL2Network: setL2Network,
+        customL1Network: setL1Network,
+      })
+    } else {
       // the networks havent been added yet
 
       // check if theres an existing network available
