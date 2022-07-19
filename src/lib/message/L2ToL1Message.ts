@@ -271,7 +271,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     )
 
     if (logs.length !== 1)
-      throw new ArbSdkError('No NodeConfirmed events found')
+      throw new ArbSdkError('No NodeCreated events found')
     return await this.getBlockFromNodeLog(
       l2Provider as JsonRpcProvider,
       logs[0]
