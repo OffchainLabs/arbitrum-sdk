@@ -211,7 +211,7 @@ export const l2Networks: L2Networks = {
     name: 'Arbitrum Rollup Goerli Testnet',
     partnerChainID: 5,
     rpcURL:
-      process.env['GOERGLI_ROLLUP_TESTNET_RPC'] ||
+      process.env['GOERLI_ROLLUP_TESTNET_RPC'] ||
       'https://goerli-rollup.arbitrum.io/rpc',
     tokenBridge: {
       l1CustomGateway: '0x9fDD1C4E4AA24EEc1d913FABea925594a20d43C7',
@@ -228,6 +228,40 @@ export const l2Networks: L2Networks = {
       l2ProxyAdmin: '0xeC377B42712608B0356CC54Da81B2be1A4982bAb',
       l2Weth: '0xe39Ab88f8A4777030A534146A9Ca3B52bd5D43A3',
       l2WethGateway: '0xf9F2e89c8347BD96742Cc07095dee490e64301d6',
+    },
+  },
+  42170: {
+    chainID: 42170,
+    confirmPeriodBlocks: 20,
+    ethBridge: {
+      bridge: '0xc1ebd02f738644983b6c4b2d440b8e77dde276bd',
+      inbox: '0xc4448b71118c9071bcb9734a0eac55d18a153949',
+      outbox: '0xD4B80C3D7240325D18E645B49e6535A3Bf95cc58',
+      rollup: '0xfb209827c58283535b744575e11953dcc4bead88',
+      sequencerInbox: '0x211e1c4c7f1bf5351ac850ed10fd68cffcf6c21b',
+    },
+    explorerUrl: 'https://a4ba-explorer.arbitrum.io',
+    isArbitrum: true,
+    isCustom: true,
+    name: 'AnyTrust',
+    partnerChainID: 1,
+    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
+    rpcURL: process.env['NOVA_RPC'] as string,
+    tokenBridge: {
+      l1CustomGateway: '0x23122da8C581AA7E0d07A36Ff1f16F799650232f',
+      l1ERC20Gateway: '0xB2535b988dcE19f9D71dfB22dB6da744aCac21bf',
+      l1GatewayRouter: '0xC840838Bc438d73C16c2f8b22D2Ce3669963cD48',
+      l1MultiCall: '0x8896d23afea159a5e9b72c9eb3dc4e2684a38ea3',
+      l1ProxyAdmin: '0xa8f7DdEd54a726eB873E98bFF2C95ABF2d03e560',
+      l1Weth: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+      l1WethGateway: '0xE4E2121b479017955Be0b175305B35f312330BaE',
+      l2CustomGateway: '0xbf544970E6BD77b21C6492C281AB60d0770451F4',
+      l2ERC20Gateway: '0xcF9bAb7e53DDe48A6DC4f286CB14e05298799257',
+      l2GatewayRouter: '0x21903d3F8176b1a0c17E953Cd896610Be9fFDFa8',
+      l2Multicall: '0x5e1eE626420A354BbC9a95FeA1BAd4492e3bcB86',
+      l2ProxyAdmin: '0xada790b026097BfB36a5ed696859b97a96CEd92C',
+      l2Weth: '0x722E8BdD2ce80A4422E880164f2079488e115365',
+      l2WethGateway: '0x7626841cB6113412F9c88D3ADC720C9FAC88D9eD',
     },
   },
 }
