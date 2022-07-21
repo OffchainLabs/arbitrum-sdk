@@ -139,9 +139,15 @@ const lastUpdatedL2: LastUpdated = {
   value: false,
 }
 
-export const isNitroL1 = async (l1Provider: SignerOrProvider) => {
+export const isNitroL1 = async (
+  l1Provider: SignerOrProvider,
+  /**
+   * Wait at least this amount of time before rechecking if isNitro
+   */
+  timeSinceCheckMs: number = fifthteenMinutesMs
+) => {
   if (isNitro) return true
-  if (Date.now() - lastUpdatedL1.timestamp > fifthteenMinutesMs) {
+  if (Date.now() - lastUpdatedL1.timestamp > timeSinceCheckMs) {
     const l1Network = await nitro.getL1Network(l1Provider)
     const partner = l1Network.partnerChainIDs[0]
     const l2Network = await nitro.getL2Network(partner)
@@ -180,10 +186,14 @@ export const isNitroL1 = async (l1Provider: SignerOrProvider) => {
 }
 
 export const isNitroL2 = async (
-  l2SignerOrProvider: SignerOrProvider
+  l2SignerOrProvider: SignerOrProvider,
+  /**
+   * Wait at least this amount of time before rechecking if isNitro
+   */
+  timeSinceCheckMs: number = fifthteenMinutesMs
 ): Promise<boolean> => {
   if (isNitro) return true
-  if (Date.now() - lastUpdatedL2.timestamp > fifthteenMinutesMs) {
+  if (Date.now() - lastUpdatedL2.timestamp > timeSinceCheckMs) {
     const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2SignerOrProvider)
     const l2Network = await nitro.getL2Network(l2SignerOrProvider)
     const blockNumber = await arbSys.arbBlockNumber()

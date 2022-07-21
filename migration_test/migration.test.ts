@@ -26,7 +26,7 @@ import { Provider } from '@ethersproject/abstract-provider'
 import { fundL1, fundL2, wait } from '../integration_test/testHelpers'
 import { L2ToL1MessageStatus } from '../src/lib/message/L2ToL1Message'
 import { testSetup } from '../scripts/testSetup'
-import { isNitroL1 } from '../src/lib/utils/migration_types'
+import { isNitroL2 } from '../src/lib/utils/migration_types'
 import { BigNumber, Signer } from 'ethers'
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 import { TestWETH9__factory } from '../src/lib/abi/factories/TestWETH9__factory'
@@ -40,14 +40,14 @@ import {
 } from '../src'
 dotenv.config()
 
-const waitForNitro = async (l1Provider: Provider, minimum?: number) => {
+const waitForNitro = async (l2Provider: Provider, minimum?: number) => {
   const now = Date.now()
   // eslint-disable-next-line no-constant-condition
   while (true) {
     try {
       // isNitroL2 can throw an error during the migration
       const isNitroNow =
-        (await isNitroL1(l1Provider)) &&
+        (await isNitroL2(l2Provider), 30000) &&
         (!minimum || Date.now() - now > minimum)
 
       if (isNitroNow) return
@@ -701,7 +701,7 @@ describe('Migration tests', async () => {
 
     await multiTest.initialise()
 
-    await waitForNitro(testState.core.l1Signer.provider!, 150000)
+    await waitForNitro(testState.core.l2Signer.provider!, 150000)
 
     await multiTest.finalise()
   })
