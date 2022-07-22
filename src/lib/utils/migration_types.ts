@@ -158,6 +158,12 @@ export const isNitroL1 = async (
       const inbox = NitroInbox__factory.connect(inboxAddr, l1Provider)
       const bridgeAddr = await inbox.bridge()
       const bridge = NitroBridgeFactory.connect(bridgeAddr, l1Provider)
+      if (!(await bridge.allowedDelayedInboxes(inboxAddr))) {
+        // In the middle of the migration the bridge is switched over,
+        // but the inbox isn't enabled yet.
+        // This error will be caught below and return false.
+        throw new ArbSdkError(`inbox isn't authorized by bridge`)
+      }
       const rollupAdd = await bridge.rollup()
       const rollup = NitroRollupUserLogic__factory.connect(
         rollupAdd,
