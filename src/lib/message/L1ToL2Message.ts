@@ -160,7 +160,8 @@ export abstract class L1ToL2Message {
     sender: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
-    messageData: RetryableMessageParams
+    messageData: RetryableMessageParams,
+    retryableCreationId?: string // TODO: remove this after migration
   ): L1ToL2MessageReaderOrWriter<T>
   public static fromTxComponents<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
@@ -168,7 +169,8 @@ export abstract class L1ToL2Message {
     sender: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
-    messageData: RetryableMessageParams
+    messageData: RetryableMessageParams,
+    retryableCreationId?: string // TODO: remove this after migration
   ): L1ToL2MessageReader | L1ToL2MessageWriter {
     return SignerProviderUtils.isSigner(l2SignerOrProvider)
       ? new L1ToL2MessageWriter(
@@ -177,7 +179,8 @@ export abstract class L1ToL2Message {
           sender,
           messageNumber,
           l1BaseFee,
-          messageData
+          messageData,
+          retryableCreationId
         )
       : new L1ToL2MessageReader(
           l2SignerOrProvider,
@@ -185,7 +188,8 @@ export abstract class L1ToL2Message {
           sender,
           messageNumber,
           l1BaseFee,
-          messageData
+          messageData,
+          retryableCreationId
         )
   }
 
@@ -239,9 +243,10 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     sender: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
-    messageData: RetryableMessageParams
+    messageData: RetryableMessageParams,
+    retryableCreationId?: string // TODO: remove this after migration
   ) {
-    super(chainId, sender, messageNumber, l1BaseFee, messageData)
+    super(chainId, sender, messageNumber, l1BaseFee, messageData, retryableCreationId)
   }
 
   /**
@@ -504,7 +509,8 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
     sender: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
-    messageData: RetryableMessageParams
+    messageData: RetryableMessageParams,
+    retryableCreationId?: string // TODO: remove this after migration
   ) {
     super(
       l2Signer.provider!,
@@ -512,7 +518,8 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
       sender,
       messageNumber,
       l1BaseFee,
-      messageData
+      messageData,
+      retryableCreationId
     )
     if (!l2Signer.provider)
       throw new ArbSdkError('Signer not connected to provider.')
