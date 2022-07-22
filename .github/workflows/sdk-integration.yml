@@ -40,7 +40,7 @@ jobs:
           cp ./.env-sample ./.env
       - name: Wait for nitro startup
         run: |
-          source .env
+          source sdk/.env
 
           # poll the nitro endpoint until we get a 0 return code
           while true
