@@ -23,7 +23,6 @@ import { BigNumber } from 'ethers'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
-import { SignerOrProvider } from '../dataEntities/signerOrProvider'
 import { AssetBridger } from './assetBridger'
 import {
   L1EthDepositTransaction,
@@ -42,7 +41,7 @@ export interface EthWithdrawParams {
   /**
    * L2 provider
    */
-  l2SignerOrProvider: SignerOrProvider
+  l2Signer: Signer
 
   /**
    * Address that is sending the assets
@@ -155,12 +154,12 @@ export class EthBridger extends AssetBridger<
   public async withdraw(
     params: EthWithdrawParams
   ): Promise<L2ContractTransaction> {
-    await this.checkL2Network(params.l2SignerOrProvider)
+    await this.checkL2Network(params.l2Signer)
 
     const addr = params.destinationAddress || params.from
     const arbSys = ArbSys__factory.connect(
       ARB_SYS_ADDRESS,
-      params.l2SignerOrProvider
+      params.l2Signer
     )
 
     const tx = await arbSys.functions.withdrawEth(

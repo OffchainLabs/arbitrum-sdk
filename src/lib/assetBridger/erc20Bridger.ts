@@ -617,13 +617,13 @@ export class Erc20Bridger extends AssetBridger<
   public async withdraw(
     params: TokenWithdrawParams
   ): Promise<L2ContractTransaction> {
-    await this.checkL2Network(params.l2SignerOrProvider)
+    await this.checkL2Network(params.l2Signer)
 
     const to = params.destinationAddress || (await params.from)
 
     const l2GatewayRouter = L2GatewayRouter__factory.connect(
       this.l2Network.tokenBridge.l2GatewayRouter,
-      params.l2SignerOrProvider
+      params.l2Signer
     )
 
     const tx = await l2GatewayRouter.functions[
