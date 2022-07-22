@@ -1,4 +1,4 @@
-source .env-sample
+source ../.env
   
 # poll the nitro endpoint until we get a 0 return code
 while true
