@@ -520,7 +520,7 @@ class EthWithdrawalMigrationTest extends MigrationTest {
 }
 
 /**
- * Check that an L1->L2 weth deposit initiated before the migration
+ * Check that an L1->L2 Eth deposit initiated before the migration
  * can be finalised after the migration.
  */
 class EthDepositMigrationTest extends MigrationTest {
@@ -693,7 +693,7 @@ describe('Migration tests', async () => {
        */
       EthWithdrawalMigrationTest,
       /**
-       * Check that an L1->L2 weth deposit initiated before the migration
+       * Check that an L1->L2 Eth deposit initiated before the migration
        * can be finalised after the migration.
        */
       EthDepositMigrationTest,
