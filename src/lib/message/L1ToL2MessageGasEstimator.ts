@@ -179,17 +179,6 @@ export class L1ToL2MessageGasEstimator {
     )
   }
 
-  public static getExpectedRetryableL2Deposit({
-    gasLimit,
-    maxFeePerGas,
-    maxSubmissionCost,
-    l2CallValue,
-  }: L1ToL2MessageGasParams & {
-    l2CallValue: L1ToL2MessageParams['l2CallValue']
-  }): BigNumber {
-    return gasLimit.mul(maxFeePerGas).add(maxSubmissionCost).add(l2CallValue)
-  }
-
   public static async isValid(
     estimates: L1ToL2MessageGasParams,
     estimateFunc: () => Promise<L1ToL2MessageGasParams>
@@ -240,6 +229,10 @@ export class L1ToL2MessageGasEstimator {
       gasLimitDefaults.percentIncrease
     )
 
+    const deposit =
+      options?.deposit?.base ||
+      calculatedGasLimit.mul(maxFeePerGas).add(maxSubmissionFee).add(retryableEstimateData.l2CallValue)
+
     // always ensure the max gas is greater than the min - this can be useful if we know that
     // gas estimation is bad for the provided transaction
     const gasLimit = calculatedGasLimit.gt(gasLimitDefaults.min)
@@ -247,9 +240,10 @@ export class L1ToL2MessageGasEstimator {
       : gasLimitDefaults.min
 
     return {
-      gasLimit: gasLimit,
+      gasLimit,
       maxSubmissionCost: maxSubmissionFee,
-      maxFeePerGas: maxFeePerGas,
+      maxFeePerGas,
+      deposit
     }
   }
 }

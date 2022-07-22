@@ -535,14 +535,6 @@ export class Erc20Bridger extends AssetBridger<
       ]
     )
 
-    const deposit =
-      retryableGasOverrides?.deposit?.base ||
-      L1ToL2MessageGasEstimator.getExpectedRetryableL2Deposit({
-        gasLimit: estimates.gasLimit,
-        maxFeePerGas: estimates.maxFeePerGas,
-        maxSubmissionCost: estimates.maxSubmissionCost,
-        l2CallValue,
-      })
     
     // TODO: use RetryableData error to parse data instead of querying
     const l1Gateway = L1ERC20Gateway__factory.connect(
@@ -563,7 +555,7 @@ export class Erc20Bridger extends AssetBridger<
       core: {
         to: this.l2Network.tokenBridge.l1GatewayRouter,
         data: functionData,
-        value: deposit,
+        value: estimates.deposit,
       },
       retryableData: {
           data: depositCalldata,
@@ -574,7 +566,8 @@ export class Erc20Bridger extends AssetBridger<
           l2CallValue: l2CallValue,
           maxSubmissionCost: estimates.maxSubmissionCost,
           maxFeePerGas: estimates.maxFeePerGas,
-          gasLimit: estimates.gasLimit
+          gasLimit: estimates.gasLimit,
+          deposit: estimates.deposit
       },
       isValid: () =>
         L1ToL2MessageGasEstimator.isValid(estimates, () =>
@@ -716,11 +709,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
       baseFee,
       l1Signer.provider
     )
-    const setTokenDeposit =
-      L1ToL2MessageGasEstimator.getExpectedRetryableL2Deposit({
-        ...setTokenEstimates,
-        l2CallValue: ethers.constants.Zero,
-      })
 
     // 2. setGateway
     const iL2GatewayRouter = L2GatewayRouter__factory.createInterface()
@@ -741,11 +729,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
       baseFee,
       l1Signer.provider
     )
-    const setGatewayDeposit =
-      L1ToL2MessageGasEstimator.getExpectedRetryableL2Deposit({
-        ...setGatwayEstimates,
-        l2CallValue: ethers.constants.Zero,
-      })
 
     // now execute the registration
     const customRegistrationTx = await l1Token.registerTokenOnL2(
@@ -755,11 +738,11 @@ export class AdminErc20Bridger extends Erc20Bridger {
       setTokenEstimates.gasLimit,
       setGatwayEstimates.gasLimit,
       setGatwayEstimates.maxFeePerGas,
-      setTokenDeposit,
-      setGatewayDeposit,
+      setTokenEstimates.deposit,
+      setGatwayEstimates.deposit,
       l1SenderAddress,
       {
-        value: setTokenDeposit.add(setGatewayDeposit),
+        value: setTokenEstimates.deposit.add(setGatwayEstimates.deposit),
       }
     )
 
@@ -867,12 +850,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
       l1Signer.provider,
       options
     )
-    const deposit =
-      options?.deposit?.base ||
-      L1ToL2MessageGasEstimator.getExpectedRetryableL2Deposit({
-        ...estimates,
-        l2CallValue: ethers.constants.Zero,
-      })
 
     const l1GatewayRouter = L1GatewayRouter__factory.connect(
       this.l2Network.tokenBridge.l1GatewayRouter,
@@ -885,7 +862,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
       estimates.gasLimit,
       estimates.maxFeePerGas,
       estimates.maxSubmissionCost,
-      { value: deposit }
+      { value: estimates.deposit }
     )
 
     return L1TransactionReceipt.monkeyPatchContractCallWait(res)

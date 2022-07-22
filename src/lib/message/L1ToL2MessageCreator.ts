@@ -30,11 +30,11 @@ type OmitTyped<T, K extends keyof T> = Omit<T, K>
  */
 type PartialPick<T, K extends keyof T> = OmitTyped<T, K> & Partial<T>
 
-type L1ToL2GasKeys = 'maxSubmissionCost' | 'maxFeePerGas' | 'gasLimit'
+type L1ToL2GasKeys = 'maxSubmissionCost' | 'maxFeePerGas' | 'gasLimit' | 'deposit'
 export type L1ToL2MessageGasParams = Pick<RetryableData, L1ToL2GasKeys>
 export type L1ToL2MessageNoGasParams = OmitTyped<
   RetryableData,
-  L1ToL2GasKeys | 'deposit'
+  L1ToL2GasKeys
 >
 export type L1ToL2MessageParams = PartialPick<
   L1ToL2MessageNoGasParams,
@@ -118,10 +118,7 @@ export class L1ToL2MessageCreator {
       core: {
         to: l2Network.ethBridge.inbox,
         data: functionData,
-        value: L1ToL2MessageGasEstimator.getExpectedRetryableL2Deposit({
-          ...estimates,
-          l2CallValue: params.l2CallValue,
-        }),
+        value: estimates.deposit,
       },
       retryableData: {
         data: params.data,
@@ -132,7 +129,8 @@ export class L1ToL2MessageCreator {
         l2CallValue: params.l2CallValue,
         maxSubmissionCost: estimates.maxSubmissionCost,
         maxFeePerGas: estimates.maxFeePerGas,
-        gasLimit: estimates.gasLimit
+        gasLimit: estimates.gasLimit,
+        deposit: estimates.deposit
     },
       isValid: () =>
         L1ToL2MessageGasEstimator.isValid(estimates, () =>
