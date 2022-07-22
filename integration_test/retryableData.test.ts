@@ -172,24 +172,25 @@ describe('RevertData', () => {
       if (!parsed) throw err
 
       expect(parsed.callValueRefundAddress, 'callValueRefundAddress').to.eq(
-        await l1Signer.getAddress()
+        depositParams.retryableData.callValueRefundAddress
       )
       expect(parsed.data, 'data').to.eq(depositParams.retryableData.data)
       expect(parsed.deposit.toString(), 'deposit').to.eq(
         depositParams.core.value
       )
       expect(parsed.excessFeeRefundAddress, 'excessFeeRefundAddress').to.eq(
-        await l1Signer.getAddress()
+        depositParams.retryableData.excessFeeRefundAddress
       )
-      expect(parsed.from, 'from').to.eq(await l1Signer.getAddress())
+      expect(parsed.from, 'from').to.eq(depositParams.retryableData.from)
       expect(parsed.gasLimit.toString(), 'gasLimit').to.eq(
-        RetryableDataTools.ErrorTriggeringParams.gasLimit
+        depositParams.retryableData.gasLimit.toString()
       )
 
-      expect(parsed.l2CallValue.toString(), 'l2CallValue').to.eq(constants.Zero)
-
+      expect(parsed.l2CallValue.toString(), 'l2CallValue').to.eq(
+        depositParams.retryableData.l2CallValue.toString()
+      )
       expect(parsed.maxFeePerGas.toString(), 'maxFeePerGas').to.eq(
-        RetryableDataTools.ErrorTriggeringParams.maxFeePerGas
+        depositParams.retryableData.maxFeePerGas.toString()
       )
       expect(parsed.maxSubmissionCost.toString(), 'maxSubmissionCost').to.eq(
         depositParams.retryableData.maxSubmissionCost.toString()

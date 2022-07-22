@@ -68,7 +68,8 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   const withdrawRes = await params.erc20Bridger.withdraw({
     amount: params.amount,
     erc20l1Address: params.l1Token.address,
-    l2Signer: params.l2Signer,
+    l2SignerOrProvider: params.l2Signer,
+    from: await params.l2Signer.getAddress(),
   })
   const withdrawRec = await withdrawRes.wait()
   expect(withdrawRec.status).to.equal(1, 'initiate token withdraw txn failed')
@@ -214,10 +215,11 @@ export const depositToken = async (
 
   const depositRes = await erc20Bridger.deposit({
     l1Signer: l1Signer,
-    l2Provider: l2Signer.provider!,
+    l2SignerOrProvider: l2Signer,
     erc20L1Address: l1TokenAddress,
     amount: depositAmount,
     retryableGasOverrides: retryableOverrides,
+    from: await l2Signer.getAddress(),
   })
 
   const depositRec = await depositRes.wait()
