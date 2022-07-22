@@ -136,7 +136,7 @@ describe('RevertData', () => {
     await (
       await erc20Bridger.approveToken({
         erc20L1Address: l1TokenAddress,
-        l1SignerOrProvider: l1Signer,
+        l1Signer: l1Signer,
       })
     ).wait()
 
@@ -153,15 +153,15 @@ describe('RevertData', () => {
     }
 
     const erc20Params = {
-      from: await l1Signer.getAddress(),
-      l1SignerOrProvider: l1Signer.provider!,
+      l1Signer: l1Signer,
       l2SignerOrProvider: l2Signer.provider!,
+      from: await l1Signer.getAddress(),
       erc20L1Address: l1TokenAddress,
       amount: depositAmount,
       retryableGasOverrides: retryableOverrides,
     }
 
-    const depositParams = await erc20Bridger.getDepositRequest(erc20Params)
+    const depositParams = await erc20Bridger.getDepositRequest(erc20Params, l1Signer.provider!, l2Signer.provider!)
 
     try {
       await erc20Bridger.deposit(erc20Params)
@@ -174,7 +174,7 @@ describe('RevertData', () => {
       expect(parsed.callValueRefundAddress, 'callValueRefundAddress').to.eq(
         await l1Signer.getAddress()
       )
-      // expect(parsed.data, 'data').to.eq(depositParams.retryableData.callData)
+      expect(parsed.data, 'data').to.eq(depositParams.retryableData.data)
       expect(parsed.deposit.toString(), 'deposit').to.eq(
         depositParams.core.value
       )
@@ -191,10 +191,10 @@ describe('RevertData', () => {
       expect(parsed.maxFeePerGas.toString(), 'maxFeePerGas').to.eq(
         RetryableDataTools.ErrorTriggeringParams.maxFeePerGas
       )
-      // expect(parsed.maxSubmissionCost.toString(), 'maxSubmissionCost').to.eq(
-      //   depositParams.l2SubmissionFee.toString()
-      // )
-      // expect(parsed.to).to.eq(depositParams.retryableData.destination)
+      expect(parsed.maxSubmissionCost.toString(), 'maxSubmissionCost').to.eq(
+        depositParams.retryableData.maxSubmissionCost.toString()
+      )
+      expect(parsed.to).to.eq(depositParams.retryableData.to)
     }
   })
 })

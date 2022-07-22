@@ -1,5 +1,6 @@
 import { Provider } from '@ethersproject/abstract-provider'
 import { TransactionReceipt } from '@ethersproject/providers'
+import { Erc20DepositParams } from '../assetBridger/erc20Bridger'
 import { ArbSdkError } from '../dataEntities/errors'
 
 export const wait = (ms: number): Promise<void> =>
@@ -52,3 +53,12 @@ export const getTransactionReceipt = async (
 
 export const isDefined = <T>(val: T | null | undefined): val is T =>
   typeof val !== 'undefined' && val !== null
+
+export const parseDepositParams = <T extends Omit<Erc20DepositParams, 'overrides' | 'l2Signer' | 'l1Signer'>> (params: T) => {
+  return {
+    ...params,
+    excessFeeRefundAddress: params.excessFeeRefundAddress || params.from,
+    callValueRefundAddress: params.callValueRefundAddress || params.from,
+    to: params.destinationAddress ? params.destinationAddress : params.from
+  }
+}

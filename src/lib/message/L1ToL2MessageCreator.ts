@@ -11,7 +11,7 @@ import { getL2Network } from '../dataEntities/networks'
 import { PayableOverrides } from '@ethersproject/contracts'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
-import { getBaseFee } from '../utils/lib'
+import { getBaseFee, parseDepositParams } from '../utils/lib'
 import {
   isL1ToL2TransactionRequest,
   L1ToL2TransactionRequest,
@@ -123,6 +123,17 @@ export class L1ToL2MessageCreator {
           l2CallValue: params.l2CallValue,
         }),
       },
+      retryableData: {
+        data: params.data,
+        from: params.from,
+        to: params.to,
+        excessFeeRefundAddress: excessFeeRefundAddress,
+        callValueRefundAddress: callValueRefundAddress,
+        l2CallValue: params.l2CallValue,
+        maxSubmissionCost: estimates.maxSubmissionCost,
+        maxFeePerGas: estimates.maxFeePerGas,
+        gasLimit: estimates.gasLimit
+    },
       isValid: () =>
         L1ToL2MessageGasEstimator.isValid(estimates, () =>
           L1ToL2MessageCreator.getTicketEstimate(

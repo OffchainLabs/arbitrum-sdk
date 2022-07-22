@@ -1,4 +1,5 @@
 import { TransactionRequest } from '@ethersproject/providers'
+import { L1ToL2MessageGasParams, L1ToL2MessageParams } from '../message/L1ToL2MessageCreator'
 import { isDefined } from '../utils/lib'
 
 /**
@@ -14,6 +15,8 @@ export interface L1ToL2TransactionRequest {
     Pick<TransactionRequest, 'to' | 'data' | 'value'>
   > &
     TransactionRequest
+  
+  retryableData: L1ToL2MessageParams & L1ToL2MessageGasParams
 
   /**
    * If this request were sent now, would it have enough margin to reliably succeed

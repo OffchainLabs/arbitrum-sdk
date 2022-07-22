@@ -195,11 +195,8 @@ export class L1ToL2MessageGasEstimator {
     estimateFunc: () => Promise<L1ToL2MessageGasParams>
   ): Promise<boolean> {
     const reEstimated = await estimateFunc()
-    // the L1 base fee estimate may have changed, which would affect the L2 gas limit
-    // same goes for L2 base fee and minimum submission cost which affect the success of the tx
-    // TODO: deposit and nonce could also affect if valid
+    // L2 base fee and minimum submission cost which affect the success of the tx
     return (
-      estimates.gasLimit.gte(reEstimated.gasLimit) &&
       estimates.maxFeePerGas.gte(reEstimated.maxFeePerGas) &&
       estimates.maxSubmissionCost.gte(reEstimated.maxSubmissionCost)
     )
