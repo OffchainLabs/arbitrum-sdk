@@ -619,7 +619,7 @@ export class Erc20Bridger extends AssetBridger<
   ): Promise<L2ContractTransaction> {
     await this.checkL2Network(params.l2Signer)
 
-    const to = params.destinationAddress || (await params.from)
+    const to = params.destinationAddress || (await params.l2Signer.getAddress())
 
     const l2GatewayRouter = L2GatewayRouter__factory.connect(
       this.l2Network.tokenBridge.l2GatewayRouter,

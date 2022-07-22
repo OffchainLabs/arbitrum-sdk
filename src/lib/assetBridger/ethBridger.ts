@@ -44,11 +44,6 @@ export interface EthWithdrawParams {
   l2Signer: Signer
 
   /**
-   * Address that is sending the assets
-   */
-  from: string
-
-  /**
    * The amount of ETH or tokens to be withdrawn
    */
   amount: BigNumber
@@ -71,7 +66,7 @@ export type EthDepositParams = {
   l1Signer: Signer
 
   /**
-   * address that is depositing the assets
+   * Address that is depositing the assets
    */
   from: string
 
@@ -156,7 +151,8 @@ export class EthBridger extends AssetBridger<
   ): Promise<L2ContractTransaction> {
     await this.checkL2Network(params.l2Signer)
 
-    const addr = params.destinationAddress || params.from
+    const addr =
+      params.destinationAddress || (await params.l2Signer.getAddress())
     const arbSys = ArbSys__factory.connect(
       ARB_SYS_ADDRESS,
       params.l2Signer
