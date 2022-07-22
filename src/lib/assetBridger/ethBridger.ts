@@ -45,7 +45,7 @@ export interface EthWithdrawParams {
   l2SignerOrProvider: SignerOrProvider
 
   /**
-   * address that is sending the assets
+   * Address that is sending the assets
    */
   from: string
 
