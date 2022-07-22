@@ -194,23 +194,28 @@ export abstract class L1ToL2Message {
     public readonly sender: string,
     public readonly messageNumber: BigNumber,
     public readonly l1BaseFee: BigNumber,
-    public readonly messageData: RetryableMessageParams
+    public readonly messageData: RetryableMessageParams,
+    retryableCreationId?: string // TODO: remove this after migration
   ) {
-    this.retryableCreationId = L1ToL2Message.calculateSubmitRetryableId(
-      chainId,
-      sender,
-      messageNumber,
-      l1BaseFee,
-      messageData.destAddress,
-      messageData.l2CallValue,
-      messageData.l1Value,
-      messageData.maxSubmissionFee,
-      messageData.excessFeeRefundAddress,
-      messageData.callValueRefundAddress,
-      messageData.gasLimit,
-      messageData.maxFeePerGas,
-      messageData.data
-    )
+    if (isDefined(retryableCreationId)) {
+      this.retryableCreationId = retryableCreationId
+    } else {
+      this.retryableCreationId = L1ToL2Message.calculateSubmitRetryableId(
+        chainId,
+        sender,
+        messageNumber,
+        l1BaseFee,
+        messageData.destAddress,
+        messageData.l2CallValue,
+        messageData.l1Value,
+        messageData.maxSubmissionFee,
+        messageData.excessFeeRefundAddress,
+        messageData.callValueRefundAddress,
+        messageData.gasLimit,
+        messageData.maxFeePerGas,
+        messageData.data
+      )
+    }
   }
 }
 
