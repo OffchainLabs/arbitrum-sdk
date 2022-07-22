@@ -246,7 +246,14 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     messageData: RetryableMessageParams,
     retryableCreationId?: string // TODO: remove this after migration
   ) {
-    super(chainId, sender, messageNumber, l1BaseFee, messageData, retryableCreationId)
+    super(
+      chainId,
+      sender,
+      messageNumber,
+      l1BaseFee,
+      messageData,
+      retryableCreationId
+    )
   }
 
   /**
