@@ -50,9 +50,13 @@ const waitForNitro = async (l2Provider: Provider, minimum?: number) => {
         (await isNitroL2(l2Provider), 30000) &&
         (!minimum || Date.now() - now > minimum)
 
-      if (isNitroNow) return
+      if (isNitroNow) {
+        // verify that the L2 node is up
+        await l2Provider.getBlockNumber()
+        return
+      }
     } catch (err) {
-      console.log('L2 node unavailable')
+      console.log('L2 node unavailable', err)
     }
 
     await wait(30000)
