@@ -75,7 +75,12 @@ export class ArbitrumProvider extends Web3Provider {
    * @param network Must be an Arbitrum network
    */
   public constructor(provider: JsonRpcProvider, network?: Networkish) {
-    super(provider as unknown as ExternalProvider, network)
+    // use the wrapped provider if there is one to prevent double wrapping
+    const _provider = (provider as Web3Provider).provider
+    super(
+      _provider ? _provider : (provider as unknown as ExternalProvider),
+      network
+    )
   }
 
   static override getFormatter(): Formatter {
