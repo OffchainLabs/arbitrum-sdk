@@ -243,9 +243,11 @@ export class L1TransactionReceipt implements TransactionReceipt {
         }))
       )
 
-      return Promise.all(
+      const classicL1ToL2Messages = await Promise.all(
         typedMessages.filter(t => !t.isEthDeposit).map(t => t.message)
       )
+
+      return classicL1ToL2Messages.map(c => L1ToL2Message.fromClassic(c))
     }
   }
 

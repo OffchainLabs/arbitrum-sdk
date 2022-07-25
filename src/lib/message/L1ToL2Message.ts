@@ -37,6 +37,7 @@ import { L1ToL2MessageReaderOrWriter as NitroL1ToL2MessageReaderOrWriter } from 
 import {
   IL1ToL2MessageReader,
   IL1ToL2MessageWriter,
+  isNitroL2,
   toClassicRetryableParams,
 } from '../utils/migration_types'
 
@@ -85,7 +86,7 @@ export type L1ToL2MessageReaderOrWriter<T extends SignerOrProvider> =
 export abstract class L1ToL2Message {
   public static fromClassic<T extends SignerOrProvider>(
     readerOrWriter: ClassicL1ToL2MessageReaderOrWriter<T>
-  ) {
+  ): L1ToL2MessageWriter | L1ToL2MessageReader {
     if ((readerOrWriter as classic.L1ToL2MessageWriter).l2Signer) {
       return L1ToL2MessageWriter.fromClassic(
         readerOrWriter as classic.L1ToL2MessageWriter
@@ -97,7 +98,7 @@ export abstract class L1ToL2Message {
 
   public static fromNitro<T extends SignerOrProvider>(
     readerOrWriter: NitroL1ToL2MessageReaderOrWriter<T>
-  ) {
+  ): L1ToL2MessageReader | L1ToL2MessageWriter {
     if ((readerOrWriter as nitro.L1ToL2MessageWriter).l2Signer) {
       return L1ToL2MessageWriter.fromNitro(
         readerOrWriter as nitro.L1ToL2MessageWriter
@@ -180,6 +181,7 @@ export class L1ToL2MessageReader
   }
 
   private readonly classicReader?: classic.L1ToL2MessageReader
+  private readonly classicPartnerReader?: nitro.L1ToL2MessageReader
   private readonly nitroReader?: nitro.L1ToL2MessageReader
   /**
    * When messages are sent from L1 to L2 a retryable ticket is created on L2.
@@ -203,6 +205,15 @@ export class L1ToL2MessageReader
         retryableCreationId,
         messageNumber
       )
+      this.classicPartnerReader = new nitro.L1ToL2MessageReader(
+        l2Provider,
+        chainId!, // although these can be empty we know that they wont be used by the nitro reader
+        sender!,
+        messageNumber,
+        l1BaseFee!,
+        messageData!,
+        retryableCreationId
+      )
       this.retryableCreationId = retryableCreationId
     } else if (chainId && sender && messageNumber && l1BaseFee && messageData) {
       this.nitroReader = new nitro.L1ToL2MessageReader(
@@ -224,15 +235,23 @@ export class L1ToL2MessageReader
    * @returns
    */
   public async isExpired(): Promise<boolean> {
-    return this.nitroReader
-      ? this.nitroReader.isExpired()
-      : this.classicReader!.isExpired()
+    if (this.nitroReader) {
+      return await this.nitroReader.isExpired()
+    } else if (await isNitroL2(this.l2Provider)) {
+      return await this.classicPartnerReader!.isExpired()
+    } else {
+      return await this.classicReader!.isExpired()
+    }
   }
 
   public async status(): Promise<L1ToL2MessageStatus> {
-    return this.nitroReader
-      ? this.nitroReader.status()
-      : this.classicReader!.status()
+    if (this.nitroReader) {
+      return await this.nitroReader.status()
+    } else if (await isNitroL2(this.l2Provider)) {
+      return await this.classicPartnerReader!.status()
+    } else {
+      return await this.classicReader!.status()
+    }
   }
 
   /**
@@ -262,9 +281,16 @@ export class L1ToL2MessageReader
     confirmations?: number,
     timeout = 900000
   ): Promise<L1ToL2MessageWaitResult> {
-    return this.nitroReader
-      ? this.nitroReader.waitForStatus(confirmations, timeout)
-      : this.classicReader!.waitForStatus(confirmations, timeout)
+    if (this.nitroReader) {
+      return await this.nitroReader.waitForStatus(confirmations, timeout)
+    } else if (await isNitroL2(this.l2Provider)) {
+      return await this.classicPartnerReader!.waitForStatus(
+        confirmations,
+        timeout
+      )
+    } else {
+      return await this.classicReader!.waitForStatus(confirmations, timeout)
+    }
   }
 
   /**
@@ -272,9 +298,13 @@ export class L1ToL2MessageReader
    * @returns
    */
   public async getTimeout(): Promise<BigNumber> {
-    return this.nitroReader
-      ? this.nitroReader.getTimeout()
-      : this.classicReader!.getTimeout()
+    if (this.nitroReader) {
+      return await this.nitroReader.getTimeout()
+    } else if (await isNitroL2(this.l2Provider)) {
+      return await this.classicPartnerReader!.getTimeout()
+    } else {
+      return await this.classicReader!.getTimeout()
+    }
   }
 
   /**
@@ -282,10 +312,14 @@ export class L1ToL2MessageReader
    * The Beneficiary is also the address with the right to cancel a Retryable Ticket (if the ticket hasn’t been redeemed yet).
    * @returns
    */
-  public getBeneficiary(): Promise<string> {
-    return this.nitroReader
-      ? this.nitroReader.getBeneficiary()
-      : this.classicReader!.getBeneficiary()
+  public async getBeneficiary(): Promise<string> {
+    if (this.nitroReader) {
+      return await this.nitroReader.getBeneficiary()
+    } else if (await isNitroL2(this.l2Provider)) {
+      return await this.classicPartnerReader!.getBeneficiary()
+    } else {
+      return await this.classicReader!.getBeneficiary()
+    }
   }
 }
 
@@ -295,6 +329,7 @@ export class L1ToL2MessageWriter
 {
   private readonly nitroWriter?: nitro.L1ToL2MessageWriter
   private readonly classicWriter?: classic.L1ToL2MessageWriter
+  private readonly classicPartnerWriter?: nitro.L1ToL2MessageWriter
 
   public static fromClassic(classicWriter: classic.L1ToL2MessageWriter) {
     return new L1ToL2MessageWriter(
@@ -347,6 +382,15 @@ export class L1ToL2MessageWriter
         retryableCreationId,
         messageNumber
       )
+      this.classicPartnerWriter = new nitro.L1ToL2MessageWriter(
+        l2Signer,
+        chainId!,
+        sender!,
+        messageNumber!,
+        l1BaseFee!,
+        messageData!,
+        retryableCreationId
+      )
     } else if (chainId && sender && messageNumber && l1BaseFee && messageData) {
       this.nitroWriter = new nitro.L1ToL2MessageWriter(
         l2Signer,
@@ -366,9 +410,13 @@ export class L1ToL2MessageWriter
    * Throws if message status is not L1ToL2MessageStatus.NOT_YET_REDEEMED
    */
   public async redeem(overrides?: Overrides): Promise<ContractTransaction> {
-    return this.nitroWriter
-      ? this.nitroWriter.redeem(overrides)
-      : this.classicWriter!.redeem()
+    if (this.nitroWriter) {
+      return await this.nitroWriter.redeem(overrides)
+    } else if (await isNitroL2(this.l2Provider)) {
+      return await this.classicPartnerWriter!.redeem(overrides)
+    } else {
+      return await this.classicWriter!.redeem()
+    }
   }
 
   /**
@@ -376,8 +424,12 @@ export class L1ToL2MessageWriter
    * Throws if message status is not L1ToL2MessageStatus.NOT_YET_REDEEMED
    */
   public async cancel(overrides?: Overrides): Promise<ContractTransaction> {
-    return this.nitroWriter
-      ? this.nitroWriter.cancel(overrides)
-      : this.classicWriter!.cancel()
+    if (this.nitroWriter) {
+      return await this.nitroWriter.cancel(overrides)
+    } else if (await isNitroL2(this.l2Provider)) {
+      return await this.classicPartnerWriter!.cancel(overrides)
+    } else {
+      return await this.classicWriter!.cancel()
+    }
   }
 }
