@@ -9,7 +9,6 @@ import { getL2Network } from '../dataEntities/networks'
 import {
   L1ToL2MessageGasParams,
   L1ToL2MessageNoGasParams,
-  L1ToL2MessageParams,
 } from './L1ToL2MessageCreator'
 
 /**
@@ -231,7 +230,10 @@ export class L1ToL2MessageGasEstimator {
 
     const deposit =
       options?.deposit?.base ||
-      calculatedGasLimit.mul(maxFeePerGas).add(maxSubmissionFee).add(retryableEstimateData.l2CallValue)
+      calculatedGasLimit
+        .mul(maxFeePerGas)
+        .add(maxSubmissionFee)
+        .add(retryableEstimateData.l2CallValue)
 
     // always ensure the max gas is greater than the min - this can be useful if we know that
     // gas estimation is bad for the provided transaction
@@ -243,7 +245,7 @@ export class L1ToL2MessageGasEstimator {
       gasLimit,
       maxSubmissionCost: maxSubmissionFee,
       maxFeePerGas,
-      deposit
+      deposit,
     }
   }
 }

@@ -27,7 +27,6 @@ import { testSetup } from '../scripts/testSetup'
 import { randomBytes } from 'ethers/lib/utils'
 import { Inbox__factory } from '../src/lib/abi/factories/Inbox__factory'
 import { GasOverrides } from '../src/lib/message/L1ToL2MessageGasEstimator'
-import { constants } from 'ethers'
 const depositAmount = BigNumber.from(100)
 
 describe('RevertData', () => {
@@ -161,7 +160,11 @@ describe('RevertData', () => {
       retryableGasOverrides: retryableOverrides,
     }
 
-    const depositParams = await erc20Bridger.getDepositRequest(erc20Params, l1Signer.provider!, l2Signer.provider!)
+    const depositParams = await erc20Bridger.getDepositRequest(
+      erc20Params,
+      l1Signer.provider!,
+      l2Signer.provider!
+    )
 
     try {
       await erc20Bridger.deposit(erc20Params)

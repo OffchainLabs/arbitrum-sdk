@@ -54,11 +54,15 @@ export const getTransactionReceipt = async (
 export const isDefined = <T>(val: T | null | undefined): val is T =>
   typeof val !== 'undefined' && val !== null
 
-export const parseDepositParams = <T extends Omit<Erc20DepositParams, 'overrides' | 'l2Signer' | 'l1Signer'>> (params: T) => {
+export const parseDepositParams = <
+  T extends Omit<Erc20DepositParams, 'overrides' | 'l2Signer' | 'l1Signer'>
+>(
+  params: T
+) => {
   return {
     ...params,
     excessFeeRefundAddress: params.excessFeeRefundAddress || params.from,
     callValueRefundAddress: params.callValueRefundAddress || params.from,
-    to: params.destinationAddress ? params.destinationAddress : params.from
+    to: params.destinationAddress ? params.destinationAddress : params.from,
   }
 }

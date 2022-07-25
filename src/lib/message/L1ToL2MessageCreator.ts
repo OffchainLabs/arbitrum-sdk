@@ -11,7 +11,7 @@ import { getL2Network } from '../dataEntities/networks'
 import { PayableOverrides } from '@ethersproject/contracts'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
-import { getBaseFee, parseDepositParams } from '../utils/lib'
+import { getBaseFee } from '../utils/lib'
 import {
   isL1ToL2TransactionRequest,
   L1ToL2TransactionRequest,
@@ -30,12 +30,13 @@ type OmitTyped<T, K extends keyof T> = Omit<T, K>
  */
 type PartialPick<T, K extends keyof T> = OmitTyped<T, K> & Partial<T>
 
-type L1ToL2GasKeys = 'maxSubmissionCost' | 'maxFeePerGas' | 'gasLimit' | 'deposit'
+type L1ToL2GasKeys =
+  | 'maxSubmissionCost'
+  | 'maxFeePerGas'
+  | 'gasLimit'
+  | 'deposit'
 export type L1ToL2MessageGasParams = Pick<RetryableData, L1ToL2GasKeys>
-export type L1ToL2MessageNoGasParams = OmitTyped<
-  RetryableData,
-  L1ToL2GasKeys
->
+export type L1ToL2MessageNoGasParams = OmitTyped<RetryableData, L1ToL2GasKeys>
 export type L1ToL2MessageParams = PartialPick<
   L1ToL2MessageNoGasParams,
   'excessFeeRefundAddress' | 'callValueRefundAddress'
@@ -130,8 +131,8 @@ export class L1ToL2MessageCreator {
         maxSubmissionCost: estimates.maxSubmissionCost,
         maxFeePerGas: estimates.maxFeePerGas,
         gasLimit: estimates.gasLimit,
-        deposit: estimates.deposit
-    },
+        deposit: estimates.deposit,
+      },
       isValid: () =>
         L1ToL2MessageGasEstimator.isValid(estimates, () =>
           L1ToL2MessageCreator.getTicketEstimate(

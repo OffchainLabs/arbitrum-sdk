@@ -16,7 +16,6 @@
 /* eslint-env node */
 'use strict'
 
-import { BigNumber } from 'ethers'
 import { ArbSdkError } from '../dataEntities/errors'
 import { L1ContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'

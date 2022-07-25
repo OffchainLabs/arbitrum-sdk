@@ -93,8 +93,6 @@ export class EthBridger extends AssetBridger<
   EthDepositParams,
   EthWithdrawParams
 > {
-
-
   public async getDepositRequest(
     params: Omit<EthDepositParams, 'overrides'>
   ): Promise<Omit<L1ToL2TransactionRequest, 'retryableData'>> {
@@ -133,11 +131,11 @@ export class EthBridger extends AssetBridger<
       ? params
       : await this.getDepositRequest(params)
 
-      const tx = await params.l1Signer.sendTransaction({
-        ...ethDeposit.core,
-        ...params.overrides,
-      })
-    
+    const tx = await params.l1Signer.sendTransaction({
+      ...ethDeposit.core,
+      ...params.overrides,
+    })
+
     return L1TransactionReceipt.monkeyPatchEthDepositWait(tx)
   }
 
@@ -153,18 +151,12 @@ export class EthBridger extends AssetBridger<
 
     const addr =
       params.destinationAddress || (await params.l2Signer.getAddress())
-    const arbSys = ArbSys__factory.connect(
-      ARB_SYS_ADDRESS,
-      params.l2Signer
-    )
+    const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, params.l2Signer)
 
-    const tx = await arbSys.functions.withdrawEth(
-      addr,
-      {
-        value: params.amount,
-        ...(params.overrides || {}),
-      }
-    )
+    const tx = await arbSys.functions.withdrawEth(addr, {
+      value: params.amount,
+      ...(params.overrides || {}),
+    })
     return L2TransactionReceipt.monkeyPatchWait(tx)
   }
 }
