@@ -1,6 +1,6 @@
 {
   "name": "@arbitrum/sdk",
-  "version": "2.0.7",
+  "version": "2.0.8",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
