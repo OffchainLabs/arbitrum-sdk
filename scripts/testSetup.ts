@@ -224,8 +224,8 @@ const inferShadowNetworks = async (
 export const testSetup = async (): Promise<{
   l1Network: L1Network
   l2Network: L2Network
-  l1Signer: Signer
-  l2Signer: Signer
+  l1Signer: Wallet
+  l2Signer: Wallet
   erc20Bridger: Erc20Bridger
   ethBridger: EthBridger
   adminErc20Bridger: AdminErc20Bridger

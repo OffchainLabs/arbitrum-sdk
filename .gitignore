@@ -36,6 +36,9 @@ compile_commands.json
 localNetwork.json
 .yalc/*
 yalc.lock
+prevMigrationTestState.json
+migrationTestState.json
+
 
 # Logs
 logs

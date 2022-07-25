@@ -370,7 +370,8 @@ export class L1ToL2MessageWriter
       sender,
       messageNumber,
       l1BaseFee,
-      messageData
+      messageData,
+      retryableCreationId
     )
 
     if (!l2Signer.provider) throw new Error('Signer not connected to provider.')
