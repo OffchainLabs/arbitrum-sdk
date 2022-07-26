@@ -212,7 +212,7 @@ export class L1ToL2MessageReader
         messageNumber,
         l1BaseFee!,
         messageData!,
-        retryableCreationId
+        this.classicReader.l2TxHash
       )
       this.retryableCreationId = retryableCreationId
     } else if (chainId && sender && messageNumber && l1BaseFee && messageData) {
@@ -390,7 +390,7 @@ export class L1ToL2MessageWriter
         messageNumber!,
         l1BaseFee!,
         messageData!,
-        retryableCreationId
+        this.classicWriter.l2TxHash
       )
     } else if (chainId && sender && messageNumber && l1BaseFee && messageData) {
       this.nitroWriter = new nitro.L1ToL2MessageWriter(
