@@ -50,7 +50,7 @@ const waitForNitro = async (l2Provider: Provider, minimum?: number) => {
     try {
       // isNitroL2 can throw an error during the migration
       const isNitroNow =
-        (await isNitroL2(l2Provider), 30000) &&
+        (await isNitroL2(l2Provider, 30000)) &&
         (!minimum || Date.now() - now > minimum)
 
       if (isNitroNow) {

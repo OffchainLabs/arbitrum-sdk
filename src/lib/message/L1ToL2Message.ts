@@ -40,6 +40,7 @@ import {
   isNitroL2,
   toClassicRetryableParams,
 } from '../utils/migration_types'
+import { getTransactionReceipt } from '@arbitrum/sdk-nitro/dist/lib/utils/lib'
 
 export enum L2TxnType {
   L2_TX = 0,
@@ -152,6 +153,95 @@ export type L1ToL2MessageWaitResult =
   | { status: L1ToL2MessageStatus.REDEEMED; l2TxReceipt: TransactionReceipt }
   | { status: Exclude<L1ToL2MessageStatus, L1ToL2MessageStatus.REDEEMED> }
 
+class SwivelledReader extends nitro.L1ToL2MessageReader {
+  private readonly classicRetryableId: string | undefined
+  private classicRetryableReceipt: TransactionReceipt | null = null
+
+  constructor(
+    l2Provider: Provider,
+    chainId: number,
+    sender: string,
+    messageNumber: BigNumber,
+    l1BaseFee: BigNumber,
+    messageData: RetryableMessageParams,
+    retryableCreationId?: string | undefined,
+    l2TxHash?: string | undefined
+  ) {
+    super(
+      l2Provider,
+      chainId,
+      sender,
+      messageNumber,
+      l1BaseFee,
+      messageData,
+      l2TxHash
+    )
+    this.classicRetryableId = retryableCreationId
+  }
+
+  public async getRetryableCreationReceipt(
+    confirmations?: number,
+    timeout?: number
+  ): Promise<TransactionReceipt | null> {
+    if (!this.classicRetryableId)
+      return await super.getRetryableCreationReceipt()
+
+    if (!this.classicRetryableReceipt) {
+      this.classicRetryableReceipt = await getTransactionReceipt(
+        this.l2Provider,
+        this.classicRetryableId,
+        confirmations,
+        timeout
+      )
+    }
+    return this.classicRetryableReceipt || null
+  }
+}
+class SwivelledWriter extends nitro.L1ToL2MessageWriter {
+  private readonly classicRetryableId: string | undefined
+  private classicRetryableReceipt: TransactionReceipt | null = null
+
+  constructor(
+    l2Signer: Signer,
+    chainId: number,
+    sender: string,
+    messageNumber: BigNumber,
+    l1BaseFee: BigNumber,
+    messageData: RetryableMessageParams,
+    retryableCreationId?: string | undefined,
+    l2TxHash?: string | undefined
+  ) {
+    super(
+      l2Signer,
+      chainId,
+      sender,
+      messageNumber,
+      l1BaseFee,
+      messageData,
+      l2TxHash
+    )
+    this.classicRetryableId = retryableCreationId
+  }
+
+  public async getRetryableCreationReceipt(
+    confirmations?: number,
+    timeout?: number
+  ): Promise<TransactionReceipt | null> {
+    if (!this.classicRetryableId)
+      return await super.getRetryableCreationReceipt()
+
+    if (!this.classicRetryableReceipt) {
+      this.classicRetryableReceipt = await getTransactionReceipt(
+        this.l2Provider,
+        this.classicRetryableId,
+        confirmations,
+        timeout
+      )
+    }
+    return this.classicRetryableReceipt || null
+  }
+}
+
 export class L1ToL2MessageReader
   extends L1ToL2Message
   implements IL1ToL2MessageReader
@@ -205,13 +295,14 @@ export class L1ToL2MessageReader
         retryableCreationId,
         messageNumber
       )
-      this.classicPartnerReader = new nitro.L1ToL2MessageReader(
+      this.classicPartnerReader = new SwivelledReader(
         l2Provider,
         chainId!, // although these can be empty we know that they wont be used by the nitro reader
         sender!,
         messageNumber,
         l1BaseFee!,
         messageData!,
+        this.classicReader.retryableCreationId,
         this.classicReader.l2TxHash
       )
       this.retryableCreationId = retryableCreationId
@@ -383,13 +474,14 @@ export class L1ToL2MessageWriter
         retryableCreationId,
         messageNumber
       )
-      this.classicPartnerWriter = new nitro.L1ToL2MessageWriter(
+      this.classicPartnerWriter = new SwivelledWriter(
         l2Signer,
         chainId!,
         sender!,
         messageNumber!,
         l1BaseFee!,
         messageData!,
+        this.classicWriter.retryableCreationId,
         this.classicWriter.l2TxHash
       )
     } else if (chainId && sender && messageNumber && l1BaseFee && messageData) {
