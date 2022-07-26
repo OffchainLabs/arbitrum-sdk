@@ -75,10 +75,8 @@ export class ArbitrumProvider extends Web3Provider {
    * @param network Must be an Arbitrum network
    */
   public constructor(provider: JsonRpcProvider, network?: Networkish) {
-    // use the wrapped provider if there is one to prevent double wrapping
-    const _provider = (provider as Web3Provider).provider
     super(
-      _provider ? _provider : (provider as unknown as ExternalProvider),
+      provider.send.bind(provider) as (method: string, params?: Array<any>) => Promise<any>,
       network
     )
   }
