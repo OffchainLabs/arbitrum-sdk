@@ -165,6 +165,7 @@ export class L2ToL1Message {
 export class L2ToL1MessageReader extends L2ToL1Message {
   protected sendRootHash?: string
   protected sendRootSize?: BigNumber
+  protected sendRootConfirmed?: boolean
   protected outboxAddress?: string
   protected l1BatchNumber?: number
 
@@ -178,8 +179,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   public async getOutboxProof(l2Provider: Provider) {
     const { sendRootSize } = await this.getSendProps(l2Provider)
     if (!sendRootSize)
-      throw new ArbSdkError('Node not yet confirmed, cannot get proof.')
-
+      throw new ArbSdkError('Node not yet created, cannot get proof.')
     const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
       l2Provider
@@ -213,8 +213,8 @@ export class L2ToL1MessageReader extends L2ToL1Message {
    * @returns
    */
   public async status(l2Provider: Provider): Promise<L2ToL1MessageStatus> {
-    const { sendRootHash } = await this.getSendProps(l2Provider)
-    if (!sendRootHash) return L2ToL1MessageStatus.UNCONFIRMED
+    const { sendRootConfirmed } = await this.getSendProps(l2Provider)
+    if (!sendRootConfirmed) return L2ToL1MessageStatus.UNCONFIRMED
     return (await this.hasExecuted(l2Provider))
       ? L2ToL1MessageStatus.EXECUTED
       : L2ToL1MessageStatus.CONFIRMED
@@ -270,8 +270,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       }
     )
 
-    if (logs.length !== 1)
-      throw new ArbSdkError('No NodeConfirmed events found')
+    if (logs.length !== 1) throw new ArbSdkError('No NodeCreated events found')
     return await this.getBlockFromNodeLog(
       l2Provider as JsonRpcProvider,
       logs[0]
@@ -299,7 +298,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   }
 
   protected async getSendProps(l2Provider: Provider) {
-    if (!this.sendRootHash) {
+    if (!this.sendRootConfirmed) {
       const l2Network = await getL2Network(l2Provider)
 
       const rollup = RollupUserLogic__factory.connect(
@@ -308,21 +307,41 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       )
 
       const latestConfirmedNodeNum = await rollup.callStatic.latestConfirmed()
-      const l2Block = await this.getBlockFromNodeNum(
+      const l2BlockConfirmed = await this.getBlockFromNodeNum(
         rollup,
         latestConfirmedNodeNum,
         l2Provider
       )
 
-      const sendRootSize = BigNumber.from(l2Block.sendCount)
-      if (sendRootSize.gt(this.event.position)) {
-        this.sendRootSize = sendRootSize
-        this.sendRootHash = l2Block.sendRoot
+      const sendRootSizeConfirmed = BigNumber.from(l2BlockConfirmed.sendCount)
+      if (sendRootSizeConfirmed.gt(this.event.position)) {
+        this.sendRootSize = sendRootSizeConfirmed
+        this.sendRootHash = l2BlockConfirmed.sendRoot
+        this.sendRootConfirmed = true
+      } else {
+        // if the node has yet to be confirmed we'll still try to find proof info from unconfirmed nodes
+        const latestNodeNum = await rollup.callStatic.latestNodeCreated()
+        if (latestNodeNum.gt(latestConfirmedNodeNum)) {
+          // In rare case latestNodeNum can be equal to latestConfirmedNodeNum
+          // eg immediately after an upgrade, or at genesis, or on a chain where confirmation time = 0 like AnyTrust may have
+          const l2Block = await this.getBlockFromNodeNum(
+            rollup,
+            latestNodeNum,
+            l2Provider
+          )
+
+          const sendRootSize = BigNumber.from(l2Block.sendCount)
+          if (sendRootSize.gt(this.event.position)) {
+            this.sendRootSize = sendRootSize
+            this.sendRootHash = l2Block.sendRoot
+          }
+        }
       }
     }
     return {
       sendRootSize: this.sendRootSize,
       sendRootHash: this.sendRootHash,
+      sendRootConfirmed: this.sendRootConfirmed,
     }
   }
 
