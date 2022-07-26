@@ -112,7 +112,6 @@ describe('RevertData', () => {
     }
   }
 
-  // CHRIS: TODO: combine this and below
   it('does parse error in estimate gas', async () => {
     await testRetryableDataParsing('estimateGas')
   })
@@ -160,14 +159,18 @@ describe('RevertData', () => {
       retryableGasOverrides: retryableOverrides,
     }
 
-    const depositParams = await erc20Bridger.getDepositRequest(
-      erc20Params,
-      l1Signer.provider!,
-      l2Signer.provider!
-    )
+    const depositParams = await erc20Bridger.getDepositRequest({
+      ...erc20Params,
+      l1Provider: l1Signer.provider!,
+      l2Provider: l2Signer.provider!,
+    })
 
     try {
-      await erc20Bridger.deposit(erc20Params)
+      await erc20Bridger.deposit({
+        ...erc20Params,
+        l1Signer: l1Signer,
+        l2Provider: l2Signer.provider!,
+      })
       assert.fail('Expected estimateGas to fail')
     } catch (err) {
       const typedErr = err as Error

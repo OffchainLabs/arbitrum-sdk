@@ -36,6 +36,7 @@ import {
   isL1ToL2TransactionRequest,
   L1ToL2TransactionRequest,
 } from '../dataEntities/transactionRequest'
+import { OmitTyped } from '../utils/types'
 
 export interface EthWithdrawParams {
   /**
@@ -64,17 +65,10 @@ export type EthDepositParams = {
    * The L1 provider or signer
    */
   l1Signer: Signer
-
-  /**
-   * Address that is depositing the assets
-   */
-  from: string
-
   /**
    * The amount of ETH or tokens to be deposited
    */
   amount: BigNumber
-
   /**
    * Transaction overrides
    */
@@ -94,8 +88,8 @@ export class EthBridger extends AssetBridger<
   EthWithdrawParams
 > {
   public async getDepositRequest(
-    params: Omit<EthDepositParams, 'overrides'>
-  ): Promise<Omit<L1ToL2TransactionRequest, 'retryableData'>> {
+    params: OmitTyped<EthDepositParams, 'overrides' | "l1Signer">
+  ): Promise<OmitTyped<L1ToL2TransactionRequest, 'retryableData'>> {
     const inboxInterface = Inbox__factory.createInterface()
 
     const functionData = (

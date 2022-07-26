@@ -138,7 +138,7 @@ export class L1ToL2MessageGasEstimator {
     {
       from,
       to,
-      l2CallValue,
+      l2CallValue: l2CallValue,
       excessFeeRefundAddress,
       callValueRefundAddress,
       data,
@@ -178,15 +178,20 @@ export class L1ToL2MessageGasEstimator {
     )
   }
 
+  /**
+   * Checks if the estimate is valid when compared with a new one
+   * @param estimates Original estimate
+   * @param reEstimates Estimate to compare against
+   * @returns 
+   */
   public static async isValid(
     estimates: L1ToL2MessageGasParams,
-    estimateFunc: () => Promise<L1ToL2MessageGasParams>
+    reEstimates: L1ToL2MessageGasParams,
   ): Promise<boolean> {
-    const reEstimated = await estimateFunc()
     // L2 base fee and minimum submission cost which affect the success of the tx
     return (
-      estimates.maxFeePerGas.gte(reEstimated.maxFeePerGas) &&
-      estimates.maxSubmissionCost.gte(reEstimated.maxSubmissionCost)
+      estimates.maxFeePerGas.gte(reEstimates.maxFeePerGas) &&
+      estimates.maxSubmissionCost.gte(reEstimates.maxSubmissionCost)
     )
   }
 

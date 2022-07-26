@@ -214,7 +214,7 @@ export const depositToken = async (
 
   const depositRes = await erc20Bridger.deposit({
     l1Signer: l1Signer,
-    l2SignerOrProvider: l2Signer,
+    l2Provider: l2Signer.provider!,
     erc20L1Address: l1TokenAddress,
     amount: depositAmount,
     retryableGasOverrides: retryableOverrides,

@@ -17,18 +17,7 @@ import {
   L1ToL2TransactionRequest,
 } from '../dataEntities/transactionRequest'
 import { RetryableData } from '../dataEntities/retryableData'
-
-/**
- * Omit doesnt enforce that the seconds generic is a keyof the first
- * OmitTyped guard against the underlying type prop names
- * being refactored, and not being updated in the usage of OmitTyped
- */
-type OmitTyped<T, K extends keyof T> = Omit<T, K>
-
-/**
- * Make the specified properties optional
- */
-type PartialPick<T, K extends keyof T> = OmitTyped<T, K> & Partial<T>
+import { OmitTyped, PartialPick } from '../utils/types'
 
 type L1ToL2GasKeys =
   | 'maxSubmissionCost'
@@ -52,6 +41,14 @@ export class L1ToL2MessageCreator {
     }
   }
 
+  /**
+   * Gets a current estimate for the supplied params
+   * @param params 
+   * @param l1Provider 
+   * @param l2Provider 
+   * @param retryableGasOverrides 
+   * @returns 
+   */
   protected static async getTicketEstimate(
     params: L1ToL2MessageNoGasParams,
     l1Provider: Provider,
@@ -133,15 +130,15 @@ export class L1ToL2MessageCreator {
         gasLimit: estimates.gasLimit,
         deposit: estimates.deposit,
       },
-      isValid: () =>
-        L1ToL2MessageGasEstimator.isValid(estimates, () =>
-          L1ToL2MessageCreator.getTicketEstimate(
-            parsedParams,
-            l1Provider,
-            l2Provider,
-            options
-          )
-        ),
+      isValid: async () => {
+        const reEstimates = await L1ToL2MessageCreator.getTicketEstimate(
+          parsedParams,
+          l1Provider,
+          l2Provider,
+          options
+        )
+        return L1ToL2MessageGasEstimator.isValid(estimates, reEstimates)
+      },
     }
   }
 

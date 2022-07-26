@@ -61,13 +61,14 @@ import {
   L2ContractTransaction,
   L2TransactionReceipt,
 } from '../message/L2Transaction'
-import { getBaseFee, parseDepositParams } from '../utils/lib'
+import { getBaseFee } from '../utils/lib'
 import {
   isL1ToL2TransactionRequest,
   L1ToL2TransactionRequest,
 } from '../dataEntities/transactionRequest'
 import { defaultAbiCoder } from 'ethers/lib/utils'
 import { L1ToL2MessageGasParams } from '../message/L1ToL2MessageCreator'
+import { OmitTyped, RequiredPick } from '../utils/types'
 
 export interface TokenApproveParams {
   /**
@@ -95,30 +96,35 @@ export interface Erc20DepositParams extends EthDepositParams {
   /**
    * An L2 provider
    */
-  l2SignerOrProvider: SignerOrProvider
-
+  l2Provider: Provider
   /**
    * L1 address of the token ERC20 contract
    */
   erc20L1Address: string
-
   /**
    * L2 address of the entity receiving the funds. Defaults to the l1FromAddress
    */
   destinationAddress?: string
-
+  /**
+   * The address to return the any gas that was not spent on fees
+   */
   excessFeeRefundAddress?: string
+  /**
+   * The address to refund the call value to in the event the retryable is cancelled, or expires
+   */
   callValueRefundAddress?: string
-
   /**
    * Overrides for the retryable ticket parameters
    */
   retryableGasOverrides?: GasOverrides
-
   /**
    * Transaction overrides
    */
   overrides?: Overrides
+  /**
+   * Address that is depositing the assets
+   */
+  from: string
 }
 
 export interface TokenWithdrawParams extends EthWithdrawParams {
@@ -130,9 +136,24 @@ export interface TokenWithdrawParams extends EthWithdrawParams {
 
 export type L1ToL2TxReqAndSignerProvider = L1ToL2TransactionRequest & {
   l1Signer: Signer
-  l2SignerOrProvider: SignerOrProvider
   overrides?: Overrides
 }
+
+/**
+ * The deposit request takes the same args as the actual deposit. Except we dont require a signer object
+ * only a provider
+ */
+type DepositRequest = OmitTyped<
+  Erc20DepositParams,
+  'overrides' | 'l1Signer'
+> & {
+  l1Provider: Provider
+}
+
+type DefaultedDepositRequest = RequiredPick<
+  DepositRequest,
+  'callValueRefundAddress' | 'excessFeeRefundAddress' | 'destinationAddress'
+>
 
 /**
  * Bridger for moving ERC20 tokens back and forth betwen L1 to L2
@@ -410,9 +431,19 @@ export class Erc20Bridger extends AssetBridger<
     )
   }
 
+  private applyDefaults<T extends DepositRequest>(
+    params: T
+  ): DefaultedDepositRequest {
+    return {
+      ...params,
+      excessFeeRefundAddress: params.excessFeeRefundAddress || params.from,
+      callValueRefundAddress: params.callValueRefundAddress || params.from,
+      destinationAddress: params.destinationAddress || params.from,
+    }
+  }
+
   protected async estimateDeposit(
-    params: Omit<Erc20DepositParams, 'overrides' | 'l1Signer' | 'l2Signer'>,
-    l1Provider: Provider,
+    params: DefaultedDepositRequest,
     l2Provider: Provider,
     l1GatewayAddress: string,
     l2CallValue: BigNumber
@@ -424,24 +455,23 @@ export class Erc20Bridger extends AssetBridger<
       amount,
       excessFeeRefundAddress,
       callValueRefundAddress,
-      to,
-    } = parseDepositParams(params)
+      destinationAddress,
+      l1Provider,
+    } = params
 
     await this.checkL1Network(l1Provider)
     await this.checkL2Network(l2Provider)
 
     // 1. get the params for a gas estimate
-
     const l1Gateway = L1ERC20Gateway__factory.connect(
       l1GatewayAddress,
       l1Provider
     )
 
-    // TODO: use retryables data instead
     const depositCalldata = await l1Gateway.getOutboundCalldata(
       erc20L1Address,
       from,
-      to,
+      destinationAddress,
       amount,
       '0x'
     )
@@ -468,7 +498,7 @@ export class Erc20Bridger extends AssetBridger<
         from: l1GatewayAddress,
         to: l2Dest,
         data: depositCalldata,
-        l2CallValue,
+        l2CallValue: l2CallValue,
         excessFeeRefundAddress,
         callValueRefundAddress,
       },
@@ -484,21 +514,21 @@ export class Erc20Bridger extends AssetBridger<
    * @returns
    */
   public async getDepositRequest(
-    params: Omit<Erc20DepositParams, 'overrides' | 'l2Signer' | 'l1Signer'>,
-    l1Provider: Provider,
-    l2Provider: Provider
+    params: DepositRequest
   ): Promise<L1ToL2TransactionRequest> {
-    await this.checkL1Network(l1Provider)
-    await this.checkL2Network(l2Provider)
-
+    await this.checkL1Network(params.l1Provider)
+    await this.checkL2Network(params.l2Provider)
+    const defaultedParams = this.applyDefaults(params)
     const {
-      from,
-      erc20L1Address,
       amount,
-      excessFeeRefundAddress,
       callValueRefundAddress,
-      to,
-    } = parseDepositParams(params)
+      destinationAddress,
+      erc20L1Address,
+      excessFeeRefundAddress,
+      from,
+      l1Provider,
+      l2Provider,
+    } = defaultedParams
 
     const l1GatewayAddress = await this.getL1GatewayAddress(
       erc20L1Address,
@@ -511,8 +541,7 @@ export class Erc20Bridger extends AssetBridger<
     const l2CallValue = isWeth ? amount : Zero
 
     const estimates = await this.estimateDeposit(
-      params,
-      l1Provider,
+      defaultedParams,
       l2Provider,
       l1GatewayAddress,
       l2CallValue
@@ -529,7 +558,7 @@ export class Erc20Bridger extends AssetBridger<
       'outboundTransfer',
       [
         erc20L1Address,
-        to,
+        destinationAddress,
         amount,
         estimates.gasLimit,
         estimates.maxFeePerGas,
@@ -537,7 +566,6 @@ export class Erc20Bridger extends AssetBridger<
       ]
     )
 
-    // TODO: use RetryableData error to parse data instead of querying
     const l1Gateway = L1ERC20Gateway__factory.connect(
       l1GatewayAddress,
       l1Provider
@@ -546,7 +574,7 @@ export class Erc20Bridger extends AssetBridger<
     const depositCalldata = await l1Gateway.getOutboundCalldata(
       erc20L1Address,
       from,
-      to,
+      destinationAddress,
       amount,
       '0x'
     )
@@ -570,16 +598,15 @@ export class Erc20Bridger extends AssetBridger<
         gasLimit: estimates.gasLimit,
         deposit: estimates.deposit,
       },
-      isValid: () =>
-        L1ToL2MessageGasEstimator.isValid(estimates, () =>
-          this.estimateDeposit(
-            params,
-            l1Provider,
-            l2Provider,
-            l1GatewayAddress,
-            l2CallValue
-          )
-        ),
+      isValid: async () => {
+        const reEstimates = await this.estimateDeposit(
+          defaultedParams,
+          l2Provider,
+          l1GatewayAddress,
+          l2CallValue
+        )
+        return L1ToL2MessageGasEstimator.isValid(estimates, reEstimates)
+      },
     }
   }
 
@@ -592,21 +619,20 @@ export class Erc20Bridger extends AssetBridger<
     params: Erc20DepositParams | L1ToL2TxReqAndSignerProvider
   ): Promise<L1ContractCallTransaction> {
     await this.checkL1Network(params.l1Signer)
-    await this.checkL2Network(params.l2SignerOrProvider)
 
+    // Although the types prevent should alert callers that value is not
+    // a valid override, it is possible that they pass it in anyway as it's a common override
+    // We do a safety check here
     if ((params.overrides as PayableOverrides | undefined)?.value) {
       throw new ArbSdkError(
         'L1 call value should be set through l1CallValue param'
       )
     }
-    const l1Provider = SignerProviderUtils.getProviderOrThrow(params.l1Signer)
-    const l2Provider = SignerProviderUtils.getProviderOrThrow(
-      params.l2SignerOrProvider
-    )
 
+    const l1Provider = SignerProviderUtils.getProviderOrThrow(params.l1Signer)
     const tokenDeposit = isL1ToL2TransactionRequest(params)
       ? params
-      : await this.getDepositRequest(params, l1Provider, l2Provider)
+      : await this.getDepositRequest({ ...params, l1Provider })
 
     const tx = await params.l1Signer.sendTransaction({
       ...tokenDeposit.core,

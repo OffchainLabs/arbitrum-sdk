@@ -19,7 +19,7 @@ export interface RetryableData {
    */
   l2CallValue: BigNumber
   /**
-   * The total amount to deposit on L2, includes gas fees and l2 call value
+   * The total amount to deposit on L1 to cover L2 gas and L2 call value
    */
   deposit: BigNumber
   /**
