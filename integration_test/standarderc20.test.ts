@@ -132,7 +132,10 @@ describe('standard ERC20', () => {
     await redeemAndTest(waitRes.message, 1)
   })
 
-  it('deposit with low funds, fails first redeem, succeeds seconds', async () => {
+  // we currently skip this test because we need to find a gas limit that allows
+  // for the redeem transaction to execute, but not the following scheduled l2 tx
+  // we should calculate this using the l2's view of the l1 base fee
+  it.skip('deposit with low funds, fails first redeem, succeeds seconds', async () => {
     const { waitRes } = await depositToken(
       depositAmount,
       testState.l1Token.address,
