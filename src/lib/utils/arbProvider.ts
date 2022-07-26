@@ -3,6 +3,7 @@ import {
   Formatter,
   BlockTag,
   Web3Provider,
+  JsonRpcFetchFunc,
 } from '@ethersproject/providers'
 import { Formats } from '@ethersproject/providers/lib/formatter'
 import { Networkish } from '@ethersproject/networks'
@@ -74,13 +75,7 @@ export class ArbitrumProvider extends Web3Provider {
    * @param network Must be an Arbitrum network
    */
   public constructor(provider: JsonRpcProvider, network?: Networkish) {
-    super(
-      provider.send.bind(provider) as (
-        method: string,
-        params?: Array<any>
-      ) => Promise<any>,
-      network
-    )
+    super(provider.send.bind(provider) as JsonRpcFetchFunc, network)
   }
 
   static override getFormatter(): Formatter {
