@@ -2,7 +2,6 @@ import {
   JsonRpcProvider,
   Formatter,
   BlockTag,
-  ExternalProvider,
   Web3Provider,
 } from '@ethersproject/providers'
 import { Formats } from '@ethersproject/providers/lib/formatter'
@@ -76,7 +75,10 @@ export class ArbitrumProvider extends Web3Provider {
    */
   public constructor(provider: JsonRpcProvider, network?: Networkish) {
     super(
-      provider.send.bind(provider) as (method: string, params?: Array<any>) => Promise<any>,
+      provider.send.bind(provider) as (
+        method: string,
+        params?: Array<any>
+      ) => Promise<any>,
       network
     )
   }
