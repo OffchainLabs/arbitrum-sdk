@@ -42,10 +42,7 @@ import {
   GasOverrides,
   L1ToL2MessageGasEstimator,
 } from '../message/L1ToL2MessageGasEstimator'
-import {
-  SignerOrProvider,
-  SignerProviderUtils,
-} from '../dataEntities/signerOrProvider'
+import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { L2Network } from '../dataEntities/networks'
 import { ArbSdkError, MissingProviderArbSdkError } from '../dataEntities/errors'
 import { DISABLED_GATEWAY } from '../dataEntities/constants'

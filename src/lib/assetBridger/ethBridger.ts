@@ -88,7 +88,7 @@ export class EthBridger extends AssetBridger<
   EthWithdrawParams
 > {
   public async getDepositRequest(
-    params: OmitTyped<EthDepositParams, 'overrides' | "l1Signer">
+    params: OmitTyped<EthDepositParams, 'overrides' | 'l1Signer'>
   ): Promise<OmitTyped<L1ToL2TransactionRequest, 'retryableData'>> {
     const inboxInterface = Inbox__factory.createInterface()
 

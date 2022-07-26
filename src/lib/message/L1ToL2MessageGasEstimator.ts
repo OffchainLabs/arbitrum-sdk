@@ -182,11 +182,11 @@ export class L1ToL2MessageGasEstimator {
    * Checks if the estimate is valid when compared with a new one
    * @param estimates Original estimate
    * @param reEstimates Estimate to compare against
-   * @returns 
+   * @returns
    */
   public static async isValid(
     estimates: L1ToL2MessageGasParams,
-    reEstimates: L1ToL2MessageGasParams,
+    reEstimates: L1ToL2MessageGasParams
   ): Promise<boolean> {
     // L2 base fee and minimum submission cost which affect the success of the tx
     return (

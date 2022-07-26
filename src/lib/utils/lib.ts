@@ -1,6 +1,5 @@
 import { Provider } from '@ethersproject/abstract-provider'
 import { TransactionReceipt } from '@ethersproject/providers'
-import { Erc20DepositParams } from '../assetBridger/erc20Bridger'
 import { ArbSdkError } from '../dataEntities/errors'
 
 export const wait = (ms: number): Promise<void> =>

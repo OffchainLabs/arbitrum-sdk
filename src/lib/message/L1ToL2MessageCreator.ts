@@ -43,11 +43,11 @@ export class L1ToL2MessageCreator {
 
   /**
    * Gets a current estimate for the supplied params
-   * @param params 
-   * @param l1Provider 
-   * @param l2Provider 
-   * @param retryableGasOverrides 
-   * @returns 
+   * @param params
+   * @param l1Provider
+   * @param l2Provider
+   * @param retryableGasOverrides
+   * @returns
    */
   protected static async getTicketEstimate(
     params: L1ToL2MessageNoGasParams,
