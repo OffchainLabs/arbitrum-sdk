@@ -205,9 +205,9 @@ export class L2ToL1MessageReader
     // If we're on the nitro node but need a classic proof we'll need
     // call a different function as it's been renamed to 'legacy'
     if (await isNitroL2(l2Provider)) {
-      const iNodeInterface = new Interface(
-        'function legacyLookupMessageBatchProof(uint256 batchNum, uint64 index) external view returns (bytes32[] memory proof, uint256 path, address l2Sender, address l1Dest, uint256 l2Block, uint256 l1Block, uint256 timestamp, uint256 amount, bytes memory calldataForL1);'
-      )
+      const iNodeInterface = new Interface([
+        'function legacyLookupMessageBatchProof(uint256 batchNum, uint64 index) external view returns (bytes32[] memory proof, uint256 path, address l2Sender, address l1Dest, uint256 l2Block, uint256 l1Block, uint256 timestamp, uint256 amount, bytes memory calldataForL1)',
+      ])
 
       const nodeInterface = new Contract(
         NODE_INTERFACE_ADDRESS,

@@ -99,7 +99,7 @@ export class L2TransactionReceipt implements TransactionReceipt {
     ]
   }
 
-  private isClassic(
+  protected isClassic(
     e: L2ToL1TransactionEvent
   ): e is ClassicL2ToL1TransactionEvent['args'] {
     return isDefined((e as ClassicL2ToL1TransactionEvent['args']).indexInBatch)

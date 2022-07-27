@@ -27,17 +27,20 @@ import { fundL1, fundL2, wait } from '../integration_test/testHelpers'
 import { L2ToL1MessageStatus } from '../src/lib/message/L2ToL1Message'
 import { testSetup } from '../scripts/testSetup'
 import { isNitroL2 } from '../src/lib/utils/migration_types'
-import { BigNumber, Signer } from 'ethers'
+import { BigNumber } from 'ethers'
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 import { TestWETH9__factory } from '../src/lib/abi/factories/TestWETH9__factory'
 import {
   EthBridger,
   getL2Network,
   Erc20Bridger,
-  IL2ToL1MessageWriter,
-  IL1ToL2MessageWriter,
   L1ToL2MessageStatus,
+  L2TransactionReceipt,
+  L1TransactionReceipt,
 } from '../src'
+import { ArbSdkError } from '../src/lib/dataEntities/errors'
+import path from 'path'
+import * as fs from 'fs'
 dotenv.config()
 
 const waitForNitro = async (l2Provider: Provider, minimum?: number) => {
@@ -47,7 +50,7 @@ const waitForNitro = async (l2Provider: Provider, minimum?: number) => {
     try {
       // isNitroL2 can throw an error during the migration
       const isNitroNow =
-        (await isNitroL2(l2Provider), 30000) &&
+        (await isNitroL2(l2Provider, 30000)) &&
         (!minimum || Date.now() - now > minimum)
 
       if (isNitroNow) {
@@ -70,6 +73,42 @@ abstract class MigrationTest {
 
   public abstract initialise(): Promise<void>
   public abstract finalise(): Promise<void>
+}
+
+/**
+ * Check the bridge balance after is the same as before
+ */
+class BridgeBalanceMigrationTest extends MigrationTest {
+  public constructor(testState: TestState) {
+    super(testState)
+    this.name = 'Bridge balance'
+  }
+  public override async initialise(): Promise<void> {
+    const l2Network = await getL2Network(this.testState.core.l2Signer)
+
+    const bridgeAddr = l2Network.ethBridge.bridge
+    const balanceBefore =
+      await this.testState.core.l1Signer.provider!.getBalance(bridgeAddr)
+
+    this.testState.bridgeBalance.address = bridgeAddr
+    this.testState.bridgeBalance.balance = balanceBefore.toString()
+  }
+
+  public override async finalise(): Promise<void> {
+    const l2Network = await getL2Network(this.testState.core.l2Signer)
+
+    const bridgeAddr = l2Network.ethBridge.bridge
+    const balanceAfter =
+      await this.testState.core.l1Signer.provider!.getBalance(bridgeAddr)
+
+    expect(bridgeAddr, 'Bridge address should have changed.').to.not.eq(
+      this.testState.bridgeBalance.address
+    )
+    expect(
+      balanceAfter.toString(),
+      'Bridge balance after should be the same.'
+    ).to.eq(this.testState.bridgeBalance.balance)
+  }
 }
 
 /**
@@ -99,7 +138,7 @@ class EthTransferMigrationTest extends MigrationTest {
     )
 
     this.testState.ethTransfer.address = randomAddress
-    this.testState.ethTransfer.balance = amountToSend
+    this.testState.ethTransfer.balance = amountToSend.toString()
   }
 
   public override async finalise(): Promise<void> {
@@ -108,7 +147,7 @@ class EthTransferMigrationTest extends MigrationTest {
         this.testState.ethTransfer.address!
       )
     expect(finalBalance.toString(), 'Eth transfer balance after').to.eq(
-      this.testState.ethTransfer.balance!.toString()
+      this.testState.ethTransfer.balance!
     )
   }
 }
@@ -189,34 +228,33 @@ class WethBalanceMigrationTest extends MigrationTest {
       'weth balance before'
     ).to.eq(amountToSend.toString())
 
-    this.testState.weth.user = randomUser
-    this.testState.weth.balance = amountToSend
+    this.testState.weth.user = randomUser.privateKey
+    this.testState.weth.balance = amountToSend.toString()
   }
 
   public override async finalise(): Promise<void> {
     const l2Network = await getL2Network(this.testState.core.l2Signer)
-    const weth = TestWETH9__factory.connect(
-      l2Network.tokenBridge.l2Weth,
-      this.testState.weth.user!
+    const user = new Wallet(
+      this.testState.weth.user!,
+      this.testState.core.l2Signer.provider!
     )
+    const weth = TestWETH9__factory.connect(l2Network.tokenBridge.l2Weth, user)
 
-    const userBalance = await weth.balanceOf(this.testState.weth.user!.address)
+    const userBalance = await weth.balanceOf(user.address)
     expect(userBalance.toString(), 'Weth balance after').to.eq(
       this.testState.weth.balance!.toString()
     )
 
-    const ethBalBefore = await this.testState.weth.user!.getBalance()
+    const ethBalBefore = await user.getBalance()
     await (await weth.withdraw(userBalance)).wait()
-    const ethBalAfter = await this.testState.weth.user!.getBalance()
+    const ethBalAfter = await user.getBalance()
 
     expect(
       ethBalAfter.gt(ethBalBefore),
       `Bal after greater than bal before: ${ethBalBefore.toString()} ${ethBalAfter.toString()}`
     ).to.be.true
 
-    const userBalanceAfter = await weth.balanceOf(
-      this.testState.weth.user!.address
-    )
+    const userBalanceAfter = await weth.balanceOf(user.address)
     expect(userBalanceAfter.toString(), 'Weth balance after withdraw').to.eq(
       BigNumber.from(0).toString()
     )
@@ -301,34 +339,34 @@ class WethDepositMigrationTest extends MigrationTest {
       userBalBefore.sub(amountToSend).toString()
     )
 
-    const depositMessage = (
-      await depositRec.getL1ToL2Messages(this.testState.core.l2Signer)
-    )[0]
-
-    this.testState.wethXChainDeposit.message = depositMessage
-    this.testState.wethXChainDeposit.user = randomUser
-    this.testState.wethXChainDeposit.balance = amountToSend
+    this.testState.wethXChainDeposit.messageTxHash = depositRec.transactionHash
+    this.testState.wethXChainDeposit.user = randomUser.privateKey
+    this.testState.wethXChainDeposit.balance = amountToSend.toString()
   }
 
   public override async finalise(): Promise<void> {
     const l2Network = await getL2Network(this.testState.core.l2Signer)
-    const weth = TestWETH9__factory.connect(
-      l2Network.tokenBridge.l2Weth,
-      this.testState.wethXChainDeposit.user!.connect(
-        this.testState.core.l2Signer.provider!
-      )
+    const user = new Wallet(
+      this.testState.wethXChainDeposit.user!,
+      this.testState.core.l2Signer.provider!
     )
+    const weth = TestWETH9__factory.connect(l2Network.tokenBridge.l2Weth, user)
+    const l2Signer = this.testState.core.l2Signer
+    const l1Provider = this.testState.core.l1Signer.provider!
 
     // we need to manually redeem the message
-    const message = this.testState.wethXChainDeposit.message!
+    const l1TransactionReceipt = new L1TransactionReceipt(
+      await l1Provider.getTransactionReceipt(
+        this.testState.wethXChainDeposit.messageTxHash!
+      )
+    )
+    const message = (await l1TransactionReceipt.getL1ToL2Messages(l2Signer))[0]
     const status = await message.waitForStatus()
     expect(status.status, 'Weth deposit does not exist as retryable').to.eq(
       L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
     )
 
-    const userBalanceBefore = await weth.balanceOf(
-      this.testState.wethXChainDeposit.user!.address
-    )
+    const userBalanceBefore = await weth.balanceOf(user.address)
     expect(userBalanceBefore.toString(), 'Weth balance before redeem').to.eq(
       '0'
     )
@@ -340,9 +378,7 @@ class WethDepositMigrationTest extends MigrationTest {
       L1ToL2MessageStatus.REDEEMED
     )
 
-    const userBalance = await weth.balanceOf(
-      this.testState.wethXChainDeposit.user!.address
-    )
+    const userBalance = await weth.balanceOf(user.address)
     expect(userBalance.toString(), 'Weth balance after redeem').to.eq(
       this.testState.wethXChainDeposit.balance!.toString()
     )
@@ -406,16 +442,18 @@ class WethWithdrawalMigrationTest extends MigrationTest {
       L2ToL1MessageStatus.UNCONFIRMED
     )
 
-    this.testState.wethXChainWithdrawal.message = message
-    this.testState.wethXChainWithdrawal.user = randomUser
-    this.testState.wethXChainWithdrawal.balance = amountToSend
+    this.testState.wethXChainWithdrawal.messageTxHash =
+      withdrawRec.transactionHash
+    this.testState.wethXChainWithdrawal.user = randomUser.privateKey
+    this.testState.wethXChainWithdrawal.balance = amountToSend.toString()
   }
 
   public override async finalise(): Promise<void> {
     const l2Signer = this.testState.core.l2Signer
     const l2Provider = l2Signer.provider!
     const l2Network = await getL2Network(this.testState.core.l2Signer)
-    const user = this.testState.wethXChainWithdrawal.user!.connect(
+    const user = new Wallet(
+      this.testState.wethXChainWithdrawal.user!,
       this.testState.core.l1Signer.provider!
     )
     const l1Weth = TestWETH9__factory.connect(
@@ -426,7 +464,17 @@ class WethWithdrawalMigrationTest extends MigrationTest {
     expect(balBefore.toString(), 'weth withdrawal balance before not 0').to.eq(
       '0'
     )
-    const message = this.testState.wethXChainWithdrawal.message!
+    const l2TransactionReceipt = new L2TransactionReceipt(
+      await l2Provider.getTransactionReceipt(
+        this.testState.wethXChainWithdrawal.messageTxHash!
+      )
+    )
+    const message = (
+      await l2TransactionReceipt.getL2ToL1Messages(
+        this.testState.core.l1Signer,
+        l2Provider
+      )
+    )[0]
 
     const outboxStatus = await message.status(l2Provider)
     expect(outboxStatus, 'weth withdrawal status not CONFIRMED').to.eq(
@@ -479,26 +527,31 @@ class EthWithdrawalMigrationTest extends MigrationTest {
       1,
       'initiate eth withdraw txn failed'
     )
-    const withdrawMessage = (
-      await withdrawEthRec.getL2ToL1Messages(
-        this.testState.core.l1Signer,
-        randomUser.provider!
-      )
-    )[0]
 
-    this.testState.ethXChainWithdrawal.message = withdrawMessage
-    this.testState.ethXChainWithdrawal.user = randomUser
-    this.testState.ethXChainWithdrawal.balance = amountToSend
+    this.testState.ethXChainWithdrawal.messageTxHash =
+      withdrawEthRec.transactionHash
+    this.testState.ethXChainWithdrawal.user = randomUser.privateKey
+    this.testState.ethXChainWithdrawal.balance = amountToSend.toString()
   }
 
   public override async finalise(): Promise<void> {
     const l2Signer = this.testState.core.l2Signer
     const l2Provider = l2Signer.provider!
-
-    const message = this.testState.ethXChainWithdrawal.message!
-    const l1User = this.testState.ethXChainWithdrawal.user!.connect(
+    const l1User = new Wallet(
+      this.testState.ethXChainWithdrawal.user!,
       this.testState.core.l1Signer.provider!
     )
+    const l2TransactionReceipt = new L2TransactionReceipt(
+      await l2Provider.getTransactionReceipt(
+        this.testState.ethXChainWithdrawal.messageTxHash!
+      )
+    )
+    const message = (
+      await l2TransactionReceipt.getL2ToL1Messages(
+        this.testState.core.l1Signer,
+        l2Provider
+      )
+    )[0]
 
     const balBefore = await l1User.getBalance()
     expect(balBefore.toString(), 'eth withdrawal balance before not 0').to.eq(
@@ -554,12 +607,13 @@ class EthDepositMigrationTest extends MigrationTest {
     })
     await depositRes.wait()
 
-    this.testState.ethXChainDeposit.user = randomUser
-    this.testState.ethXChainDeposit.balance = amountToSend
+    this.testState.ethXChainDeposit.user = randomUser.privateKey
+    this.testState.ethXChainDeposit.balance = amountToSend.toString()
   }
 
   public override async finalise(): Promise<void> {
-    const l1User = this.testState.ethXChainDeposit.user!.connect(
+    const l1User = new Wallet(
+      this.testState.ethXChainDeposit.user!,
       this.testState.core.l2Signer.provider!
     )
 
@@ -571,15 +625,20 @@ class EthDepositMigrationTest extends MigrationTest {
 }
 
 interface TestState {
+  fromFile: boolean
   core: {
-    l1Signer: Signer
-    l2Signer: Signer
+    l1Signer: Wallet
+    l2Signer: Wallet
     erc20Bridger: Erc20Bridger
     ethBridger: EthBridger
   }
+  bridgeBalance: {
+    address?: string
+    balance?: string
+  }
   ethTransfer: {
     address?: string
-    balance?: BigNumber
+    balance?: string
   }
   tokenDeploy: {
     address?: string
@@ -587,27 +646,27 @@ interface TestState {
     symbol?: string
   }
   weth: {
-    user?: Wallet
-    balance?: BigNumber
+    user?: string
+    balance?: string
   }
   wethXChainDeposit: {
-    message?: IL1ToL2MessageWriter
-    user?: Wallet
-    balance?: BigNumber
+    messageTxHash?: string
+    user?: string
+    balance?: string
   }
   ethXChainDeposit: {
-    user?: Wallet
-    balance?: BigNumber
+    user?: string
+    balance?: string
   }
   wethXChainWithdrawal: {
-    message?: IL2ToL1MessageWriter
-    user?: Wallet
-    balance?: BigNumber
+    messageTxHash?: string
+    user?: string
+    balance?: string
   }
   ethXChainWithdrawal: {
-    message?: IL2ToL1MessageWriter
-    user?: Wallet
-    balance?: BigNumber
+    messageTxHash?: string
+    user?: string
+    balance?: string
   }
 }
 
@@ -640,26 +699,84 @@ class MultiTest extends MigrationTest {
   }
 }
 
+type SerialisedTestState = Omit<TestState, 'core' | 'fromFile'> & {
+  core: {
+    l1Signer: string
+    l2Signer: string
+  }
+}
+
 describe('Migration tests', async () => {
+  const writeTestStateToFile = (testState: TestState) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { core, fromFile, ...rest } = testState
+    const serialisableTestState: SerialisedTestState = {
+      core: {
+        l1Signer: core.l1Signer.privateKey,
+        l2Signer: core.l2Signer.privateKey,
+      },
+      ...rest,
+    }
+
+    fs.writeFileSync(
+      path.join(__dirname, 'prevMigrationTestState.json'),
+      JSON.stringify(serialisableTestState, null, 2)
+    )
+    console.log('prevMigrationTestState.json updated')
+  }
+
   const initialiseTestState = async (): Promise<TestState> => {
     const { l2Signer, l1Signer, erc20Bridger, ethBridger } = await testSetup()
-    await fundL1(l1Signer, parseEther('20'))
-    await fundL2(l2Signer, parseEther('20'))
+    // look for an existing teststate file
+    const localNetworkFile = path.join(__dirname, 'migrationTestState.json')
+    if (fs.existsSync(localNetworkFile)) {
+      const testState = JSON.parse(
+        fs.readFileSync(localNetworkFile).toString()
+      ) as SerialisedTestState
+      const l1Wallet = new Wallet(testState.core.l1Signer, l1Signer.provider!)
+      const l2Wallet = new Wallet(testState.core.l2Signer, l2Signer.provider!)
+      const l1Balance = await l1Wallet.getBalance()
+      const l2Balance = await l2Wallet.getBalance()
+      if (l1Balance.eq(0))
+        throw new ArbSdkError(
+          'L1 wallet loaded from teststate has not balance. Is the teststate file up to date.'
+        )
+      if (l2Balance.eq(0))
+        throw new ArbSdkError(
+          'L2 wallet loaded from teststate has not balance. Is the teststate file up to date.'
+        )
 
-    return {
-      core: {
-        l2Signer,
-        l1Signer,
-        erc20Bridger,
-        ethBridger,
-      },
-      ethTransfer: {},
-      tokenDeploy: {},
-      weth: {},
-      wethXChainDeposit: {},
-      wethXChainWithdrawal: {},
-      ethXChainWithdrawal: {},
-      ethXChainDeposit: {},
+      return {
+        ...testState,
+        core: {
+          l1Signer: l1Wallet,
+          l2Signer: l2Wallet,
+          erc20Bridger: erc20Bridger,
+          ethBridger: ethBridger,
+        },
+        fromFile: true,
+      }
+    } else {
+      await fundL1(l1Signer, parseEther('20'))
+      await fundL2(l2Signer, parseEther('20'))
+
+      return {
+        fromFile: false,
+        core: {
+          l2Signer,
+          l1Signer,
+          erc20Bridger,
+          ethBridger,
+        },
+        bridgeBalance: {},
+        ethTransfer: {},
+        tokenDeploy: {},
+        weth: {},
+        wethXChainDeposit: {},
+        wethXChainWithdrawal: {},
+        ethXChainWithdrawal: {},
+        ethXChainDeposit: {},
+      }
     }
   }
 
@@ -701,11 +818,23 @@ describe('Migration tests', async () => {
        * can be finalised after the migration.
        */
       EthDepositMigrationTest,
+      /**
+       * Check the bridge balance after is the same as before
+       */
+      BridgeBalanceMigrationTest,
     ])
 
-    await multiTest.initialise()
+    if (!testState.fromFile) {
+      // if we loaded the teststate from file it must mean it
+      // was already initialised
+      await multiTest.initialise()
+      writeTestStateToFile(testState)
+    }
 
-    await waitForNitro(testState.core.l2Signer.provider!, 150000)
+    await waitForNitro(
+      testState.core.l2Signer.provider!,
+      testState.fromFile ? 0 : 150000
+    )
 
     await multiTest.finalise()
   })
