@@ -76,6 +76,42 @@ abstract class MigrationTest {
 }
 
 /**
+ * Check the bridge balance after is the same as before
+ */
+class BridgeBalanceMigrationTest extends MigrationTest {
+  public constructor(testState: TestState) {
+    super(testState)
+    this.name = 'Bridge balance'
+  }
+  public override async initialise(): Promise<void> {
+    const l2Network = await getL2Network(this.testState.core.l2Signer)
+
+    const bridgeAddr = l2Network.ethBridge.bridge
+    const balanceBefore =
+      await this.testState.core.l1Signer.provider!.getBalance(bridgeAddr)
+
+    this.testState.bridgeBalance.address = bridgeAddr
+    this.testState.bridgeBalance.balance = balanceBefore.toString()
+  }
+
+  public override async finalise(): Promise<void> {
+    const l2Network = await getL2Network(this.testState.core.l2Signer)
+
+    const bridgeAddr = l2Network.ethBridge.bridge
+    const balanceAfter =
+      await this.testState.core.l1Signer.provider!.getBalance(bridgeAddr)
+
+    expect(bridgeAddr, 'Bridge address should have changed.').to.not.eq(
+      this.testState.bridgeBalance.address
+    )
+    expect(
+      balanceAfter.toString(),
+      'Bridge balance after should be the same.'
+    ).to.eq(this.testState.bridgeBalance.balance)
+  }
+}
+
+/**
  * Check that a receiver of eth just before the migration
  * still has it after the migration
  */
@@ -596,6 +632,10 @@ interface TestState {
     erc20Bridger: Erc20Bridger
     ethBridger: EthBridger
   }
+  bridgeBalance: {
+    address?: string
+    balance?: string
+  }
   ethTransfer: {
     address?: string
     balance?: string
@@ -728,6 +768,7 @@ describe('Migration tests', async () => {
           erc20Bridger,
           ethBridger,
         },
+        bridgeBalance: {},
         ethTransfer: {},
         tokenDeploy: {},
         weth: {},
@@ -777,6 +818,10 @@ describe('Migration tests', async () => {
        * can be finalised after the migration.
        */
       EthDepositMigrationTest,
+      /**
+       * Check the bridge balance after is the same as before
+       */
+      BridgeBalanceMigrationTest,
     ])
 
     if (!testState.fromFile) {
