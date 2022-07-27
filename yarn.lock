@@ -35,10 +35,10 @@
     ts-node "^10.2.1"
     typechain "7.0.0"
 
-"@arbitrum/sdk-nitro@npm:@arbitrum/sdk@3.0.0-beta.4":
-  version "3.0.0-beta.4"
-  resolved "https://registry.yarnpkg.com/@arbitrum/sdk/-/sdk-3.0.0-beta.4.tgz#c5dc05dd686b80853b8b3ea5c9d658ad9f0f38dd"
-  integrity sha512-sJpc8rELwmTJZUTdizakDW0vdvV9qauWxjBgrpBdkYfMJbzf2A+5ME7btxIgpnKvSpmbfPv1nkXmevjO77bIZw==
+"@arbitrum/sdk-nitro@npm:@arbitrum/sdk@3.0.0-beta.5":
+  version "3.0.0-beta.5"
+  resolved "https://registry.yarnpkg.com/@arbitrum/sdk/-/sdk-3.0.0-beta.5.tgz#ef1c81de58db9e76defb4a1971274316a375133b"
+  integrity sha512-qeNdK7es4uKRFciz4zznPEnGRZaAHkrwNqUN1F4U6d4i8olhK0KMdSodx2ZjajBvVVwOo5kFsw5ocAaTvkf28g==
   dependencies:
     "@ethersproject/address" "^5.0.8"
     "@ethersproject/bignumber" "^5.1.1"
