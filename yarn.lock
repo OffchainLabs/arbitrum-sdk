@@ -19,10 +19,10 @@
     "@openzeppelin/contracts-upgradeable" "4.5.2"
     hardhat "^2.6.6"
 
-"@arbitrum/sdk-classic@npm:@arbitrum/sdk@1.1.12":
-  version "1.1.12"
-  resolved "https://registry.yarnpkg.com/@arbitrum/sdk/-/sdk-1.1.12.tgz#2f805a864bd1bcc8a677fcccebab3ca442c28d7d"
-  integrity sha512-s8ku93/wQ9bIMNbO4HWp4+qndzakVc/ppH1l9z4TFHHqNHbD2ejKmiGQeHXdraJsgVs2JnFYVWtq/fVbCB5rDg==
+"@arbitrum/sdk-classic@npm:@arbitrum/sdk@1.1.13":
+  version "1.1.13"
+  resolved "https://registry.yarnpkg.com/@arbitrum/sdk/-/sdk-1.1.13.tgz#5221c61e951b53535d5226d67e99adc398b4bf4f"
+  integrity sha512-XnivIDij4ZLx/Yk1KJj77QwzwcbakU3R1pjzWqv548Nzj8Cg8o15nSg4PQGdwEtsv1VWFhabFHSwZMsmIX37GA==
   dependencies:
     "@ethersproject/address" "^5.0.8"
     "@ethersproject/bignumber" "^5.1.1"
@@ -35,10 +35,10 @@
     ts-node "^10.2.1"
     typechain "7.0.0"
 
-"@arbitrum/sdk-nitro@npm:@arbitrum/sdk@3.0.0-beta.4":
-  version "3.0.0-beta.4"
-  resolved "https://registry.yarnpkg.com/@arbitrum/sdk/-/sdk-3.0.0-beta.4.tgz#c5dc05dd686b80853b8b3ea5c9d658ad9f0f38dd"
-  integrity sha512-sJpc8rELwmTJZUTdizakDW0vdvV9qauWxjBgrpBdkYfMJbzf2A+5ME7btxIgpnKvSpmbfPv1nkXmevjO77bIZw==
+"@arbitrum/sdk-nitro@npm:@arbitrum/sdk@3.0.0-beta.6":
+  version "3.0.0-beta.6"
+  resolved "https://registry.yarnpkg.com/@arbitrum/sdk/-/sdk-3.0.0-beta.6.tgz#a36c3e39a7358396b5533f3288125107da6ae59e"
+  integrity sha512-kPCfgj72MeyVcIXQKoztLO29UTcpSbXFzc/S0oDgVNNcHcXp1hWUJqqkVRg0O43P2yKjZRT/I94K0Nj2nZNiiQ==
   dependencies:
     "@ethersproject/address" "^5.0.8"
     "@ethersproject/bignumber" "^5.1.1"

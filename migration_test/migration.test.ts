@@ -590,7 +590,7 @@ class EthDepositMigrationTest extends MigrationTest {
     const randomUser = Wallet.createRandom().connect(
       this.testState.core.l1Signer.provider!
     )
-    const amountToSend = parseEther('0.000137')
+    const amountToSend = parseEther('0.0137')
     const ethBridger = this.testState.core.ethBridger
 
     await (
@@ -616,11 +616,10 @@ class EthDepositMigrationTest extends MigrationTest {
       this.testState.ethXChainDeposit.user!,
       this.testState.core.l2Signer.provider!
     )
-
-    expect(
-      (await l1User.getBalance()).toString(),
-      'Eth X chain deposit balance'
-    ).to.eq(this.testState.ethXChainDeposit.balance!.toString())
+    const bal = await l1User.getBalance()
+    const expected = bal.mul(99).div(100)
+    expect(bal.gt(expected), `Eth X chain deposit balance: ${bal} ${expected}`)
+      .to.be.true
   }
 }
 

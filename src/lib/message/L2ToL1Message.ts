@@ -125,7 +125,7 @@ export class L2ToL1Message {
     destination?: string,
     hashOrUniqueId?: BigNumber,
     indexInBatch?: BigNumber
-  ): Promise<L2ToL1TransactionEvent[]> {
+  ): Promise<(L2ToL1TransactionEvent & { transactionHash: string })[]> {
     return (
       await Promise.all([
         classic.L2ToL1Message.getL2ToL1MessageLogs(
