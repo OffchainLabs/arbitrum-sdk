@@ -178,7 +178,7 @@ export class L2ToL1Message {
           t.filters.L2ToL1Transaction(null, destination, uniqueId, batchNumber),
         filter
       )
-    ).map(l => l.event)
+    ).map(l => ({ ...l.event, transactionHash: l.transactionHash }))
 
     if (indexInBatch) {
       const indexItems = events.filter(b => b.indexInBatch.eq(indexInBatch))
