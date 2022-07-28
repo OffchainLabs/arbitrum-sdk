@@ -616,11 +616,15 @@ class EthDepositMigrationTest extends MigrationTest {
       this.testState.ethXChainDeposit.user!,
       this.testState.core.l2Signer.provider!
     )
-
+    const bal = await l1User.getBalance()
+    const diff = BigNumber.from('1000000000000')
     expect(
-      (await l1User.getBalance()).toString(),
-      'Eth X chain deposit balance'
-    ).to.eq(this.testState.ethXChainDeposit.balance!.toString())
+      bal.gt(
+        BigNumber.from(this.testState.ethXChainDeposit.balance!).sub(diff)
+      ),
+      `Eth X chain deposit balance: ${bal} ${this.testState.ethXChainDeposit
+        .balance!} ${diff}`
+    ).to.be.true
   }
 }
 
