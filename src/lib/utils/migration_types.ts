@@ -35,6 +35,9 @@ import { Bridge__factory as NitroBridgeFactory } from '@arbitrum/sdk-nitro/dist/
 import { RollupUserLogic__factory as NitroRollupUserLogic__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/RollupUserLogic__factory'
 import { L1ToL2MessageReader as ClassicL1ToL2MessageReader } from '@arbitrum/sdk-classic/dist/index'
 
+import { l1Networks as classicL1Networks } from '@arbitrum/sdk-classic/dist/lib/dataEntities/networks'
+import { l1Networks as nitroL1Networks } from '@arbitrum/sdk-nitro/dist/lib/dataEntities/networks'
+
 import { l2Networks as classicL2Networks } from '@arbitrum/sdk-classic/dist/lib/dataEntities/networks'
 import { l2Networks as nitroL2Networks } from '@arbitrum/sdk-nitro/dist/lib/dataEntities/networks'
 import { ArbSdkError, MissingProviderArbTsError } from '../dataEntities/errors'
@@ -828,3 +831,12 @@ export const classicGetInboxMessageDeliveredEvents = (
       l => iFace.parseLog(l).args as ClassicInboxMessageDeliveredEvent['args']
     )
 }
+
+// patch networks to be consistent
+nitroL1Networks[1].partnerChainIDs.push(42170)
+classicL1Networks[1].partnerChainIDs.push(42170)
+classicL1Networks[5] = nitroL1Networks[5]
+classicL2Networks[421613] = convertNetworkNitroToClassic(
+  nitroL2Networks[421613]
+)
+classicL2Networks[42170] = convertNetworkNitroToClassic(nitroL2Networks[42170])
