@@ -104,10 +104,15 @@ class BridgeBalanceMigrationTest extends MigrationTest {
     expect(bridgeAddr, 'Bridge address should have changed.').to.not.eq(
       this.testState.bridgeBalance.address
     )
+    // we cant guarantee that the bridge hasnt been used in between out test executing and finalising
+    // but we dont expect it to change that much
+    const balanceBefore = BigNumber.from(this.testState.bridgeBalance.balance!)
+      .mul(98)
+      .div(100)
     expect(
-      balanceAfter.toString(),
-      'Bridge balance after should be the same.'
-    ).to.eq(this.testState.bridgeBalance.balance)
+      balanceAfter.gt(balanceBefore),
+      `Bridge balance after should be the same. ${balanceBefore} ${balanceAfter}`
+    ).to.be.true
   }
 }
 
@@ -756,8 +761,8 @@ describe('Migration tests', async () => {
         fromFile: true,
       }
     } else {
-      await fundL1(l1Signer, parseEther('20'))
-      await fundL2(l2Signer, parseEther('20'))
+      await fundL1(l1Signer, parseEther('2.5'))
+      await fundL2(l2Signer, parseEther('2.5'))
 
       return {
         fromFile: false,
