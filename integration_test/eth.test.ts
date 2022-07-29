@@ -21,6 +21,7 @@ import dotenv from 'dotenv'
 
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
+
 import { fundL1, fundL2, prettyLog, skipIfMainnet } from './testHelpers'
 import {
   L2ToL1Message,
