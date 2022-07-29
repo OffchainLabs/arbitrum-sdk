@@ -159,7 +159,7 @@ describe('RevertData', () => {
       retryableGasOverrides: retryableOverrides,
     }
 
-    const depositParams = await erc20Bridger.getDepositParams(erc20Params)
+    const depositParams = await erc20Bridger.getDepositRequest(erc20Params)
 
     try {
       await erc20Bridger.deposit(erc20Params)
@@ -170,31 +170,31 @@ describe('RevertData', () => {
       if (!parsed) throw err
 
       expect(parsed.callValueRefundAddress, 'callValueRefundAddress').to.eq(
-        depositParams.retryableCallValueRefundAddress
+        depositParams.retryableData.callValueRefundAddress
       )
-      expect(parsed.data, 'data').to.eq(depositParams.retryableCallData)
+      expect(parsed.data, 'data').to.eq(depositParams.retryableData.callData)
       expect(parsed.deposit.toString(), 'deposit').to.eq(
-        depositParams.depositCallValue.toString()
+        depositParams.l2GasCostsMaxTotal.toString()
       )
       expect(parsed.excessFeeRefundAddress, 'excessFeeRefundAddress').to.eq(
-        depositParams.retryableExcessFeeRefundAddress
+        depositParams.retryableData.excessFeeRefundAddress
       )
-      expect(parsed.from, 'from').to.eq(depositParams.retryableSender)
+      expect(parsed.from, 'from').to.eq(depositParams.retryableData.sender)
       expect(parsed.gasLimit.toString(), 'gasLimit').to.eq(
         depositParams.l2GasLimit.toString()
       )
 
       expect(parsed.l2CallValue.toString(), 'l2CallValue').to.eq(
-        depositParams.retryableValue.toString()
+        depositParams.retryableData.l2CallValue.toString()
       )
 
       expect(parsed.maxFeePerGas.toString(), 'maxFeePerGas').to.eq(
         depositParams.l2MaxFeePerGas.toString()
       )
       expect(parsed.maxSubmissionCost.toString(), 'maxSubmissionCost').to.eq(
-        depositParams.maxSubmissionFee.toString()
+        depositParams.l2SubmissionFee.toString()
       )
-      expect(parsed.to).to.eq(depositParams.retryableDestination)
+      expect(parsed.to).to.eq(depositParams.retryableData.destination)
     }
   })
 })
