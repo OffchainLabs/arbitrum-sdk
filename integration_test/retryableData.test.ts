@@ -112,7 +112,6 @@ describe('RevertData', () => {
     }
   }
 
-  // CHRIS: TODO: combine this and below
   it('does parse error in estimate gas', async () => {
     await testRetryableDataParsing('estimateGas')
   })
@@ -153,16 +152,25 @@ describe('RevertData', () => {
 
     const erc20Params = {
       l1Signer: l1Signer,
-      l2Provider: l2Signer.provider!,
+      l2SignerOrProvider: l2Signer.provider!,
+      from: await l1Signer.getAddress(),
       erc20L1Address: l1TokenAddress,
       amount: depositAmount,
       retryableGasOverrides: retryableOverrides,
     }
 
-    const depositParams = await erc20Bridger.getDepositRequest(erc20Params)
+    const depositParams = await erc20Bridger.getDepositRequest({
+      ...erc20Params,
+      l1Provider: l1Signer.provider!,
+      l2Provider: l2Signer.provider!,
+    })
 
     try {
-      await erc20Bridger.deposit(erc20Params)
+      await erc20Bridger.deposit({
+        ...erc20Params,
+        l1Signer: l1Signer,
+        l2Provider: l2Signer.provider!,
+      })
       assert.fail('Expected estimateGas to fail')
     } catch (err) {
       const typedErr = err as Error
@@ -172,29 +180,28 @@ describe('RevertData', () => {
       expect(parsed.callValueRefundAddress, 'callValueRefundAddress').to.eq(
         depositParams.retryableData.callValueRefundAddress
       )
-      expect(parsed.data, 'data').to.eq(depositParams.retryableData.callData)
+      expect(parsed.data, 'data').to.eq(depositParams.retryableData.data)
       expect(parsed.deposit.toString(), 'deposit').to.eq(
-        depositParams.l2GasCostsMaxTotal.toString()
+        depositParams.core.value
       )
       expect(parsed.excessFeeRefundAddress, 'excessFeeRefundAddress').to.eq(
         depositParams.retryableData.excessFeeRefundAddress
       )
-      expect(parsed.from, 'from').to.eq(depositParams.retryableData.sender)
+      expect(parsed.from, 'from').to.eq(depositParams.retryableData.from)
       expect(parsed.gasLimit.toString(), 'gasLimit').to.eq(
-        depositParams.l2GasLimit.toString()
+        depositParams.retryableData.gasLimit.toString()
       )
 
       expect(parsed.l2CallValue.toString(), 'l2CallValue').to.eq(
         depositParams.retryableData.l2CallValue.toString()
       )
-
       expect(parsed.maxFeePerGas.toString(), 'maxFeePerGas').to.eq(
-        depositParams.l2MaxFeePerGas.toString()
+        depositParams.retryableData.maxFeePerGas.toString()
       )
       expect(parsed.maxSubmissionCost.toString(), 'maxSubmissionCost').to.eq(
-        depositParams.l2SubmissionFee.toString()
+        depositParams.retryableData.maxSubmissionCost.toString()
       )
-      expect(parsed.to).to.eq(depositParams.retryableData.destination)
+      expect(parsed.to).to.eq(depositParams.retryableData.to)
     }
   })
 })
