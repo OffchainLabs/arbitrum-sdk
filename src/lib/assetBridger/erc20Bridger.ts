@@ -71,6 +71,7 @@ import {
   IRetryableData,
 } from '../dataEntities/transactionRequest'
 import { defaultAbiCoder } from 'ethers/lib/utils'
+import { EventArgs } from '../dataEntities/event'
 
 export interface TokenApproveParams {
   /**
@@ -279,7 +280,7 @@ export class Erc20Bridger extends AssetBridger<
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     l1TokenAddress?: string,
     fromAddress?: string
-  ): Promise<(WithdrawalInitiatedEvent['args'] & { txHash: string })[]> {
+  ): Promise<(EventArgs<WithdrawalInitiatedEvent> & { txHash: string })[]> {
     await this.checkL2Network(l2Provider)
 
     const eventFetcher = new EventFetcher(l2Provider)
@@ -357,6 +358,9 @@ export class Erc20Bridger extends AssetBridger<
 
   /**
    * Get the L2 token contract at the provided address
+   * Note: This function just returns a typed ethers object for the provided address, it doesnt
+   * check the underlying form of the contract bytecode to see if it's an erc20, and doesn't ensure the validity
+   * of any of the underlying functions on that contract.
    * @param l2Provider
    * @param l2TokenAddr
    * @returns
@@ -370,6 +374,9 @@ export class Erc20Bridger extends AssetBridger<
 
   /**
    * Get the L1 token contract at the provided address
+   * Note: This function just returns a typed ethers object for the provided address, it doesnt
+   * check the underlying form of the contract bytecode to see if it's an erc20, and doesn't ensure the validity
+   * of any of the underlying functions on that contract.
    * @param l1Provider
    * @param l1TokenAddr
    * @returns
@@ -402,8 +409,9 @@ export class Erc20Bridger extends AssetBridger<
 
   /**
    * Get the corresponding L1 for the provided L2 token
-   * @param erc20L1Address
-   * @param l1Provider
+   * Validates the returned address against the l2 router to ensure it is correctly mapped to the provided erc20L2Address
+   * @param erc20L2Address
+   * @param l2Provider
    * @returns
    */
   public async getL1ERC20Address(
@@ -413,8 +421,22 @@ export class Erc20Bridger extends AssetBridger<
     await this.checkL2Network(l2Provider)
 
     const arbERC20 = L2GatewayToken__factory.connect(erc20L2Address, l2Provider)
+    const l1Address = await arbERC20.functions.l1Address().then(([res]) => res)
 
-    return await arbERC20.functions.l1Address().then(([res]) => res)
+    // check that this l1 address is indeed registered to this l2 token
+    const l2GatewayRouter = L2GatewayRouter__factory.connect(
+      this.l2Network.tokenBridge.l2GatewayRouter,
+      l2Provider
+    )
+
+    const l2Address = await l2GatewayRouter.calculateL2TokenAddress(l1Address)
+    if (l2Address.toLowerCase() !== erc20L2Address.toLowerCase()) {
+      throw new ArbSdkError(
+        `Unexpected l1 address. L1 address from token is not registered to the provided l2 address. ${l1Address} ${l2Address} ${erc20L2Address}`
+      )
+    }
+
+    return l1Address
   }
 
   /**
@@ -486,7 +508,7 @@ export class Erc20Bridger extends AssetBridger<
     // The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
     // Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
     const isWeth = await this.isWethGateway(l1GatewayAddress, l1Signer.provider)
-    const estimateGasCallValue = isWeth ? amount : Zero
+    const l2CallValue = isWeth ? amount : Zero
 
     const l2Dest = await l1Gateway.counterpartGateway()
     const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
@@ -511,7 +533,7 @@ export class Erc20Bridger extends AssetBridger<
       l1GatewayAddress,
       l2Dest,
       depositCalldata,
-      estimateGasCallValue,
+      l2CallValue,
       baseFee,
       excessFeeRefundAddress,
       callValueRefundAddress,
@@ -543,10 +565,10 @@ export class Erc20Bridger extends AssetBridger<
       l2MaxFeePerGas: estimates.maxFeePerGas,
       l2SubmissionFee: estimates.maxSubmissionFee,
       l2GasCostsMaxTotal: estimates.totalL2GasCosts,
-      txRequestCore: {
+      core: {
         to: this.l2Network.tokenBridge.l1GatewayRouter,
         data: functionData,
-        value: estimates.totalL2GasCosts,
+        value: estimates.totalL2GasCosts.add(l2CallValue),
       },
       retryableData: {
         callData: depositCalldata,
@@ -554,7 +576,17 @@ export class Erc20Bridger extends AssetBridger<
         destination: l2Dest,
         excessFeeRefundAddress: excessFeeRefundAddress,
         callValueRefundAddress: callValueRefundAddress,
-        value: estimateGasCallValue,
+        l2CallValue: l2CallValue,
+      },
+      isValid: async () => {
+        const reEstimated = await this.getDepositRequest({
+          ...params,
+          retryableGasOverrides: undefined,
+        })
+        return (
+          estimates.maxFeePerGas.gte(reEstimated.l2MaxFeePerGas) &&
+          estimates.maxSubmissionFee.gte(reEstimated.l2SubmissionFee)
+        )
       },
     }
   }
@@ -584,7 +616,7 @@ export class Erc20Bridger extends AssetBridger<
       : await this.getDepositRequest(params)
 
     return await params.l1Signer[estimate ? 'estimateGas' : 'sendTransaction']({
-      ...tokenDeposit.txRequestCore,
+      ...tokenDeposit.core,
       ...params.overrides,
     })
   }
@@ -828,7 +860,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
   public async getL1GatewaySetEvents(
     l1Provider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag }
-  ): Promise<GatewaySetEvent['args'][]> {
+  ): Promise<EventArgs<GatewaySetEvent>[]> {
     await this.checkL1Network(l1Provider)
 
     const l1GatewayRouterAddress = this.l2Network.tokenBridge.l1GatewayRouter
@@ -853,7 +885,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     l2Provider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     customNetworkL2GatewayRouter?: string
-  ): Promise<GatewaySetEvent['args'][]> {
+  ): Promise<EventArgs<GatewaySetEvent>[]> {
     if (this.l2Network.isCustom && !customNetworkL2GatewayRouter) {
       throw new ArbSdkError(
         'Must supply customNetworkL2GatewayRouter for custom network '

@@ -18,6 +18,7 @@ jobs:
           repository: OffchainLabs/nitro
           submodules: 'recursive'
           path: 'nitro'
+          ref: 'master'
       - name: Setup node/yarn
         uses: actions/setup-node@v3
         with:
@@ -39,7 +40,7 @@ jobs:
           cp ./.env-sample ./.env
       - name: Wait for nitro startup
         run: |
-          cd sdk
+          cd sdk/scripts
           ./waitForNitro.sh
       - name: Generate network file
         run: |

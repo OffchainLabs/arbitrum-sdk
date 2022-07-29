@@ -157,6 +157,21 @@ export class L1ToL2MessageGasEstimator {
   }
 
   /**
+   * Provides an estimate for the L2 maxFeePerGas, adding some margin to allow for gas price variation
+   * @param options
+   * @returns
+   */
+  public async estimateMaxFeePerGas(options?: PercentIncrease) {
+    const maxFeePerGasDefaults = this.applyMaxFeePerGasDefaults(options)
+
+    // estimate the l2 gas price
+    return this.percentIncrease(
+      maxFeePerGasDefaults.base || (await this.l2Provider.getGasPrice()),
+      maxFeePerGasDefaults.percentIncrease
+    )
+  }
+
+  /**
    * Get gas limit, gas price and submission price estimates for sending an L1->L2 message
    * @param sender Sender of the L1 to L2 transaction
    * @param l2CallTo Destination L2 contract address
@@ -185,15 +200,9 @@ export class L1ToL2MessageGasEstimator {
     totalL2GasCosts: BigNumber
   }> {
     const gasLimitDefaults = this.applyGasLimitDefaults(options?.gasLimit)
-    const maxFeePerGasDefaults = this.applyMaxFeePerGasDefaults(
-      options?.maxFeePerGas
-    )
 
     // estimate the l1 gas price
-    const maxFeePerGas = this.percentIncrease(
-      maxFeePerGasDefaults.base || (await this.l2Provider.getGasPrice()),
-      maxFeePerGasDefaults.percentIncrease
-    )
+    const maxFeePerGas = await this.estimateMaxFeePerGas(options?.maxFeePerGas)
 
     // estimate the submission fee
     const maxSubmissionFee = await this.estimateSubmissionFee(

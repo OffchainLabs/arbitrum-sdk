@@ -29,7 +29,7 @@ import { Inbox__factory } from '../src/lib/abi/factories/Inbox__factory'
 import { GasOverrides } from '../src/lib/message/L1ToL2MessageGasEstimator'
 const depositAmount = BigNumber.from(100)
 
-describe.only('RevertData', () => {
+describe('RevertData', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
@@ -44,7 +44,10 @@ describe.only('RevertData', () => {
       l2CallValue,
       data: hexlify(randomBytes(32)),
       maxSubmissionCost: maxSubmissionCost,
-      value: l2CallValue.add(maxSubmissionCost),
+      value: l2CallValue
+        .add(maxSubmissionCost)
+        .add(RetryableDataTools.ErrorTriggeringParams.gasLimit)
+        .add(RetryableDataTools.ErrorTriggeringParams.maxFeePerGas),
       gasLimit: RetryableDataTools.ErrorTriggeringParams.gasLimit,
       maxFeePerGas: RetryableDataTools.ErrorTriggeringParams.maxFeePerGas,
     }
@@ -182,7 +185,7 @@ describe.only('RevertData', () => {
       )
 
       expect(parsed.l2CallValue.toString(), 'l2CallValue').to.eq(
-        depositParams.retryableData.value.toString()
+        depositParams.retryableData.l2CallValue.toString()
       )
 
       expect(parsed.maxFeePerGas.toString(), 'maxFeePerGas').to.eq(

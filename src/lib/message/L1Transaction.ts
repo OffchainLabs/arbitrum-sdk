@@ -32,22 +32,19 @@ import {
 } from './L1ToL2Message'
 
 import { L1ERC20Gateway__factory } from '../abi/factories/L1ERC20Gateway__factory'
-import { DepositInitiatedEvent } from '../abi/L1ERC20Gateway'
 import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
-import { ethers } from 'ethers'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { InboxMessageDeliveredEvent } from '../abi/Inbox'
-import { hexZeroPad } from '@ethersproject/bytes'
-import {
-  InboxMessageKind,
-  RetryableMessageParams,
-} from '../dataEntities/message'
+import { InboxMessageKind } from '../dataEntities/message'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
 import { MessageDeliveredEvent } from '../abi/Bridge'
+import { EventArgs, parseTypedLogs } from '../dataEntities/event'
+import { isDefined } from '../utils/lib'
+import { SubmitRetryableMessageDataParser } from './messageDataParser'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -103,29 +100,20 @@ export class L1TransactionReceipt implements TransactionReceipt {
    * Get any MessageDelivered events that were emitted during this transaction
    * @returns
    */
-  public getMessageDeliveredEvents(): MessageDeliveredEvent['args'][] {
-    const iface = Bridge__factory.createInterface()
-    const messageDeliveredTopic = iface.getEventTopic(
-      iface.getEvent('MessageDelivered')
-    )
-
-    return this.logs
-      .filter(log => log.topics[0] === messageDeliveredTopic)
-      .map(l => iface.parseLog(l).args as MessageDeliveredEvent['args'])
+  public getMessageDeliveredEvents(): EventArgs<MessageDeliveredEvent>[] {
+    return parseTypedLogs(Bridge__factory, this.logs, 'MessageDelivered')
   }
 
   /**
    * Get any InboxMessageDelivered events that were emitted during this transaction
    * @returns
    */
-  public getInboxMessageDeliveredEvent(): InboxMessageDeliveredEvent['args'][] {
-    const iFace = Inbox__factory.createInterface()
-    const inboxMessageDeliveredTopic = iFace.getEventTopic(
-      iFace.events['InboxMessageDelivered(uint256,bytes)']
+  public getInboxMessageDeliveredEvent() {
+    return parseTypedLogs(
+      Inbox__factory,
+      this.logs,
+      'InboxMessageDelivered(uint256,bytes)'
     )
-    return this.logs
-      .filter(log => log.topics[0] === inboxMessageDeliveredTopic)
-      .map(l => iFace.parseLog(l).args as InboxMessageDeliveredEvent['args'])
   }
 
   /**
@@ -134,8 +122,8 @@ export class L1TransactionReceipt implements TransactionReceipt {
    * @returns
    */
   public getMessageEvents(): {
-    inboxMessageEvent: InboxMessageDeliveredEvent['args']
-    bridgeMessageEvent: MessageDeliveredEvent['args']
+    inboxMessageEvent: EventArgs<InboxMessageDeliveredEvent>
+    bridgeMessageEvent: EventArgs<MessageDeliveredEvent>
   }[] {
     const bridgeMessages = this.getMessageDeliveredEvents()
     const inboxMessages = this.getInboxMessageDeliveredEvent()
@@ -151,8 +139,8 @@ export class L1TransactionReceipt implements TransactionReceipt {
     }
 
     const messages: {
-      inboxMessageEvent: InboxMessageDeliveredEvent['args']
-      bridgeMessageEvent: MessageDeliveredEvent['args']
+      inboxMessageEvent: EventArgs<InboxMessageDeliveredEvent>
+      bridgeMessageEvent: EventArgs<MessageDeliveredEvent>
     }[] = []
     for (const bm of bridgeMessages) {
       const im = inboxMessages.filter(i => i.messageNum.eq(bm.messageIndex))[0]
@@ -173,50 +161,10 @@ export class L1TransactionReceipt implements TransactionReceipt {
     return messages
   }
 
-  private parseRetryableMessageData(eventData: string): RetryableMessageParams {
-    // decode the data field - is been packed so we cant decode the bytes field this way
-    const parsed = ethers.utils.defaultAbiCoder.decode(
-      [
-        'uint256', // dest
-        'uint256', // l2 call balue
-        'uint256', // msg val
-        'uint256', // max submission
-        'uint256', // excess fee refund addr
-        'uint256', // call value refund addr
-        'uint256', // max gas
-        'uint256', // gas price bid
-        'uint256', // data length
-      ],
-      // decode from the first 9 words
-      eventData.substring(0, 64 * 9 + 2)
-    ) as BigNumber[]
-
-    const addressFromBigNumber = (bn: BigNumber) =>
-      ethers.utils.getAddress(hexZeroPad(bn.toHexString(), 20))
-
-    const destAddress = addressFromBigNumber(parsed[0])
-    const l2CallValue = parsed[1]
-    const l1Value = parsed[2]
-    const maxSubmissionFee = parsed[3]
-    const excessFeeRefundAddress = addressFromBigNumber(parsed[4])
-    const callValueRefundAddress = addressFromBigNumber(parsed[5])
-    const gasLimit = parsed[6]
-    const maxFeePerGas = parsed[7]
-    const data = '0x' + eventData.substring(64 * 9 + 2)
-
-    return {
-      destAddress,
-      l2CallValue,
-      l1Value,
-      maxSubmissionFee: maxSubmissionFee,
-      excessFeeRefundAddress,
-      callValueRefundAddress,
-      gasLimit,
-      maxFeePerGas,
-      data,
-    }
-  }
-
+  /**
+   * Get any eth deposit messages created by this transaction
+   * @param l2SignerOrProvider
+   */
   public async getEthDepositMessages(
     l2Provider: Provider
   ): Promise<EthDepositMessage[]> {
@@ -259,9 +207,11 @@ export class L1TransactionReceipt implements TransactionReceipt {
           InboxMessageKind.L1MessageType_submitRetryableTx
       )
       .map(mn => {
-        const inboxMessageData = this.parseRetryableMessageData(
+        const messageDataParser = new SubmitRetryableMessageDataParser()
+        const inboxMessageData = messageDataParser.parse(
           mn.inboxMessageEvent.data
         )
+
         return L1ToL2Message.fromTxComponents(
           l2SignerOrProvider,
           BigNumber.from(chainID).toNumber(),
@@ -277,13 +227,11 @@ export class L1TransactionReceipt implements TransactionReceipt {
    * Get any token deposit events created by this transaction
    * @returns
    */
-  public getTokenDepositEvents(): DepositInitiatedEvent['args'][] {
-    const iface = L1ERC20Gateway__factory.createInterface()
-    const event = iface.getEvent('DepositInitiated')
-    const eventTopic = iface.getEventTopic(event)
-    const logs = this.logs.filter(log => log.topics[0] === eventTopic)
-    return logs.map(
-      log => iface.parseLog(log).args as DepositInitiatedEvent['args']
+  public getTokenDepositEvents() {
+    return parseTypedLogs(
+      L1ERC20Gateway__factory,
+      this.logs,
+      'DepositInitiated'
     )
   }
 
@@ -366,7 +314,7 @@ export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
     const res = await message.wait(confirmations, timeout)
 
     return {
-      complete: Boolean(res),
+      complete: isDefined(res),
       l2TxReceipt: res,
       message,
     }

@@ -59,25 +59,25 @@ export const instantiateBridge = (
     throw new Error('need ARB_KEY var')
   }
 
-  let networkID = args.networkID
-  if (!networkID) {
+  let l2NetworkID = args.networkID
+  if (!l2NetworkID) {
     console.log(
       'No networkID command line arg provided; using network',
       defaultNetworkId
     )
 
-    networkID = defaultNetworkId
+    l2NetworkID = defaultNetworkId
   }
-  const isL1 = isDefined(l1Networks[networkID])
-  const isL2 = isDefined(l2Networks[networkID])
+  const isL1 = isDefined(l1Networks[l2NetworkID])
+  const isL2 = isDefined(l2Networks[l2NetworkID])
   if (!isL1 && !isL2) {
-    throw new Error(`Unrecognized network ID: ${networkID}`)
+    throw new Error(`Unrecognized network ID: ${l2NetworkID}`)
   }
   if (!isL2) {
-    throw new Error(`Tests must specify an L2 network ID: ${networkID}`)
+    throw new Error(`Tests must specify an L2 network ID: ${l2NetworkID}`)
   }
 
-  const l2Network = l2Networks[networkID]
+  const l2Network = l2Networks[l2NetworkID]
   const l1Network = l1Networks[l2Network.partnerChainID]
 
   if (!l1Network) {
@@ -86,14 +86,26 @@ export const instantiateBridge = (
     )
   }
 
-  if (!l1Network.rpcURL) {
-    throw new Error('L1 rpc url not set (see .env.sample or networks.ts)')
-  }
-  if (!l2Network.rpcURL) {
-    throw new Error('L2 rpc url not set (see .env.sample or utils/networks.ts)')
-  }
-  const ethProvider = new JsonRpcProvider(l1Network.rpcURL)
-  const arbProvider = new JsonRpcProvider(l2Network.rpcURL)
+  const l1Rpc = (() => {
+    if (l2NetworkID === 42161) return process.env['MAINNET_RPC'] as string
+    if (l2NetworkID === 421611) return process.env['RINKEBY_RPC'] as string
+    if (l2NetworkID === 1338) return 'http://127.0.0.1:8545/'
+    throw new Error(
+      'L1 rpc url not set (see .env.sample or networks.ts) or chain id not supported'
+    )
+  })()
+  const l2Rpc = (() => {
+    if (l2NetworkID === 42161)
+      return process.env['ARB_ONE_RPC'] || 'https://arb1.arbitrum.io/rpc'
+    if (l2NetworkID === 421611)
+      return process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc'
+    throw new Error(
+      'L2 rpc url not set (see .env.sample or networks.ts) or chain id not supported'
+    )
+  })()
+
+  const ethProvider = new JsonRpcProvider(l1Rpc)
+  const arbProvider = new JsonRpcProvider(l2Rpc)
 
   const l1Signer = (() => {
     if (l1PkParam) {
