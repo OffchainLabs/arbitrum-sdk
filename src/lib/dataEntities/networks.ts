@@ -117,7 +117,7 @@ const rinkebyETHBridge: EthBridge = {
   inbox: '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e',
   sequencerInbox: '0xE1Ae39E91C5505f7F0ffC9e2bbF1f6E1122DCfA8',
   outbox: '0x36648F69cEb55Ce1B2920Bf2de321FBc9c378f0E',
-  rollup: '0x9a28E783c47bBEB813F32B861A431d0776681E95',
+  rollup: '0x71c6093C564EDDCFAf03481C3F59F88849F1e644',
 }
 
 const mainnetETHBridge: EthBridge = {
