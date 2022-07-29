@@ -113,11 +113,11 @@ const rinkebyTokenBridge: TokenBridge = {
 }
 
 const rinkebyETHBridge: EthBridge = {
-  bridge: '0x9a28e783c47bbeb813f32b861a431d0776681e95',
+  bridge: '0x85C720444e436E1F9407E0C3895d3fE149f41168',
   inbox: '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e',
-  sequencerInbox: '0xe1ae39e91c5505f7f0ffc9e2bbf1f6e1122dcfa8',
-  outbox: '0x2360A33905dc1c72b12d975d975F42BaBdcef9F3',
-  rollup: '0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c',
+  sequencerInbox: '0xE1Ae39E91C5505f7F0ffC9e2bbF1f6E1122DCfA8',
+  outbox: '0x36648F69cEb55Ce1B2920Bf2de321FBc9c378f0E',
+  rollup: '0x9a28E783c47bBEB813F32B861A431d0776681E95',
 }
 
 const mainnetETHBridge: EthBridge = {
