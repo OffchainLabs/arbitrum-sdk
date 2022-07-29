@@ -65,6 +65,15 @@ interface WithdrawalParams {
  * @param params
  */
 export const withdrawToken = async (params: WithdrawalParams) => {
+  const withdrawalParams = await params.erc20Bridger.getWithdrawalParams({
+    amount: params.amount,
+    erc20l1Address: params.l1Token.address,
+    l2Signer: params.l2Signer,
+  })
+  const l1GasEstimate = await withdrawalParams.estimateL1GasLimit(
+    params.l1Signer.provider!
+  )
+
   const withdrawRes = await params.erc20Bridger.withdraw({
     amount: params.amount,
     erc20l1Address: params.l1Token.address,
@@ -130,8 +139,13 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   ).to.eq(L2ToL1MessageStatus.CONFIRMED)
 
   const execTx = await message.execute(params.l2Signer.provider!)
+  const execRec = await execTx.wait()
 
-  await execTx.wait()
+  expect(
+    execRec.gasUsed.toNumber(),
+    'Gas used greater than estimate'
+  ).to.be.lessThan(l1GasEstimate.toNumber())
+
   expect(
     await message.status(params.l2Signer.provider!),
     'executed status'

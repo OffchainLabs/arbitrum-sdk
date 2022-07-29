@@ -102,8 +102,10 @@ describe('Ether', async () => {
     const l1ToL2Message = l1ToL2Messages[0]
 
     const walletAddress = await l1Signer.getAddress()
-    expect(l1ToL2Message.to, 'Incorrect to address').to.eq(walletAddress)
-    expect(l1ToL2Message.value.eq(ethToDeposit), 'Incorrect value').to.be.true
+    expect(l1ToL2Message.to).to.eq(walletAddress, 'message inputs value error')
+    expect(l1ToL2Message.value.toString(), 'message inputs value error').to.eq(
+      ethToDeposit.toString()
+    )
 
     prettyLog('l2TxHash: ' + waitResult.message.l2DepositTxHash)
     prettyLog('l2 transaction found!')
@@ -112,7 +114,9 @@ describe('Ether', async () => {
     expect(waitResult.l2TxReceipt).to.not.be.null
 
     const testWalletL2EthBalance = await l2Signer.getBalance()
-    expect(testWalletL2EthBalance.eq(ethToDeposit), 'final balance').to.be.true
+    expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(
+      ethToDeposit.toString()
+    )
   })
 
   it('withdraw Ether transaction succeeds', async () => {
@@ -121,8 +125,14 @@ describe('Ether', async () => {
     await fundL1(l1Signer)
 
     const ethToWithdraw = parseEther('0.00000002')
-    // const initialBalance = await l2Signer.getBalance()
     const randomAddress = Wallet.createRandom().address
+    const request = await ethBridger.getWithdrawalRequest({
+      amount: ethToWithdraw,
+      l2Signer: l2Signer,
+      destinationAddress: randomAddress,
+    })
+    const l1GasEstimate = await request.estimateL1GasLimit(l1Signer.provider!)
+
     const withdrawEthRes = await ethBridger.withdraw({
       amount: ethToWithdraw,
       l2Signer: l2Signer,
@@ -177,7 +187,13 @@ describe('Ether', async () => {
     ).to.eq(L2ToL1MessageStatus.CONFIRMED)
 
     const execTx = await withdrawMessage.execute(l2Signer.provider!)
-    await execTx.wait()
+    const execRec = await execTx.wait()
+
+    expect(
+      execRec.gasUsed.toNumber(),
+      'Gas used greater than estimate'
+    ).to.be.lessThan(l1GasEstimate.toNumber())
+
     expect(
       await withdrawMessage.status(l2Signer.provider!),
       'executed status'

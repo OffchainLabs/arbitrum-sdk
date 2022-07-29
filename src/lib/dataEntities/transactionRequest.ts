@@ -1,4 +1,4 @@
-import { TransactionRequest } from '@ethersproject/providers'
+import { TransactionRequest, Provider } from '@ethersproject/providers'
 import { BigNumber } from 'ethers'
 
 /**
@@ -38,8 +38,7 @@ export interface L1ToL2TransactionRequest {
    */
   isValid(): Promise<boolean>
 }
-
-/**
+/*
  * Parameters that will be used to create the retryable ticket for this l1 to l2 message
  */
 export interface IRetryableData {
@@ -70,6 +69,20 @@ export interface IRetryableData {
 }
 
 /**
+ * A transaction request for a transaction that will trigger an L2 to L1 message
+ */
+export interface L2ToL1TransactionRequest {
+  txRequest: Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
+  /**
+   * Estimate the gas limit required to execute the withdrawal on L1.
+   * Note that this is only a rough estimate as it may not be possible to know
+   * the exact size of the proof straight away, however the real value should be
+   * within a few thousand gas of this estimate.
+   */
+  estimateL1GasLimit: (l1Provider: Provider) => Promise<BigNumber>
+}
+
+/**
  * Ensure the T is not of TransactionRequest type by ensure it doesnt have a specific TransactionRequest property
  */
 type IsNotTransactionRequest<T> = T extends { txRequest: any } ? never : T
@@ -83,4 +96,15 @@ export const isL1ToL2TransactionRequest = <T>(
   possibleRequest: IsNotTransactionRequest<T> | L1ToL2TransactionRequest
 ): possibleRequest is L1ToL2TransactionRequest => {
   return (possibleRequest as L1ToL2TransactionRequest).core != undefined
+}
+
+/**
+ * Check if an object is of L2ToL1TransactionRequest type
+ * @param possibleRequest
+ * @returns
+ */
+export const isL2ToL1TransactionRequest = <T>(
+  possibleRequest: IsNotTransactionRequest<T> | L2ToL1TransactionRequest
+): possibleRequest is L2ToL1TransactionRequest => {
+  return (possibleRequest as L2ToL1TransactionRequest).txRequest != undefined
 }
