@@ -44,6 +44,7 @@ import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
 import { ArbitrumProvider } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
 import { JsonRpcProvider } from '@ethersproject/providers'
+import { EventArgs } from '../dataEntities/event'
 
 export interface MessageBatchProofInfo {
   /**
@@ -125,15 +126,15 @@ const ASSERTION_CONFIRMED_PADDING = 20
  * Base functionality for L2->L1 messages
  */
 export class L2ToL1Message {
-  protected constructor(public readonly event: L2ToL1TxEvent['args']) {}
+  protected constructor(public readonly event: EventArgs<L2ToL1TxEvent>) {}
 
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event: L2ToL1TxEvent['args']
+    event: EventArgs<L2ToL1TxEvent>
   ): L2ToL1MessageReaderOrWriter<T>
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event: L2ToL1TxEvent['args']
+    event: EventArgs<L2ToL1TxEvent>
   ): L2ToL1MessageReader | L2ToL1MessageWriter {
     return SignerProviderUtils.isSigner(l1SignerOrProvider)
       ? new L2ToL1MessageWriter(l1SignerOrProvider, event)
@@ -146,7 +147,7 @@ export class L2ToL1Message {
     position?: BigNumber,
     destination?: string,
     hash?: BigNumber
-  ): Promise<L2ToL1TxEvent['args'][]> {
+  ): Promise<EventArgs<L2ToL1TxEvent>[]> {
     const eventFetcher = new EventFetcher(l2Provider)
     return (
       await eventFetcher.getEvents(
@@ -171,7 +172,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
   constructor(
     protected readonly l1Provider: Provider,
-    event: L2ToL1TxEvent['args']
+    event: EventArgs<L2ToL1TxEvent>
   ) {
     super(event)
   }
@@ -451,7 +452,10 @@ export class L2ToL1MessageReader extends L2ToL1Message {
  * Provides read and write access for l2-to-l1-messages
  */
 export class L2ToL1MessageWriter extends L2ToL1MessageReader {
-  constructor(private readonly l1Signer: Signer, event: L2ToL1TxEvent['args']) {
+  constructor(
+    private readonly l1Signer: Signer,
+    event: EventArgs<L2ToL1TxEvent>
+  ) {
     super(l1Signer.provider!, event)
   }
 

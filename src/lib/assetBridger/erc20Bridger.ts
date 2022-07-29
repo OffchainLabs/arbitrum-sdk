@@ -65,6 +65,7 @@ import {
   IRetryableData,
 } from '../dataEntities/transactionRequest'
 import { defaultAbiCoder } from 'ethers/lib/utils'
+import { EventArgs } from '../dataEntities/event'
 
 export interface TokenApproveParams {
   /**
@@ -225,7 +226,7 @@ export class Erc20Bridger extends AssetBridger<
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     l1TokenAddress?: string,
     fromAddress?: string
-  ): Promise<(WithdrawalInitiatedEvent['args'] & { txHash: string })[]> {
+  ): Promise<(EventArgs<WithdrawalInitiatedEvent> & { txHash: string })[]> {
     await this.checkL2Network(l2Provider)
 
     const eventFetcher = new EventFetcher(l2Provider)
@@ -761,7 +762,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
   public async getL1GatewaySetEvents(
     l1Provider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag }
-  ): Promise<GatewaySetEvent['args'][]> {
+  ): Promise<EventArgs<GatewaySetEvent>[]> {
     await this.checkL1Network(l1Provider)
 
     const l1GatewayRouterAddress = this.l2Network.tokenBridge.l1GatewayRouter
@@ -786,7 +787,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     l2Provider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     customNetworkL2GatewayRouter?: string
-  ): Promise<GatewaySetEvent['args'][]> {
+  ): Promise<EventArgs<GatewaySetEvent>[]> {
     if (this.l2Network.isCustom && !customNetworkL2GatewayRouter) {
       throw new ArbSdkError(
         'Must supply customNetworkL2GatewayRouter for custom network '
