@@ -22,12 +22,12 @@ import { SignerOrProvider } from './signerOrProvider'
 import * as classic from '@arbitrum/sdk-classic'
 import {
   l1Networks as classicl1Networks,
-  l2Networks as classicL2Networks
+  l2Networks as classicL2Networks,
 } from '@arbitrum/sdk-classic/dist/lib/dataEntities/networks'
 import * as nitro from '@arbitrum/sdk-nitro'
 import {
   l1Networks as nitrol1Networks,
-  l2Networks as nitroL2Networks
+  l2Networks as nitroL2Networks,
 } from '@arbitrum/sdk-nitro/dist/lib/dataEntities/networks'
 import {
   convertNetworkClassicToNitro,
@@ -149,8 +149,12 @@ function patchClassicNetworkWithNitro() {
   // adds nitro specific networks to the classic package to avoid breakage
   classicl1Networks[1].partnerChainIDs.push(42170)
   classicl1Networks[5] = nitrol1Networks[5]
-  classicL2Networks[421613] = convertNetworkNitroToClassic(nitroL2Networks[421613])
-  classicL2Networks[42170] = convertNetworkNitroToClassic(nitroL2Networks[42170])
+  classicL2Networks[421613] = convertNetworkNitroToClassic(
+    nitroL2Networks[421613]
+  )
+  classicL2Networks[42170] = convertNetworkNitroToClassic(
+    nitroL2Networks[42170]
+  )
 }
 
-patchClassicNetworkWithNitro();
+patchClassicNetworkWithNitro()
