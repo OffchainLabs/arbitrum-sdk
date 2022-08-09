@@ -132,14 +132,28 @@ export const getOutboxAddr = (
 type LastUpdated = { timestamp: number; value: boolean }
 const fifthteenMinutesMs = 15 * 60 * 1000
 
-const lastUpdatedL1: LastUpdated = {
+let lastUpdatedL1: LastUpdated = {
   timestamp: 0,
   value: false,
 }
 
-const lastUpdatedL2: LastUpdated = {
+let lastUpdatedL2: LastUpdated = {
   timestamp: 0,
   value: false,
+}
+
+let l2ChainIdOverride: number | undefined = undefined
+export const updateL2ChainIdAndClearCache = (l2ChainId: number) => {
+  isNitro = false
+  lastUpdatedL1 = {
+    timestamp: 0,
+    value: false,
+  }
+  lastUpdatedL2 = {
+    timestamp: 0,
+    value: false,
+  }
+  l2ChainIdOverride = l2ChainId
 }
 
 export const isNitroL1 = async (
@@ -152,7 +166,9 @@ export const isNitroL1 = async (
   if (isNitro) return true
   if (Date.now() - lastUpdatedL1.timestamp > timeSinceCheckMs) {
     const l1Network = await nitro.getL1Network(l1Provider)
-    const partner = l1Network.partnerChainIDs[0]
+    const partner = l1Network.partnerChainIDs.filter(
+      pcId => !isDefined(l2ChainIdOverride) || pcId === l2ChainIdOverride
+    )[0]
     const l2Network = await nitro.getL2Network(partner)
     if (!l2Network)
       throw new ArbSdkError(`No l2 network found with chain id ${partner}`)
@@ -428,6 +444,7 @@ export interface EthDepositMessage {
 }
 
 import { getTransactionReceipt } from '@arbitrum/sdk-nitro/dist/lib/utils/lib'
+import { isDefined } from './lib'
 
 export const toNitroEthDepositMessage = async (
   message: ClassicL1ToL2MessageReader,
