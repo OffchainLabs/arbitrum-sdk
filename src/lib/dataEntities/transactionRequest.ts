@@ -38,7 +38,8 @@ export interface L1ToL2TransactionRequest {
    */
   isValid(): Promise<boolean>
 }
-/*
+
+/**
  * Parameters that will be used to create the retryable ticket for this l1 to l2 message
  */
 export interface IRetryableData {
