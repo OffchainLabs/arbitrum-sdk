@@ -240,7 +240,7 @@ export const l2Networks: L2Networks = {
       rollup: '0xfb209827c58283535b744575e11953dcc4bead88',
       sequencerInbox: '0x211e1c4c7f1bf5351ac850ed10fd68cffcf6c21b',
     },
-    explorerUrl: 'https://a4ba-explorer.arbitrum.io',
+    explorerUrl: 'https://nova-explorer.arbitrum.io',
     isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Nova',
