@@ -40,6 +40,7 @@ import { l1Networks as nitroL1Networks } from '@arbitrum/sdk-nitro/dist/lib/data
 
 import { l2Networks as classicL2Networks } from '@arbitrum/sdk-classic/dist/lib/dataEntities/networks'
 import { l2Networks as nitroL2Networks } from '@arbitrum/sdk-nitro/dist/lib/dataEntities/networks'
+import { getTransactionReceipt } from '@arbitrum/sdk-nitro/dist/lib/utils/lib'
 import { ArbSdkError, MissingProviderArbTsError } from '../dataEntities/errors'
 import {
   EthBridger,
@@ -53,6 +54,7 @@ import {
   TokenWithdrawParams,
 } from '../assetBridger/erc20Bridger'
 import { GasOverrides } from '../message/L1ToL2MessageGasEstimator'
+import { isDefined } from './lib'
 
 let isNitro = false
 
@@ -442,9 +444,6 @@ export interface EthDepositMessage {
     timeout?: number
   ): Promise<ethers.providers.TransactionReceipt | null>
 }
-
-import { getTransactionReceipt } from '@arbitrum/sdk-nitro/dist/lib/utils/lib'
-import { isDefined } from './lib'
 
 export const toNitroEthDepositMessage = async (
   message: ClassicL1ToL2MessageReader,
