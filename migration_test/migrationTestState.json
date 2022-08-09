@@ -1,0 +1,42 @@
+{
+  "core": {
+    "l1Signer": "0x46b139d0a903544ea1888a8cc6f9d3f3aeb1855ed4e8e9149c7945665c640407",
+    "l2Signer": "0x46b139d0a903544ea1888a8cc6f9d3f3aeb1855ed4e8e9149c7945665c640407"
+  },
+  "bridgeBalance": {
+    "address": "0x9a28e783c47bbeb813f32b861a431d0776681e95",
+    "balance": "668736520924576492643614"
+  },
+  "ethTransfer": {
+    "address": "0xE76351b4F4885e723977073b99A4A993f8837557",
+    "balance": "5000000000000"
+  },
+  "tokenDeploy": {
+    "address": "0xd8bCe9F01b4F4E46c67E452A89d5c48A7D3dA48F",
+    "name": "TESTY_MIG",
+    "symbol": "MIG"
+  },
+  "weth": {
+    "user": "0x2cdbc9e7ae3c34b917c08ad081546ee5703706325fdaa9a67247c17a4de1320c",
+    "balance": "137000000000000"
+  },
+  "wethXChainDeposit": {
+    "messageTxHash": "0xb2c4eabf2f7e8df2ad9efb003d2a648ac7ab0ec99f8f8ab0ff88248e4b28f7f3",
+    "user": "0x36cbb6aaf63a91eccd26eb818ecce6c04920e712f68a5008fadf3483aad96fc3",
+    "balance": "137000000000000"
+  },
+  "wethXChainWithdrawal": {
+    "messageTxHash": "0x64eb63d1df4fd7a505d5d6ae840941b7de0eeddf94e3f3884b6ab1456f631742",
+    "user": "0xab42a67eab4aff13781f1ea992628f05186a7db7c7e5aa3cc129aa45f64ff73a",
+    "balance": "137000000000000"
+  },
+  "ethXChainWithdrawal": {
+    "messageTxHash": "0xbc696cf4fbb254d1f8d4f4c344fc2554b127935e8a690a1c14d6f1d55fc57f68",
+    "user": "0xc9580654ff4672730eebc0d2e6a5911bd66b8435cc2bc07f711333812b60ea7d",
+    "balance": "137000000000000"
+  },
+  "ethXChainDeposit": {
+    "user": "0x1203f2a3ea829ce7cac78478b6ed7068d8dfc6324f2ebdf24679da1306da293a",
+    "balance": "13700000000000000"
+  }
+}
