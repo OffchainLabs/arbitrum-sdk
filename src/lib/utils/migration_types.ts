@@ -168,9 +168,10 @@ export const isNitroL1 = async (
   if (isNitro) return true
   if (Date.now() - lastUpdatedL1.timestamp > timeSinceCheckMs) {
     const l1Network = await nitro.getL1Network(l1Provider)
-    const partner = l1Network.partnerChainIDs.filter(
-      pcId => !isDefined(l2ChainIdOverride) || pcId === l2ChainIdOverride
-    )[0]
+    const partner =
+      l1Network.partnerChainIDs.filter(
+        pcId => !isDefined(l2ChainIdOverride) || pcId === l2ChainIdOverride
+      )[0] || l1Network.partnerChainIDs[0]
     const l2Network = await nitro.getL2Network(partner)
     if (!l2Network)
       throw new ArbSdkError(`No l2 network found with chain id ${partner}`)
