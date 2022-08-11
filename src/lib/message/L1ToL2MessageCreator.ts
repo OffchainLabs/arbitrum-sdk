@@ -17,32 +17,19 @@ import {
   L1ToL2TransactionRequest,
 } from '../dataEntities/transactionRequest'
 import { RetryableData } from '../dataEntities/retryableData'
+import { OmitTyped, PartialPick } from '../utils/types'
 
-/**
- * Omit doesnt enforce that the seconds generic is a keyof the first
- * OmitTyped guard against the underlying type prop names
- * being refactored, and not being updated in the usage of OmitTyped
- */
-type OmitTyped<T, K extends keyof T> = Omit<T, K>
-
-/**
- * Make the specified properties optional
- */
-type PartialPick<T, K extends keyof T> = OmitTyped<T, K> & Partial<T>
-
-type L1ToL2MessageParams = PartialPick<
-  OmitTyped<
-    RetryableData,
-    'deposit' | 'from' | 'maxSubmissionCost' | 'maxFeePerGas'
-  >,
+type L1ToL2GasKeys =
+  | 'maxSubmissionCost'
+  | 'maxFeePerGas'
+  | 'gasLimit'
+  | 'deposit'
+export type L1ToL2MessageGasParams = Pick<RetryableData, L1ToL2GasKeys>
+export type L1ToL2MessageNoGasParams = OmitTyped<RetryableData, L1ToL2GasKeys>
+export type L1ToL2MessageParams = PartialPick<
+  L1ToL2MessageNoGasParams,
   'excessFeeRefundAddress' | 'callValueRefundAddress'
-> & {
-  l2Provider: Provider
-  /**
-   * Options for estimating L1ToL2 gas parameters
-   */
-  retryableGasOverrides?: GasOverrides
-}
+>
 
 /**
  * Creates retryable tickets by directly calling the Inbox contract on L1
@@ -55,44 +42,68 @@ export class L1ToL2MessageCreator {
   }
 
   /**
-   * Generate a transaction request for creating a retryable ticket
+   * Gets a current estimate for the supplied params
+   * @param params
+   * @param l1Provider
    * @param l2Provider
-   * @param l2CallTo
-   * @param l2CallData
-   * @param l2CallValue
+   * @param retryableGasOverrides
+   * @returns
+   */
+  protected static async getTicketEstimate(
+    params: L1ToL2MessageNoGasParams,
+    l1Provider: Provider,
+    l2Provider: Provider,
+    retryableGasOverrides?: GasOverrides
+  ): Promise<Pick<RetryableData, L1ToL2GasKeys>> {
+    const baseFee = await getBaseFee(l1Provider)
+
+    const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
+    return await gasEstimator.estimateAll(
+      params,
+      baseFee,
+      l1Provider,
+      retryableGasOverrides
+    )
+  }
+
+  /**
+   * Generate a transaction request for creating a retryable ticket
+   * @param params
+   * @param l1Provider
+   * @param l2Provider
    * @param options
    * @returns
    */
-  public async getTicketCreationRequest(
-    params: L1ToL2MessageParams
+  public static async getTicketCreationRequest(
+    params: L1ToL2MessageParams,
+    l1Provider: Provider,
+    l2Provider: Provider,
+    options?: GasOverrides
   ): Promise<L1ToL2TransactionRequest> {
-    const sender = await this.l1Signer.getAddress()
-    const excessFeeRefundAddress = params.excessFeeRefundAddress || sender
-    const callValueRefundAddress = params.callValueRefundAddress || sender
-    const l1Provider = SignerProviderUtils.getProviderOrThrow(this.l1Signer)
+    const excessFeeRefundAddress = params.excessFeeRefundAddress || params.from
+    const callValueRefundAddress = params.callValueRefundAddress || params.from
 
-    const gasEstimator = new L1ToL2MessageGasEstimator(params.l2Provider)
-    const baseFee = await getBaseFee(l1Provider)
-    const estimates = await gasEstimator.estimateAll(
-      sender,
-      params.to,
-      params.data,
-      params.l2CallValue,
-      baseFee,
+    const parsedParams: L1ToL2MessageNoGasParams = {
+      ...params,
       excessFeeRefundAddress,
       callValueRefundAddress,
+    }
+
+    const estimates = await L1ToL2MessageCreator.getTicketEstimate(
+      parsedParams,
       l1Provider,
-      params.retryableGasOverrides
+      l2Provider,
+      options
     )
 
-    const l2Network = await getL2Network(params.l2Provider)
+    const l2Network = await getL2Network(l2Provider)
     const inboxInterface = Inbox__factory.createInterface()
     const functionData = inboxInterface.encodeFunctionData(
       'createRetryableTicket',
       [
         params.to,
         params.l2CallValue,
-        estimates.maxSubmissionFee,
+        estimates.maxSubmissionCost,
         excessFeeRefundAddress,
         callValueRefundAddress,
         estimates.gasLimit,
@@ -102,24 +113,31 @@ export class L1ToL2MessageCreator {
     )
 
     return {
-      l2GasLimit: estimates.gasLimit,
-      l2MaxFeePerGas: estimates.maxFeePerGas,
-      l2SubmissionFee: estimates.maxSubmissionFee,
-      l2GasCostsMaxTotal: estimates.totalL2GasCosts,
       core: {
         to: l2Network.ethBridge.inbox,
         data: functionData,
-        value: estimates.totalL2GasCosts.add(params.l2CallValue),
+        value: estimates.deposit,
+      },
+      retryableData: {
+        data: params.data,
+        from: params.from,
+        to: params.to,
+        excessFeeRefundAddress: excessFeeRefundAddress,
+        callValueRefundAddress: callValueRefundAddress,
+        l2CallValue: params.l2CallValue,
+        maxSubmissionCost: estimates.maxSubmissionCost,
+        maxFeePerGas: estimates.maxFeePerGas,
+        gasLimit: estimates.gasLimit,
+        deposit: estimates.deposit,
       },
       isValid: async () => {
-        const reEstimated = await this.getTicketCreationRequest({
-          ...params,
-          retryableGasOverrides: undefined,
-        })
-        return (
-          estimates.maxFeePerGas.gte(reEstimated.l2MaxFeePerGas) &&
-          estimates.maxSubmissionFee.gte(reEstimated.l2SubmissionFee)
+        const reEstimates = await L1ToL2MessageCreator.getTicketEstimate(
+          parsedParams,
+          l1Provider,
+          l2Provider,
+          options
         )
+        return L1ToL2MessageGasEstimator.isValid(estimates, reEstimates)
       },
     }
   }
@@ -130,11 +148,19 @@ export class L1ToL2MessageCreator {
   public async createRetryableTicket(
     params:
       | (L1ToL2MessageParams & { overrides?: PayableOverrides })
-      | (L1ToL2TransactionRequest & { overrides?: PayableOverrides })
+      | (L1ToL2TransactionRequest & { overrides?: PayableOverrides }),
+    l2Provider: Provider,
+    options?: GasOverrides
   ): Promise<L1ContractTransaction> {
+    const l1Provider = SignerProviderUtils.getProviderOrThrow(this.l1Signer)
     const createRequest = isL1ToL2TransactionRequest(params)
       ? params
-      : await this.getTicketCreationRequest(params)
+      : await L1ToL2MessageCreator.getTicketCreationRequest(
+          params,
+          l1Provider,
+          l2Provider,
+          options
+        )
 
     const tx = await this.l1Signer.sendTransaction({
       ...createRequest,
