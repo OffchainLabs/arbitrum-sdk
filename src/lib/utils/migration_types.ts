@@ -132,27 +132,29 @@ export const getOutboxAddr = (
 type LastUpdated = { timestamp: number; value: boolean }
 const fifthteenMinutesMs = 15 * 60 * 1000
 
-
 const makeCache = () => {
-  let isNitroCache: {
+  const isNitroCache: {
     [l2ChainId: number]: { l1: LastUpdated; l2: LastUpdated }
   } = {}
 
   const getCacheWithDefault = (l2ChainId: number) => {
     const nitroCacheRes = isNitroCache[l2ChainId]
-    if(!isDefined(nitroCacheRes.l1)) nitroCacheRes.l1 = { timestamp: 0, value: false }
-    if(!isDefined(nitroCacheRes.l2)) nitroCacheRes.l2 = { timestamp: 0, value: false }
+    if (!isDefined(nitroCacheRes.l1))
+      nitroCacheRes.l1 = { timestamp: 0, value: false }
+    if (!isDefined(nitroCacheRes.l2))
+      nitroCacheRes.l2 = { timestamp: 0, value: false }
     return nitroCacheRes
   }
 
-  const setCache = (l2ChainId: number, val: { l1: LastUpdated; l2: LastUpdated }) => 
-   (isNitroCache[l2ChainId] = val)
+  const setCache = (
+    l2ChainId: number,
+    val: { l1: LastUpdated; l2: LastUpdated }
+  ) => (isNitroCache[l2ChainId] = val)
 
-   return { setCache, getCacheWithDefault }
+  return { setCache, getCacheWithDefault }
 }
 
 const cache = makeCache()
-
 
 export const isNitroL1 = async (
   l2ChainId: number,
@@ -257,7 +259,7 @@ export const isNitroL2 = async (
         l2: {
           timestamp: Date.now(),
           value: true,
-        }
+        },
       })
     } catch {
       cache.setCache(l2Network.chainID, {
@@ -265,7 +267,7 @@ export const isNitroL2 = async (
         l2: {
           timestamp: Date.now(),
           value: false,
-        }
+        },
       })
     }
   }
