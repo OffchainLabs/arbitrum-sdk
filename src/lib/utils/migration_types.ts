@@ -160,7 +160,7 @@ class LastUpdatedCache {
       }
 
       return this.lastUpdatedL2[l2ChainId]
-    } else throw new Error(`Unexpected cache type in get: ${l1OrL2}.`)
+    } else throw new ArbSdkError(`Unexpected cache type in get: ${l1OrL2}.`)
   }
 
   public update(
@@ -180,7 +180,7 @@ class LastUpdatedCache {
       if (lastUpdated.value) {
         this.lastUpdatedL1[l2ChainId] = lastUpdated
       }
-    } else throw new Error(`Unexpected cache type in update: ${l1OrL2}.`)
+    } else throw new ArbSdkError(`Unexpected cache type in update: ${l1OrL2}.`)
   }
 }
 const isNitroCache = new LastUpdatedCache()
