@@ -140,7 +140,7 @@ export class Erc20Bridger extends AssetBridger<
     erc20L1Address: string,
     l1Provider: Provider
   ): Promise<string> {
-    return (await isNitroL1(l1Provider))
+    return (await isNitroL1(this.l2Network.chainID, l1Provider))
       ? this.nitroBridger.getL1GatewayAddress(erc20L1Address, l1Provider)
       : this.classicBridger.getL1GatewayAddress(erc20L1Address, l1Provider)
   }
@@ -168,7 +168,7 @@ export class Erc20Bridger extends AssetBridger<
   public async approveToken(
     params: TokenApproveParams
   ): Promise<ethers.ContractTransaction> {
-    return (await isNitroL1(params.l1Signer))
+    return (await isNitroL1(this.l2Network.chainID, params.l1Signer))
       ? this.nitroBridger.approveToken(params)
       : this.classicBridger.approveToken(params)
   }
@@ -239,7 +239,7 @@ export class Erc20Bridger extends AssetBridger<
     erc20L1Address: string,
     l1Provider: Provider
   ): Promise<string> {
-    return (await isNitroL1(l1Provider))
+    return (await isNitroL1(this.l2Network.chainID, l1Provider))
       ? this.nitroBridger.getL2ERC20Address(erc20L1Address, l1Provider)
       : this.classicBridger.getL2ERC20Address(erc20L1Address, l1Provider)
   }
@@ -269,7 +269,7 @@ export class Erc20Bridger extends AssetBridger<
     l1TokenAddress: string,
     l1Provider: Provider
   ): Promise<boolean> {
-    return (await isNitroL1(l1Provider))
+    return (await isNitroL1(this.l2Network.chainID, l1Provider))
       ? this.nitroBridger.l1TokenIsDisabled(l1TokenAddress, l1Provider)
       : this.classicBridger.l1TokenIsDisabled(l1TokenAddress, l1Provider)
   }
@@ -282,7 +282,7 @@ export class Erc20Bridger extends AssetBridger<
   public async depositEstimateGas(
     params: TokenDepositParams
   ): Promise<BigNumber> {
-    return (await isNitroL1(params.l1Signer))
+    return (await isNitroL1(this.l2Network.chainID, params.l1Signer))
       ? this.nitroBridger.depositEstimateGas(params)
       : this.classicBridger.depositEstimateGas({
           ...params,
@@ -301,7 +301,7 @@ export class Erc20Bridger extends AssetBridger<
     params: TokenDepositParams
   ): Promise<L1ContractCallTransaction> {
     return L1TransactionReceipt.monkeyPatchContractCallWait(
-      (await isNitroL1(params.l1Signer))
+      (await isNitroL1(this.l2Network.chainID, params.l1Signer))
         ? await this.nitroBridger.deposit(params)
         : await this.classicBridger.deposit({
             ...params,
@@ -382,7 +382,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     l2Provider: Provider
   ): Promise<L1ContractTransaction> {
     return L1TransactionReceipt.monkeyPatchContractCallWait(
-      (await isNitroL1(l1Signer))
+      (await isNitroL1(this.l2Network.chainID, l1Signer))
         ? await this.adminNitroBridger.registerCustomToken(
             l1TokenAddress,
             l2TokenAddress,
@@ -409,7 +409,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     customNetworkL1GatewayRouter?: string
   ): Promise<GatewaySetEvent['args'][]> {
-    return (await isNitroL1(l1Provider))
+    return (await isNitroL1(this.l2Network.chainID, l1Provider))
       ? this.adminNitroBridger.getL1GatewaySetEvents(l1Provider, filter)
       : this.adminClassicBridger.getL1GatewaySetEvents(
           l1Provider,
@@ -456,7 +456,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     maxGas: BigNumber = BigNumber.from(0)
   ): Promise<L1ContractCallTransaction> {
     return L1TransactionReceipt.monkeyPatchContractCallWait(
-      (await isNitroL1(l1Signer))
+      (await isNitroL1(this.l2Network.chainID, l1Signer))
         ? await this.adminNitroBridger.setGateways(
             l1Signer,
             l2Provider,

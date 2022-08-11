@@ -122,7 +122,7 @@ export class EthBridger extends AssetBridger<
   public async depositEstimateGas(
     params: EthDepositParams
   ): Promise<BigNumber> {
-    return (await isNitroL1(params.l1Signer))
+    return (await isNitroL1(this.l2Network.chainID, params.l1Signer))
       ? this.nitroBridger.depositEstimateGas(params)
       : this.classicBridger.depositEstimateGas(params)
   }
@@ -136,7 +136,7 @@ export class EthBridger extends AssetBridger<
     params: EthDepositParams
   ): Promise<L1EthDepositTransaction> {
     return L1TransactionReceipt.monkeyPatchEthDepositWait(
-      (await isNitroL1(params.l1Signer))
+      (await isNitroL1(this.l2Network.chainID, params.l1Signer))
         ? await this.nitroBridger.deposit(params)
         : await this.classicBridger.deposit(params)
     )

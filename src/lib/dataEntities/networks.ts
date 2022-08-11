@@ -88,9 +88,10 @@ export interface L2Networks {
 }
 
 export const getL1Network = async (
-  signerOrProvider: SignerOrProvider
+  signerOrProvider: SignerOrProvider,
+  l2ChainId: number
 ): Promise<L1Network> => {
-  if (await isNitroL1(signerOrProvider)) {
+  if (await isNitroL1(l2ChainId, signerOrProvider)) {
     return await nitro.getL1Network(signerOrProvider)
   } else {
     return await classic.getL1Network(signerOrProvider)

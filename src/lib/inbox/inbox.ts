@@ -40,7 +40,10 @@ type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
 export class InboxTools {
   private readonly classicInbox: classic.InboxTools
   private readonly nitroInbox: nitro.InboxTools
-  constructor(private readonly l1Signer: Signer, l2Network: L2Network) {
+  constructor(
+    private readonly l1Signer: Signer,
+    private readonly l2Network: L2Network
+  ) {
     this.classicInbox = new classic.InboxTools(
       l1Signer,
       lookupExistingNetwork(l2Network)
@@ -63,7 +66,7 @@ export class InboxTools {
     startSearchRangeBlocks = 100,
     rangeMultipler = 2
   ): Promise<ForceInclusionParams | null> {
-    if (await isNitroL1(this.l1Signer)) {
+    if (await isNitroL1(this.l2Network.chainID, this.l1Signer)) {
       return this.nitroInbox.getForceIncludableEvent(
         maxSearchRangeBlocks,
         startSearchRangeBlocks,
@@ -111,7 +114,7 @@ export class InboxTools {
     messageDeliveredEvent?: T,
     overrides?: Overrides
   ): Promise<ContractTransaction | null> {
-    if (await isNitroL1(this.l1Signer)) {
+    if (await isNitroL1(this.l2Network.chainID, this.l1Signer)) {
       return this.nitroInbox.forceInclude(messageDeliveredEvent, overrides)
     } else {
       if (messageDeliveredEvent) {

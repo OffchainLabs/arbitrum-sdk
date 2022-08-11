@@ -56,8 +56,6 @@ import {
 import { GasOverrides } from '../message/L1ToL2MessageGasEstimator'
 import { isDefined } from './lib'
 
-let isNitro = false
-
 export const generateL2NitroNetwork = async (
   existingNitroL2Network: nitro.L2Network,
   l1Provider: Provider
@@ -134,44 +132,74 @@ export const getOutboxAddr = (
 type LastUpdated = { timestamp: number; value: boolean }
 const fifthteenMinutesMs = 15 * 60 * 1000
 
-let lastUpdatedL1: LastUpdated = {
-  timestamp: 0,
-  value: false,
+enum CacheType {
+  L1 = 1,
+  L2 = 2,
 }
 
-let lastUpdatedL2: LastUpdated = {
-  timestamp: 0,
-  value: false,
-}
+class LastUpdatedCache {
+  public lastUpdatedL1: {
+    // we key by l2 chainid even for the l1 cache because
+    // an l1 chain can multiple l2s
+    [l2ChainID: number]: LastUpdated
+  } = {}
+  public lastUpdatedL2: {
+    [l2ChainID: number]: LastUpdated
+  } = {}
 
-let l2ChainIdOverride: number | undefined = undefined
-export const updateL2ChainIdAndClearCache = (l2ChainId: number) => {
-  isNitro = false
-  lastUpdatedL1 = {
-    timestamp: 0,
-    value: false,
+  public get(l2ChainId: number, l1OrL2: CacheType) {
+    if (l1OrL2 === CacheType.L1) {
+      if (!isDefined(this.lastUpdatedL1[l2ChainId])) {
+        this.lastUpdatedL1[l2ChainId] = { timestamp: 0, value: false }
+      }
+
+      return this.lastUpdatedL1[l2ChainId]
+    } else if (l1OrL2 === CacheType.L2) {
+      if (!isDefined(this.lastUpdatedL2[l2ChainId])) {
+        this.lastUpdatedL2[l2ChainId] = { timestamp: 0, value: false }
+      }
+
+      return this.lastUpdatedL2[l2ChainId]
+    } else throw new Error(`Unexpected cache type in get: ${l1OrL2}.`)
   }
-  lastUpdatedL2 = {
-    timestamp: 0,
-    value: false,
+
+  public update(
+    l2ChainId: number,
+    l1OrL2: CacheType,
+    lastUpdated: LastUpdated
+  ) {
+    if (l1OrL2 === CacheType.L1) {
+      this.lastUpdatedL1[l2ChainId] = lastUpdated
+      // if we found isNitro to be true then lets update both sides of the cache
+      if (lastUpdated.value) {
+        this.lastUpdatedL2[l2ChainId] = lastUpdated
+      }
+    } else if (l1OrL2 === CacheType.L2) {
+      this.lastUpdatedL2[l2ChainId] = lastUpdated
+      // if we found isNitro to be true then lets update both sides of the cache
+      if (lastUpdated.value) {
+        this.lastUpdatedL1[l2ChainId] = lastUpdated
+      }
+    } else throw new Error(`Unexpected cache type in update: ${l1OrL2}.`)
   }
-  l2ChainIdOverride = l2ChainId
 }
+const isNitroCache = new LastUpdatedCache()
 
 export const isNitroL1 = async (
+  l2ChainId: number,
   l1Provider: SignerOrProvider,
   /**
    * Wait at least this amount of time before rechecking if isNitro
    */
   timeSinceCheckMs: number = fifthteenMinutesMs
 ) => {
-  if (isNitro) return true
-  if (Date.now() - lastUpdatedL1.timestamp > timeSinceCheckMs) {
+  const cacheData = isNitroCache.get(l2ChainId, CacheType.L1)
+  if (cacheData.value) return true
+  if (Date.now() - cacheData.timestamp > timeSinceCheckMs) {
     const l1Network = await nitro.getL1Network(l1Provider)
-    const partner =
-      l1Network.partnerChainIDs.filter(
-        pcId => !isDefined(l2ChainIdOverride) || pcId === l2ChainIdOverride
-      )[0] || l1Network.partnerChainIDs[0]
+    const partner = l1Network.partnerChainIDs.filter(
+      pcId => pcId === l2ChainId
+    )[0]
     const l2Network = await nitro.getL2Network(partner)
     if (!l2Network)
       throw new ArbSdkError(`No l2 network found with chain id ${partner}`)
@@ -184,7 +212,7 @@ export const isNitroL1 = async (
         // In the middle of the migration the bridge is switched over,
         // but the inbox isn't enabled yet.
         // This error will be caught below and return false.
-        throw new ArbSdkError(`inbox isn't authorized by bridge`)
+        throw new ArbSdkError(`Inbox isn't authorized by bridge`)
       }
       const rollupAdd = await bridge.rollup()
       const rollup = NitroRollupUserLogic__factory.connect(
@@ -202,15 +230,18 @@ export const isNitroL1 = async (
       )
 
       nitroL2Networks[nitroL2Network.chainID] = nitroL2Network
-      isNitro = true
-      lastUpdatedL1.timestamp = Date.now()
-      lastUpdatedL1.value = true
+      isNitroCache.update(l2ChainId, CacheType.L1, {
+        timestamp: Date.now(),
+        value: true,
+      })
     } catch (err) {
-      lastUpdatedL1.timestamp = Date.now()
-      lastUpdatedL1.value = false
+      isNitroCache.update(l2ChainId, CacheType.L1, {
+        timestamp: Date.now(),
+        value: false,
+      })
     }
   }
-  return lastUpdatedL1.value
+  return isNitroCache.get(l2ChainId, CacheType.L1).value
 }
 
 export const isNitroL2 = async (
@@ -220,10 +251,11 @@ export const isNitroL2 = async (
    */
   timeSinceCheckMs: number = fifthteenMinutesMs
 ): Promise<boolean> => {
-  if (isNitro) return true
-  if (Date.now() - lastUpdatedL2.timestamp > timeSinceCheckMs) {
+  const l2Network = await nitro.getL2Network(l2SignerOrProvider)
+  const cacheData = isNitroCache.get(l2Network.chainID, CacheType.L2)
+  if (cacheData.value) return true
+  if (Date.now() - cacheData.timestamp > timeSinceCheckMs) {
     const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2SignerOrProvider)
-    const l2Network = await nitro.getL2Network(l2SignerOrProvider)
     const blockNumber = await arbSys.arbBlockNumber()
     try {
       // will throw an error if pre nitro
@@ -238,15 +270,18 @@ export const isNitroL2 = async (
         SignerProviderUtils.getProviderOrThrow(l1Provider)
       )
       nitroL2Networks[nitroL2Network.chainID] = nitroL2Network
-      isNitro = true
-      lastUpdatedL2.timestamp = Date.now()
-      lastUpdatedL2.value = true
+      isNitroCache.update(l2Network.chainID, CacheType.L2, {
+        timestamp: Date.now(),
+        value: true,
+      })
     } catch {
-      lastUpdatedL2.timestamp = Date.now()
-      lastUpdatedL2.value = false
+      isNitroCache.update(l2Network.chainID, CacheType.L2, {
+        timestamp: Date.now(),
+        value: false,
+      })
     }
   }
-  return lastUpdatedL2.value
+  return isNitroCache.get(l2Network.chainID, CacheType.L2).value
 }
 
 export const lookupExistingNetwork = (
