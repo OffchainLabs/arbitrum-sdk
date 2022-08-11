@@ -247,7 +247,8 @@ export const testSetup = async (): Promise<{
   // are we shadow forking
 
   try {
-    const l1Network = await getL1Network(l1Deployer)
+    const l2ChainId = await l2Deployer.getChainId()
+    const l1Network = await getL1Network(l1Deployer, l2ChainId)
     const l2Network = await getL2Network(l2Deployer)
     setL1Network = l1Network
     setL2Network = l2Network

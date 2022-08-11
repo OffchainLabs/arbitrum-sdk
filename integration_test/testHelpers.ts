@@ -138,7 +138,11 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   const balBefore = await params.l1Token.balanceOf(
     await params.l1Signer.getAddress()
   )
-  if ((await isNitroL1(params.l1Signer)) && shouldFinaliseWithdrawal()) {
+  const l2ChainId = await params.l2Signer.getChainId()
+  if (
+    (await isNitroL1(l2ChainId, params.l1Signer)) &&
+    shouldFinaliseWithdrawal()
+  ) {
     await message.waitUntilReadyToExecute(params.l2Signer.provider!)
     expect(
       await message.status(params.l2Signer.provider!),

@@ -64,8 +64,9 @@ describe('Custom ERC20', () => {
       ...(await testSetup()),
       l1CustomToken: {} as any,
     }
+    const l2ChainId = await testState.l2Signer.getChainId()
     await fundL1(testState.l1Signer, parseEther('0.01'))
-    if (await isNitroL1(testState.l1Signer)) {
+    if (await isNitroL1(l2ChainId, testState.l1Signer)) {
       await fundL2(testState.l2Signer, parseEther('0.5'))
     } else {
       await fundL2(testState.l2Signer)

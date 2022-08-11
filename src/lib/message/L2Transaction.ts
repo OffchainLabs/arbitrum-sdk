@@ -146,7 +146,8 @@ export class L2TransactionReceipt implements TransactionReceipt {
     l1Provider: providers.JsonRpcProvider,
     confirmations = 10
   ): Promise<boolean> {
-    if (await isNitroL1(l1Provider)) {
+    const l2ChainId = (await l2Provider.getNetwork()).chainId
+    if (await isNitroL1(l2ChainId, l1Provider)) {
       return this.nitroReceipt.isDataAvailable(l2Provider, confirmations)
     } else {
       return this.classicReceipt.isDataAvailable(l2Provider, l1Provider)

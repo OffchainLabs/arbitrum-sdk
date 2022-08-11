@@ -63,7 +63,8 @@ describe('standard ERC20', () => {
   before('init', async () => {
     const setup = await testSetup()
     await fundL1(setup.l1Signer, parseEther('0.01'))
-    if (await isNitroL1(setup.l1Signer)) {
+
+    if (await isNitroL1(setup.l2Network.chainID, setup.l1Signer)) {
       await fundL2(setup.l2Signer, parseEther('0.5'))
     } else {
       await fundL2(setup.l2Signer)
@@ -173,7 +174,7 @@ describe('standard ERC20', () => {
   // for the redeem transaction to execute, but not the following scheduled l2 tx
   // we should calculate this using the l2's view of the l1 base fee
   it.skip('deposit with low funds, fails first redeem, succeeds seconds', async () => {
-    if (await isNitroL1(testState.l1Signer)) {
+    if (await isNitroL1(testState.l2Network.chainID, testState.l1Signer)) {
       const { waitRes } = await depositToken(
         depositAmount,
         testState.l1Token.address,

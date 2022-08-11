@@ -46,7 +46,8 @@ describe('Ether', async () => {
 
   it('transfers ether on l2', async () => {
     const { l2Signer, l1Signer } = await testSetup()
-    if (await isNitroL1(l1Signer)) {
+    const l2ChainId = await l2Signer.getChainId()
+    if (await isNitroL1(l2ChainId, l1Signer)) {
       await fundL2(l2Signer, parseEther('0.5'))
     } else {
       await fundL2(l2Signer, parseEther('0.001'))
