@@ -116,7 +116,6 @@ export class RetryableDataTools {
   ): RetryableData | null {
     const errorData = this.tryGetErrorData(ethersJsErrorOrData)
     if (!errorData) return null
-    // TODO: add typeguard
     return errorInterface.parseError(errorData).args as unknown as RetryableData
   }
 }
