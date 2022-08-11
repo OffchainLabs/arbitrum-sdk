@@ -132,7 +132,9 @@ export const getOutboxAddr = (
 type LastUpdated = { timestamp: number; value: boolean }
 const fifthteenMinutesMs = 15 * 60 * 1000
 
-let isNitroCache: { [l2ChainId: number]: LastUpdated } = {}
+let isNitroCache: {
+  [l2ChainId: number]: { l1: LastUpdated; l2: LastUpdated }
+} = {}
 
 
 export const isNitroL1 = async (
@@ -151,8 +153,8 @@ export const isNitroL1 = async (
     )
 
   const cacheData = isNitroCache[l2ChainId]
-  if (cacheData.value) return true
-  if (Date.now() - cacheData.timestamp > timeSinceCheckMs) {
+  if (cacheData.l1.value) return true
+  if (Date.now() - cacheData.l1.timestamp > timeSinceCheckMs) {
     const l1Network = await nitro.getL1Network(l1Provider)
     const partner = l1Network.partnerChainIDs.filter(
       pcId => pcId === l2ChainId
@@ -187,18 +189,18 @@ export const isNitroL1 = async (
       )
 
       nitroL2Networks[nitroL2Network.chainID] = nitroL2Network
-      isNitroCache[l2ChainId] = {
+      isNitroCache[l2ChainId].l1 = {
         timestamp: Date.now(),
         value: true,
       }
     } catch (err) {
-      isNitroCache[l2ChainId] = {
+      isNitroCache[l2ChainId].l1 = {
         timestamp: Date.now(),
         value: false,
       }
     }
   }
-  return isNitroCache[l2ChainId].value
+  return isNitroCache[l2ChainId].l1.value
 }
 
 export const isNitroL2 = async (
@@ -210,8 +212,8 @@ export const isNitroL2 = async (
 ): Promise<boolean> => {
   const l2Network = await nitro.getL2Network(l2SignerOrProvider)
   const cacheData = isNitroCache[l2Network.chainID]
-  if (cacheData.value) return true
-  if (Date.now() - cacheData.timestamp > timeSinceCheckMs) {
+  if (cacheData.l2.value) return true
+  if (Date.now() - cacheData.l2.timestamp > timeSinceCheckMs) {
     const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2SignerOrProvider)
     const blockNumber = await arbSys.arbBlockNumber()
     try {
@@ -227,18 +229,18 @@ export const isNitroL2 = async (
         SignerProviderUtils.getProviderOrThrow(l1Provider)
       )
       nitroL2Networks[nitroL2Network.chainID] = nitroL2Network
-      isNitroCache[l2Network.chainID] = {
+      isNitroCache[l2Network.chainID].l2 = {
         timestamp: Date.now(),
         value: true,
       }
     } catch {
-      isNitroCache[l2Network.chainID] = {
+      isNitroCache[l2Network.chainID].l2 = {
         timestamp: Date.now(),
         value: false,
       }
     }
   }
-  return isNitroCache[l2Network.chainID].value
+  return isNitroCache[l2Network.chainID].l2.value
 }
 
 export const lookupExistingNetwork = (
