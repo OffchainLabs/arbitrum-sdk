@@ -132,9 +132,26 @@ export const getOutboxAddr = (
 type LastUpdated = { timestamp: number; value: boolean }
 const fifthteenMinutesMs = 15 * 60 * 1000
 
-let isNitroCache: {
-  [l2ChainId: number]: { l1: LastUpdated; l2: LastUpdated }
-} = {}
+
+const makeCache = () => {
+  let isNitroCache: {
+    [l2ChainId: number]: { l1: LastUpdated; l2: LastUpdated }
+  } = {}
+
+  const getCacheWithDefault = (l2ChainId: number) => {
+    const nitroCacheRes = isNitroCache[l2ChainId]
+    if(!isDefined(nitroCacheRes.l1)) nitroCacheRes.l1 = { timestamp: 0, value: false }
+    if(!isDefined(nitroCacheRes.l2)) nitroCacheRes.l2 = { timestamp: 0, value: false }
+    return nitroCacheRes
+  }
+
+  const setCache = (l2ChainId: number, val: { l1: LastUpdated; l2: LastUpdated }) => 
+   (isNitroCache[l2ChainId] = val)
+
+   return { setCache, getCacheWithDefault }
+}
+
+const cache = makeCache()
 
 
 export const isNitroL1 = async (
@@ -152,7 +169,7 @@ export const isNitroL1 = async (
       `Unexpected l2 chain id type is not a number: ${l2ChainId}`
     )
 
-  const cacheData = isNitroCache[l2ChainId]
+  const cacheData = cache.getCacheWithDefault(l2ChainId)
   if (cacheData.l1.value) return true
   if (Date.now() - cacheData.l1.timestamp > timeSinceCheckMs) {
     const l1Network = await nitro.getL1Network(l1Provider)
@@ -188,19 +205,25 @@ export const isNitroL1 = async (
         SignerProviderUtils.getProviderOrThrow(l1Provider)
       )
 
-      nitroL2Networks[nitroL2Network.chainID] = nitroL2Network
-      isNitroCache[l2ChainId].l1 = {
-        timestamp: Date.now(),
-        value: true,
-      }
+      nitroL2Networks[l2ChainId] = nitroL2Network
+      cache.setCache(nitroL2Network.chainID, {
+        ...cacheData,
+        l1: {
+          timestamp: Date.now(),
+          value: true,
+        },
+      })
     } catch (err) {
-      isNitroCache[l2ChainId].l1 = {
-        timestamp: Date.now(),
-        value: false,
-      }
+      cache.setCache(l2ChainId, {
+        ...cacheData,
+        l1: {
+          timestamp: Date.now(),
+          value: false,
+        },
+      })
     }
   }
-  return isNitroCache[l2ChainId].l1.value
+  return cache.getCacheWithDefault(l2ChainId).l1.value
 }
 
 export const isNitroL2 = async (
@@ -211,7 +234,7 @@ export const isNitroL2 = async (
   timeSinceCheckMs: number = fifthteenMinutesMs
 ): Promise<boolean> => {
   const l2Network = await nitro.getL2Network(l2SignerOrProvider)
-  const cacheData = isNitroCache[l2Network.chainID]
+  const cacheData = cache.getCacheWithDefault(l2Network.chainID)
   if (cacheData.l2.value) return true
   if (Date.now() - cacheData.l2.timestamp > timeSinceCheckMs) {
     const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2SignerOrProvider)
@@ -229,18 +252,24 @@ export const isNitroL2 = async (
         SignerProviderUtils.getProviderOrThrow(l1Provider)
       )
       nitroL2Networks[nitroL2Network.chainID] = nitroL2Network
-      isNitroCache[l2Network.chainID].l2 = {
-        timestamp: Date.now(),
-        value: true,
-      }
+      cache.setCache(l2Network.chainID, {
+        ...cacheData,
+        l2: {
+          timestamp: Date.now(),
+          value: true,
+        }
+      })
     } catch {
-      isNitroCache[l2Network.chainID].l2 = {
-        timestamp: Date.now(),
-        value: false,
-      }
+      cache.setCache(l2Network.chainID, {
+        ...cacheData,
+        l2: {
+          timestamp: Date.now(),
+          value: false,
+        }
+      })
     }
   }
-  return isNitroCache[l2Network.chainID].l2.value
+  return cache.getCacheWithDefault(l2Network.chainID).l2.value
 }
 
 export const lookupExistingNetwork = (
