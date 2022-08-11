@@ -195,7 +195,10 @@ export const isNitroL1 = async (
 ) => {
   // the first argument to this function used to be an l1 provider
   // if the calling code was javascript they may miss this change
-  if(typeof l2ChainId !== "number") throw new ArbSdkError(`Unexpected l2 chain id type is not a number: ${l2ChainId}`)
+  if (typeof l2ChainId !== 'number')
+    throw new ArbSdkError(
+      `Unexpected l2 chain id type is not a number: ${l2ChainId}`
+    )
 
   const cacheData = isNitroCache.get(l2ChainId, CacheType.L1)
   if (cacheData.value) return true
