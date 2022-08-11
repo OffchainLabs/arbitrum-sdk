@@ -233,18 +233,18 @@ export class L1ToL2MessageGasEstimator {
       gasLimitDefaults.percentIncrease
     )
 
-    const deposit =
-      options?.deposit?.base ||
-      calculatedGasLimit
-        .mul(maxFeePerGas)
-        .add(maxSubmissionFee)
-        .add(retryableEstimateData.l2CallValue)
-
     // always ensure the max gas is greater than the min - this can be useful if we know that
     // gas estimation is bad for the provided transaction
     const gasLimit = calculatedGasLimit.gt(gasLimitDefaults.min)
       ? calculatedGasLimit
       : gasLimitDefaults.min
+
+    const deposit =
+      options?.deposit?.base ||
+      gasLimit
+        .mul(maxFeePerGas)
+        .add(maxSubmissionFee)
+        .add(retryableEstimateData.l2CallValue)
 
     return {
       gasLimit,
