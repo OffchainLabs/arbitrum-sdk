@@ -139,10 +139,10 @@ const makeCache = () => {
 
   const getCacheWithDefault = (l2ChainId: number) => {
     let nitroCacheRes = isNitroCache[l2ChainId]
-    if(!isDefined(nitroCacheRes))
+    if (!isDefined(nitroCacheRes))
       nitroCacheRes = {
         l1: { timestamp: 0, value: false },
-        l2: { timestamp: 0, value: false }
+        l2: { timestamp: 0, value: false },
       }
     if (!isDefined(nitroCacheRes.l1))
       nitroCacheRes.l1 = { timestamp: 0, value: false }
