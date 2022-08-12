@@ -10,8 +10,6 @@ getDirectories('./docs', function (err, res) {
   } else {
     for (const path of res) {
       if (!path.endsWith('.md')) continue
-      console.log(path)
-
       readFile(path, 'utf-8', function (err, contents) {
         if (err) {
           console.log(err)
