@@ -34,7 +34,7 @@
     "lint": "eslint .",
     "format": "prettier './**/*.{js,json,md,ts,yml}' --write && yarn run lint --fix",
     "clean:compile": "ts-node scripts/cleanCompileContracts.ts",
-    "generate_docs": "typedoc",
+    "generate_docs": "typedoc && node scripts/postProcessDocs.js",
     "checkRetryable": "ts-node scripts/checkRetryableStatus.ts",
     "redeemRetryable": "ts-node scripts/redeemRetryable.ts",
     "setStandard": "ts-node scripts/setStandardGateways.ts",
