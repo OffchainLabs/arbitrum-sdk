@@ -4,6 +4,5 @@ module.exports = {
   exclude: ['./src/lib/abi'],
   excludeNotDocumented: true,
   excludeInternal: true,
-  entryPointStrategy: 'expand',
-  readme: './readme.doc.md',
+  entryPointStrategy: 'expand'
 }
