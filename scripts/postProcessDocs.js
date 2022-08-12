@@ -1,10 +1,7 @@
 const glob = require('glob')
 const { readFile, writeFile } = require('fs')
 
-var getDirectories = function (src, callback) {
-  glob(src + '/**/*', callback)
-}
-getDirectories('./docs', function (err, res) {
+glob('./docs/**/*', function (err, res) {
   if (err) {
     console.log('Error', err)
   } else {
@@ -15,9 +12,8 @@ getDirectories('./docs', function (err, res) {
           console.log(err)
           return
         }
-        //   Fix JSX md rendering breaking tags:
+        // Fix JSX md rendering breaking tags:
         const replaced = contents.replace(/</g, '&lt;').replace(/>/g, '&gt;')
-
         writeFile(path, replaced, 'utf-8', function (err) {
           if (err) console.warn('Error', err)
         })
