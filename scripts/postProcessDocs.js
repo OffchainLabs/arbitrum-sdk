@@ -6,7 +6,7 @@ glob('./docs/**/*', function (err, res) {
     console.log('Error', err)
   } else {
     for (const path of res) {
-      if (!path.endsWith('.md')) continue
+      if (!path.endsWith('.md') || path.includes('README')) continue
       readFile(path, 'utf-8', function (err, contents) {
         if (err) {
           console.log(err)
