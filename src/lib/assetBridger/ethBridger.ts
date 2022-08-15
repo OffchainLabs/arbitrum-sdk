@@ -45,20 +45,13 @@ import { MissingProviderArbSdkError } from '../dataEntities/errors'
 
 export interface EthWithdrawParams {
   /**
-   * L2 provider
-   */
-  l2Signer: Signer
-
-  /**
    * The amount of ETH or tokens to be withdrawn
    */
   amount: BigNumber
-
   /**
    * The L1 address to receive the value. Defaults to l2Signer's address
    */
-  destinationAddress?: string
-
+  destinationAddress: string
   /**
    * Transaction overrides
    */
@@ -146,16 +139,10 @@ export class EthBridger extends AssetBridger<
   public async getWithdrawalRequest(
     params: EthWithdrawParams
   ): Promise<L2ToL1TransactionRequest> {
-    if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
-      throw new MissingProviderArbSdkError('l2Signer')
-    }
-    await this.checkL2Network(params.l2Signer)
-
-    const addr =
-      params.destinationAddress || (await params.l2Signer.getAddress())
-
     const iArbSys = ArbSys__factory.createInterface()
-    const functionData = iArbSys.encodeFunctionData('withdrawEth', [addr])
+    const functionData = iArbSys.encodeFunctionData('withdrawEth', [
+      params.destinationAddress,
+    ])
 
     return {
       txRequest: {
@@ -179,14 +166,16 @@ export class EthBridger extends AssetBridger<
    * @returns
    */
   public async withdraw(
-    params: EthWithdrawParams | L2ToL1TxReqAndSigner
+    params: (EthWithdrawParams & { l2Signer: Signer }) | L2ToL1TxReqAndSigner
   ): Promise<L2ContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
       throw new MissingProviderArbSdkError('l2Signer')
     }
     await this.checkL2Network(params.l2Signer)
 
-    const request = isL2ToL1TransactionRequest(params)
+    const request = isL2ToL1TransactionRequest<
+      EthWithdrawParams & { l2Signer: Signer }
+    >(params)
       ? params
       : await this.getWithdrawalRequest(params)
 

@@ -76,20 +76,13 @@ import { EventArgs } from '../dataEntities/event'
 
 export interface TokenApproveParams {
   /**
-   * L1 signer whose tokens are being approved
-   */
-  l1Signer: Signer
-
-  /**
    * L1 address of the ERC20 token contract
    */
   erc20L1Address: string
-
   /**
    * Amount to approve. Defaults to max int.
    */
   amount?: BigNumber
-
   /**
    * Transaction overrides
    */
@@ -147,6 +140,16 @@ export type L2ToL1TxReqAndSigner = L2ToL1TransactionRequest & {
   l2Signer: Signer
   overrides?: Overrides
 }
+
+type SignerTokenApproveParams = TokenApproveParams & { l1Signer: Signer }
+type ProviderTokenApproveParams = TokenApproveParams & { l1Provider: Provider }
+export type ApproveParamsOrTxRequest =
+  | SignerTokenApproveParams
+  | {
+      txRequest: Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
+      l1Signer: Signer
+      overrides?: Overrides
+    }
 
 /**
  * The deposit request takes the same args as the actual deposit. Except we dont require a signer object
@@ -224,17 +227,12 @@ export class Erc20Bridger extends AssetBridger<
    * @returns
    */
   public async getApproveTokenRequest(
-    params: TokenApproveParams
+    params: ProviderTokenApproveParams
   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
-    if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
-      throw new MissingProviderArbSdkError('l1Signer')
-    }
-    await this.checkL1Network(params.l1Signer)
-
     // you approve tokens to the gateway that the router will use
     const gatewayAddress = await this.getL1GatewayAddress(
       params.erc20L1Address,
-      SignerProviderUtils.getProviderOrThrow(params.l1Signer)
+      SignerProviderUtils.getProviderOrThrow(params.l1Provider)
     )
 
     const iErc20Interface = ERC20__factory.createInterface()
@@ -251,14 +249,9 @@ export class Erc20Bridger extends AssetBridger<
   }
 
   private isApproveParams(
-    params:
-      | TokenApproveParams
-      | {
-          txRequest: Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
-          l1Signer: Signer
-        }
-  ): params is TokenApproveParams {
-    return (params as TokenApproveParams).erc20L1Address != undefined
+    params: ApproveParamsOrTxRequest
+  ): params is SignerTokenApproveParams {
+    return (params as SignerTokenApproveParams).erc20L1Address != undefined
   }
 
   /**
@@ -267,13 +260,7 @@ export class Erc20Bridger extends AssetBridger<
    * @returns
    */
   public async approveToken(
-    params:
-      | TokenApproveParams
-      | {
-          txRequest: Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
-          l1Signer: Signer
-          overrides?: Overrides
-        }
+    params: ApproveParamsOrTxRequest
   ): Promise<ethers.ContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
       throw new MissingProviderArbSdkError('l1Signer')
@@ -281,7 +268,10 @@ export class Erc20Bridger extends AssetBridger<
     await this.checkL1Network(params.l1Signer)
 
     const approveRequest = this.isApproveParams(params)
-      ? await this.getApproveTokenRequest(params)
+      ? await this.getApproveTokenRequest({
+          ...params,
+          l1Provider: SignerProviderUtils.getProviderOrThrow(params.l1Signer),
+        })
       : params.txRequest
     return await params.l1Signer.sendTransaction({
       ...approveRequest,
@@ -705,12 +695,7 @@ export class Erc20Bridger extends AssetBridger<
   public async getWithdrawalParams(
     params: Erc20WithdrawParams
   ): Promise<L2ToL1TransactionRequest> {
-    if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
-      throw new MissingProviderArbSdkError('l2Signer')
-    }
-    await this.checkL2Network(params.l2Signer)
-
-    const to = params.destinationAddress || (await params.l2Signer.getAddress())
+    const to = params.destinationAddress
 
     const routerInterface = L2GatewayRouter__factory.createInterface()
     const functionData =
@@ -752,14 +737,16 @@ export class Erc20Bridger extends AssetBridger<
    * @returns
    */
   public async withdraw(
-    params: Erc20WithdrawParams | L2ToL1TxReqAndSigner
+    params: (Erc20WithdrawParams & { l2Signer: Signer }) | L2ToL1TxReqAndSigner
   ): Promise<L2ContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
       throw new MissingProviderArbSdkError('l2Signer')
     }
     await this.checkL2Network(params.l2Signer)
 
-    const withdrawalRequest = isL2ToL1TransactionRequest(params)
+    const withdrawalRequest = isL2ToL1TransactionRequest<
+      Erc20WithdrawParams & { l2Signer: Signer }
+    >(params)
       ? params
       : await this.getWithdrawalParams(params)
 
