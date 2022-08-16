@@ -315,6 +315,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       )
 
       const sendRootSizeConfirmed = BigNumber.from(l2BlockConfirmed.sendCount)
+      console.log("confirmed send root", sendRootSizeConfirmed.toString(), this.event.position.toString(), latestConfirmedNodeNum.toString())
       if (sendRootSizeConfirmed.gt(this.event.position)) {
         this.sendRootSize = sendRootSizeConfirmed
         this.sendRootHash = l2BlockConfirmed.sendRoot
@@ -322,6 +323,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       } else {
         // if the node has yet to be confirmed we'll still try to find proof info from unconfirmed nodes
         const latestNodeNum = await rollup.callStatic.latestNodeCreated()
+        console.log("latest node num", latestNodeNum.toString())
         if (latestNodeNum.gt(latestConfirmedNodeNum)) {
           // In rare case latestNodeNum can be equal to latestConfirmedNodeNum
           // eg immediately after an upgrade, or at genesis, or on a chain where confirmation time = 0 like AnyTrust may have
@@ -332,6 +334,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
           )
 
           const sendRootSize = BigNumber.from(l2Block.sendCount)
+          console.log("latest node num position", sendRootSize.toString(), this.event.position.toString())
           if (sendRootSize.gt(this.event.position)) {
             this.sendRootSize = sendRootSize
             this.sendRootHash = l2Block.sendRoot
