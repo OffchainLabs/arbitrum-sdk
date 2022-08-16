@@ -315,6 +315,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       )
 
       const sendRootSizeConfirmed = BigNumber.from(l2BlockConfirmed.sendCount)
+      console.log("block nums", await l2Provider.getBlockNumber(), this.l1Provider.getBlockNumber())
       console.log("confirmed send root", sendRootSizeConfirmed.toString(), this.event.position.toString(), latestConfirmedNodeNum.toString())
       if (sendRootSizeConfirmed.gt(this.event.position)) {
         this.sendRootSize = sendRootSizeConfirmed
