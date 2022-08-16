@@ -126,9 +126,9 @@ describe('Ether', async () => {
 
     const ethToWithdraw = parseEther('0.00000002')
     const randomAddress = Wallet.createRandom().address
+
     const request = await ethBridger.getWithdrawalRequest({
       amount: ethToWithdraw,
-      l2Signer: l2Signer,
       destinationAddress: randomAddress,
     })
     const l1GasEstimate = await request.estimateL1GasLimit(l1Signer.provider!)
