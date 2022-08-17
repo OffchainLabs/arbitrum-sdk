@@ -18,13 +18,11 @@
 
 import { Signer } from '@ethersproject/abstract-signer'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
-import { BigNumber, ethers } from 'ethers'
+import { BigNumber } from 'ethers'
 
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
-import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
-import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { AssetBridger } from './assetBridger'
 import {
   L1EthDepositTransaction,
@@ -34,11 +32,15 @@ import {
   L2ContractTransaction,
   L2TransactionReceipt,
 } from '../message/L2Transaction'
-import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
+import {
+  isL1ToL2TransactionRequest,
+  L1ToL2TransactionRequest,
+} from '../dataEntities/transactionRequest'
+import { OmitTyped } from '../utils/types'
 
 export interface EthWithdrawParams {
   /**
-   * L2 signer who is sending the assets
+   * L2 provider
    */
   l2Signer: Signer
 
@@ -60,15 +62,13 @@ export interface EthWithdrawParams {
 
 export type EthDepositParams = {
   /**
-   * The L1 entity depositing the assets
+   * The L1 provider or signer
    */
   l1Signer: Signer
-
   /**
    * The amount of ETH or tokens to be deposited
    */
   amount: BigNumber
-
   /**
    * Transaction overrides
    */
@@ -87,69 +87,28 @@ export class EthBridger extends AssetBridger<
   EthDepositParams,
   EthWithdrawParams
 > {
-  private async depositTxOrGas<T extends boolean>(
-    params: EthDepositParams | L1ToL2TxReqAndSigner,
-    estimate: T
-  ): Promise<T extends true ? BigNumber : ethers.ContractTransaction>
-  private async depositTxOrGas<T extends boolean>(
-    params: EthDepositParams | L1ToL2TxReqAndSigner,
-    estimate: T
-  ): Promise<BigNumber | ethers.ContractTransaction> {
-    if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
-      throw new MissingProviderArbSdkError('l1Signer')
-    }
-    await this.checkL1Network(params.l1Signer)
-
-    const ethDeposit = this.isDepositRequest(params)
-      ? params
-      : await this.getDepositRequest(params)
-
-    return await params.l1Signer[estimate ? 'estimateGas' : 'sendTransaction']({
-      ...ethDeposit,
-      ...params.overrides,
-    })
-  }
-
   public async getDepositRequest(
-    params: EthDepositParams
-  ): Promise<L1ToL2TransactionRequest> {
+    params: OmitTyped<EthDepositParams, 'overrides' | 'l1Signer'>
+  ): Promise<OmitTyped<L1ToL2TransactionRequest, 'retryableData'>> {
     const inboxInterface = Inbox__factory.createInterface()
 
     const functionData = (
       inboxInterface as unknown as {
         encodeFunctionData(
-          functionFragment: 'depositEth',
+          functionFragment: 'depositEth()',
           values?: undefined
         ): string
       }
-    ).encodeFunctionData('depositEth')
+    ).encodeFunctionData('depositEth()')
 
     return {
-      l2GasLimit: BigNumber.from(0),
-      l2GasCostsMaxTotal: BigNumber.from(0),
-      l2MaxFeePerGas: BigNumber.from(0),
-      l2SubmissionFee: BigNumber.from(0),
-      to: this.l2Network.ethBridge.inbox,
-      value: params.amount,
-      data: functionData,
+      core: {
+        to: this.l2Network.ethBridge.inbox,
+        value: params.amount,
+        data: functionData,
+      },
+      isValid: async () => true,
     }
-  }
-
-  private isDepositRequest(
-    params: EthDepositParams | L1ToL2TransactionRequest
-  ): params is L1ToL2TransactionRequest {
-    return (params as L1ToL2TransactionRequest).l2GasCostsMaxTotal != undefined
-  }
-
-  /**
-   * Estimate gas for depositing ETH from L1 onto L2
-   * @param params
-   * @returns
-   */
-  public async depositEstimateGas(
-    params: EthDepositParams | L1ToL2TxReqAndSigner
-  ): Promise<BigNumber> {
-    return await this.depositTxOrGas(params, true)
   }
 
   /**
@@ -160,45 +119,18 @@ export class EthBridger extends AssetBridger<
   public async deposit(
     params: EthDepositParams | L1ToL2TxReqAndSigner
   ): Promise<L1EthDepositTransaction> {
-    const tx = await this.depositTxOrGas(params, false)
+    await this.checkL1Network(params.l1Signer)
+
+    const ethDeposit = isL1ToL2TransactionRequest(params)
+      ? params
+      : await this.getDepositRequest(params)
+
+    const tx = await params.l1Signer.sendTransaction({
+      ...ethDeposit.core,
+      ...params.overrides,
+    })
+
     return L1TransactionReceipt.monkeyPatchEthDepositWait(tx)
-  }
-
-  private async withdrawTxOrGas<T extends boolean>(
-    params: EthWithdrawParams,
-    estimate: T
-  ): Promise<T extends true ? BigNumber : ethers.ContractTransaction>
-  private async withdrawTxOrGas<T extends boolean>(
-    params: EthWithdrawParams,
-    estimate: T
-  ): Promise<BigNumber | ethers.ContractTransaction> {
-    if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
-      throw new MissingProviderArbSdkError('l2Signer')
-    }
-    await this.checkL2Network(params.l2Signer)
-
-    const addr =
-      params.destinationAddress || (await params.l2Signer.getAddress())
-    const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, params.l2Signer)
-
-    return (estimate ? arbSys.estimateGas : arbSys.functions).withdrawEth(
-      addr,
-      {
-        value: params.amount,
-        ...(params.overrides || {}),
-      }
-    )
-  }
-
-  /**
-   * Estimate gas for withdrawing ETH from L2 onto L1
-   * @param params
-   * @returns
-   */
-  public async withdrawEstimateGas(
-    params: EthWithdrawParams
-  ): Promise<BigNumber> {
-    return await this.withdrawTxOrGas(params, true)
   }
 
   /**
@@ -209,7 +141,16 @@ export class EthBridger extends AssetBridger<
   public async withdraw(
     params: EthWithdrawParams
   ): Promise<L2ContractTransaction> {
-    const tx = await this.withdrawTxOrGas(params, false)
+    await this.checkL2Network(params.l2Signer)
+
+    const addr =
+      params.destinationAddress || (await params.l2Signer.getAddress())
+    const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, params.l2Signer)
+
+    const tx = await arbSys.functions.withdrawEth(addr, {
+      value: params.amount,
+      ...(params.overrides || {}),
+    })
     return L2TransactionReceipt.monkeyPatchWait(tx)
   }
 }

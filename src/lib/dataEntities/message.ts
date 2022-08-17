@@ -26,7 +26,7 @@ export interface RetryableMessageParams {
    */
   excessFeeRefundAddress: string
   /**
-   *  Address to credit l2Callvalue on L2 if retryable txn times out or gets cancelled
+   * Address to credit l2Callvalue on L2 if retryable txn times out or gets cancelled
    */
   callValueRefundAddress: string
   /**

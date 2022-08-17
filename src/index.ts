@@ -53,3 +53,7 @@ export {
 export { InboxTools } from './lib/inbox/inbox'
 export { EventFetcher } from './lib/utils/eventFetcher'
 export * as constants from './lib/dataEntities/constants'
+export {
+  RetryableData,
+  RetryableDataTools,
+} from './lib/dataEntities/retryableData'

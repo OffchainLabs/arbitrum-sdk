@@ -20,6 +20,7 @@ import { Provider, BlockTag, Filter } from '@ethersproject/abstract-provider'
 import { Contract, Event } from '@ethersproject/contracts'
 import { constants } from 'ethers'
 import { TypedEvent, TypedEventFilter } from '../abi/common'
+import { TypeChainContractFactory } from '../dataEntities/event'
 
 export type FetchedEvent<TEvent extends Event> = {
   event: TEvent['args']
@@ -59,9 +60,7 @@ export class EventFetcher {
     TEventFilter extends TypedEventFilter<TypedEvent>
   >(
     addr: string | undefined,
-    contractFactory: {
-      connect(address: string, provider: Provider): TContract
-    },
+    contractFactory: TypeChainContractFactory<TContract>,
     topicGenerator: (t: TContract) => TEventFilter,
     filter: { fromBlock: BlockTag; toBlock: BlockTag }
   ): Promise<FetchedEvent<TEventOf<TEventFilter>>[]> {

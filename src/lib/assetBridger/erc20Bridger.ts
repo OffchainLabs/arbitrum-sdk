@@ -59,8 +59,13 @@ import {
   L2TransactionReceipt,
 } from '../message/L2Transaction'
 import { getBaseFee } from '../utils/lib'
-import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
+import {
+  isL1ToL2TransactionRequest,
+  L1ToL2TransactionRequest,
+} from '../dataEntities/transactionRequest'
 import { defaultAbiCoder } from 'ethers/lib/utils'
+import { L1ToL2MessageGasParams } from '../message/L1ToL2MessageCreator'
+import { OmitTyped, RequiredPick } from '../utils/types'
 import { EventArgs } from '../dataEntities/event'
 
 export interface TokenApproveParams {
@@ -90,26 +95,34 @@ export interface Erc20DepositParams extends EthDepositParams {
    * An L2 provider
    */
   l2Provider: Provider
-
   /**
    * L1 address of the token ERC20 contract
    */
   erc20L1Address: string
-
   /**
    * L2 address of the entity receiving the funds. Defaults to the l1FromAddress
    */
   destinationAddress?: string
-
+  /**
+   * The address to return the any gas that was not spent on fees
+   */
+  excessFeeRefundAddress?: string
+  /**
+   * The address to refund the call value to in the event the retryable is cancelled, or expires
+   */
+  callValueRefundAddress?: string
   /**
    * Overrides for the retryable ticket parameters
    */
   retryableGasOverrides?: GasOverrides
-
   /**
    * Transaction overrides
    */
   overrides?: Overrides
+  /**
+   * Address that is depositing the assets
+   */
+  from: string
 }
 
 export interface TokenWithdrawParams extends EthWithdrawParams {
@@ -121,9 +134,24 @@ export interface TokenWithdrawParams extends EthWithdrawParams {
 
 export type L1ToL2TxReqAndSignerProvider = L1ToL2TransactionRequest & {
   l1Signer: Signer
-  l2Provider: Provider
   overrides?: Overrides
 }
+
+/**
+ * The deposit request takes the same args as the actual deposit. Except we dont require a signer object
+ * only a provider
+ */
+type DepositRequest = OmitTyped<
+  Erc20DepositParams,
+  'overrides' | 'l1Signer'
+> & {
+  l1Provider: Provider
+}
+
+type DefaultedDepositRequest = RequiredPick<
+  DepositRequest,
+  'callValueRefundAddress' | 'excessFeeRefundAddress' | 'destinationAddress'
+>
 
 /**
  * Bridger for moving ERC20 tokens back and forth betwen L1 to L2
@@ -186,15 +214,12 @@ export class Erc20Bridger extends AssetBridger<
   public async approveToken(
     params: TokenApproveParams
   ): Promise<ethers.ContractTransaction> {
-    if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
-      throw new MissingProviderArbSdkError('l1Signer')
-    }
     await this.checkL1Network(params.l1Signer)
 
     // you approve tokens to the gateway that the router will use
     const gatewayAddress = await this.getL1GatewayAddress(
       params.erc20L1Address,
-      params.l1Signer.provider
+      SignerProviderUtils.getProviderOrThrow(params.l1Signer)
     )
     const contract = await ERC20__factory.connect(
       params.erc20L1Address,
@@ -300,6 +325,9 @@ export class Erc20Bridger extends AssetBridger<
 
   /**
    * Get the L2 token contract at the provided address
+   * Note: This function just returns a typed ethers object for the provided address, it doesnt
+   * check the underlying form of the contract bytecode to see if it's an erc20, and doesn't ensure the validity
+   * of any of the underlying functions on that contract.
    * @param l2Provider
    * @param l2TokenAddr
    * @returns
@@ -313,6 +341,9 @@ export class Erc20Bridger extends AssetBridger<
 
   /**
    * Get the L1 token contract at the provided address
+   * Note: This function just returns a typed ethers object for the provided address, it doesnt
+   * check the underlying form of the contract bytecode to see if it's an erc20, and doesn't ensure the validity
+   * of any of the underlying functions on that contract.
    * @param l1Provider
    * @param l1TokenAddr
    * @returns
@@ -345,8 +376,9 @@ export class Erc20Bridger extends AssetBridger<
 
   /**
    * Get the corresponding L1 for the provided L2 token
-   * @param erc20L1Address
-   * @param l1Provider
+   * Validates the returned address against the l2 router to ensure it is correctly mapped to the provided erc20L2Address
+   * @param erc20L2Address
+   * @param l2Provider
    * @returns
    */
   public async getL1ERC20Address(
@@ -356,8 +388,22 @@ export class Erc20Bridger extends AssetBridger<
     await this.checkL2Network(l2Provider)
 
     const arbERC20 = L2GatewayToken__factory.connect(erc20L2Address, l2Provider)
+    const l1Address = await arbERC20.functions.l1Address().then(([res]) => res)
 
-    return await arbERC20.functions.l1Address().then(([res]) => res)
+    // check that this l1 address is indeed registered to this l2 token
+    const l2GatewayRouter = L2GatewayRouter__factory.connect(
+      this.l2Network.tokenBridge.l2GatewayRouter,
+      l2Provider
+    )
+
+    const l2Address = await l2GatewayRouter.calculateL2TokenAddress(l1Address)
+    if (l2Address.toLowerCase() !== erc20L2Address.toLowerCase()) {
+      throw new ArbSdkError(
+        `Unexpected l1 address. L1 address from token is not registered to the provided l2 address. ${l1Address} ${l2Address} ${erc20L2Address}`
+      )
+    }
+
+    return l1Address
   }
 
   /**
@@ -383,52 +429,50 @@ export class Erc20Bridger extends AssetBridger<
     )
   }
 
-  /**
-   * Get the arguments for calling the deposit function
-   * @param params
-   * @returns
-   */
-  public async getDepositRequest(
-    params: Erc20DepositParams
-  ): Promise<L1ToL2TransactionRequest> {
+  private applyDefaults<T extends DepositRequest>(
+    params: T
+  ): DefaultedDepositRequest {
+    return {
+      ...params,
+      excessFeeRefundAddress: params.excessFeeRefundAddress || params.from,
+      callValueRefundAddress: params.callValueRefundAddress || params.from,
+      destinationAddress: params.destinationAddress || params.from,
+    }
+  }
+
+  protected async estimateDeposit(
+    params: DefaultedDepositRequest,
+    l2Provider: Provider,
+    l1GatewayAddress: string,
+    l2CallValue: BigNumber
+  ): Promise<L1ToL2MessageGasParams> {
     const {
+      from,
       retryableGasOverrides,
       erc20L1Address,
       amount,
-      l2Provider,
-      l1Signer,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
       destinationAddress,
+      l1Provider,
     } = params
 
-    await this.checkL1Network(params.l1Signer)
-    await this.checkL2Network(params.l2Provider)
-    if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
-      throw new MissingProviderArbSdkError('l1Signer')
-    }
+    await this.checkL1Network(l1Provider)
+    await this.checkL2Network(l2Provider)
 
     // 1. get the params for a gas estimate
-    const l1GatewayAddress = await this.getL1GatewayAddress(
-      erc20L1Address,
-      l1Signer.provider
-    )
     const l1Gateway = L1ERC20Gateway__factory.connect(
       l1GatewayAddress,
-      l1Signer.provider
+      l1Provider
     )
-    const sender = await l1Signer.getAddress()
-    const to = destinationAddress ? destinationAddress : sender
+
     const depositCalldata = await l1Gateway.getOutboundCalldata(
       erc20L1Address,
-      sender,
-      to,
+      from,
+      destinationAddress,
       amount,
       '0x'
     )
-
-    // The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
-    // Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
-    const isWeth = await this.isWethGateway(l1GatewayAddress, l1Signer.provider)
-    const estimateGasCallValue = isWeth ? amount : Zero
 
     const l2Dest = await l1Gateway.counterpartGateway()
     const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
@@ -439,35 +483,80 @@ export class Erc20Bridger extends AssetBridger<
     if (l1GatewayAddress === this.l2Network.tokenBridge.l1CustomGateway) {
       if (!tokenGasOverrides) tokenGasOverrides = {}
       if (!tokenGasOverrides.gasLimit) tokenGasOverrides.gasLimit = {}
-      tokenGasOverrides.gasLimit.min = Erc20Bridger.MIN_CUSTOM_DEPOSIT_GAS_LIMIT
+      if (!tokenGasOverrides.gasLimit.min) {
+        tokenGasOverrides.gasLimit.min =
+          Erc20Bridger.MIN_CUSTOM_DEPOSIT_GAS_LIMIT
+      }
     }
 
     // 2. get the gas estimates
-    const baseFee = await getBaseFee(l1Signer.provider)
-    const estimates = await gasEstimator.estimateAll(
-      l1GatewayAddress,
-      l2Dest,
-      depositCalldata,
-      estimateGasCallValue,
+    const baseFee = await getBaseFee(l1Provider)
+    return await gasEstimator.estimateAll(
+      {
+        from: l1GatewayAddress,
+        to: l2Dest,
+        data: depositCalldata,
+        l2CallValue: l2CallValue,
+        excessFeeRefundAddress,
+        callValueRefundAddress,
+      },
       baseFee,
-      sender,
-      sender,
-      l1Signer.provider,
+      l1Provider,
       tokenGasOverrides
+    )
+  }
+
+  /**
+   * Get the arguments for calling the deposit function
+   * @param params
+   * @returns
+   */
+  public async getDepositRequest(
+    params: DepositRequest
+  ): Promise<L1ToL2TransactionRequest> {
+    await this.checkL1Network(params.l1Provider)
+    await this.checkL2Network(params.l2Provider)
+    const defaultedParams = this.applyDefaults(params)
+    const {
+      amount,
+      callValueRefundAddress,
+      destinationAddress,
+      erc20L1Address,
+      excessFeeRefundAddress,
+      from,
+      l1Provider,
+      l2Provider,
+    } = defaultedParams
+
+    const l1GatewayAddress = await this.getL1GatewayAddress(
+      erc20L1Address,
+      l1Provider
+    )
+
+    // The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
+    // Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
+    const isWeth = await this.isWethGateway(l1GatewayAddress, l1Provider)
+    const l2CallValue = isWeth ? amount : Zero
+
+    const estimates = await this.estimateDeposit(
+      defaultedParams,
+      l2Provider,
+      l1GatewayAddress,
+      l2CallValue
     )
 
     const l1GatewayRouterInterface = L1GatewayRouter__factory.createInterface()
 
     const innerData = defaultAbiCoder.encode(
       ['uint256', 'bytes'],
-      [estimates.maxSubmissionFee, '0x']
+      [estimates.maxSubmissionCost, '0x']
     )
 
     const functionData = l1GatewayRouterInterface.encodeFunctionData(
       'outboundTransfer',
       [
         erc20L1Address,
-        to,
+        destinationAddress,
         amount,
         estimates.gasLimit,
         estimates.maxFeePerGas,
@@ -475,58 +564,48 @@ export class Erc20Bridger extends AssetBridger<
       ]
     )
 
-    return {
-      l2GasLimit: estimates.gasLimit,
-      l2MaxFeePerGas: estimates.maxFeePerGas,
-      l2SubmissionFee: estimates.maxSubmissionFee,
-      l2GasCostsMaxTotal: estimates.totalL2GasCosts,
-      to: this.l2Network.tokenBridge.l1GatewayRouter,
-      data: functionData,
-      value: estimates.totalL2GasCosts,
-    }
-  }
-
-  private isDepositRequest(
-    params: Erc20DepositParams | L1ToL2TxReqAndSignerProvider
-  ): params is L1ToL2TxReqAndSignerProvider {
-    return (
-      (params as L1ToL2TxReqAndSignerProvider).l2GasCostsMaxTotal != undefined
+    const l1Gateway = L1ERC20Gateway__factory.connect(
+      l1GatewayAddress,
+      l1Provider
     )
-  }
 
-  private async depositTxOrGas<T extends boolean>(
-    params: Erc20DepositParams | L1ToL2TxReqAndSignerProvider,
-    estimate: T
-  ): Promise<T extends true ? BigNumber : ethers.ContractTransaction>
-  private async depositTxOrGas<T extends boolean>(
-    params: Erc20DepositParams | L1ToL2TxReqAndSignerProvider,
-    estimate: T
-  ): Promise<BigNumber | ethers.ContractTransaction> {
-    await this.checkL1Network(params.l1Signer)
-    await this.checkL2Network(params.l2Provider)
-    if (!SignerProviderUtils.signerHasProvider(params.l1Signer)) {
-      throw new MissingProviderArbSdkError('l1Signer')
+    const depositCalldata = await l1Gateway.getOutboundCalldata(
+      erc20L1Address,
+      from,
+      destinationAddress,
+      amount,
+      '0x'
+    )
+    const l2Dest = await l1Gateway.counterpartGateway()
+
+    return {
+      core: {
+        to: this.l2Network.tokenBridge.l1GatewayRouter,
+        data: functionData,
+        value: estimates.deposit,
+      },
+      retryableData: {
+        data: depositCalldata,
+        from: l1GatewayAddress,
+        to: l2Dest,
+        excessFeeRefundAddress: excessFeeRefundAddress,
+        callValueRefundAddress: callValueRefundAddress,
+        l2CallValue: l2CallValue,
+        maxSubmissionCost: estimates.maxSubmissionCost,
+        maxFeePerGas: estimates.maxFeePerGas,
+        gasLimit: estimates.gasLimit,
+        deposit: estimates.deposit,
+      },
+      isValid: async () => {
+        const reEstimates = await this.estimateDeposit(
+          defaultedParams,
+          l2Provider,
+          l1GatewayAddress,
+          l2CallValue
+        )
+        return L1ToL2MessageGasEstimator.isValid(estimates, reEstimates)
+      },
     }
-
-    const tokenDeposit = this.isDepositRequest(params)
-      ? params
-      : await this.getDepositRequest(params)
-
-    return await params.l1Signer[estimate ? 'estimateGas' : 'sendTransaction']({
-      ...tokenDeposit,
-      ...params.overrides,
-    })
-  }
-
-  /**
-   * Estimate the gas required for a token deposit
-   * @param params
-   * @returns
-   */
-  public async depositEstimateGas(
-    params: Erc20DepositParams | L1ToL2TxReqAndSignerProvider
-  ): Promise<BigNumber> {
-    return await this.depositTxOrGas(params, true)
   }
 
   /**
@@ -537,46 +616,28 @@ export class Erc20Bridger extends AssetBridger<
   public async deposit(
     params: Erc20DepositParams | L1ToL2TxReqAndSignerProvider
   ): Promise<L1ContractCallTransaction> {
-    const tx = await this.depositTxOrGas(params, false)
-    return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
-  }
+    await this.checkL1Network(params.l1Signer)
 
-  private async withdrawTxOrGas<T extends boolean>(
-    params: TokenWithdrawParams,
-    estimate: T
-  ): Promise<T extends true ? BigNumber : ethers.ContractTransaction>
-  private async withdrawTxOrGas<T extends boolean>(
-    params: TokenWithdrawParams,
-    estimate: T
-  ): Promise<BigNumber | ethers.ContractTransaction> {
-    if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
-      throw new MissingProviderArbSdkError('l2Signer')
+    // Although the types prevent should alert callers that value is not
+    // a valid override, it is possible that they pass it in anyway as it's a common override
+    // We do a safety check here
+    if ((params.overrides as PayableOverrides | undefined)?.value) {
+      throw new ArbSdkError(
+        'L1 call value should be set through l1CallValue param'
+      )
     }
-    await this.checkL2Network(params.l2Signer)
 
-    const to = params.destinationAddress || (await params.l2Signer.getAddress())
+    const l1Provider = SignerProviderUtils.getProviderOrThrow(params.l1Signer)
+    const tokenDeposit = isL1ToL2TransactionRequest(params)
+      ? params
+      : await this.getDepositRequest({ ...params, l1Provider })
 
-    const l2GatewayRouter = L2GatewayRouter__factory.connect(
-      this.l2Network.tokenBridge.l2GatewayRouter,
-      params.l2Signer
-    )
-
-    return (estimate ? l2GatewayRouter.estimateGas : l2GatewayRouter.functions)[
-      'outboundTransfer(address,address,uint256,bytes)'
-    ](params.erc20l1Address, to, params.amount, '0x', {
-      ...(params.overrides || {}),
+    const tx = await params.l1Signer.sendTransaction({
+      ...tokenDeposit.core,
+      ...params.overrides,
     })
-  }
 
-  /**
-   * Estimate gas for withdrawing tokens from L2 to L1
-   * @param params
-   * @returns
-   */
-  public async withdrawEstimateGas(
-    params: TokenWithdrawParams
-  ): Promise<BigNumber> {
-    return this.withdrawTxOrGas(params, true)
+    return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
   /**
@@ -587,7 +648,20 @@ export class Erc20Bridger extends AssetBridger<
   public async withdraw(
     params: TokenWithdrawParams
   ): Promise<L2ContractTransaction> {
-    const tx = await this.withdrawTxOrGas(params, false)
+    await this.checkL2Network(params.l2Signer)
+
+    const to = params.destinationAddress || (await params.l2Signer.getAddress())
+
+    const l2GatewayRouter = L2GatewayRouter__factory.connect(
+      this.l2Network.tokenBridge.l2GatewayRouter,
+      params.l2Signer
+    )
+
+    const tx = await l2GatewayRouter.functions[
+      'outboundTransfer(address,address,uint256,bytes)'
+    ](params.erc20l1Address, to, params.amount, '0x', {
+      ...(params.overrides || {}),
+    })
     return L2TransactionReceipt.monkeyPatchWait(tx)
   }
 }
@@ -655,13 +729,15 @@ export class AdminErc20Bridger extends Erc20Bridger {
     const l1SignerAddr = await l1Signer.getAddress()
     const baseFee = await getBaseFee(l1Signer.provider)
     const setTokenEstimates = await gasPriceEstimator.estimateAll(
-      this.l2Network.tokenBridge.l1CustomGateway,
-      this.l2Network.tokenBridge.l2CustomGateway,
-      l2SetTokenCallData,
-      Zero,
+      {
+        from: this.l2Network.tokenBridge.l1CustomGateway,
+        to: this.l2Network.tokenBridge.l2CustomGateway,
+        data: l2SetTokenCallData,
+        callValueRefundAddress: l1SignerAddr,
+        excessFeeRefundAddress: l1SignerAddr,
+        l2CallValue: Zero,
+      },
       baseFee,
-      l1SignerAddr,
-      l1SignerAddr,
       l1Signer.provider
     )
 
@@ -673,31 +749,31 @@ export class AdminErc20Bridger extends Erc20Bridger {
     )
 
     const setGatwayEstimates = await gasPriceEstimator.estimateAll(
-      this.l2Network.tokenBridge.l1GatewayRouter,
-      this.l2Network.tokenBridge.l2GatewayRouter,
-      l2SetGatewaysCallData,
-      Zero,
+      {
+        from: this.l2Network.tokenBridge.l1GatewayRouter,
+        to: this.l2Network.tokenBridge.l2GatewayRouter,
+        data: l2SetGatewaysCallData,
+        l2CallValue: Zero,
+        callValueRefundAddress: l1SignerAddr,
+        excessFeeRefundAddress: l1SignerAddr,
+      },
       baseFee,
-      l1SignerAddr,
-      l1SignerAddr,
       l1Signer.provider
     )
 
     // now execute the registration
     const customRegistrationTx = await l1Token.registerTokenOnL2(
       l2TokenAddress,
-      setTokenEstimates.maxSubmissionFee,
-      setGatwayEstimates.maxSubmissionFee,
+      setTokenEstimates.maxSubmissionCost,
+      setGatwayEstimates.maxSubmissionCost,
       setTokenEstimates.gasLimit,
       setGatwayEstimates.gasLimit,
       setGatwayEstimates.maxFeePerGas,
-      setTokenEstimates.totalL2GasCosts,
-      setGatwayEstimates.totalL2GasCosts,
+      setTokenEstimates.deposit,
+      setGatwayEstimates.deposit,
       l1SenderAddress,
       {
-        value: setTokenEstimates.totalL2GasCosts.add(
-          setGatwayEstimates.totalL2GasCosts
-        ),
+        value: setTokenEstimates.deposit.add(setGatwayEstimates.deposit),
       }
     )
 
@@ -770,7 +846,8 @@ export class AdminErc20Bridger extends Erc20Bridger {
   public async setGateways(
     l1Signer: Signer,
     l2Provider: Provider,
-    tokenGateways: TokenAndGateway[]
+    tokenGateways: TokenAndGateway[],
+    options?: GasOverrides
   ): Promise<L1ContractCallTransaction> {
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
       throw new MissingProviderArbSdkError('l1Signer')
@@ -792,14 +869,17 @@ export class AdminErc20Bridger extends Erc20Bridger {
 
     const l1SignerAddr = await l1Signer.getAddress()
     const estimates = await estimator.estimateAll(
-      this.l2Network.tokenBridge.l1GatewayRouter,
-      this.l2Network.tokenBridge.l2GatewayRouter,
-      l2SetGatewaysCallData,
-      Zero,
+      {
+        from: this.l2Network.tokenBridge.l1GatewayRouter,
+        to: this.l2Network.tokenBridge.l2GatewayRouter,
+        data: l2SetGatewaysCallData,
+        l2CallValue: Zero,
+        callValueRefundAddress: l1SignerAddr,
+        excessFeeRefundAddress: l1SignerAddr,
+      },
       baseFee,
-      l1SignerAddr,
-      l1SignerAddr,
-      l1Signer.provider
+      l1Signer.provider,
+      options
     )
 
     const l1GatewayRouter = L1GatewayRouter__factory.connect(
@@ -812,8 +892,8 @@ export class AdminErc20Bridger extends Erc20Bridger {
       tokenGateways.map(tG => tG.gatewayAddr),
       estimates.gasLimit,
       estimates.maxFeePerGas,
-      estimates.maxSubmissionFee,
-      { value: estimates.totalL2GasCosts }
+      estimates.maxSubmissionCost,
+      { value: estimates.deposit }
     )
 
     return L1TransactionReceipt.monkeyPatchContractCallWait(res)

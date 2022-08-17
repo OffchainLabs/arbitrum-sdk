@@ -1,25 +1,44 @@
 import { TransactionRequest } from '@ethersproject/providers'
-import { BigNumber } from 'ethers'
+import {
+  L1ToL2MessageGasParams,
+  L1ToL2MessageParams,
+} from '../message/L1ToL2MessageCreator'
+import { isDefined } from '../utils/lib'
 
 /**
  * A transaction request for a transaction that will trigger some sort of
  * execution on the L2
  */
-export interface L1ToL2TransactionRequest extends TransactionRequest {
+export interface L1ToL2TransactionRequest {
   /**
-   * The gas limit provided to this transactin when executed on L2 (units of gas)
+   * Core fields needed to form the L1 component of the transaction request
    */
-  l2GasLimit: BigNumber
+  core: Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
+
   /**
-   * The max fee per gas that will be paid on L2 (wei per gas)
+   * Information about the retryable ticket, and it's subsequent execution, that
+   * will occur on L2
    */
-  l2MaxFeePerGas: BigNumber
+  retryableData: L1ToL2MessageParams & L1ToL2MessageGasParams
+
   /**
-   * The L2 retryable ticket submission cost (wei)
+   * If this request were sent now, would it have enough margin to reliably succeed
    */
-  l2SubmissionFee: BigNumber
-  /**
-   * The maximum total amount of eth that could be spent on L2 (wei)
-   */
-  l2GasCostsMaxTotal: BigNumber
+  isValid(): Promise<boolean>
+}
+
+/**
+ * Ensure the T is not of TransactionRequest type by ensure it doesnt have a specific TransactionRequest property
+ */
+type IsNotTransactionRequest<T> = T extends { txRequest: any } ? never : T
+
+/**
+ * Check if an object is of L1ToL2TransactionRequest type
+ * @param possibleRequest
+ * @returns
+ */
+export const isL1ToL2TransactionRequest = <T>(
+  possibleRequest: IsNotTransactionRequest<T> | L1ToL2TransactionRequest
+): possibleRequest is L1ToL2TransactionRequest => {
+  return isDefined((possibleRequest as L1ToL2TransactionRequest).core)
 }

@@ -88,7 +88,6 @@ export const getCustomNetworks = async (
     isCustom: true,
     name: 'EthLocal',
     partnerChainIDs: [l2NetworkInfo.chainId],
-    rpcURL: l1Url,
   }
 
   const l2Network: Omit<L2Network, 'tokenBridge'> = {
@@ -106,7 +105,6 @@ export const getCustomNetworks = async (
     isCustom: true,
     name: 'ArbLocal',
     partnerChainID: l1NetworkInfo.chainId,
-    rpcURL: l2Url,
     retryableLifetimeSeconds: 7 * 24 * 60 * 60,
   }
   return {

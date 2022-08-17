@@ -21,6 +21,7 @@ import dotenv from 'dotenv'
 
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
+
 import { fundL1, fundL2, prettyLog, skipIfMainnet } from './testHelpers'
 import {
   L2ToL1Message,
@@ -96,28 +97,13 @@ describe('Ether', async () => {
 
     const waitResult = await rec.waitForL2(l2Signer.provider!)
 
-    const l1ToL2Messages = await rec.getL1ToL2Messages(l2Signer)
+    const l1ToL2Messages = await rec.getEthDepositMessages(l2Signer.provider!)
     expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
     const l1ToL2Message = l1ToL2Messages[0]
 
     const walletAddress = await l1Signer.getAddress()
-
-    for (const addr of [
-      l1ToL2Message.messageData.destAddress,
-      l1ToL2Message.messageData.excessFeeRefundAddress,
-      l1ToL2Message.messageData.callValueRefundAddress,
-    ]) {
-      expect(addr).to.eq(walletAddress, 'message inputs value error')
-    }
-
-    for (const value of [
-      l1ToL2Message.messageData.l2CallValue,
-      l1ToL2Message.messageData.gasLimit,
-      l1ToL2Message.messageData.maxFeePerGas,
-    ]) {
-      expect(value.isZero(), 'message inputs value error').to.be.true
-    }
-    expect(l1ToL2Message.messageData.data, 'empty call data').to.eq('0x')
+    expect(l1ToL2Message.to, 'Incorrect to address').to.eq(walletAddress)
+    expect(l1ToL2Message.value.eq(ethToDeposit), 'Incorrect value').to.be.true
 
     prettyLog('l2TxHash: ' + waitResult.message.l2DepositTxHash)
     prettyLog('l2 transaction found!')
@@ -126,7 +112,7 @@ describe('Ether', async () => {
     expect(waitResult.l2TxReceipt).to.not.be.null
 
     const testWalletL2EthBalance = await l2Signer.getBalance()
-    expect(testWalletL2EthBalance.gt(ethToDeposit), 'final balance').to.be.true
+    expect(testWalletL2EthBalance.eq(ethToDeposit), 'final balance').to.be.true
   })
 
   it('withdraw Ether transaction succeeds', async () => {
