@@ -49,4 +49,4 @@ jobs:
       - name: Integration tests
         run: |
           cd sdk
-          yarn test:integration
+          CI=true yarn test:integration

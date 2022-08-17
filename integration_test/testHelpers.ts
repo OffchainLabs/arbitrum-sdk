@@ -60,6 +60,53 @@ interface WithdrawalParams {
   gatewayType: GatewayType
 }
 
+export const startMiner = async (signer: Signer) => {
+  // this doesnt happen locally, but on CI for some reason we new nodes are not added
+  // unless l2 blocks are being mined. So we run a miner to keep producing blocks.
+  // Since the miner is run in the background we need to stop it at some point so that the tests exit.
+  // We can either do this explicitly, but this is a bit tricky with the tests, or try to detect if with the method below
+  // 1. check if any new blocks are being mined - this means a test is being run at the moment
+  // 2. if a test is being run, start the miner for 2 minutes
+  // 3. after the miner has stopped, go back to 1. and wait to see if tests are still being run
+  // 4. if no tests have run for 2 minutes, then stop the miner
+
+  // current block number
+  let lastObservedBlock = await signer.provider!.getBlockNumber()
+  let lastObservedBlockTime = Date.now()
+
+  // look for new blocks for 2 minutes since the last block changed
+  while (Date.now() - lastObservedBlockTime < 120000) {
+    const currentBlock = await signer.provider!.getBlockNumber()
+    const currentBlockTime = Date.now()
+    if (currentBlock > lastObservedBlock) {
+      // new block mined, start the miners for 2 minutes
+      while (Date.now() - currentBlockTime < 120000) {
+        // send a tx every 15 seconds
+        await (
+          await signer.sendTransaction({
+            to: await signer.getAddress(),
+            value: 0,
+          })
+        ).wait()
+        await wait(15000)
+      }
+
+      // we've finished mining for a bit, record when we stopped the miner
+      lastObservedBlock = await signer.provider!.getBlockNumber()
+      lastObservedBlockTime = Date.now()
+    }
+  }
+}
+
+export const startCi = async () => {
+  const { l1Signer, l2Signer } = await testSetup()
+  await fundL1(l1Signer, parseEther('1'))
+  await fundL2(l2Signer, parseEther('1'))
+}
+// start the miner if running on CI
+const isCi = process.env['CI']
+if (isCi) startCi()
+
 /**
  * Withdraws a token and tests that it occurred correctly
  * @param params
