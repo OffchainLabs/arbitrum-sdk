@@ -61,6 +61,7 @@ interface WithdrawalParams {
 }
 
 export const startMiner = async (signer: Signer) => {
+  console.log(`${await signer.getAddress()}: starting miner`)
   // this doesnt happen locally, but on CI for some reason we new nodes are not added
   // unless l2 blocks are being mined. So we run a miner to keep producing blocks.
   // Since the miner is run in the background we need to stop it at some point so that the tests exit.
@@ -78,7 +79,13 @@ export const startMiner = async (signer: Signer) => {
   while (Date.now() - lastObservedBlockTime < 120000) {
     const currentBlock = await signer.provider!.getBlockNumber()
     const currentBlockTime = Date.now()
+    console.log(
+      `${await signer.getAddress()}: current block: ${currentBlock} ${currentBlockTime}`
+    )
     if (currentBlock > lastObservedBlock) {
+      console.log(
+        `${await signer.getAddress()}: tests in progress, mining blocks: ${currentBlock} ${currentBlockTime} ${lastObservedBlock} ${lastObservedBlockTime}`
+      )
       // new block mined, start the miners for 2 minutes
       while (Date.now() - currentBlockTime < 120000) {
         // send a tx every 15 seconds
@@ -94,14 +101,26 @@ export const startMiner = async (signer: Signer) => {
       // we've finished mining for a bit, record when we stopped the miner
       lastObservedBlock = await signer.provider!.getBlockNumber()
       lastObservedBlockTime = Date.now()
+      console.log(
+        `${await signer.getAddress()}: finished mining blocks: ${lastObservedBlock} ${lastObservedBlockTime}`
+      )
     }
+
+    await wait(15000)
   }
+
+  console.log(
+    `${await signer.getAddress()}: tests complete, exiting miner: ${lastObservedBlock} ${lastObservedBlockTime} ${await signer.provider!.getBlockNumber()} ${Date.now()}`
+  )
 }
 
 export const startCi = async () => {
   const { l1Signer, l2Signer } = await testSetup()
   await fundL1(l1Signer, parseEther('1'))
   await fundL2(l2Signer, parseEther('1'))
+  startMiner(l1Signer)
+  console.log('starting l2 miner')
+  startMiner(l2Signer)
 }
 // start the miner if running on CI
 const isCi = process.env['CI']
