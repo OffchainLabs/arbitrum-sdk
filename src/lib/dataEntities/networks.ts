@@ -246,7 +246,8 @@ export const l2Networks: L2Networks = {
     name: 'Arbitrum Nova',
     partnerChainID: 1,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
-    rpcURL: process.env['NOVA_RPC'] as string || 'https://nova.arbitrum.io/rpc',
+    rpcURL:
+      (process.env['NOVA_RPC'] as string) || 'https://nova.arbitrum.io/rpc',
     tokenBridge: {
       l1CustomGateway: '0x23122da8C581AA7E0d07A36Ff1f16F799650232f',
       l1ERC20Gateway: '0xB2535b988dcE19f9D71dfB22dB6da744aCac21bf',
