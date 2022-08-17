@@ -37,7 +37,7 @@ import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
 import { ArbSdkError } from '../dataEntities/errors'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { EventArgs, parseTypedLogs } from '../dataEntities/event'
-import { ArbitrumProvider, getArbTransactionReceipt } from '../utils/arbProvider'
+import { ArbitrumProvider } from '../utils/arbProvider'
 
 export interface L2ContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<L2TransactionReceipt>
