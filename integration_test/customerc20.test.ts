@@ -75,14 +75,14 @@ describe('Custom ERC20', () => {
       ...(await testSetup()),
       l1CustomToken: {} as any,
     }
-    await fundL1(testState.l1Signer)
-    await fundL2(testState.l2Signer)
+    await fundL1(testState.l1Signer, parseEther("1"))
+    await fundL2(testState.l2Signer, parseEther("1"))
 
     const walletL1 = Wallet.createRandom().connect(testState.l1Signer.provider!)
     await (
       await testState.l1Signer.sendTransaction({
         to: walletL1.address,
-        value: parseEther('0.05'),
+        value: parseEther('0.1'),
       })
     ).wait()
 
@@ -90,7 +90,7 @@ describe('Custom ERC20', () => {
     await (
       await testState.l2Signer.sendTransaction({
         to: walletL2.address,
-        value: parseEther('0.05'),
+        value: parseEther('0.1'),
       })
     ).wait()
 
