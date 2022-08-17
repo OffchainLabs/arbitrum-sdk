@@ -48,6 +48,7 @@ const withdrawalAmount = BigNumber.from(10)
 
 const startMiner = async (signer: Signer, intervalMs: number) => {
   // send a 0 value tx to keep the miner ticking over
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     await (
       await signer.sendTransaction({ to: await signer.getAddress(), value: 0 })
@@ -75,8 +76,8 @@ describe('Custom ERC20', () => {
       ...(await testSetup()),
       l1CustomToken: {} as any,
     }
-    await fundL1(testState.l1Signer, parseEther("1"))
-    await fundL2(testState.l2Signer, parseEther("1"))
+    await fundL1(testState.l1Signer, parseEther('1'))
+    await fundL2(testState.l2Signer, parseEther('1'))
 
     const walletL1 = Wallet.createRandom().connect(testState.l1Signer.provider!)
     await (
