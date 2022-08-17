@@ -147,7 +147,7 @@ export class L2ToL1Message {
     position?: BigNumber,
     destination?: string,
     hash?: BigNumber
-  ): Promise<EventArgs<L2ToL1TxEvent>[]> {
+  ): Promise<(L2ToL1TxEvent['args'] & { transactionHash: string })[]> {
     const eventFetcher = new EventFetcher(l2Provider)
     return (
       await eventFetcher.getEvents(
@@ -156,7 +156,7 @@ export class L2ToL1Message {
         t => t.filters.L2ToL1Tx(null, destination, hash, position),
         filter
       )
-    ).map(l => l.event)
+    ).map(l => ({ ...l.event, transactionHash: l.transactionHash }))
   }
 }
 
@@ -413,34 +413,45 @@ export class L2ToL1MessageReader extends L2ToL1Message {
       )
     ).sort((a, b) => a.event.nodeNum.toNumber() - b.event.nodeNum.toNumber())
 
+    const lastL2Block =
+      logs.length === 0
+        ? undefined
+        : await this.getBlockFromNodeLog(
+            l2Provider as JsonRpcProvider,
+            logs[logs.length - 1]
+          )
+    const lastSendCount = lastL2Block
+      ? BigNumber.from(lastL2Block.sendCount)
+      : BigNumber.from(0)
+
     // here we assume the L2 to L1 tx is actually valid, so the user needs to wait the max time
     // since there isn't a pending node that includes this message yet
-    if (logs.length === 0)
+    if (lastSendCount.lte(this.event.position))
       return BigNumber.from(l2Network.confirmPeriodBlocks)
         .add(ASSERTION_CREATED_PADDING)
         .add(ASSERTION_CONFIRMED_PADDING)
         .add(latestBlock)
 
-    let foundLog: FetchedEvent<NodeCreatedEvent> | undefined = undefined
-    for (const log of logs) {
+    // use binary search to find the first node with sendCount > this.event.position
+    // default to the last node since we already checked above
+    let foundLog: FetchedEvent<NodeCreatedEvent> = logs[logs.length - 1]
+    let left = 0
+    let right = logs.length - 1
+    while (left <= right) {
+      const mid = Math.floor((left + right) / 2)
+      const log = logs[mid]
       const l2Block = await this.getBlockFromNodeLog(
         l2Provider as JsonRpcProvider,
         log
       )
       const sendCount = BigNumber.from(l2Block.sendCount)
-      if (sendCount.gte(this.event.position)) {
+      if (sendCount.gt(this.event.position)) {
         foundLog = log
-        break
+        right = mid - 1
+      } else {
+        left = mid + 1
       }
     }
-
-    // here we assume the L2 to L1 tx is actually valid, so the user needs to wait the max time
-    // since there isn't a pending node that includes this message yet
-    if (!foundLog)
-      return BigNumber.from(l2Network.confirmPeriodBlocks)
-        .add(ASSERTION_CREATED_PADDING)
-        .add(ASSERTION_CONFIRMED_PADDING)
-        .add(latestBlock)
 
     const earliestNodeWithExit = foundLog.event.nodeNum
     const node = await rollup.getNode(earliestNodeWithExit)

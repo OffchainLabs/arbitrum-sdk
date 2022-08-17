@@ -109,11 +109,11 @@ const rinkebyTokenBridge: TokenBridge = {
 }
 
 const rinkebyETHBridge: EthBridge = {
-  bridge: '0x9a28e783c47bbeb813f32b861a431d0776681e95',
+  bridge: '0x85C720444e436E1F9407E0C3895d3fE149f41168',
   inbox: '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e',
-  sequencerInbox: '0xe1ae39e91c5505f7f0ffc9e2bbf1f6e1122dcfa8',
-  outbox: '0x2360A33905dc1c72b12d975d975F42BaBdcef9F3',
-  rollup: '0xFe2c86CF40F89Fe2F726cFBBACEBae631300b50c',
+  sequencerInbox: '0x957C9c64f7c2cE091E56aF3F33AB20259096355F',
+  outbox: '0x36648F69cEb55Ce1B2920Bf2de321FBc9c378f0E',
+  rollup: '0x71c6093C564EDDCFAf03481C3F59F88849F1e644',
 }
 
 const mainnetETHBridge: EthBridge = {
@@ -129,7 +129,7 @@ export const l1Networks: L1Networks = {
     chainID: 1,
     name: 'Mainnet',
     explorerUrl: 'https://etherscan.io',
-    partnerChainIDs: [42161],
+    partnerChainIDs: [42161, 42170],
     blockTime: 14,
     isCustom: false,
   },
@@ -148,6 +148,15 @@ export const l1Networks: L1Networks = {
     partnerChainIDs: [421611],
     blockTime: 15,
     isCustom: false,
+  },
+  5: {
+    blockTime: 15,
+    chainID: 5,
+    explorerUrl: 'https://goerli.etherscan.io',
+    isCustom: false,
+    name: 'Goerli',
+    partnerChainIDs: [421613],
+    rpcURL: process.env['GOERLI_RPC'] as string,
   },
 }
 
@@ -175,6 +184,77 @@ export const l2Networks: L2Networks = {
     confirmPeriodBlocks: 6545, // TODO
     isCustom: false,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
+  },
+  421613: {
+    chainID: 421613,
+    confirmPeriodBlocks: 960,
+    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
+    ethBridge: {
+      bridge: '0xaf4159a80b6cc41ed517db1c453d1ef5c2e4db72',
+      inbox: '0x6BEbC4925716945D46F0Ec336D5C2564F419682C',
+      outbox: '0x45Af9Ed1D03703e480CE7d328fB684bb67DA5049',
+      rollup: '0x45e5cAea8768F42B385A366D3551Ad1e0cbFAb17',
+      sequencerInbox: '0x0484A87B144745A2E5b7c359552119B6EA2917A9',
+    },
+    explorerUrl: 'https://goerli-rollup-explorer.arbitrum.io',
+    isArbitrum: true,
+    isCustom: false,
+    name: 'Arbitrum Rollup Goerli Testnet',
+    partnerChainID: 5,
+    rpcURL:
+      process.env['GOERLI_ROLLUP_TESTNET_RPC'] ||
+      'https://goerli-rollup.arbitrum.io/rpc',
+    tokenBridge: {
+      l1CustomGateway: '0x9fDD1C4E4AA24EEc1d913FABea925594a20d43C7',
+      l1ERC20Gateway: '0x715D99480b77A8d9D603638e593a539E21345FdF',
+      l1GatewayRouter: '0x4c7708168395aEa569453Fc36862D2ffcDaC588c',
+      l1MultiCall: '0xa0A8537a683B49ba4bbE23883d984d4684e0acdD',
+      l1ProxyAdmin: '0x16101A84B00344221E2983190718bFAba30D9CeE',
+      l1Weth: '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6',
+      l1WethGateway: '0x6e244cD02BBB8a6dbd7F626f05B2ef82151Ab502',
+      l2CustomGateway: '0x8b6990830cF135318f75182487A4D7698549C717',
+      l2ERC20Gateway: '0x2eC7Bc552CE8E51f098325D2FcF0d3b9d3d2A9a2',
+      l2GatewayRouter: '0xE5B9d8d42d656d1DcB8065A6c012FE3780246041',
+      l2Multicall: '0x108B25170319f38DbED14cA9716C54E5D1FF4623',
+      l2ProxyAdmin: '0xeC377B42712608B0356CC54Da81B2be1A4982bAb',
+      l2Weth: '0xe39Ab88f8A4777030A534146A9Ca3B52bd5D43A3',
+      l2WethGateway: '0xf9F2e89c8347BD96742Cc07095dee490e64301d6',
+    },
+  },
+  42170: {
+    chainID: 42170,
+    confirmPeriodBlocks: 45818,
+    ethBridge: {
+      bridge: '0xc1ebd02f738644983b6c4b2d440b8e77dde276bd',
+      inbox: '0xc4448b71118c9071bcb9734a0eac55d18a153949',
+      outbox: '0xD4B80C3D7240325D18E645B49e6535A3Bf95cc58',
+      rollup: '0xfb209827c58283535b744575e11953dcc4bead88',
+      sequencerInbox: '0x211e1c4c7f1bf5351ac850ed10fd68cffcf6c21b',
+    },
+    explorerUrl: 'https://nova-explorer.arbitrum.io',
+    isArbitrum: true,
+    isCustom: false,
+    name: 'Arbitrum Nova',
+    partnerChainID: 1,
+    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
+    rpcURL:
+      (process.env['NOVA_RPC'] as string) || 'https://nova.arbitrum.io/rpc',
+    tokenBridge: {
+      l1CustomGateway: '0x23122da8C581AA7E0d07A36Ff1f16F799650232f',
+      l1ERC20Gateway: '0xB2535b988dcE19f9D71dfB22dB6da744aCac21bf',
+      l1GatewayRouter: '0xC840838Bc438d73C16c2f8b22D2Ce3669963cD48',
+      l1MultiCall: '0x8896d23afea159a5e9b72c9eb3dc4e2684a38ea3',
+      l1ProxyAdmin: '0xa8f7DdEd54a726eB873E98bFF2C95ABF2d03e560',
+      l1Weth: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+      l1WethGateway: '0xE4E2121b479017955Be0b175305B35f312330BaE',
+      l2CustomGateway: '0xbf544970E6BD77b21C6492C281AB60d0770451F4',
+      l2ERC20Gateway: '0xcF9bAb7e53DDe48A6DC4f286CB14e05298799257',
+      l2GatewayRouter: '0x21903d3F8176b1a0c17E953Cd896610Be9fFDFa8',
+      l2Multicall: '0x5e1eE626420A354BbC9a95FeA1BAd4492e3bcB86',
+      l2ProxyAdmin: '0xada790b026097BfB36a5ed696859b97a96CEd92C',
+      l2Weth: '0x722E8BdD2ce80A4422E880164f2079488e115365',
+      l2WethGateway: '0x7626841cB6113412F9c88D3ADC720C9FAC88D9eD',
+    },
   },
 }
 
