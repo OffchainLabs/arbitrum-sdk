@@ -151,10 +151,9 @@ export class L2ToL1Message {
     const eventFetcher = new EventFetcher(l2Provider)
     return (
       await eventFetcher.getEvents(
-        ARB_SYS_ADDRESS,
         ArbSys__factory,
         t => t.filters.L2ToL1Tx(null, destination, hash, position),
-        filter
+        { ...filter, address: ARB_SYS_ADDRESS }
       )
     ).map(l => ({ ...l.event, transactionHash: l.transactionHash }))
   }
@@ -262,12 +261,12 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     // now get the block hash and sendroot for that node
     const eventFetcher = new EventFetcher(rollup.provider)
     const logs = await eventFetcher.getEvents(
-      rollup.address,
       RollupUserLogic__factory,
       t => t.filters.NodeCreated(nodeNum),
       {
         fromBlock: node.createdAtBlock.toNumber(),
         toBlock: node.createdAtBlock.toNumber(),
+        address: rollup.address,
       }
     )
 
@@ -397,7 +396,6 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     const eventFetcher = new EventFetcher(this.l1Provider)
     const logs = (
       await eventFetcher.getEvents(
-        rollup.address,
         RollupUserLogic__factory,
         t => t.filters.NodeCreated(),
         {
@@ -409,6 +407,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
             0
           ),
           toBlock: 'latest',
+          address: rollup.address,
         }
       )
     ).sort((a, b) => a.event.nodeNum.toNumber() - b.event.nodeNum.toNumber())

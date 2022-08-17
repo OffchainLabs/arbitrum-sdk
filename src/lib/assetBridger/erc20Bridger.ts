@@ -253,11 +253,10 @@ export class Erc20Bridger extends AssetBridger<
     const eventFetcher = new EventFetcher(l2Provider)
     const events = (
       await eventFetcher.getEvents(
-        gatewayAddress,
         L2ArbitrumGateway__factory,
         contract =>
           contract.filters.WithdrawalInitiated(null, fromAddress || null),
-        filter
+        { ...filter, address: gatewayAddress }
       )
     ).map(a => ({ txHash: a.transactionHash, ...a.event }))
 
@@ -796,10 +795,9 @@ export class AdminErc20Bridger extends Erc20Bridger {
     const eventFetcher = new EventFetcher(l1Provider)
     return (
       await eventFetcher.getEvents(
-        l1GatewayRouterAddress,
         L1GatewayRouter__factory,
         t => t.filters.GatewaySet(),
-        filter
+        { ...filter, address: l1GatewayRouterAddress }
       )
     ).map(a => a.event)
   }
@@ -828,10 +826,9 @@ export class AdminErc20Bridger extends Erc20Bridger {
     const eventFetcher = new EventFetcher(l2Provider)
     return (
       await eventFetcher.getEvents(
-        l2GatewayRouterAddress,
         L1GatewayRouter__factory,
         t => t.filters.GatewaySet(),
-        filter
+        { ...filter, address: l2GatewayRouterAddress }
       )
     ).map(a => a.event)
   }

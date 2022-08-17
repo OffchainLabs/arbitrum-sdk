@@ -160,12 +160,12 @@ export class InboxTools {
 
     // get all the events in this range
     const events = await eFetcher.getEvents(
-      bridge.address,
       Bridge__factory,
       b => b.filters.MessageDelivered(),
       {
         fromBlock: blockRange.startBlock,
         toBlock: blockRange.endBlock,
+        address: bridge.address,
       }
     )
 
