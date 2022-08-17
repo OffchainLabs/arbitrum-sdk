@@ -59,19 +59,22 @@ export class EventFetcher {
     TContract extends Contract,
     TEventFilter extends TypedEventFilter<TypedEvent>
   >(
-    addr: string | undefined,
     contractFactory: TypeChainContractFactory<TContract>,
     topicGenerator: (t: TContract) => TEventFilter,
-    filter: { fromBlock: BlockTag; toBlock: BlockTag }
+    filter: {
+      fromBlock: BlockTag
+      toBlock: BlockTag
+      address?: string
+    }
   ): Promise<FetchedEvent<TEventOf<TEventFilter>>[]> {
     const contract = contractFactory.connect(
-      addr || constants.AddressZero,
+      filter.address || constants.AddressZero,
       this.provider
     )
     const eventFilter = topicGenerator(contract)
     const fullFilter: Filter = {
       ...eventFilter,
-      address: addr,
+      address: filter.address,
       fromBlock: filter.fromBlock,
       toBlock: filter.toBlock,
     }

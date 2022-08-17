@@ -156,7 +156,6 @@ export const l1Networks: L1Networks = {
     isCustom: false,
     name: 'Goerli',
     partnerChainIDs: [421613],
-    rpcURL: process.env['GOERLI_RPC'] as string,
   },
 }
 
@@ -201,9 +200,6 @@ export const l2Networks: L2Networks = {
     isCustom: false,
     name: 'Arbitrum Rollup Goerli Testnet',
     partnerChainID: 5,
-    rpcURL:
-      process.env['GOERLI_ROLLUP_TESTNET_RPC'] ||
-      'https://goerli-rollup.arbitrum.io/rpc',
     tokenBridge: {
       l1CustomGateway: '0x9fDD1C4E4AA24EEc1d913FABea925594a20d43C7',
       l1ERC20Gateway: '0x715D99480b77A8d9D603638e593a539E21345FdF',
@@ -237,8 +233,6 @@ export const l2Networks: L2Networks = {
     name: 'Arbitrum Nova',
     partnerChainID: 1,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
-    rpcURL:
-      (process.env['NOVA_RPC'] as string) || 'https://nova.arbitrum.io/rpc',
     tokenBridge: {
       l1CustomGateway: '0x23122da8C581AA7E0d07A36Ff1f16F799650232f',
       l1ERC20Gateway: '0xB2535b988dcE19f9D71dfB22dB6da744aCac21bf',
