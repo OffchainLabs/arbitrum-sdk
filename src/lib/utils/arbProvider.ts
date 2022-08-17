@@ -1,4 +1,10 @@
-import { JsonRpcProvider, Formatter, BlockTag } from '@ethersproject/providers'
+import {
+  JsonRpcProvider,
+  Formatter,
+  BlockTag,
+  Web3Provider,
+  JsonRpcFetchFunc,
+} from '@ethersproject/providers'
 import { Formats } from '@ethersproject/providers/lib/formatter'
 import { Networkish } from '@ethersproject/networks'
 import {
@@ -60,7 +66,7 @@ class ArbFormatter extends Formatter {
 /**
  * Arbitrum specific formats
  */
-export class ArbitrumProvider extends JsonRpcProvider {
+export class ArbitrumProvider extends Web3Provider {
   private static arbFormatter = new ArbFormatter()
 
   /**
@@ -69,7 +75,7 @@ export class ArbitrumProvider extends JsonRpcProvider {
    * @param network Must be an Arbitrum network
    */
   public constructor(provider: JsonRpcProvider, network?: Networkish) {
-    super(provider.connection, network)
+    super(provider.send.bind(provider) as JsonRpcFetchFunc, network)
   }
 
   static override getFormatter(): Formatter {
