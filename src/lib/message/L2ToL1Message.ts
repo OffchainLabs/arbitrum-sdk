@@ -147,7 +147,7 @@ export class L2ToL1Message {
     position?: BigNumber,
     destination?: string,
     hash?: BigNumber
-  ): Promise<(L2ToL1TxEvent['args'] & { transactionHash: string })[]> {
+  ): Promise<(EventArgs<L2ToL1TxEvent> & { transactionHash: string })[]> {
     const eventFetcher = new EventFetcher(l2Provider)
     return (
       await eventFetcher.getEvents(
