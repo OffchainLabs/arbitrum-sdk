@@ -133,9 +133,9 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   const balBefore = await params.l1Token.balanceOf(
     await params.l1Signer.getAddress()
   )
-  console.log("waiting for status")
+  console.log('waiting for status')
   await message.waitUntilReadyToExecute(params.l2Signer.provider!)
-  console.log("waiting for status complete")
+  console.log('waiting for status complete')
   expect(
     await message.status(params.l2Signer.provider!),
     'confirmed status'

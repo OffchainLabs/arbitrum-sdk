@@ -48,8 +48,10 @@ const withdrawalAmount = BigNumber.from(10)
 
 const startMiner = async (signer: Signer, intervalMs: number) => {
   // send a 0 value tx to keep the miner ticking over
-  while(true) {
-    await (await signer.sendTransaction({ to: await signer.getAddress(), value: 0 })).wait()
+  while (true) {
+    await (
+      await signer.sendTransaction({ to: await signer.getAddress(), value: 0 })
+    ).wait()
     await wait(intervalMs)
   }
 }
@@ -76,11 +78,27 @@ describe('Custom ERC20', () => {
     await fundL1(testState.l1Signer)
     await fundL2(testState.l2Signer)
 
-    const wallet = Wallet.createRandom().connect(testState.l1Signer.provider!)
-    await (await testState.l1Signer.sendTransaction({ to: wallet.address, value: parseEther("0.05") })).wait()
+    const walletL1 = Wallet.createRandom().connect(testState.l1Signer.provider!)
+    await (
+      await testState.l1Signer.sendTransaction({
+        to: walletL1.address,
+        value: parseEther('0.05'),
+      })
+    ).wait()
 
-    console.log("calling here")
-    startMiner(wallet, 60000)
+    const walletL2 = Wallet.createRandom().connect(testState.l2Signer.provider!)
+    await (
+      await testState.l2Signer.sendTransaction({
+        to: walletL2.address,
+        value: parseEther('0.05'),
+      })
+    ).wait()
+
+    console.log('starting l1 miner')
+    startMiner(walletL1, 60000)
+
+    console.log('starting l2 miner')
+    startMiner(walletL2, 60000)
   })
 
   it('register custom token', async () => {
