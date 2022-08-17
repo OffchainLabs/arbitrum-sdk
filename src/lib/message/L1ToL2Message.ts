@@ -354,12 +354,12 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       const blockRange = { from: fromBlock.number, to: toBlockNumber }
       queriedRange.push(blockRange)
       const redeemEvents = await eventFetcher.getEvents(
-        ARB_RETRYABLE_TX_ADDRESS,
         ArbRetryableTx__factory,
         contract => contract.filters.RedeemScheduled(this.retryableCreationId),
         {
           fromBlock: blockRange.from,
           toBlock: blockRange.to,
+          address: ARB_RETRYABLE_TX_ADDRESS,
         }
       )
       const successfulRedeem = (
@@ -385,11 +385,14 @@ export class L1ToL2MessageReader extends L1ToL2Message {
         while (queriedRange.length > 0) {
           const blockRange = queriedRange.shift()
           const keepaliveEvents = await eventFetcher.getEvents(
-            ARB_RETRYABLE_TX_ADDRESS,
             ArbRetryableTx__factory,
             contract =>
               contract.filters.LifetimeExtended(this.retryableCreationId),
-            { fromBlock: blockRange!.from, toBlock: blockRange!.to }
+            {
+              fromBlock: blockRange!.from,
+              toBlock: blockRange!.to,
+              address: ARB_RETRYABLE_TX_ADDRESS,
+            }
           )
           if (keepaliveEvents.length > 0) {
             timeout = keepaliveEvents
