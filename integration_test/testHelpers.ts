@@ -25,7 +25,7 @@ import { parseEther } from '@ethersproject/units'
 
 import { config, getSigner, testSetup } from '../scripts/testSetup'
 
-import { Signer } from 'ethers'
+import { Signer, Wallet } from 'ethers'
 import { Erc20Bridger, L1ToL2MessageStatus, L2ToL1MessageStatus } from '../src'
 import { L2Network } from '../src/lib/dataEntities/networks'
 import { GasOverrides } from '../src/lib/message/L1ToL2MessageGasEstimator'
@@ -60,8 +60,8 @@ interface WithdrawalParams {
   gatewayType: GatewayType
 }
 
-export const startMiner = async (signer: Signer) => {
-  console.log(`${await signer.getAddress()}: starting miner`)
+export const startMiner = async (signer: Signer, name: string) => {
+  console.log(`${await signer.getAddress()}:${name}: starting miner`)
   // this doesnt happen locally, but on CI for some reason we new nodes are not added
   // unless l2 blocks are being mined. So we run a miner to keep producing blocks.
   // Since the miner is run in the background we need to stop it at some point so that the tests exit.
@@ -80,11 +80,11 @@ export const startMiner = async (signer: Signer) => {
     const currentBlock = await signer.provider!.getBlockNumber()
     const currentBlockTime = Date.now()
     console.log(
-      `${await signer.getAddress()}: current block: ${currentBlock} ${currentBlockTime}`
+      `${await signer.getAddress()}:${name}: current block: ${currentBlock} ${currentBlockTime}`
     )
     if (currentBlock > lastObservedBlock) {
       console.log(
-        `${await signer.getAddress()}: tests in progress, mining blocks: ${currentBlock} ${currentBlockTime} ${lastObservedBlock} ${lastObservedBlockTime}`
+        `${await signer.getAddress()}:${name}: tests in progress, mining blocks: ${currentBlock} ${currentBlockTime} ${lastObservedBlock} ${lastObservedBlockTime}`
       )
       // new block mined, start the miners for 2 minutes
       while (Date.now() - currentBlockTime < 120000) {
@@ -102,7 +102,7 @@ export const startMiner = async (signer: Signer) => {
       lastObservedBlock = await signer.provider!.getBlockNumber()
       lastObservedBlockTime = Date.now()
       console.log(
-        `${await signer.getAddress()}: finished mining blocks: ${lastObservedBlock} ${lastObservedBlockTime}`
+        `${await signer.getAddress()}:${name}: finished mining blocks: ${lastObservedBlock} ${lastObservedBlockTime}`
       )
     }
 
@@ -110,21 +110,35 @@ export const startMiner = async (signer: Signer) => {
   }
 
   console.log(
-    `${await signer.getAddress()}: tests complete, exiting miner: ${lastObservedBlock} ${lastObservedBlockTime} ${await signer.provider!.getBlockNumber()} ${Date.now()}`
+    `${await signer.getAddress()}:${name}: tests complete, exiting miner: ${lastObservedBlock} ${lastObservedBlockTime} ${await signer.provider!.getBlockNumber()} ${Date.now()}`
   )
+}
+
+const mineUntilStop = async (miner: Signer, state: { mining: boolean }) => {
+  while (state.mining) {
+    await (
+      await miner.sendTransaction({
+        to: await miner.getAddress(),
+        value: 0,
+      })
+    ).wait()
+    await wait(15000)
+  }
 }
 
 export const startCi = async () => {
   const { l1Signer, l2Signer } = await testSetup()
   await fundL1(l1Signer, parseEther('1'))
   await fundL2(l2Signer, parseEther('1'))
-  startMiner(l1Signer)
-  console.log('starting l2 miner')
-  startMiner(l2Signer)
+  startMiner(l1Signer, 'l1')
+
+  // CHRIS: TODO: this doesnt work since it keeps bloody mining!!!!!
+  // We should run the miner just in the withdrawal?
+  startMiner(l2Signer, 'l2')
 }
 // start the miner if running on CI
-const isCi = process.env['CI']
-if (isCi) startCi()
+// const isCi = process.env['CI']
+// if (isCi) await startCi()
 
 /**
  * Withdraws a token and tests that it occurred correctly
@@ -200,8 +214,21 @@ export const withdrawToken = async (params: WithdrawalParams) => {
     await params.l1Signer.getAddress()
   )
   console.log('waiting for status')
-  await message.waitUntilReadyToExecute(params.l2Signer.provider!)
-  console.log('waiting for status complete')
+
+  // whilst waiting for status we miner on both l1 and l2
+  const miner1 = Wallet.createRandom().connect(params.l1Signer.provider!)
+  const miner2 = Wallet.createRandom().connect(params.l2Signer.provider!)
+  await fundL1(miner1)
+  await fundL1(miner2)
+  const state = { mining: true }
+  await Promise.race([
+    mineUntilStop(miner1, state),
+    mineUntilStop(miner2, state),
+    message.waitUntilReadyToExecute(params.l2Signer.provider!),
+  ])
+  state.mining = false
+
+  await console.log('waiting for status complete')
   expect(
     await message.status(params.l2Signer.provider!),
     'confirmed status'
