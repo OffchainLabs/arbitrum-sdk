@@ -60,6 +60,7 @@ describe('ArbProvider', () => {
       const l1BatchConfirmations = (
         await arbTxReceipt.getBatchConfirmations(l2Provider)
       ).toNumber()
+      console.log("batch details", l1BatchNumber, l1BatchConfirmations)
 
       if (l1BatchNumber && l1BatchNumber > 0) {
         expect(l1BatchConfirmations, 'missing confirmations').to.be.gt(0)

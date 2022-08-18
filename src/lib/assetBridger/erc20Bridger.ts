@@ -628,7 +628,8 @@ export class Erc20Bridger extends AssetBridger<
       core: {
         to: this.l2Network.tokenBridge.l1GatewayRouter,
         data: functionData,
-        value: estimates.deposit,
+        // CHRIS: TODO: think more about this
+        value: estimates.deposit.sub(l2CallValue),
       },
       retryableData: {
         data: depositCalldata,
@@ -724,8 +725,17 @@ export class Erc20Bridger extends AssetBridger<
       // in the future we want to do proper estimation here
       /* eslint-disable @typescript-eslint/no-unused-vars */
       estimateL1GasLimit: async (l1Provider: Provider) => {
+        const l1GatewayAddress = await this.getL1GatewayAddress(
+          params.erc20l1Address,
+          l1Provider
+        )
+
+        // The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
+        // Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
+        const isWeth = await this.isWethGateway(l1GatewayAddress, l1Provider)
+
         // measured 157421 - add some padding
-        return BigNumber.from(160000)
+        return isWeth ? BigNumber.from(180000) : BigNumber.from(160000)
       },
     }
   }
