@@ -182,7 +182,7 @@ describe('RevertData', () => {
       )
       expect(parsed.data, 'data').to.eq(depositParams.retryableData.data)
       expect(parsed.deposit.toString(), 'deposit').to.eq(
-        depositParams.core.value
+        depositParams.core.value.toString()
       )
       expect(parsed.excessFeeRefundAddress, 'excessFeeRefundAddress').to.eq(
         depositParams.retryableData.excessFeeRefundAddress

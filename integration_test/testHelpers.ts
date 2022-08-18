@@ -60,86 +60,19 @@ interface WithdrawalParams {
   gatewayType: GatewayType
 }
 
-export const startMiner = async (signer: Signer, name: string) => {
-  console.log(`${await signer.getAddress()}:${name}: starting miner`)
-  // this doesnt happen locally, but on CI for some reason we new nodes are not added
-  // unless l2 blocks are being mined. So we run a miner to keep producing blocks.
-  // Since the miner is run in the background we need to stop it at some point so that the tests exit.
-  // We can either do this explicitly, but this is a bit tricky with the tests, or try to detect if with the method below
-  // 1. check if any new blocks are being mined - this means a test is being run at the moment
-  // 2. if a test is being run, start the miner for 2 minutes
-  // 3. after the miner has stopped, go back to 1. and wait to see if tests are still being run
-  // 4. if no tests have run for 2 minutes, then stop the miner
-
-  // current block number
-  let lastObservedBlock = await signer.provider!.getBlockNumber()
-  let lastObservedBlockTime = Date.now()
-
-  // look for new blocks for 2 minutes since the last block changed
-  while (Date.now() - lastObservedBlockTime < 120000) {
-    const currentBlock = await signer.provider!.getBlockNumber()
-    const currentBlockTime = Date.now()
-    console.log(
-      `${await signer.getAddress()}:${name}: current block: ${currentBlock} ${currentBlockTime}`
-    )
-    if (currentBlock > lastObservedBlock) {
-      console.log(
-        `${await signer.getAddress()}:${name}: tests in progress, mining blocks: ${currentBlock} ${currentBlockTime} ${lastObservedBlock} ${lastObservedBlockTime}`
-      )
-      // new block mined, start the miners for 2 minutes
-      while (Date.now() - currentBlockTime < 120000) {
-        // send a tx every 15 seconds
-        await (
-          await signer.sendTransaction({
-            to: await signer.getAddress(),
-            value: 0,
-          })
-        ).wait()
-        await wait(15000)
-      }
-
-      // we've finished mining for a bit, record when we stopped the miner
-      lastObservedBlock = await signer.provider!.getBlockNumber()
-      lastObservedBlockTime = Date.now()
-      console.log(
-        `${await signer.getAddress()}:${name}: finished mining blocks: ${lastObservedBlock} ${lastObservedBlockTime}`
-      )
-    }
-
-    await wait(15000)
-  }
-
-  console.log(
-    `${await signer.getAddress()}:${name}: tests complete, exiting miner: ${lastObservedBlock} ${lastObservedBlockTime} ${await signer.provider!.getBlockNumber()} ${Date.now()}`
-  )
-}
-
-const mineUntilStop = async (miner: Signer, state: { mining: boolean }) => {
+export const mineUntilStop = async (miner: Signer, state: { mining: boolean }) => {
   while (state.mining) {
+    console.log('before send')
     await (
       await miner.sendTransaction({
         to: await miner.getAddress(),
         value: 0,
       })
     ).wait()
+    console.log('after send')
     await wait(15000)
   }
 }
-
-export const startCi = async () => {
-  const { l1Signer, l2Signer } = await testSetup()
-  await fundL1(l1Signer, parseEther('1'))
-  await fundL2(l2Signer, parseEther('1'))
-  startMiner(l1Signer, 'l1')
-
-  // CHRIS: TODO: this doesnt work since it keeps bloody mining!!!!!
-  // We should run the miner just in the withdrawal?
-  startMiner(l2Signer, 'l2')
-}
-// start the miner if running on CI
-// const isCi = process.env['CI']
-// if (isCi) await startCi()
-
 /**
  * Withdraws a token and tests that it occurred correctly
  * @param params
@@ -216,10 +149,15 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   console.log('waiting for status')
 
   // whilst waiting for status we miner on both l1 and l2
+  console.log('a')
   const miner1 = Wallet.createRandom().connect(params.l1Signer.provider!)
+  console.log('b')
   const miner2 = Wallet.createRandom().connect(params.l2Signer.provider!)
-  await fundL1(miner1)
-  await fundL1(miner2)
+  console.log('c')
+  await fundL1(miner1, parseEther('1'))
+  console.log('d')
+  await fundL2(miner2, parseEther('1'))
+  console.log('e')
   const state = { mining: true }
   await Promise.race([
     mineUntilStop(miner1, state),
