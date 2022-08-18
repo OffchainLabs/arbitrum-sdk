@@ -30,7 +30,6 @@ import { JsonRpcProvider } from '@ethersproject/providers'
 import { BigNumber, Wallet } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
 import { testSetup } from '../scripts/testSetup'
-import { parse } from 'yargs'
 
 describe('ArbProvider', () => {
   beforeEach('skipIfMainnet', async function () {
@@ -41,6 +40,7 @@ describe('ArbProvider', () => {
     const { l2Signer, l1Signer } = await testSetup()
     const l2Provider = l2Signer.provider! as JsonRpcProvider
 
+    // set up miners
     const miner1 = Wallet.createRandom().connect(l1Signer.provider!)
     const miner2 = Wallet.createRandom().connect(l2Signer.provider!)
     await fundL1(miner1, parseEther('0.1'))
@@ -75,7 +75,6 @@ describe('ArbProvider', () => {
       const l1BatchConfirmations = (
         await arbTxReceipt.getBatchConfirmations(l2Provider)
       ).toNumber()
-      console.log('batch details', l1BatchNumber, l1BatchConfirmations)
 
       if (l1BatchNumber && l1BatchNumber > 0) {
         expect(l1BatchConfirmations, 'missing confirmations').to.be.gt(0)

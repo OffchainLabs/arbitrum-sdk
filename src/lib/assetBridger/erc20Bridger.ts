@@ -628,7 +628,10 @@ export class Erc20Bridger extends AssetBridger<
       core: {
         to: this.l2Network.tokenBridge.l1GatewayRouter,
         data: functionData,
-        // CHRIS: TODO: think more about this
+        // the deposit includes the l2 call value, however for token deposits
+        // they either have 0 call value, or their call value is withdrawn from
+        // a contract by the gateway (weth). So in both of these cases the l2 call value
+        // is not actually deposited in the value field
         value: estimates.deposit.sub(l2CallValue),
       },
       retryableData: {

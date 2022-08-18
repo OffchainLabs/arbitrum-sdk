@@ -60,16 +60,17 @@ interface WithdrawalParams {
   gatewayType: GatewayType
 }
 
-export const mineUntilStop = async (miner: Signer, state: { mining: boolean }) => {
+export const mineUntilStop = async (
+  miner: Signer,
+  state: { mining: boolean }
+) => {
   while (state.mining) {
-    console.log('before send')
     await (
       await miner.sendTransaction({
         to: await miner.getAddress(),
         value: 0,
       })
     ).wait()
-    console.log('after send')
     await wait(15000)
   }
 }
@@ -146,18 +147,12 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   const balBefore = await params.l1Token.balanceOf(
     await params.l1Signer.getAddress()
   )
-  console.log('waiting for status')
 
   // whilst waiting for status we miner on both l1 and l2
-  console.log('a')
   const miner1 = Wallet.createRandom().connect(params.l1Signer.provider!)
-  console.log('b')
   const miner2 = Wallet.createRandom().connect(params.l2Signer.provider!)
-  console.log('c')
   await fundL1(miner1, parseEther('1'))
-  console.log('d')
   await fundL2(miner2, parseEther('1'))
-  console.log('e')
   const state = { mining: true }
   await Promise.race([
     mineUntilStop(miner1, state),
@@ -166,7 +161,6 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   ])
   state.mining = false
 
-  await console.log('waiting for status complete')
   expect(
     await message.status(params.l2Signer.provider!),
     'confirmed status'
