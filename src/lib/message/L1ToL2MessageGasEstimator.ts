@@ -10,6 +10,8 @@ import {
   L1ToL2MessageGasParams,
   L1ToL2MessageNoGasParams,
 } from './L1ToL2MessageCreator'
+import { RetryableDataTools } from '../dataEntities/retryableData'
+import { getBaseFee } from '../utils/lib'
 
 /**
  * The default amount to increase the maximum submission cost. Submission cost is calculated
@@ -233,24 +235,105 @@ export class L1ToL2MessageGasEstimator {
       gasLimitDefaults.percentIncrease
     )
 
-    const deposit =
-      options?.deposit?.base ||
-      calculatedGasLimit
-        .mul(maxFeePerGas)
-        .add(maxSubmissionFee)
-        .add(retryableEstimateData.l2CallValue)
-
     // always ensure the max gas is greater than the min - this can be useful if we know that
     // gas estimation is bad for the provided transaction
     const gasLimit = calculatedGasLimit.gt(gasLimitDefaults.min)
       ? calculatedGasLimit
       : gasLimitDefaults.min
 
+    const deposit =
+      options?.deposit?.base ||
+      gasLimit
+        .mul(maxFeePerGas)
+        .add(maxSubmissionFee)
+        .add(retryableEstimateData.l2CallValue)
+
     return {
       gasLimit,
       maxSubmissionCost: maxSubmissionFee,
       maxFeePerGas,
       deposit,
+    }
+  }
+
+  
+  /**
+   * Transactions that make an L1->L2 message need to estimate L2 gas parameters
+   * This function does that, and populates those parameters into a transaction request
+   * @param dataFunc 
+   * @param l1Provider 
+   * @param gasOverrides 
+   * @returns 
+   */
+  public async populateL1ToL2FunctionParams(
+    /**
+     * Function that will internally make an L1->L2 transaction
+     * Will initially be called with dummy values to trigger a special revert containing
+     * the real params. Then called again with the real params to form the final data to be submitted
+     */
+    dataFunc: (params: {
+      gasLimit: BigNumber
+      maxFeePerGas: BigNumber
+      maxSubmissionFee: BigNumber
+    }) => { data: string; value: BigNumber; to: string; from: string },
+    l1Provider: Provider,
+    gasOverrides?: GasOverrides
+  ) {
+    // get function data that should trigger a retryable data error
+    const {
+      data: nullData,
+      to,
+      value,
+      from,
+    } = dataFunc({
+      gasLimit: RetryableDataTools.ErrorTriggeringParams.gasLimit,
+      maxFeePerGas: RetryableDataTools.ErrorTriggeringParams.maxFeePerGas,
+      maxSubmissionFee: BigNumber.from(1),
+    })
+
+    // get retryable data from the null call
+    const res = await l1Provider.call({
+      to: to,
+      data: nullData,
+      value: value,
+      from: from,
+    })
+    const retryable = RetryableDataTools.tryParseError(res)!
+
+    // use retryable data to get gas estimates
+    // const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
+    const baseFee = await getBaseFee(l1Provider)
+    const estimates = await this.estimateAll(
+      {
+        from: retryable.from,
+        to: retryable.to,
+        data: retryable.data,
+        l2CallValue: retryable.l2CallValue,
+        excessFeeRefundAddress: retryable.excessFeeRefundAddress,
+        callValueRefundAddress: retryable.callValueRefundAddress,
+      },
+      baseFee,
+      l1Provider,
+      gasOverrides
+    )
+
+    // form the real data for the transaction
+    const {
+      data: realData,
+      to: realTo,
+      value: realValue,
+    } = dataFunc({
+      gasLimit: estimates.gasLimit,
+      maxFeePerGas: estimates.maxFeePerGas,
+      maxSubmissionFee: estimates.maxSubmissionCost,
+    })
+
+    return {
+      estimates,
+      retryable,
+      data: realData,
+      to: realTo,
+      value: realValue,
     }
   }
 }

@@ -63,9 +63,10 @@ import {
   isL1ToL2TransactionRequest,
   L1ToL2TransactionRequest,
 } from '../dataEntities/transactionRequest'
-import { defaultAbiCoder } from 'ethers/lib/utils'
+import { defaultAbiCoder, Interface, parseEther } from 'ethers/lib/utils'
 import { L1ToL2MessageGasParams } from '../message/L1ToL2MessageCreator'
 import { OmitTyped, RequiredPick } from '../utils/types'
+import { RetryableDataTools } from '../dataEntities/retryableData'
 
 export interface TokenApproveParams {
   /**
@@ -439,72 +440,6 @@ export class Erc20Bridger extends AssetBridger<
     }
   }
 
-  protected async estimateDeposit(
-    params: DefaultedDepositRequest,
-    l2Provider: Provider,
-    l1GatewayAddress: string,
-    l2CallValue: BigNumber
-  ): Promise<L1ToL2MessageGasParams> {
-    const {
-      from,
-      retryableGasOverrides,
-      erc20L1Address,
-      amount,
-      excessFeeRefundAddress,
-      callValueRefundAddress,
-      destinationAddress,
-      l1Provider,
-    } = params
-
-    await this.checkL1Network(l1Provider)
-    await this.checkL2Network(l2Provider)
-
-    // 1. get the params for a gas estimate
-    const l1Gateway = L1ERC20Gateway__factory.connect(
-      l1GatewayAddress,
-      l1Provider
-    )
-
-    const depositCalldata = await l1Gateway.getOutboundCalldata(
-      erc20L1Address,
-      from,
-      destinationAddress,
-      amount,
-      '0x'
-    )
-
-    const l2Dest = await l1Gateway.counterpartGateway()
-    const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
-
-    let tokenGasOverrides: GasOverrides | undefined = retryableGasOverrides
-
-    // we also add a hardcoded minimum gas limit for custom gateway deposits
-    if (l1GatewayAddress === this.l2Network.tokenBridge.l1CustomGateway) {
-      if (!tokenGasOverrides) tokenGasOverrides = {}
-      if (!tokenGasOverrides.gasLimit) tokenGasOverrides.gasLimit = {}
-      if (!tokenGasOverrides.gasLimit.min) {
-        tokenGasOverrides.gasLimit.min =
-          Erc20Bridger.MIN_CUSTOM_DEPOSIT_GAS_LIMIT
-      }
-    }
-
-    // 2. get the gas estimates
-    const baseFee = await getBaseFee(l1Provider)
-    return await gasEstimator.estimateAll(
-      {
-        from: l1GatewayAddress,
-        to: l2Dest,
-        data: depositCalldata,
-        l2CallValue: l2CallValue,
-        excessFeeRefundAddress,
-        callValueRefundAddress,
-      },
-      baseFee,
-      l1Provider,
-      tokenGasOverrides
-    )
-  }
-
   /**
    * Get the arguments for calling the deposit function
    * @param params
@@ -518,13 +453,11 @@ export class Erc20Bridger extends AssetBridger<
     const defaultedParams = this.applyDefaults(params)
     const {
       amount,
-      callValueRefundAddress,
       destinationAddress,
       erc20L1Address,
-      excessFeeRefundAddress,
-      from,
       l1Provider,
       l2Provider,
+      retryableGasOverrides,
     } = defaultedParams
 
     const l1GatewayAddress = await this.getL1GatewayAddress(
@@ -537,72 +470,74 @@ export class Erc20Bridger extends AssetBridger<
     const isWeth = await this.isWethGateway(l1GatewayAddress, l1Provider)
     const l2CallValue = isWeth ? amount : Zero
 
-    const estimates = await this.estimateDeposit(
-      defaultedParams,
-      l2Provider,
-      l1GatewayAddress,
-      l2CallValue
-    )
+    let tokenGasOverrides: GasOverrides | undefined = retryableGasOverrides
 
-    const l1GatewayRouterInterface = L1GatewayRouter__factory.createInterface()
+    // we also add a hardcoded minimum gas limit for custom gateway deposits
+    if (l1GatewayAddress === this.l2Network.tokenBridge.l1CustomGateway) {
+      if (!tokenGasOverrides) tokenGasOverrides = {}
+      if (!tokenGasOverrides.gasLimit) tokenGasOverrides.gasLimit = {}
+      if (!tokenGasOverrides.gasLimit.min) {
+        tokenGasOverrides.gasLimit.min =
+          Erc20Bridger.MIN_CUSTOM_DEPOSIT_GAS_LIMIT
+      }
+    }
 
-    const innerData = defaultAbiCoder.encode(
-      ['uint256', 'bytes'],
-      [estimates.maxSubmissionCost, '0x']
-    )
+    const depositFunc = (params: {
+      gasLimit: BigNumber
+      maxFeePerGas: BigNumber
+      maxSubmissionFee: BigNumber
+    }) => {
+      const innerData = defaultAbiCoder.encode(
+        ['uint256', 'bytes'],
+        [params.maxSubmissionFee, '0x']
+      )
+      const iGatewayRouter = L1GatewayRouter__factory.createInterface()
 
-    const functionData = l1GatewayRouterInterface.encodeFunctionData(
-      'outboundTransfer',
-      [
-        erc20L1Address,
-        destinationAddress,
-        amount,
-        estimates.gasLimit,
-        estimates.maxFeePerGas,
-        innerData,
-      ]
-    )
+      return {
+        data: iGatewayRouter.encodeFunctionData('outboundTransfer', [
+          erc20L1Address,
+          destinationAddress,
+          amount,
+          params.gasLimit,
+          params.maxFeePerGas,
+          innerData,
+        ]),
+        to: this.l2Network.tokenBridge.l1GatewayRouter,
+        from: defaultedParams.from,
+        value: params.gasLimit
+          .mul(params.maxFeePerGas)
+          .add(params.maxSubmissionFee)
+          .add(l2CallValue),
+      }
+    }
 
-    const l1Gateway = L1ERC20Gateway__factory.connect(
-      l1GatewayAddress,
-      l1Provider
+    const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
+    const estimates = await gasEstimator.populateL1ToL2FunctionParams(
+      depositFunc,
+      l1Provider,
+      tokenGasOverrides
     )
-
-    const depositCalldata = await l1Gateway.getOutboundCalldata(
-      erc20L1Address,
-      from,
-      destinationAddress,
-      amount,
-      '0x'
-    )
-    const l2Dest = await l1Gateway.counterpartGateway()
 
     return {
       core: {
         to: this.l2Network.tokenBridge.l1GatewayRouter,
-        data: functionData,
-        value: estimates.deposit,
+        data: estimates.data,
+        value: estimates.value,
       },
       retryableData: {
-        data: depositCalldata,
-        from: l1GatewayAddress,
-        to: l2Dest,
-        excessFeeRefundAddress: excessFeeRefundAddress,
-        callValueRefundAddress: callValueRefundAddress,
-        l2CallValue: l2CallValue,
-        maxSubmissionCost: estimates.maxSubmissionCost,
-        maxFeePerGas: estimates.maxFeePerGas,
-        gasLimit: estimates.gasLimit,
-        deposit: estimates.deposit,
+        ...estimates.retryable,
+        ...estimates.estimates,
       },
       isValid: async () => {
-        const reEstimates = await this.estimateDeposit(
-          defaultedParams,
-          l2Provider,
-          l1GatewayAddress,
-          l2CallValue
+        const reEstimates = await gasEstimator.populateL1ToL2FunctionParams(
+          depositFunc,
+          l1Provider,
+          tokenGasOverrides
         )
-        return L1ToL2MessageGasEstimator.isValid(estimates, reEstimates)
+        return L1ToL2MessageGasEstimator.isValid(
+          estimates.estimates,
+          reEstimates.estimates
+        )
       },
     }
   }
@@ -713,70 +648,101 @@ export class AdminErc20Bridger extends Erc20Bridger {
         `L2 token does not have l1 address set. Set address: ${l1AddressFromL2}, expected address: ${l1TokenAddress}.`
       )
     }
-    const gasPriceEstimator = new L1ToL2MessageGasEstimator(l2Provider)
 
-    // internally the registerTokenOnL2 sends two l1tol2 messages
-    // the first registers the tokens and the second sets the gateways
-    // we need to estimate gas for each of these l1tol2 messages
-    // 1. registerTokenFromL1
-    const il2CustomGateway = L2CustomGateway__factory.createInterface()
-    const l2SetTokenCallData = il2CustomGateway.encodeFunctionData(
-      'registerTokenFromL1',
-      [[l1TokenAddress], [l2TokenAddress]]
-    )
+    type GasParams = {
+      maxSubmissionCost: BigNumber
+      gasLimit: BigNumber
+    }
+    const from = await l1Signer.getAddress()
+    const encodeFuncData = (
+      setTokenGas: GasParams,
+      setGatewayGas: GasParams,
+      maxFeePerGas: BigNumber
+    ) => {
+      // if we set maxFeePerGas to be the error triggering param then it will
+      // always trigger for the setToken call and never make it ti setGateways
+      // so we here we just use the gas limit to trigger retryable data
+      const doubleFeePerGas = maxFeePerGas.eq(
+        RetryableDataTools.ErrorTriggeringParams.maxFeePerGas
+      )
+        ? RetryableDataTools.ErrorTriggeringParams.maxFeePerGas.mul(2)
+        : maxFeePerGas
+      const setTokenDeposit = setTokenGas.gasLimit
+        .mul(doubleFeePerGas)
+        .add(setTokenGas.maxSubmissionCost)
+      const setGatewayDeposit = setGatewayGas.gasLimit
+        .mul(doubleFeePerGas)
+        .add(setGatewayGas.maxSubmissionCost)
 
-    const l1SignerAddr = await l1Signer.getAddress()
-    const baseFee = await getBaseFee(l1Signer.provider)
-    const setTokenEstimates = await gasPriceEstimator.estimateAll(
-      {
-        from: this.l2Network.tokenBridge.l1CustomGateway,
-        to: this.l2Network.tokenBridge.l2CustomGateway,
-        data: l2SetTokenCallData,
-        callValueRefundAddress: l1SignerAddr,
-        excessFeeRefundAddress: l1SignerAddr,
-        l2CallValue: Zero,
-      },
-      baseFee,
-      l1Signer.provider
-    )
+      const data = l1Token.interface.encodeFunctionData('registerTokenOnL2', [
+        l2TokenAddress,
+        setTokenGas.maxSubmissionCost,
+        setGatewayGas.maxSubmissionCost,
+        setTokenGas.gasLimit,
+        setGatewayGas.gasLimit,
+        doubleFeePerGas,
+        setTokenDeposit,
+        setGatewayDeposit,
+        l1SenderAddress,
+      ])
 
-    // 2. setGateway
-    const iL2GatewayRouter = L2GatewayRouter__factory.createInterface()
-    const l2SetGatewaysCallData = iL2GatewayRouter.encodeFunctionData(
-      'setGateway',
-      [[l1TokenAddress], [this.l2Network.tokenBridge.l1CustomGateway]]
-    )
-
-    const setGatwayEstimates = await gasPriceEstimator.estimateAll(
-      {
-        from: this.l2Network.tokenBridge.l1GatewayRouter,
-        to: this.l2Network.tokenBridge.l2GatewayRouter,
-        data: l2SetGatewaysCallData,
-        l2CallValue: Zero,
-        callValueRefundAddress: l1SignerAddr,
-        excessFeeRefundAddress: l1SignerAddr,
-      },
-      baseFee,
-      l1Signer.provider
-    )
-
-    // now execute the registration
-    const customRegistrationTx = await l1Token.registerTokenOnL2(
-      l2TokenAddress,
-      setTokenEstimates.maxSubmissionCost,
-      setGatwayEstimates.maxSubmissionCost,
-      setTokenEstimates.gasLimit,
-      setGatwayEstimates.gasLimit,
-      setGatwayEstimates.maxFeePerGas,
-      setTokenEstimates.deposit,
-      setGatwayEstimates.deposit,
-      l1SenderAddress,
-      {
-        value: setTokenEstimates.deposit.add(setGatwayEstimates.deposit),
+      return {
+        data,
+        value: setTokenDeposit.add(setGatewayDeposit),
+        to: l1Token.address,
+        from,
       }
+    }
+
+    const l1Provider = l1Signer.provider!
+    const gEstimator = new L1ToL2MessageGasEstimator(l2Provider)
+    const setTokenEstimates2 = await gEstimator.populateL1ToL2FunctionParams(
+      (params: {
+        gasLimit: BigNumber
+        maxFeePerGas: BigNumber
+        maxSubmissionFee: BigNumber
+      }) =>
+        encodeFuncData(
+          {
+            gasLimit: params.gasLimit,
+            maxSubmissionCost: params.maxSubmissionFee,
+          },
+          {
+            gasLimit: RetryableDataTools.ErrorTriggeringParams.gasLimit,
+            maxSubmissionCost: BigNumber.from(1),
+          },
+          params.maxFeePerGas
+        ),
+      l1Provider
     )
 
-    return L1TransactionReceipt.monkeyPatchWait(customRegistrationTx)
+    const setGatewayEstimates2 = await gEstimator.populateL1ToL2FunctionParams(
+      (params: {
+        gasLimit: BigNumber
+        maxFeePerGas: BigNumber
+        maxSubmissionFee: BigNumber
+      }) =>
+        encodeFuncData(
+          {
+            gasLimit: setTokenEstimates2.estimates.gasLimit,
+            maxSubmissionCost: setTokenEstimates2.estimates.maxSubmissionCost,
+          },
+          {
+            gasLimit: params.gasLimit,
+            maxSubmissionCost: params.maxSubmissionFee,
+          },
+          params.maxFeePerGas
+        ),
+      l1Provider
+    )
+
+    const registerTx = await l1Signer.sendTransaction({
+      to: l1Token.address,
+      data: setGatewayEstimates2.data,
+      value: setGatewayEstimates2.value,
+    })
+
+    return L1TransactionReceipt.monkeyPatchWait(registerTx)
   }
 
   /**
@@ -854,46 +820,45 @@ export class AdminErc20Bridger extends Erc20Bridger {
     await this.checkL1Network(l1Signer)
     await this.checkL2Network(l2Provider)
 
-    const estimator = new L1ToL2MessageGasEstimator(l2Provider)
-    const baseFee = await getBaseFee(l1Signer.provider)
-
-    const iL2GatewayRouter = L2GatewayRouter__factory.createInterface()
-    const l2SetGatewaysCallData = iL2GatewayRouter.encodeFunctionData(
-      'setGateway',
-      [
-        tokenGateways.map(tG => tG.tokenAddr),
-        tokenGateways.map(tG => tG.gatewayAddr),
-      ]
-    )
-
-    const l1SignerAddr = await l1Signer.getAddress()
-    const estimates = await estimator.estimateAll(
-      {
-        from: this.l2Network.tokenBridge.l1GatewayRouter,
-        to: this.l2Network.tokenBridge.l2GatewayRouter,
-        data: l2SetGatewaysCallData,
-        l2CallValue: Zero,
-        callValueRefundAddress: l1SignerAddr,
-        excessFeeRefundAddress: l1SignerAddr,
-      },
-      baseFee,
-      l1Signer.provider,
-      options
-    )
+    const from = await l1Signer.getAddress()
 
     const l1GatewayRouter = L1GatewayRouter__factory.connect(
       this.l2Network.tokenBridge.l1GatewayRouter,
       l1Signer
     )
 
-    const res = await l1GatewayRouter.functions.setGateways(
-      tokenGateways.map(tG => tG.tokenAddr),
-      tokenGateways.map(tG => tG.gatewayAddr),
-      estimates.gasLimit,
-      estimates.maxFeePerGas,
-      estimates.maxSubmissionCost,
-      { value: estimates.deposit }
+    const setGatewaysFunc = (params: {
+      gasLimit: BigNumber
+      maxFeePerGas: BigNumber
+      maxSubmissionFee: BigNumber
+    }) => {
+      return {
+        data: l1GatewayRouter.interface.encodeFunctionData('setGateways', [
+          tokenGateways.map(tG => tG.tokenAddr),
+          tokenGateways.map(tG => tG.gatewayAddr),
+          params.gasLimit,
+          params.maxFeePerGas,
+          params.maxSubmissionFee,
+        ]),
+        from,
+        value: params.gasLimit
+          .mul(params.maxFeePerGas)
+          .add(params.maxSubmissionFee),
+        to: l1GatewayRouter.address,
+      }
+    }
+    const gEstimator = new L1ToL2MessageGasEstimator(l2Provider)
+    const estimates = await gEstimator.populateL1ToL2FunctionParams(
+      setGatewaysFunc,
+      l1Signer.provider,
+      options
     )
+
+    const res = await l1Signer.sendTransaction({
+      to: estimates.to,
+      data: estimates.data,
+      value: estimates.estimates.deposit,
+    })
 
     return L1TransactionReceipt.monkeyPatchContractCallWait(res)
   }
