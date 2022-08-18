@@ -25,7 +25,7 @@ import { parseEther } from '@ethersproject/units'
 
 import { config, getSigner, testSetup } from '../scripts/testSetup'
 
-import { Signer } from 'ethers'
+import { Signer, Wallet } from 'ethers'
 import { Erc20Bridger, L1ToL2MessageStatus, L2ToL1MessageStatus } from '../src'
 import { L2Network } from '../src/lib/dataEntities/networks'
 import { GasOverrides } from '../src/lib/message/L1ToL2MessageGasEstimator'
@@ -60,12 +60,36 @@ interface WithdrawalParams {
   gatewayType: GatewayType
 }
 
+export const mineUntilStop = async (
+  miner: Signer,
+  state: { mining: boolean }
+) => {
+  while (state.mining) {
+    await (
+      await miner.sendTransaction({
+        to: await miner.getAddress(),
+        value: 0,
+      })
+    ).wait()
+    await wait(15000)
+  }
+}
 /**
  * Withdraws a token and tests that it occurred correctly
  * @param params
  */
 export const withdrawToken = async (params: WithdrawalParams) => {
+  const withdrawalParams = await params.erc20Bridger.getWithdrawalParams({
+    amount: params.amount,
+    erc20l1Address: params.l1Token.address,
+    destinationAddress: await params.l2Signer.getAddress(),
+  })
+  const l1GasEstimate = await withdrawalParams.estimateL1GasLimit(
+    params.l1Signer.provider!
+  )
+
   const withdrawRes = await params.erc20Bridger.withdraw({
+    destinationAddress: await params.l2Signer.getAddress(),
     amount: params.amount,
     erc20l1Address: params.l1Token.address,
     l2Signer: params.l2Signer,
@@ -123,15 +147,33 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   const balBefore = await params.l1Token.balanceOf(
     await params.l1Signer.getAddress()
   )
-  await message.waitUntilReadyToExecute(params.l2Signer.provider!)
+
+  // whilst waiting for status we miner on both l1 and l2
+  const miner1 = Wallet.createRandom().connect(params.l1Signer.provider!)
+  const miner2 = Wallet.createRandom().connect(params.l2Signer.provider!)
+  await fundL1(miner1, parseEther('1'))
+  await fundL2(miner2, parseEther('1'))
+  const state = { mining: true }
+  await Promise.race([
+    mineUntilStop(miner1, state),
+    mineUntilStop(miner2, state),
+    message.waitUntilReadyToExecute(params.l2Signer.provider!),
+  ])
+  state.mining = false
+
   expect(
     await message.status(params.l2Signer.provider!),
     'confirmed status'
   ).to.eq(L2ToL1MessageStatus.CONFIRMED)
 
   const execTx = await message.execute(params.l2Signer.provider!)
+  const execRec = await execTx.wait()
 
-  await execTx.wait()
+  expect(
+    execRec.gasUsed.toNumber(),
+    'Gas used greater than estimate'
+  ).to.be.lessThan(l1GasEstimate.toNumber())
+
   expect(
     await message.status(params.l2Signer.provider!),
     'executed status'

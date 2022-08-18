@@ -16,9 +16,11 @@
 /* eslint-env node */
 'use strict'
 
-import { Provider, BlockTag } from '@ethersproject/abstract-provider'
+import { Provider, BlockTag, Filter } from '@ethersproject/abstract-provider'
 import { Contract, Event } from '@ethersproject/contracts'
+import { constants } from 'ethers'
 import { TypedEvent, TypedEventFilter } from '../abi/common'
+import { TypeChainContractFactory } from '../dataEntities/event'
 
 export type FetchedEvent<TEvent extends Event> = {
   event: TEvent['args']
@@ -57,17 +59,22 @@ export class EventFetcher {
     TContract extends Contract,
     TEventFilter extends TypedEventFilter<TypedEvent>
   >(
-    addr: string,
-    contractFactory: {
-      connect(address: string, provider: Provider): TContract
-    },
+    contractFactory: TypeChainContractFactory<TContract>,
     topicGenerator: (t: TContract) => TEventFilter,
-    filter: { fromBlock: BlockTag; toBlock: BlockTag }
+    filter: {
+      fromBlock: BlockTag
+      toBlock: BlockTag
+      address?: string
+    }
   ): Promise<FetchedEvent<TEventOf<TEventFilter>>[]> {
-    const contract = contractFactory.connect(addr, this.provider)
+    const contract = contractFactory.connect(
+      filter.address || constants.AddressZero,
+      this.provider
+    )
     const eventFilter = topicGenerator(contract)
-    const fullFilter = {
+    const fullFilter: Filter = {
       ...eventFilter,
+      address: filter.address,
       fromBlock: filter.fromBlock,
       toBlock: filter.toBlock,
     }

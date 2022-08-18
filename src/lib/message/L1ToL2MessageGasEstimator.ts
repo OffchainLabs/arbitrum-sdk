@@ -256,14 +256,13 @@ export class L1ToL2MessageGasEstimator {
     }
   }
 
-  
   /**
    * Transactions that make an L1->L2 message need to estimate L2 gas parameters
    * This function does that, and populates those parameters into a transaction request
-   * @param dataFunc 
-   * @param l1Provider 
-   * @param gasOverrides 
-   * @returns 
+   * @param dataFunc
+   * @param l1Provider
+   * @param gasOverrides
+   * @returns
    */
   public async populateL1ToL2FunctionParams(
     /**

@@ -22,7 +22,13 @@ import dotenv from 'dotenv'
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
 
-import { fundL1, fundL2, prettyLog, skipIfMainnet } from './testHelpers'
+import {
+  fundL1,
+  fundL2,
+  mineUntilStop,
+  prettyLog,
+  skipIfMainnet,
+} from './testHelpers'
 import {
   L2ToL1Message,
   L2ToL1MessageStatus,
@@ -102,8 +108,10 @@ describe('Ether', async () => {
     const l1ToL2Message = l1ToL2Messages[0]
 
     const walletAddress = await l1Signer.getAddress()
-    expect(l1ToL2Message.to, 'Incorrect to address').to.eq(walletAddress)
-    expect(l1ToL2Message.value.eq(ethToDeposit), 'Incorrect value').to.be.true
+    expect(l1ToL2Message.to).to.eq(walletAddress, 'message inputs value error')
+    expect(l1ToL2Message.value.toString(), 'message inputs value error').to.eq(
+      ethToDeposit.toString()
+    )
 
     prettyLog('l2TxHash: ' + waitResult.message.l2DepositTxHash)
     prettyLog('l2 transaction found!')
@@ -112,7 +120,9 @@ describe('Ether', async () => {
     expect(waitResult.l2TxReceipt).to.not.be.null
 
     const testWalletL2EthBalance = await l2Signer.getBalance()
-    expect(testWalletL2EthBalance.eq(ethToDeposit), 'final balance').to.be.true
+    expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(
+      ethToDeposit.toString()
+    )
   })
 
   it('withdraw Ether transaction succeeds', async () => {
@@ -121,13 +131,21 @@ describe('Ether', async () => {
     await fundL1(l1Signer)
 
     const ethToWithdraw = parseEther('0.00000002')
-    // const initialBalance = await l2Signer.getBalance()
     const randomAddress = Wallet.createRandom().address
+
+    const request = await ethBridger.getWithdrawalRequest({
+      amount: ethToWithdraw,
+      destinationAddress: randomAddress,
+    })
+
+    const l1GasEstimate = await request.estimateL1GasLimit(l1Signer.provider!)
+
     const withdrawEthRes = await ethBridger.withdraw({
       amount: ethToWithdraw,
       l2Signer: l2Signer,
       destinationAddress: randomAddress,
     })
+
     const withdrawEthRec = await withdrawEthRes.wait()
 
     expect(withdrawEthRec.status).to.equal(
@@ -170,14 +188,33 @@ describe('Ether', async () => {
     //   expectedFinalBalance.toString()
     // )
 
-    await withdrawMessage.waitUntilReadyToExecute(l2Signer.provider!)
+    // run a miner whilst withdrawing
+    const miner1 = Wallet.createRandom().connect(l1Signer.provider!)
+    const miner2 = Wallet.createRandom().connect(l2Signer.provider!)
+    await fundL1(miner1, parseEther('1'))
+    await fundL2(miner2, parseEther('1'))
+    const state = { mining: true }
+    await Promise.race([
+      mineUntilStop(miner1, state),
+      mineUntilStop(miner2, state),
+      withdrawMessage.waitUntilReadyToExecute(l2Signer.provider!),
+    ])
+    state.mining = false
+
+    // await withdrawMessage.waitUntilReadyToExecute(l2Signer.provider!)
     expect(
       await withdrawMessage.status(l2Signer.provider!),
       'confirmed status'
     ).to.eq(L2ToL1MessageStatus.CONFIRMED)
 
     const execTx = await withdrawMessage.execute(l2Signer.provider!)
-    await execTx.wait()
+    const execRec = await execTx.wait()
+
+    expect(
+      execRec.gasUsed.toNumber(),
+      'Gas used greater than estimate'
+    ).to.be.lessThan(l1GasEstimate.toNumber())
+
     expect(
       await withdrawMessage.status(l2Signer.provider!),
       'executed status'

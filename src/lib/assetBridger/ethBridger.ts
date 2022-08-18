@@ -17,6 +17,7 @@
 'use strict'
 
 import { Signer } from '@ethersproject/abstract-signer'
+import { Provider } from '@ethersproject/abstract-provider'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
 import { BigNumber } from 'ethers'
 
@@ -34,26 +35,23 @@ import {
 } from '../message/L2Transaction'
 import {
   isL1ToL2TransactionRequest,
+  isL2ToL1TransactionRequest,
   L1ToL2TransactionRequest,
+  L2ToL1TransactionRequest,
 } from '../dataEntities/transactionRequest'
 import { OmitTyped } from '../utils/types'
+import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
+import { MissingProviderArbSdkError } from '../dataEntities/errors'
 
 export interface EthWithdrawParams {
-  /**
-   * L2 provider
-   */
-  l2Signer: Signer
-
   /**
    * The amount of ETH or tokens to be withdrawn
    */
   amount: BigNumber
-
   /**
    * The L1 address to receive the value. Defaults to l2Signer's address
    */
-  destinationAddress?: string
-
+  destinationAddress: string
   /**
    * Transaction overrides
    */
@@ -80,12 +78,17 @@ export type L1ToL2TxReqAndSigner = L1ToL2TransactionRequest & {
   overrides?: Overrides
 }
 
+export type L2ToL1TxReqAndSigner = L2ToL1TransactionRequest & {
+  l2Signer: Signer
+  overrides?: Overrides
+}
+
 /**
  * Bridger for moving ETH back and forth betwen L1 to L2
  */
 export class EthBridger extends AssetBridger<
-  EthDepositParams,
-  EthWithdrawParams
+  EthDepositParams | L1ToL2TxReqAndSigner,
+  EthWithdrawParams | L2ToL1TxReqAndSigner
 > {
   public async getDepositRequest(
     params: OmitTyped<EthDepositParams, 'overrides' | 'l1Signer'>
@@ -133,23 +136,52 @@ export class EthBridger extends AssetBridger<
     return L1TransactionReceipt.monkeyPatchEthDepositWait(tx)
   }
 
+  public async getWithdrawalRequest(
+    params: EthWithdrawParams
+  ): Promise<L2ToL1TransactionRequest> {
+    const iArbSys = ArbSys__factory.createInterface()
+    const functionData = iArbSys.encodeFunctionData('withdrawEth', [
+      params.destinationAddress,
+    ])
+
+    return {
+      txRequest: {
+        to: ARB_SYS_ADDRESS,
+        data: functionData,
+        value: params.amount,
+      },
+      // we make this async and expect a provider since we
+      // in the future we want to do proper estimation here
+      /* eslint-disable @typescript-eslint/no-unused-vars */
+      estimateL1GasLimit: async (l1Provider: Provider) => {
+        //  measured 126998 - add some padding
+        return BigNumber.from(130000)
+      },
+    }
+  }
+
   /**
    * Withdraw ETH from L2 onto L1
    * @param params
    * @returns
    */
   public async withdraw(
-    params: EthWithdrawParams
+    params: (EthWithdrawParams & { l2Signer: Signer }) | L2ToL1TxReqAndSigner
   ): Promise<L2ContractTransaction> {
+    if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
+      throw new MissingProviderArbSdkError('l2Signer')
+    }
     await this.checkL2Network(params.l2Signer)
 
-    const addr =
-      params.destinationAddress || (await params.l2Signer.getAddress())
-    const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, params.l2Signer)
+    const request = isL2ToL1TransactionRequest<
+      EthWithdrawParams & { l2Signer: Signer }
+    >(params)
+      ? params
+      : await this.getWithdrawalRequest(params)
 
-    const tx = await arbSys.functions.withdrawEth(addr, {
-      value: params.amount,
-      ...(params.overrides || {}),
+    const tx = await params.l2Signer.sendTransaction({
+      ...request.txRequest,
+      ...params.overrides,
     })
     return L2TransactionReceipt.monkeyPatchWait(tx)
   }

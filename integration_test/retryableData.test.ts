@@ -122,7 +122,7 @@ describe('RevertData', () => {
 
   it('is the same as what we estimate in erc20Bridger', async () => {
     const { erc20Bridger, l1Signer, l2Signer } = await testSetup()
-    await fundL1(l1Signer, parseEther("2"))
+    await fundL1(l1Signer, parseEther('2'))
 
     const deployErc20 = new TestERC20__factory().connect(l1Signer)
     const testToken = await deployErc20.deploy()
@@ -149,7 +149,6 @@ describe('RevertData', () => {
         percentIncrease: BigNumber.from(0),
       },
     }
-
 
     const erc20Params = {
       l1Signer: l1Signer,

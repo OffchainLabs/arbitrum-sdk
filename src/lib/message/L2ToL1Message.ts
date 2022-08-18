@@ -44,6 +44,7 @@ import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
 import { ArbitrumProvider } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
 import { JsonRpcProvider } from '@ethersproject/providers'
+import { EventArgs } from '../dataEntities/event'
 
 export interface MessageBatchProofInfo {
   /**
@@ -125,15 +126,15 @@ const ASSERTION_CONFIRMED_PADDING = 20
  * Base functionality for L2->L1 messages
  */
 export class L2ToL1Message {
-  protected constructor(public readonly event: L2ToL1TxEvent['args']) {}
+  protected constructor(public readonly event: EventArgs<L2ToL1TxEvent>) {}
 
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event: L2ToL1TxEvent['args']
+    event: EventArgs<L2ToL1TxEvent>
   ): L2ToL1MessageReaderOrWriter<T>
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event: L2ToL1TxEvent['args']
+    event: EventArgs<L2ToL1TxEvent>
   ): L2ToL1MessageReader | L2ToL1MessageWriter {
     return SignerProviderUtils.isSigner(l1SignerOrProvider)
       ? new L2ToL1MessageWriter(l1SignerOrProvider, event)
@@ -146,16 +147,15 @@ export class L2ToL1Message {
     position?: BigNumber,
     destination?: string,
     hash?: BigNumber
-  ): Promise<L2ToL1TxEvent['args'][]> {
+  ): Promise<(EventArgs<L2ToL1TxEvent> & { transactionHash: string })[]> {
     const eventFetcher = new EventFetcher(l2Provider)
     return (
       await eventFetcher.getEvents(
-        ARB_SYS_ADDRESS,
         ArbSys__factory,
         t => t.filters.L2ToL1Tx(null, destination, hash, position),
-        filter
+        { ...filter, address: ARB_SYS_ADDRESS }
       )
-    ).map(l => l.event)
+    ).map(l => ({ ...l.event, transactionHash: l.transactionHash }))
   }
 }
 
@@ -171,7 +171,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
 
   constructor(
     protected readonly l1Provider: Provider,
-    event: L2ToL1TxEvent['args']
+    event: EventArgs<L2ToL1TxEvent>
   ) {
     super(event)
   }
@@ -261,12 +261,12 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     // now get the block hash and sendroot for that node
     const eventFetcher = new EventFetcher(rollup.provider)
     const logs = await eventFetcher.getEvents(
-      rollup.address,
       RollupUserLogic__factory,
       t => t.filters.NodeCreated(nodeNum),
       {
         fromBlock: node.createdAtBlock.toNumber(),
         toBlock: node.createdAtBlock.toNumber(),
+        address: rollup.address,
       }
     )
 
@@ -396,7 +396,6 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     const eventFetcher = new EventFetcher(this.l1Provider)
     const logs = (
       await eventFetcher.getEvents(
-        rollup.address,
         RollupUserLogic__factory,
         t => t.filters.NodeCreated(),
         {
@@ -408,38 +407,50 @@ export class L2ToL1MessageReader extends L2ToL1Message {
             0
           ),
           toBlock: 'latest',
+          address: rollup.address,
         }
       )
     ).sort((a, b) => a.event.nodeNum.toNumber() - b.event.nodeNum.toNumber())
 
+    const lastL2Block =
+      logs.length === 0
+        ? undefined
+        : await this.getBlockFromNodeLog(
+            l2Provider as JsonRpcProvider,
+            logs[logs.length - 1]
+          )
+    const lastSendCount = lastL2Block
+      ? BigNumber.from(lastL2Block.sendCount)
+      : BigNumber.from(0)
+
     // here we assume the L2 to L1 tx is actually valid, so the user needs to wait the max time
     // since there isn't a pending node that includes this message yet
-    if (logs.length === 0)
+    if (lastSendCount.lte(this.event.position))
       return BigNumber.from(l2Network.confirmPeriodBlocks)
         .add(ASSERTION_CREATED_PADDING)
         .add(ASSERTION_CONFIRMED_PADDING)
         .add(latestBlock)
 
-    let foundLog: FetchedEvent<NodeCreatedEvent> | undefined = undefined
-    for (const log of logs) {
+    // use binary search to find the first node with sendCount > this.event.position
+    // default to the last node since we already checked above
+    let foundLog: FetchedEvent<NodeCreatedEvent> = logs[logs.length - 1]
+    let left = 0
+    let right = logs.length - 1
+    while (left <= right) {
+      const mid = Math.floor((left + right) / 2)
+      const log = logs[mid]
       const l2Block = await this.getBlockFromNodeLog(
         l2Provider as JsonRpcProvider,
         log
       )
       const sendCount = BigNumber.from(l2Block.sendCount)
-      if (sendCount.gte(this.event.position)) {
+      if (sendCount.gt(this.event.position)) {
         foundLog = log
-        break
+        right = mid - 1
+      } else {
+        left = mid + 1
       }
     }
-
-    // here we assume the L2 to L1 tx is actually valid, so the user needs to wait the max time
-    // since there isn't a pending node that includes this message yet
-    if (!foundLog)
-      return BigNumber.from(l2Network.confirmPeriodBlocks)
-        .add(ASSERTION_CREATED_PADDING)
-        .add(ASSERTION_CONFIRMED_PADDING)
-        .add(latestBlock)
 
     const earliestNodeWithExit = foundLog.event.nodeNum
     const node = await rollup.getNode(earliestNodeWithExit)
@@ -451,7 +462,10 @@ export class L2ToL1MessageReader extends L2ToL1Message {
  * Provides read and write access for l2-to-l1-messages
  */
 export class L2ToL1MessageWriter extends L2ToL1MessageReader {
-  constructor(private readonly l1Signer: Signer, event: L2ToL1TxEvent['args']) {
+  constructor(
+    private readonly l1Signer: Signer,
+    event: EventArgs<L2ToL1TxEvent>
+  ) {
     super(l1Signer.provider!, event)
   }
 

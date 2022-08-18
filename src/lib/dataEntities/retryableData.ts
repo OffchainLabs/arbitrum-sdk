@@ -1,6 +1,5 @@
 import { Interface } from '@ethersproject/abi'
 import { BigNumber } from 'ethers'
-import { Provider } from '@ethersproject/abstract-provider'
 import { isDefined } from '../utils/lib'
 
 // TODO: add typechain support
@@ -120,7 +119,6 @@ export class RetryableDataTools {
         ? ethersJsErrorOrData
         : this.tryGetErrorData(ethersJsErrorOrData)
     if (!errorData) return null
-    // TODO: add typeguard
     return errorInterface.parseError(errorData).args as unknown as RetryableData
   }
 }
