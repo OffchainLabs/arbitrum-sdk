@@ -157,6 +157,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
         bridgeMessageEvent: bm,
       })
     }
+
     return messages
   }
 

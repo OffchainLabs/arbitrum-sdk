@@ -18,7 +18,13 @@
 
 import { expect } from 'chai'
 
-import { fundL2, skipIfMainnet, wait } from './testHelpers'
+import {
+  fundL1,
+  fundL2,
+  mineUntilStop,
+  skipIfMainnet,
+  wait,
+} from './testHelpers'
 import { L2TransactionReceipt } from '../src'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { BigNumber, Wallet } from 'ethers'
@@ -31,8 +37,17 @@ describe('ArbProvider', () => {
   })
 
   it('does find l1 batch info', async () => {
-    const { l2Signer } = await testSetup()
+    const { l2Signer, l1Signer } = await testSetup()
     const l2Provider = l2Signer.provider! as JsonRpcProvider
+
+    // set up miners
+    const miner1 = Wallet.createRandom().connect(l1Signer.provider!)
+    const miner2 = Wallet.createRandom().connect(l2Signer.provider!)
+    await fundL1(miner1, parseEther('0.1'))
+    await fundL2(miner2, parseEther('0.1'))
+    const state = { mining: true }
+    mineUntilStop(miner1, state)
+    mineUntilStop(miner2, state)
 
     await fundL2(l2Signer)
     const randomAddress = Wallet.createRandom().address
@@ -72,5 +87,7 @@ describe('ArbProvider', () => {
         break
       }
     }
+
+    state.mining = false
   })
 })
