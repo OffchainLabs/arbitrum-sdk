@@ -560,7 +560,7 @@ export class Erc20Bridger extends AssetBridger<
         to: this.l2Network.tokenBridge.l1GatewayRouter,
         data: estimates.data,
         value: estimates.value,
-        from: params.from
+        from: params.from,
       },
       retryableData: {
         ...estimates.retryable,
