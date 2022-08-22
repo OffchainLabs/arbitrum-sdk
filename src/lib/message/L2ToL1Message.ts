@@ -35,7 +35,6 @@ import {
   convertL2ToL1Status,
   IL2ToL1MessageReader,
   IL2ToL1MessageWriter,
-  isNitroL1,
   isNitroL2,
   MessageBatchProofInfo,
 } from '../utils/migration_types'
@@ -158,7 +157,7 @@ export class L2ToL1MessageReader
 {
   private readonly classicReader?: classic.L2ToL1MessageReader
   private readonly nitroReader?: nitro.L2ToL1MessageReader
-  protected nitroSet: boolean = false
+  protected nitroSet = false
 
   public constructor(
     l1Provider: Provider,
@@ -308,8 +307,7 @@ export class L2ToL1MessageReader
       if (!this.nitroSet && (await isNitroL2(l2Provider))) this.nitroSet = true
 
       return this.nitroReader.getFirstExecutableBlock(l2Provider)
-    }
-    else return this.classicReader!.getFirstExecutableBlock(l2Provider)
+    } else return this.classicReader!.getFirstExecutableBlock(l2Provider)
   }
 }
 
@@ -376,8 +374,7 @@ export class L2ToL1MessageWriter
       if (!this.nitroSet && (await isNitroL2(l2Provider))) this.nitroSet = true
 
       return this.nitroWriter.execute(l2Provider, overrides)
-    }
-    else {
+    } else {
       const proof =
         this.classicProof || (await this.tryGetClassicProof(l2Provider))
       if (proof === null) throw new ArbSdkError('Unexpected missing proof')
