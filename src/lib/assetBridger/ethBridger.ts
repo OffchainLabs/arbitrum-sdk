@@ -83,6 +83,11 @@ export type L2ToL1TxReqAndSigner = L2ToL1TransactionRequest & {
   overrides?: Overrides
 }
 
+type EthDepositRequestParams = OmitTyped<
+  EthDepositParams,
+  'overrides' | 'l1Signer'
+> & { from: string }
+
 /**
  * Bridger for moving ETH back and forth betwen L1 to L2
  */
@@ -91,7 +96,7 @@ export class EthBridger extends AssetBridger<
   EthWithdrawParams | L2ToL1TxReqAndSigner
 > {
   public async getDepositRequest(
-    params: OmitTyped<EthDepositParams, 'overrides' | 'l1Signer'>
+    params: EthDepositRequestParams
   ): Promise<OmitTyped<L1ToL2TransactionRequest, 'retryableData'>> {
     const inboxInterface = Inbox__factory.createInterface()
 
@@ -109,6 +114,7 @@ export class EthBridger extends AssetBridger<
         to: this.l2Network.ethBridge.inbox,
         value: params.amount,
         data: functionData,
+        from: params.from,
       },
       isValid: async () => true,
     }
@@ -126,7 +132,10 @@ export class EthBridger extends AssetBridger<
 
     const ethDeposit = isL1ToL2TransactionRequest(params)
       ? params
-      : await this.getDepositRequest(params)
+      : await this.getDepositRequest({
+          ...params,
+          from: await params.l1Signer.getAddress(),
+        })
 
     const tx = await params.l1Signer.sendTransaction({
       ...ethDeposit.core,

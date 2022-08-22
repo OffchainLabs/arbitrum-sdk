@@ -12,6 +12,7 @@ import {
 } from './L1ToL2MessageCreator'
 import { RetryableDataTools } from '../dataEntities/retryableData'
 import { getBaseFee } from '../utils/lib'
+import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
 
 /**
  * The default amount to increase the maximum submission cost. Submission cost is calculated
@@ -274,7 +275,7 @@ export class L1ToL2MessageGasEstimator {
       gasLimit: BigNumber
       maxFeePerGas: BigNumber
       maxSubmissionFee: BigNumber
-    }) => { data: string; value: BigNumber; to: string; from: string },
+    }) => L1ToL2TransactionRequest['core'],
     l1Provider: Provider,
     gasOverrides?: GasOverrides
   ) {

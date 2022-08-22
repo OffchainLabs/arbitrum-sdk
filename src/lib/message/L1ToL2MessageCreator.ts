@@ -117,6 +117,7 @@ export class L1ToL2MessageCreator {
         to: l2Network.ethBridge.inbox,
         data: functionData,
         value: estimates.deposit,
+        from: params.from
       },
       retryableData: {
         data: params.data,
