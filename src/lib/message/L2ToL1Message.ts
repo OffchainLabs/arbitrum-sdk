@@ -168,7 +168,7 @@ export class L2ToL1Message {
     destination?: string,
     uniqueId?: BigNumber,
     indexInBatch?: BigNumber
-  ): Promise<L2ToL1TransactionEvent['args'][]> {
+  ): Promise<(L2ToL1TransactionEvent['args'] & { transactionHash: string })[]> {
     const eventFetcher = new EventFetcher(l2Provider)
     const events = (
       await eventFetcher.getEvents(
@@ -178,7 +178,7 @@ export class L2ToL1Message {
           t.filters.L2ToL1Transaction(null, destination, uniqueId, batchNumber),
         filter
       )
-    ).map(l => l.event)
+    ).map(l => ({ ...l.event, transactionHash: l.transactionHash }))
 
     if (indexInBatch) {
       const indexItems = events.filter(b => b.indexInBatch.eq(indexInBatch))
