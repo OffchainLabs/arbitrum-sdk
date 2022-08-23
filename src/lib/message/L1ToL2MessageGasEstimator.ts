@@ -10,9 +10,14 @@ import {
   L1ToL2MessageGasParams,
   L1ToL2MessageNoGasParams,
 } from './L1ToL2MessageCreator'
-import { RetryableDataTools } from '../dataEntities/retryableData'
-import { getBaseFee } from '../utils/lib'
+import {
+  RetryableData,
+  RetryableDataTools,
+} from '../dataEntities/retryableData'
+import { getBaseFee, isDefined } from '../utils/lib'
 import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
+import { OmitTyped } from '../utils/types'
+import { ArbSdkError } from '../dataEntities/errors'
 
 /**
  * The default amount to increase the maximum submission cost. Submission cost is calculated
@@ -271,11 +276,9 @@ export class L1ToL2MessageGasEstimator {
      * Will initially be called with dummy values to trigger a special revert containing
      * the real params. Then called again with the real params to form the final data to be submitted
      */
-    dataFunc: (params: {
-      gasLimit: BigNumber
-      maxFeePerGas: BigNumber
-      maxSubmissionFee: BigNumber
-    }) => L1ToL2TransactionRequest['core'],
+    dataFunc: (
+      params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
+    ) => L1ToL2TransactionRequest['core'],
     l1Provider: Provider,
     gasOverrides?: GasOverrides
   ) {
@@ -288,17 +291,28 @@ export class L1ToL2MessageGasEstimator {
     } = dataFunc({
       gasLimit: RetryableDataTools.ErrorTriggeringParams.gasLimit,
       maxFeePerGas: RetryableDataTools.ErrorTriggeringParams.maxFeePerGas,
-      maxSubmissionFee: BigNumber.from(1),
+      maxSubmissionCost: BigNumber.from(1),
     })
 
-    // get retryable data from the null call
-    const res = await l1Provider.call({
-      to: to,
-      data: nullData,
-      value: value,
-      from: from,
-    })
-    const retryable = RetryableDataTools.tryParseError(res)!
+    let retryable: RetryableData | null
+    try {
+      // get retryable data from the null call
+      const res = await l1Provider.call({
+        to: to,
+        data: nullData,
+        value: value,
+        from: from,
+      })
+      retryable = RetryableDataTools.tryParseError(res)
+      if (!isDefined(retryable)) {
+        throw new ArbSdkError(`No retryable data found in error: ${res}`)
+      }
+    } catch (err) {
+      retryable = RetryableDataTools.tryParseError(err as Error)
+      if (!isDefined(retryable)) {
+        throw new ArbSdkError('No retryable data found in error', err as Error)
+      }
+    }
 
     // use retryable data to get gas estimates
     // const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
@@ -325,7 +339,7 @@ export class L1ToL2MessageGasEstimator {
     } = dataFunc({
       gasLimit: estimates.gasLimit,
       maxFeePerGas: estimates.maxFeePerGas,
-      maxSubmissionFee: estimates.maxSubmissionCost,
+      maxSubmissionCost: estimates.maxSubmissionCost,
     })
 
     return {

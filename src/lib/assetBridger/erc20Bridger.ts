@@ -70,6 +70,7 @@ import { defaultAbiCoder } from 'ethers/lib/utils'
 import { OmitTyped, RequiredPick } from '../utils/types'
 import { RetryableDataTools } from '../dataEntities/retryableData'
 import { EventArgs } from '../dataEntities/event'
+import { L1ToL2MessageGasParams } from '../message/L1ToL2MessageCreator'
 
 export interface TokenApproveParams {
   /**
@@ -516,14 +517,12 @@ export class Erc20Bridger extends AssetBridger<
       }
     }
 
-    const depositFunc = (params: {
-      gasLimit: BigNumber
-      maxFeePerGas: BigNumber
-      maxSubmissionFee: BigNumber
-    }) => {
+    const depositFunc = (
+      params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
+    ) => {
       const innerData = defaultAbiCoder.encode(
         ['uint256', 'bytes'],
-        [params.maxSubmissionFee, '0x']
+        [params.maxSubmissionCost, '0x']
       )
       const iGatewayRouter = L1GatewayRouter__factory.createInterface()
 
@@ -540,7 +539,7 @@ export class Erc20Bridger extends AssetBridger<
         from: defaultedParams.from,
         value: params.gasLimit
           .mul(params.maxFeePerGas)
-          .add(params.maxSubmissionFee),
+          .add(params.maxSubmissionCost),
         // we dont include the l2 call value for token deposits because
         // they either have 0 call value, or their call value is withdrawn from
         // a contract by the gateway (weth). So in both of these cases the l2 call value
@@ -789,15 +788,11 @@ export class AdminErc20Bridger extends Erc20Bridger {
     const l1Provider = l1Signer.provider!
     const gEstimator = new L1ToL2MessageGasEstimator(l2Provider)
     const setTokenEstimates2 = await gEstimator.populateL1ToL2FunctionParams(
-      (params: {
-        gasLimit: BigNumber
-        maxFeePerGas: BigNumber
-        maxSubmissionFee: BigNumber
-      }) =>
+      (params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>) =>
         encodeFuncData(
           {
             gasLimit: params.gasLimit,
-            maxSubmissionCost: params.maxSubmissionFee,
+            maxSubmissionCost: params.maxSubmissionCost,
           },
           {
             gasLimit: RetryableDataTools.ErrorTriggeringParams.gasLimit,
@@ -809,11 +804,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     )
 
     const setGatewayEstimates2 = await gEstimator.populateL1ToL2FunctionParams(
-      (params: {
-        gasLimit: BigNumber
-        maxFeePerGas: BigNumber
-        maxSubmissionFee: BigNumber
-      }) =>
+      (params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>) =>
         encodeFuncData(
           {
             gasLimit: setTokenEstimates2.estimates.gasLimit,
@@ -821,7 +812,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
           },
           {
             gasLimit: params.gasLimit,
-            maxSubmissionCost: params.maxSubmissionFee,
+            maxSubmissionCost: params.maxSubmissionCost,
           },
           params.maxFeePerGas
         ),
@@ -917,23 +908,21 @@ export class AdminErc20Bridger extends Erc20Bridger {
       l1Signer
     )
 
-    const setGatewaysFunc = (params: {
-      gasLimit: BigNumber
-      maxFeePerGas: BigNumber
-      maxSubmissionFee: BigNumber
-    }) => {
+    const setGatewaysFunc = (
+      params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
+    ) => {
       return {
         data: l1GatewayRouter.interface.encodeFunctionData('setGateways', [
           tokenGateways.map(tG => tG.tokenAddr),
           tokenGateways.map(tG => tG.gatewayAddr),
           params.gasLimit,
           params.maxFeePerGas,
-          params.maxSubmissionFee,
+          params.maxSubmissionCost,
         ]),
         from,
         value: params.gasLimit
           .mul(params.maxFeePerGas)
-          .add(params.maxSubmissionFee),
+          .add(params.maxSubmissionCost),
         to: l1GatewayRouter.address,
       }
     }
