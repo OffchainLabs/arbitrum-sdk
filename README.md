@@ -110,24 +110,3 @@ Defaults to `rinkArby`, for custom network use `--network` flag.
 
 `rinkArby` expects env var `ARB_KEY` to be prefunded with at least 0.02 ETH, and env var `INFURA_KEY` to be set.
 (see `integration_test/config.ts`)
-
-### Bridge A Standard Token
-
-Bridging new a token to L2 (i.e., deploying a new token contract) through the standard gateway is done by simply depositing a token that hasn't yet been bridged. This repo includes a script to trigger this initial deposit/deployment:
-
-1. clone `arbitrum-sdk`
-
-2. `yarn install` (from root)
-
-3. Set `PRIVKEY` environmental variable (you can use .env) to the key of the account from which you'll be deploying (account should have some balance of the token you're bridging).
-
-4. Set MAINNET_RPC environmental variable to L1 RPC endpoint (i.e., https://mainnet.infura.io/v3/my-infura-key)
-
-5. `yarn bridgeStandardToken`
-
-Required CL params:
-`networkID`:number — Chain ID of L2 network
-`l1TokenAddress`:string — address of L1 token to be bridged
-
-Ex:
-`yarn bridgeStandardToken --networkID 421611 --l1TokenAddress 0xdf032bc4b9dc2782bb09352007d4c57b75160b15 --amount 3`
