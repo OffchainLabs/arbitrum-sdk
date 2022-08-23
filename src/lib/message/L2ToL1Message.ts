@@ -88,7 +88,7 @@ export class L2ToL1Message {
    * @param indexInBatch The index in the batch, only valid for pre-nitro events. This parameter is ignored post-nitro
    * @returns Any classic and nitro events that match the provided filters.
    */
-  public static async getEventLogs(
+  public static async getL2ToL1Events(
     l2Provider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     position?: BigNumber,

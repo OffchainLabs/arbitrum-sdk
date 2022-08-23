@@ -23,7 +23,6 @@ export {
   L2ContractTransaction,
 } from './lib/message/L2Transaction'
 export {
-  L2ToL1MessageStatus,
   L2ToL1Message,
   L2ToL1MessageWriter,
   L2ToL1MessageReader,
@@ -53,6 +52,7 @@ export {
 export { InboxTools } from './lib/inbox/inbox'
 export { EventFetcher } from './lib/utils/eventFetcher'
 export * as constants from './lib/dataEntities/constants'
+export { L2ToL1MessageStatus } from './lib/dataEntities/message'
 export {
   RetryableData,
   RetryableDataTools,
