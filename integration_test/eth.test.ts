@@ -29,10 +29,8 @@ import {
   prettyLog,
   skipIfMainnet,
 } from './testHelpers'
-import {
-  L2ToL1Message,
-} from '../src/lib/message/L2ToL1Message'
-import { L2ToL1MessageStatus } from "../src/lib/dataEntities/message"
+import { L2ToL1Message } from '../src/lib/message/L2ToL1Message'
+import { L2ToL1MessageStatus } from '../src/lib/dataEntities/message'
 import { testSetup } from '../scripts/testSetup'
 dotenv.config()
 
