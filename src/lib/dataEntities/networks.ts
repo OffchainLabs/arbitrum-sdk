@@ -96,7 +96,7 @@ export const getL1Network = async (
     (await isNitroL1(l2ChainId, signerOrProvider)) ? nitro : classic
   ).getL1Network(signerOrProvider)
 
-  return isDefined(network.rpcURL)
+  return isDefined((await network).rpcURL)
     ? network
     : {
         ...network,
