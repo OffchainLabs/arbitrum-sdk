@@ -64,6 +64,7 @@ export interface EthBridge {
   sequencerInbox: string
   outbox: string
   rollup: string
+  classicOutbox: string
 }
 
 export interface L1Networks {
@@ -114,6 +115,7 @@ const rinkebyETHBridge: EthBridge = {
   sequencerInbox: '0x957C9c64f7c2cE091E56aF3F33AB20259096355F',
   outbox: '0x36648F69cEb55Ce1B2920Bf2de321FBc9c378f0E',
   rollup: '0x71c6093C564EDDCFAf03481C3F59F88849F1e644',
+  classicOutbox: '0x2360A33905dc1c72b12d975d975F42BaBdcef9F3',
 }
 
 const mainnetETHBridge: EthBridge = {
@@ -122,6 +124,7 @@ const mainnetETHBridge: EthBridge = {
   sequencerInbox: '0x4c6f947Ae67F572afa4ae0730947DE7C874F95Ef',
   outbox: '0x760723CD2e632826c38Fef8CD438A4CC7E7E1A40',
   rollup: '0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A',
+  classicOutbox: '0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A',
 }
 
 export const l1Networks: L1Networks = {
@@ -194,6 +197,7 @@ export const l2Networks: L2Networks = {
       outbox: '0x45Af9Ed1D03703e480CE7d328fB684bb67DA5049',
       rollup: '0x45e5cAea8768F42B385A366D3551Ad1e0cbFAb17',
       sequencerInbox: '0x0484A87B144745A2E5b7c359552119B6EA2917A9',
+      classicOutbox: '0x0000000000000000000000000000000000000000',
     },
     explorerUrl: 'https://goerli-rollup-explorer.arbitrum.io',
     isArbitrum: true,
@@ -226,6 +230,7 @@ export const l2Networks: L2Networks = {
       outbox: '0xD4B80C3D7240325D18E645B49e6535A3Bf95cc58',
       rollup: '0xfb209827c58283535b744575e11953dcc4bead88',
       sequencerInbox: '0x211e1c4c7f1bf5351ac850ed10fd68cffcf6c21b',
+      classicOutbox: '0x0000000000000000000000000000000000000000',
     },
     explorerUrl: 'https://nova-explorer.arbitrum.io',
     isArbitrum: true,

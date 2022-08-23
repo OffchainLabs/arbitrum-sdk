@@ -12,6 +12,7 @@ async function main() {
 
   const nitroPath = getPackagePath('@arbitrum/nitro-contracts')
   const peripheralsPath = getPackagePath('arb-bridge-peripherals')
+  const bridgeEthPath = getPackagePath('arb-bridge-eth')
 
   console.log('Compiling paths.')
 
@@ -42,6 +43,8 @@ async function main() {
   const allFiles = glob(cwd, [
     `${peripheralsPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
     `${nitroPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
+    // we have a hardcoded abi for the old outbox
+    `./src/lib/dataEntities/OldOutbox.json`,
   ])
 
   // TODO: generate files into different subfolders (ie `/nitro/*`) to avoid overwrite of contracts with the same name

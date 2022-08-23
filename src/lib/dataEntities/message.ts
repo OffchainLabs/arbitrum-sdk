@@ -51,3 +51,18 @@ export enum InboxMessageKind {
   L1MessageType_submitRetryableTx = 9,
   L1MessageType_ethDeposit = 12,
 }
+
+export enum L2ToL1MessageStatus {
+  /**
+   * ArbSys.sendTxToL1 called, but assertion not yet confirmed
+   */
+  UNCONFIRMED,
+  /**
+   * Assertion for outgoing message confirmed, but message not yet executed
+   */
+  CONFIRMED,
+  /**
+   * Outgoing message executed (terminal state)
+   */
+  EXECUTED,
+}
