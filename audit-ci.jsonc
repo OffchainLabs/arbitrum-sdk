@@ -1,0 +1,59 @@
+{
+  "$schema": "https://github.com/IBM/audit-ci/raw/main/docs/schema.json",
+  "low": true,
+  "allowlist": [
+    // Undici
+    ////////////
+    // https://github.com/advisories/GHSA-3cvr-822r-rqcc
+    // Undici CRLF injection
+    // Used only in hardhat, so only in dev. Even then we dont use remote requests.
+    "GHSA-3cvr-822r-rqcc",
+    // https://github.com/advisories/GHSA-pgw7-wx7w-2w33
+    // ProxyAgent vulnerable to MITM
+    // Used only in hardhat, so only in dev. Even then we dont use remote requests.
+    "GHSA-pgw7-wx7w-2w33",
+    // https://github.com/advisories/GHSA-q768-x9m6-m9qp
+    // undici before v5.8.0 vulnerable to uncleared cookies
+    // Used only in hardhat, so only in dev. Even then we dont use remote requests.
+    "GHSA-q768-x9m6-m9qp",
+    // https://github.com/advisories/GHSA-8qr4-xgw6-wmr3
+    // undici.request` vulnerable to SSRF
+    // Used only in hardhat, so only in dev. Even then we dont use remote requests.
+    "GHSA-8qr4-xgw6-wmr3",
+    // https://github.com/advisories/GHSA-f772-66g8-q5h3
+    // Nodejs ‘undici’ Vulnerable to CRLF
+    // Used only in hardhat, so only in dev. Even then we dont use remote requests.
+    "GHSA-f772-66g8-q5h3",
+
+    // Open Zepplin
+    ////////////
+    // https://github.com/advisories/GHSA-88g8-f5mf-f5rj
+    // Improper Initialization in OpenZeppelin
+    // Initialiser can be re-entered. We've checked and aren't currently vulnerable.
+    "GHSA-88g8-f5mf-f5rj",
+    // https://github.com/advisories/GHSA-9c22-pwxw-p6hx
+    // Initializer reentrancy may lead to double initialization
+    // Initialiser can be re-entered. We've checked and aren't currently vulnerable.
+    "GHSA-9c22-pwxw-p6hx",
+    // https://github.com/advisories/GHSA-4g63-c64m-25w9
+    // OpenZeppelin Contracts's SignatureChecker may revert on invalid EIP-1271 signers
+    // We dont use EIP-1271
+    "GHSA-4g63-c64m-25w9",
+    // https://github.com/advisories/GHSA-qh9x-gcfh-pcrw
+    // OpenZeppelin Contracts's ERC165Checker may revert instead of returning false
+    // We don't use ERC165Checker
+    "GHSA-qh9x-gcfh-pcrw",
+    // https://github.com/advisories/GHSA-7grf-83vw-6f5x
+    // OpenZeppelin Contracts ERC165Checker unbounded gas consumption
+    // We don't use ERC165Checker
+    "GHSA-7grf-83vw-6f5x",
+    // https://github.com/advisories/GHSA-xrc4-737v-9q75
+    // OpenZeppelin Contracts's GovernorVotesQuorumFraction updates to quorum may affect past defeated proposals
+    // We don't use GovernorVotesQuorumFraction
+    "GHSA-xrc4-737v-9q75",
+    // https://github.com/advisories/GHSA-4h98-2769-gh6h
+    // OpenZeppelin Contracts vulnerable to ECDSA signature malleability
+    // We don’t use signatures for replay protection anywhere
+    "GHSA-4h98-2769-gh6h"
+  ]
+}
