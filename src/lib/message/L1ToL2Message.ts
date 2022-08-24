@@ -280,7 +280,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
   /**
    * When retryable tickets are created, and gas is supplied to it, an attempt is
-   * made to redeem the ticket straght away. This is called an auto redeem.
+   * made to redeem the ticket straight away. This is called an auto redeem.
    * @returns TransactionReceipt of the auto redeem attempt if exists, otherwise null
    */
   public async getAutoRedeemAttempt(): Promise<TransactionReceipt | null> {
