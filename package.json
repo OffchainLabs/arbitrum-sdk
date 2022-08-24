@@ -52,11 +52,7 @@
     "ethers": "^5.1.0"
   },
   "devDependencies": {
-<<<<<<< HEAD
     "@arbitrum/nitro-contracts": "1.0.0-beta.8",
-=======
-    "@arbitrum/nitro-contracts": "1.0.0-beta.6",
->>>>>>> c-nitro-next
     "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@typechain/ethers-v5": "9.0.0",
     "@types/chai": "^4.2.11",
@@ -67,11 +63,7 @@
     "@typescript-eslint/eslint-plugin-tslint": "^5.27.1",
     "@typescript-eslint/parser": "^5.14.0",
     "arb-bridge-peripherals": "1.0.10",
-<<<<<<< HEAD
-    "audit-ci": "^5.1.2",
-=======
     "audit-ci": "^6.3.0",
->>>>>>> c-nitro-next
     "axios": "^0.21.3",
     "chai": "^4.2.0",
     "chalk": "^4.1.0",
