@@ -212,11 +212,13 @@ const inferShadowNetworks = async (
   const l2ChainId = (await l2Provider.getNetwork()).chainId
   copiedNetworks.l2Network.chainID = l2ChainId
   copiedNetworks.l2Network.isCustom = true
+  copiedNetworks.l2Network.rpcURL = config.arbUrl
   const l1ChainID = (await l1Provider.getNetwork()).chainId
   copiedNetworks.l2Network.partnerChainID = l1ChainID
   copiedNetworks.l1Network.chainID = l1ChainID
   copiedNetworks.l1Network.isCustom = true
   copiedNetworks.l1Network.partnerChainIDs = [l2ChainId]
+  copiedNetworks.l1Network.rpcURL = config.ethUrl
 
   return { ...copiedNetworks }
 }

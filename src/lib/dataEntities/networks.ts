@@ -92,16 +92,14 @@ export const getL1Network = async (
   signerOrProvider: SignerOrProvider,
   l2ChainId: number
 ): Promise<L1Network> => {
-  const network = (
-    (await isNitroL1(l2ChainId, signerOrProvider)) ? nitro : classic
+  const network = await ((await isNitroL1(l2ChainId, signerOrProvider))
+    ? nitro
+    : classic
   ).getL1Network(signerOrProvider)
 
   return isDefined(network.rpcURL)
     ? network
-    : {
-        ...network,
-        rpcURL: process.env['L1RPC'],
-      }
+    : { ...network, rpcURL: process.env['L1RPC'] || 'undefined rpc' }
 }
 export const getL2Network = async (
   signerOrProvider: SignerOrProvider
