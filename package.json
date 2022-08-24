@@ -20,7 +20,7 @@
   },
   "homepage": "https://offchainlabs.com",
   "scripts": {
-    "audit:ci": "audit-ci -l -a 1067409 1067487 1067486 1081677 1081989 1081919 1081990 1081920 1081921 1081848 1083165 1083163",
+    "audit:ci": "audit-ci --config ./audit-ci.jsonc",
     "prepare": "yarn run gen:abi",
     "gen:abi": "node ./scripts/genAbi.js",
     "gen:network": "ts-node ./scripts/genNetwork.ts",
@@ -52,7 +52,11 @@
     "ethers": "^5.1.0"
   },
   "devDependencies": {
+<<<<<<< HEAD
     "@arbitrum/nitro-contracts": "1.0.0-beta.8",
+=======
+    "@arbitrum/nitro-contracts": "1.0.0-beta.6",
+>>>>>>> c-nitro-next
     "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@typechain/ethers-v5": "9.0.0",
     "@types/chai": "^4.2.11",
@@ -63,7 +67,11 @@
     "@typescript-eslint/eslint-plugin-tslint": "^5.27.1",
     "@typescript-eslint/parser": "^5.14.0",
     "arb-bridge-peripherals": "1.0.10",
+<<<<<<< HEAD
     "audit-ci": "^5.1.2",
+=======
+    "audit-ci": "^6.3.0",
+>>>>>>> c-nitro-next
     "axios": "^0.21.3",
     "chai": "^4.2.0",
     "chalk": "^4.1.0",
