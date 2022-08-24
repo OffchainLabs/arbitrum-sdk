@@ -880,7 +880,6 @@ export const classicGetInboxMessageDeliveredEvents = (
 }
 
 // patch networks to be consistent
-nitroL1Networks[1].partnerChainIDs.push(42170)
 classicL1Networks[1].partnerChainIDs.push(42170)
 classicL1Networks[5] = nitroL1Networks[5]
 classicL2Networks[421613] = convertNetworkNitroToClassic(
