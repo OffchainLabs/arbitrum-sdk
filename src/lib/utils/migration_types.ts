@@ -179,7 +179,13 @@ export const isNitroL1 = async (
   const cacheData = cache.getCacheWithDefault(l2ChainId)
   if (cacheData.l1.value) return true
   if (Date.now() - cacheData.l1.timestamp > timeSinceCheckMs) {
-    const l1Network = await nitro.getL1Network(l1Provider)
+    const _l1Network = await nitro.getL1Network(l1Provider)
+    const l1Network = isDefined(_l1Network.rpcURL)
+      ? _l1Network
+      : {
+          ..._l1Network,
+          rpcURL: process.env['L1RPC'] || 'undefined rpc',
+        }
     const partner = l1Network.partnerChainIDs.filter(
       pcId => pcId === l2ChainId
     )[0]
@@ -250,7 +256,13 @@ export const isNitroL2 = async (
       // will throw an error if pre nitro
       await arbSys.arbBlockHash(blockNumber.sub(1))
 
-      const l1Network = await nitro.getL1Network(l2Network.partnerChainID)
+      const _l1Network = await nitro.getL1Network(l2Network.partnerChainID)
+      const l1Network = isDefined(_l1Network.rpcURL)
+        ? _l1Network
+        : {
+            ..._l1Network,
+            rpcURL: process.env['L1RPC'] || 'undefined rpc',
+          }
       const l1Provider = new JsonRpcProvider(l1Network.rpcURL)
       // when we've switched to nitro we need to regenerate the nitro
       // network config and set it
