@@ -20,6 +20,7 @@ import dotenv from 'dotenv'
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
 import { SEVEN_DAYS_IN_SECONDS } from './constants'
+import { isDefined } from '../utils/lib'
 
 dotenv.config()
 
@@ -285,7 +286,12 @@ const getNetwork = async (
 
   const networks = layer === 1 ? l1Networks : l2Networks
   if (networks[chainID]) {
-    return networks[chainID]
+    return isDefined(networks[chainID].rpcURL)
+      ? networks[chainID]
+      : {
+          ...networks[chainID],
+          rpcURL: process.env[layer === 1 ? 'L1RPC' : 'L2RPC'],
+        }
   } else {
     throw new ArbSdkError(`Unrecognized network ${chainID}.`)
   }
