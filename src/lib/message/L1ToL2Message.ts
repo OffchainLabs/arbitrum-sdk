@@ -461,17 +461,32 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    */
   public async waitForStatus(
     confirmations?: number,
-    timeout = 900000
+    timeout?: number
   ): Promise<L1ToL2MessageWaitResult> {
+    // arbitrum waits until finalisation before the accepting a deposit
+    // finalisation can be up to 2 epochs = 64 blocks on mainnet
+    // however on goerli it can be very long due to low participation therefore we
+    // wait 10 epochs there = 320 blocks. Each block is 12 seconds.
+    // In both cases we add 10 blocks leeway.
+    const defaultTimeout = this.chainId === 421613 ? 3960000 : 888000
+    const chosenTimeout = isDefined(timeout) ? timeout : defaultTimeout
+
     // try to wait for the retryable ticket to be created
     const _retryableCreationReceipt = await this.getRetryableCreationReceipt(
       confirmations,
-      timeout
+      chosenTimeout
     )
-    if (!_retryableCreationReceipt)
-      throw new ArbSdkError(
-        `Retryable creation receipt not found ${this.retryableCreationId}`
-      )
+    if (!_retryableCreationReceipt) {
+      if (confirmations || chosenTimeout) {
+        throw new ArbSdkError(
+          `Timed out waiting to retrieve retryable creation receipt: ${this.retryableCreationId}.`
+        )
+      } else {
+        throw new ArbSdkError(
+          `Retryable creation receipt not found ${this.retryableCreationId}.`
+        )
+      }
+    }
     return await this.getSuccessfulRedeem()
   }
 
