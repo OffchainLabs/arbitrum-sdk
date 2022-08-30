@@ -302,6 +302,34 @@ export const getL2Network = (
   return getNetwork(signerOrProviderOrChainID, 2) as Promise<L2Network>
 }
 
+/**
+ * Arbitrum waits until finalisation before the accepting a deposit
+ * on goerli it can be very long due to low participation
+ * @param chainId
+ * @returns
+ */
+export const getDepositTimeout = (chainId: number) => {
+  // finalisation on mainnet can be up to 2 epochs = 64 blocks on mainnet
+  // wait 10 epochs there on goerli = 320 blocks. Each block is 12 seconds.
+  // In both cases we add 10 blocks leeway.
+  switch (chainId) {
+    // goerli
+    case 421613:
+      return 3960000
+    // arb one
+    case 42161:
+      return 888000
+    // nova
+    case 42170:
+      return 888000
+    // rinkeby - soon to be decomissioned
+    case 421611:
+      return 9000000
+    default:
+      throw new ArbSdkError(`Unexpected chain id: ${chainId}.`)
+  }
+}
+
 export const addCustomNetwork = ({
   customL1Network,
   customL2Network,
