@@ -29,6 +29,7 @@ import {
   isNitroL1,
   isNitroL2,
 } from '../utils/migration_types'
+import { isDefined } from '../utils/lib'
 
 dotenv.config()
 
@@ -88,13 +89,17 @@ export interface L2Networks {
 }
 
 export const getL1Network = async (
-  signerOrProvider: SignerOrProvider
+  signerOrProvider: SignerOrProvider,
+  l2ChainId: number
 ): Promise<L1Network> => {
-  if (await isNitroL1(signerOrProvider)) {
-    return await nitro.getL1Network(signerOrProvider)
-  } else {
-    return await classic.getL1Network(signerOrProvider)
-  }
+  const network = await ((await isNitroL1(l2ChainId, signerOrProvider))
+    ? nitro
+    : classic
+  ).getL1Network(signerOrProvider)
+
+  return isDefined(network.rpcURL)
+    ? network
+    : { ...network, rpcURL: process.env['L1RPC'] || 'undefined rpc' }
 }
 export const getL2Network = async (
   signerOrProvider: SignerOrProvider

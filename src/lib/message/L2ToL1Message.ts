@@ -157,6 +157,7 @@ export class L2ToL1MessageReader
 {
   private readonly classicReader?: classic.L2ToL1MessageReader
   private readonly nitroReader?: nitro.L2ToL1MessageReader
+  protected nitroSet = false
 
   public constructor(
     l1Provider: Provider,
@@ -235,9 +236,15 @@ export class L2ToL1MessageReader
   public async getOutboxProof(
     l2Provider: Provider
   ): Promise<MessageBatchProofInfo | null | string[]> {
-    return this.nitroReader
-      ? this.nitroReader.getOutboxProof(l2Provider)
-      : this.tryGetClassicProof(l2Provider)
+    if (this.nitroReader) {
+      // calling isNitroL2 updates the network object with new contract addresses, we need
+      // to make sure that's occurred
+      if (!this.nitroSet && (await isNitroL2(l2Provider))) this.nitroSet = true
+
+      return await this.nitroReader.getOutboxProof(l2Provider)
+    } else {
+      return await this.tryGetClassicProof(l2Provider)
+    }
   }
 
   protected classicProof?: MessageBatchProofInfo
@@ -249,8 +256,13 @@ export class L2ToL1MessageReader
    */
   public async status(l2Provider: Provider): Promise<L2ToL1MessageStatus> {
     // can we create an l2tol1message here, we need to - the constructor is what we need
-    if (this.nitroReader) return this.nitroReader.status(l2Provider)
-    else {
+    if (this.nitroReader) {
+      // calling isNitroL2 updates the network object with new contract addresses, we need
+      // to make sure that's occurred
+      if (!this.nitroSet && (await isNitroL2(l2Provider))) this.nitroSet = true
+
+      return this.nitroReader.status(l2Provider)
+    } else {
       const proof =
         this.classicProof || (await this.tryGetClassicProof(l2Provider))
       if (proof && !this.classicProof) this.classicProof = proof
@@ -271,9 +283,13 @@ export class L2ToL1MessageReader
     l2Provider: Provider,
     retryDelay = 500
   ): Promise<void> {
-    if (this.nitroReader)
+    if (this.nitroReader) {
+      // calling isNitroL2 updates the network object with new contract addresses, we need
+      // to make sure that's occurred
+      if (!this.nitroSet && (await isNitroL2(l2Provider))) this.nitroSet = true
+
       return this.nitroReader.waitUntilReadyToExecute(l2Provider, retryDelay)
-    else return this.classicReader!.waitUntilOutboxEntryCreated(retryDelay)
+    } else return this.classicReader!.waitUntilOutboxEntryCreated(retryDelay)
   }
 
   /**
@@ -285,9 +301,13 @@ export class L2ToL1MessageReader
   public async getFirstExecutableBlock(
     l2Provider: Provider
   ): Promise<BigNumber | null> {
-    if (this.nitroReader)
+    if (this.nitroReader) {
+      // calling isNitroL2 updates the network object with new contract addresses, we need
+      // to make sure that's occurred
+      if (!this.nitroSet && (await isNitroL2(l2Provider))) this.nitroSet = true
+
       return this.nitroReader.getFirstExecutableBlock(l2Provider)
-    else return this.classicReader!.getFirstExecutableBlock(l2Provider)
+    } else return this.classicReader!.getFirstExecutableBlock(l2Provider)
   }
 }
 
@@ -348,8 +368,13 @@ export class L2ToL1MessageWriter
     l2Provider: Provider,
     overrides?: Overrides
   ): Promise<ContractTransaction> {
-    if (this.nitroWriter) return this.nitroWriter.execute(l2Provider, overrides)
-    else {
+    if (this.nitroWriter) {
+      // calling isNitroL2 updates the network object with new contract addresses, we need
+      // to make sure that's occurred
+      if (!this.nitroSet && (await isNitroL2(l2Provider))) this.nitroSet = true
+
+      return this.nitroWriter.execute(l2Provider, overrides)
+    } else {
       const proof =
         this.classicProof || (await this.tryGetClassicProof(l2Provider))
       if (proof === null) throw new ArbSdkError('Unexpected missing proof')

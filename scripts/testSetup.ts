@@ -212,11 +212,13 @@ const inferShadowNetworks = async (
   const l2ChainId = (await l2Provider.getNetwork()).chainId
   copiedNetworks.l2Network.chainID = l2ChainId
   copiedNetworks.l2Network.isCustom = true
+  copiedNetworks.l2Network.rpcURL = config.arbUrl
   const l1ChainID = (await l1Provider.getNetwork()).chainId
   copiedNetworks.l2Network.partnerChainID = l1ChainID
   copiedNetworks.l1Network.chainID = l1ChainID
   copiedNetworks.l1Network.isCustom = true
   copiedNetworks.l1Network.partnerChainIDs = [l2ChainId]
+  copiedNetworks.l1Network.rpcURL = config.ethUrl
 
   return { ...copiedNetworks }
 }
@@ -247,7 +249,8 @@ export const testSetup = async (): Promise<{
   // are we shadow forking
 
   try {
-    const l1Network = await getL1Network(l1Deployer)
+    const l2ChainId = await l2Deployer.getChainId()
+    const l1Network = await getL1Network(l1Deployer, l2ChainId)
     const l2Network = await getL2Network(l2Deployer)
     setL1Network = l1Network
     setL2Network = l2Network
