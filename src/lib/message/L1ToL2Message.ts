@@ -33,10 +33,7 @@ import {
 import { ArbSdkError } from '../dataEntities/errors'
 import { ethers, Overrides } from 'ethers'
 import { L2TransactionReceipt, RedeemTransaction } from './L2Transaction'
-import {
-  getDepositTimeout,
-  getL2Network,
-} from '../../lib/dataEntities/networks'
+import { getL2Network } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt, isDefined } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
@@ -466,9 +463,11 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     confirmations?: number,
     timeout?: number
   ): Promise<L1ToL2MessageWaitResult> {
+    const l2Network = await getL2Network(this.chainId)
+
     const chosenTimeout = isDefined(timeout)
       ? timeout
-      : getDepositTimeout(this.chainId)
+      : l2Network.depositTimeout
 
     // try to wait for the retryable ticket to be created
     const _retryableCreationReceipt = await this.getRetryableCreationReceipt(
@@ -749,9 +748,11 @@ export class EthDepositMessage {
   }
 
   public async wait(confirmations?: number, timeout?: number) {
+    const l2Network = await getL2Network(this.l2ChainId)
+
     const chosenTimeout = isDefined(timeout)
       ? timeout
-      : getDepositTimeout(this.l2ChainId)
+      : l2Network.depositTimeout
 
     if (!this.l2DepositTxReceipt) {
       this.l2DepositTxReceipt = await getTransactionReceipt(
