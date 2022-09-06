@@ -12,7 +12,6 @@ async function main() {
 
   const nitroPath = getPackagePath('@arbitrum/nitro-contracts')
   const peripheralsPath = getPackagePath('arb-bridge-peripherals')
-  const bridgeEthPath = getPackagePath('arb-bridge-eth')
 
   console.log('Compiling paths.')
 
@@ -40,24 +39,36 @@ async function main() {
 
   console.log('Done compiling')
 
-  const allFiles = glob(cwd, [
+  const nitroFiles = glob(cwd, [
     `${peripheralsPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
     `${nitroPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
-    // we have a hardcoded abi for the old outbox
-    `./src/lib/dataEntities/OldOutbox.json`,
   ])
 
   // TODO: generate files into different subfolders (ie `/nitro/*`) to avoid overwrite of contracts with the same name
   await runTypeChain({
     cwd,
-    filesToProcess: allFiles,
-    allFiles: allFiles,
+    filesToProcess: nitroFiles,
+    allFiles: nitroFiles,
     outDir: './src/lib/abi/',
+    target: 'ethers-v5',
+  })
+
+  const classicFiles = glob(cwd, [
+    // we have a hardcoded abi for the old outbox
+    `./src/lib/dataEntities/Outbox.json`,
+  ])
+
+  await runTypeChain({
+    cwd,
+    filesToProcess: classicFiles,
+    allFiles: classicFiles,
+    outDir: './src/lib/abi/classic',
     target: 'ethers-v5',
   })
 
   // we delete the index file since it doesn't play well with tree shaking
   unlinkSync(`${cwd}/src/lib/abi/index.ts`)
+  unlinkSync(`${cwd}/src/lib/abi/classic/index.ts`)
 
   console.log('Typechain generated')
 }

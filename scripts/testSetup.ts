@@ -99,7 +99,6 @@ export const getCustomNetworks = async (
       outbox: outboxAddr,
       rollup: parsedDeploymentData.rollup,
       sequencerInbox: parsedDeploymentData['sequencer-inbox'],
-      classicOutbox: '0x0000000000000000000000000000000000000000',
     },
     explorerUrl: '',
     isArbitrum: true,

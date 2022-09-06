@@ -26,7 +26,7 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { BlockTag } from '@ethersproject/abstract-provider'
 
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
-import { OldOutbox__factory } from '../abi/factories/OldOutbox__factory'
+import { Outbox__factory } from '../abi/classic/factories/Outbox__factory'
 
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { L2ToL1TransactionEvent } from '../abi/ArbSys'
@@ -137,7 +137,7 @@ export class L2ToL1MessageClassic {
         )
   }
 
-  public static async getL2ToL1MessageLogs(
+  public static async getL2ToL1Events(
     l2Provider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     batchNumber?: BigNumber,
@@ -180,19 +180,55 @@ export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
     super(batchNumber, indexInBatch)
   }
 
+  /**
+   * Contains the classic outbox address, or set to zero address if this network
+   * did not have a classic outbox deployed
+   */
   protected outboxAddress: string | null = null
 
-  protected async getOutboxAddress(l2Provider: Provider) {
+  /**
+   * Classic had 2 outboxes, we need to find the correct one for the provided batch number
+   * @param l2Provider
+   * @param batchNumber
+   * @returns
+   */
+  protected async getOutboxAddress(l2Provider: Provider, batchNumber: number) {
     if (!isDefined(this.outboxAddress)) {
       const l2Network = await getL2Network(l2Provider)
-      this.outboxAddress = l2Network.ethBridge.classicOutbox
+
+      // find the outbox where the activation batch number of the next outbox
+      // is greater than the supplied batch
+      const outboxes = isDefined(l2Network.ethBridge.classicOutboxes)
+        ? Object.entries(l2Network.ethBridge.classicOutboxes)
+        : []
+
+      const res = outboxes
+        .sort((a, b) => {
+          if (a[1] < b[1]) return -1
+          else if (a[1] === b[1]) return 0
+          else return 1
+        })
+        .find(
+          (_, index, array) =>
+            array[index + 1] === undefined || array[index + 1][1] > batchNumber
+        )
+
+      if (!res) {
+        this.outboxAddress = '0x0000000000000000000000000000000000000000'
+      } else {
+        this.outboxAddress = res[0]
+      }
     }
     return this.outboxAddress
   }
 
   private async outboxEntryExists(l2Provider: Provider) {
-    const outboxAddress = await this.getOutboxAddress(l2Provider)
-    const outbox = OldOutbox__factory.connect(outboxAddress, this.l1Provider)
+    const outboxAddress = await this.getOutboxAddress(
+      l2Provider,
+      this.batchNumber.toNumber()
+    )
+
+    const outbox = Outbox__factory.connect(outboxAddress, this.l1Provider)
     return await outbox.outboxEntryExists(this.batchNumber)
   }
 
@@ -247,9 +283,12 @@ export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
     const proofInfo = await this.tryGetProof(l2Provider)
     if (!isDefined(proofInfo)) return false
 
-    const outboxAddress = await this.getOutboxAddress(l2Provider)
+    const outboxAddress = await this.getOutboxAddress(
+      l2Provider,
+      this.batchNumber.toNumber()
+    )
 
-    const outbox = OldOutbox__factory.connect(outboxAddress, this.l1Provider)
+    const outbox = Outbox__factory.connect(outboxAddress, this.l1Provider)
     try {
       await outbox.callStatic.executeTransaction(
         this.batchNumber,
@@ -362,8 +401,11 @@ export class L2ToL1MessageWriterClassic extends L2ToL1MessageReaderClassic {
         `Unexpected missing proof: ${this.batchNumber.toString()} ${this.indexInBatch.toString()}}`
       )
     }
-    const outboxAddress = await this.getOutboxAddress(l2Provider)
-    const outbox = OldOutbox__factory.connect(outboxAddress, this.l1Signer)
+    const outboxAddress = await this.getOutboxAddress(
+      l2Provider,
+      this.batchNumber.toNumber()
+    )
+    const outbox = Outbox__factory.connect(outboxAddress, this.l1Signer)
     // We can predict and print number of missing blocks
     // if not challenged
     return await outbox.functions.executeTransaction(

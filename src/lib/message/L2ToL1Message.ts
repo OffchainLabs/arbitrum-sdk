@@ -35,6 +35,7 @@ import {
 import { isDefined } from '../utils/lib'
 import { EventArgs } from '../dataEntities/event'
 import { L2ToL1MessageStatus } from '../dataEntities/message'
+import { getL2Network } from '../dataEntities/networks'
 
 export type L2ToL1TransactionEvent =
   | EventArgs<ClassicL2ToL1TransactionEvent>
@@ -96,25 +97,58 @@ export class L2ToL1Message {
     hash?: BigNumber,
     indexInBatch?: BigNumber
   ): Promise<(L2ToL1TransactionEvent & { transactionHash: string })[]> {
-    return (
-      await Promise.all([
-        classic.L2ToL1MessageClassic.getL2ToL1MessageLogs(
+    const l2Network = await getL2Network(l2Provider)
+    const nitroGenesisBlock = l2Network.nitroGenesisBlock || 0
+
+    const stringOrMin = (blockTag: BlockTag, nitroGenesisBlock: number) => {
+      typeof blockTag === 'string'
+        ? blockTag
+        : Math.min(blockTag, nitroGenesisBlock)
+    }
+    const stringOrMax = (blockTag: BlockTag, nitroGenesisBlock: number) => {
+      typeof blockTag === 'string'
+        ? blockTag
+        : Math.max(blockTag, nitroGenesisBlock)
+    }
+
+    // only fetch nitro events after the genesis block
+    const classicFilter = {
+      fromBlock: stringOrMin(filter.fromBlock, nitroGenesisBlock),
+      toBlock: stringOrMin(filter.toBlock, nitroGenesisBlock),
+    }
+    const logQueries = []
+    // tslint:disable-next-line strict-comparisons
+    if (classicFilter.fromBlock !== classicFilter.toBlock) {
+      logQueries.push(
+        classic.L2ToL1MessageClassic.getL2ToL1Events(
           l2Provider,
           filter,
           position,
           destination,
           hash,
           indexInBatch
-        ),
+        )
+      )
+    }
+
+    const nitroFilter = {
+      fromBlock: stringOrMax(filter.fromBlock, nitroGenesisBlock),
+      toBlock: stringOrMax(filter.toBlock, nitroGenesisBlock),
+    }
+    // tslint:disable-next-line strict-comparisons
+    if (nitroFilter.fromBlock !== nitroFilter.toBlock) {
+      logQueries.push(
         nitro.L2ToL1MessageNitro.getL2ToL1Events(
           l2Provider,
           filter,
           position,
           destination,
           hash
-        ),
-      ])
-    ).flat(1)
+        )
+      )
+    }
+
+    return (await Promise.all(logQueries)).flat(1)
   }
 }
 

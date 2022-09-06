@@ -42,8 +42,7 @@
     "setStandard": "ts-node scripts/setStandardGateways.ts",
     "setCustom": "ts-node scripts/setArbCustomGateways.ts",
     "cancelRetryable": "ts-node scripts/cancelRetryable.ts",
-    "bridgeStandardToken": "ts-node scripts/deployStandard.ts",
-    "tt": "typechain --target ethers-v5 --out-dir face './src/lib/message/OutOutbox.json'"
+    "bridgeStandardToken": "ts-node scripts/deployStandard.ts"
   },
   "dependencies": {
     "@ethersproject/address": "^5.0.8",
