@@ -10,6 +10,14 @@ import {
   L1ToL2MessageGasParams,
   L1ToL2MessageNoGasParams,
 } from './L1ToL2MessageCreator'
+import {
+  RetryableData,
+  RetryableDataTools,
+} from '../dataEntities/retryableData'
+import { getBaseFee, isDefined } from '../utils/lib'
+import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
+import { OmitTyped } from '../utils/types'
+import { ArbSdkError } from '../dataEntities/errors'
 
 /**
  * The default amount to increase the maximum submission cost. Submission cost is calculated
@@ -251,6 +259,98 @@ export class L1ToL2MessageGasEstimator {
       maxSubmissionCost: maxSubmissionFee,
       maxFeePerGas,
       deposit,
+    }
+  }
+
+  /**
+   * Transactions that make an L1->L2 message need to estimate L2 gas parameters
+   * This function does that, and populates those parameters into a transaction request
+   * @param dataFunc
+   * @param l1Provider
+   * @param gasOverrides
+   * @returns
+   */
+  public async populateL1ToL2FunctionParams(
+    /**
+     * Function that will internally make an L1->L2 transaction
+     * Will initially be called with dummy values to trigger a special revert containing
+     * the real params. Then called again with the real params to form the final data to be submitted
+     */
+    dataFunc: (
+      params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
+    ) => L1ToL2TransactionRequest['core'],
+    l1Provider: Provider,
+    gasOverrides?: GasOverrides
+  ) {
+    // get function data that should trigger a retryable data error
+    const {
+      data: nullData,
+      to,
+      value,
+      from,
+    } = dataFunc({
+      gasLimit: RetryableDataTools.ErrorTriggeringParams.gasLimit,
+      maxFeePerGas: RetryableDataTools.ErrorTriggeringParams.maxFeePerGas,
+      maxSubmissionCost: BigNumber.from(1),
+    })
+
+    let retryable: RetryableData | null
+    try {
+      // get retryable data from the null call
+      const res = await l1Provider.call({
+        to: to,
+        data: nullData,
+        value: value,
+        from: from,
+      })
+      retryable = RetryableDataTools.tryParseError(res)
+      if (!isDefined(retryable)) {
+        throw new ArbSdkError(`No retryable data found in error: ${res}`)
+      }
+    } catch (err) {
+      // ethersjs currently doesnt throw for custom solidity errors, so we shouldn't end up here
+      // however we try to catch and parse the error anyway in case ethersjs changes
+      // behaviour and we dont pick up on it
+      retryable = RetryableDataTools.tryParseError(err as Error)
+      if (!isDefined(retryable)) {
+        throw new ArbSdkError('No retryable data found in error', err as Error)
+      }
+    }
+
+    // use retryable data to get gas estimates
+    // const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
+    const baseFee = await getBaseFee(l1Provider)
+    const estimates = await this.estimateAll(
+      {
+        from: retryable.from,
+        to: retryable.to,
+        data: retryable.data,
+        l2CallValue: retryable.l2CallValue,
+        excessFeeRefundAddress: retryable.excessFeeRefundAddress,
+        callValueRefundAddress: retryable.callValueRefundAddress,
+      },
+      baseFee,
+      l1Provider,
+      gasOverrides
+    )
+
+    // form the real data for the transaction
+    const {
+      data: realData,
+      to: realTo,
+      value: realValue,
+    } = dataFunc({
+      gasLimit: estimates.gasLimit,
+      maxFeePerGas: estimates.maxFeePerGas,
+      maxSubmissionCost: estimates.maxSubmissionCost,
+    })
+
+    return {
+      estimates,
+      retryable,
+      data: realData,
+      to: realTo,
+      value: realValue,
     }
   }
 }
