@@ -36,7 +36,6 @@ export interface L2Network extends Network {
 export interface Network {
   chainID: number
   name: string
-  explorerUrl: string
   gif?: string
   isCustom: boolean
 }
@@ -128,7 +127,6 @@ export const l1Networks: L1Networks = {
   1: {
     chainID: 1,
     name: 'Mainnet',
-    explorerUrl: 'https://etherscan.io',
     partnerChainIDs: [42161, 42170],
     blockTime: 14,
     isCustom: false,
@@ -136,7 +134,6 @@ export const l1Networks: L1Networks = {
   1338: {
     chainID: 1338,
     name: 'Hardhat_Mainnet_Fork',
-    explorerUrl: 'https://etherscan.io',
     partnerChainIDs: [42161],
     blockTime: 1,
     isCustom: false,
@@ -144,7 +141,6 @@ export const l1Networks: L1Networks = {
   4: {
     chainID: 4,
     name: 'Rinkeby',
-    explorerUrl: 'https://rinkeby.etherscan.io',
     partnerChainIDs: [421611],
     blockTime: 15,
     isCustom: false,
@@ -152,7 +148,6 @@ export const l1Networks: L1Networks = {
   5: {
     blockTime: 15,
     chainID: 5,
-    explorerUrl: 'https://goerli.etherscan.io',
     isCustom: false,
     name: 'Goerli',
     partnerChainIDs: [421613],
@@ -163,7 +158,6 @@ export const l2Networks: L2Networks = {
   42161: {
     chainID: 42161,
     name: 'Arbitrum One',
-    explorerUrl: 'https://arbiscan.io',
     partnerChainID: 1,
     isArbitrum: true,
     tokenBridge: mainnetTokenBridge,
@@ -175,7 +169,6 @@ export const l2Networks: L2Networks = {
   421611: {
     chainID: 421611,
     name: 'ArbRinkeby',
-    explorerUrl: 'https://testnet.arbiscan.io',
     partnerChainID: 4,
     isArbitrum: true,
     tokenBridge: rinkebyTokenBridge,
@@ -195,7 +188,6 @@ export const l2Networks: L2Networks = {
       rollup: '0x45e5cAea8768F42B385A366D3551Ad1e0cbFAb17',
       sequencerInbox: '0x0484A87B144745A2E5b7c359552119B6EA2917A9',
     },
-    explorerUrl: 'https://goerli-rollup-explorer.arbitrum.io',
     isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Rollup Goerli Testnet',
@@ -227,7 +219,6 @@ export const l2Networks: L2Networks = {
       rollup: '0xfb209827c58283535b744575e11953dcc4bead88',
       sequencerInbox: '0x211e1c4c7f1bf5351ac850ed10fd68cffcf6c21b',
     },
-    explorerUrl: 'https://nova-explorer.arbitrum.io',
     isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Nova',
