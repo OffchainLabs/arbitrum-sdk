@@ -23,6 +23,7 @@ import { SEVEN_DAYS_IN_SECONDS } from './constants'
 export interface L1Network extends Network {
   partnerChainIDs: number[]
   blockTime: number //seconds
+  isArbitrum: false
 }
 
 export interface L2Network extends Network {
@@ -132,6 +133,7 @@ export const l1Networks: L1Networks = {
     partnerChainIDs: [42161, 42170],
     blockTime: 14,
     isCustom: false,
+    isArbitrum: false,
   },
   1338: {
     chainID: 1338,
@@ -140,6 +142,7 @@ export const l1Networks: L1Networks = {
     partnerChainIDs: [42161],
     blockTime: 1,
     isCustom: false,
+    isArbitrum: false,
   },
   4: {
     chainID: 4,
@@ -148,6 +151,7 @@ export const l1Networks: L1Networks = {
     partnerChainIDs: [421611],
     blockTime: 15,
     isCustom: false,
+    isArbitrum: false,
   },
   5: {
     blockTime: 15,
@@ -156,6 +160,7 @@ export const l1Networks: L1Networks = {
     isCustom: false,
     name: 'Goerli',
     partnerChainIDs: [421613],
+    isArbitrum: false,
   },
 }
 
