@@ -34,7 +34,7 @@ import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 
 describe('WETH', async () => {
   beforeEach('skipIfMainnet', async function () {
-    await skipIfMainnet(this)
+    await skipIfMainnet(this) 
   })
 
   it('deposit WETH', async () => {
