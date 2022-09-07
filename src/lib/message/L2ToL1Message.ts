@@ -100,16 +100,15 @@ export class L2ToL1Message {
     const l2Network = await getL2Network(l2Provider)
     const nitroGenesisBlock = l2Network.nitroGenesisBlock || 0
 
-    const stringOrMin = (blockTag: BlockTag, nitroGenesisBlock: number) => {
+    const stringOrMin = (blockTag: BlockTag, nitroGenesisBlock: number) =>
       typeof blockTag === 'string'
         ? blockTag
         : Math.min(blockTag, nitroGenesisBlock)
-    }
-    const stringOrMax = (blockTag: BlockTag, nitroGenesisBlock: number) => {
+
+    const stringOrMax = (blockTag: BlockTag, nitroGenesisBlock: number) =>
       typeof blockTag === 'string'
         ? blockTag
         : Math.max(blockTag, nitroGenesisBlock)
-    }
 
     // only fetch nitro events after the genesis block
     const classicFilter = {
@@ -117,7 +116,6 @@ export class L2ToL1Message {
       toBlock: stringOrMin(filter.toBlock, nitroGenesisBlock),
     }
     const logQueries = []
-    // tslint:disable-next-line strict-comparisons
     if (classicFilter.fromBlock !== classicFilter.toBlock) {
       logQueries.push(
         classic.L2ToL1MessageClassic.getL2ToL1Events(
@@ -135,7 +133,6 @@ export class L2ToL1Message {
       fromBlock: stringOrMax(filter.fromBlock, nitroGenesisBlock),
       toBlock: stringOrMax(filter.toBlock, nitroGenesisBlock),
     }
-    // tslint:disable-next-line strict-comparisons
     if (nitroFilter.fromBlock !== nitroFilter.toBlock) {
       logQueries.push(
         nitro.L2ToL1MessageNitro.getL2ToL1Events(
