@@ -447,30 +447,6 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     return (await this.getSuccessfulRedeem()).status
   }
 
-  private getDepositTimeout(chainId: number) {
-    // arbitrum waits until finalisation before the accepting a deposit
-    // finalisation can be up to 2 epochs = 64 blocks on mainnet
-    // however on goerli it can be very long due to low participation therefore we
-    // wait 10 epochs there = 320 blocks. Each block is 12 seconds.
-    // In both cases we add 10 blocks leeway.
-    switch (chainId) {
-      // goerli
-      case 421613:
-        return 3960000
-      // arb one
-      case 42161:
-        return 888000
-      // nova
-      case 42170:
-        return 888000
-      // rinkeby - soon to be decomissioned
-      case 421611:
-        return 9000000
-      default:
-        throw new ArbSdkError(`Unexpected chain id: ${chainId}.`)
-    }
-  }
-
   /**
    * Wait for the retryable ticket to be created, for it to be redeemed, and for the l2Tx to be executed.
    * Note: The terminal status of a transaction that only does an eth deposit is FUNDS_DEPOSITED_ON_L2 as
@@ -487,9 +463,11 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     confirmations?: number,
     timeout?: number
   ): Promise<L1ToL2MessageWaitResult> {
+    const l2Network = await getL2Network(this.chainId)
+
     const chosenTimeout = isDefined(timeout)
       ? timeout
-      : this.getDepositTimeout(this.chainId)
+      : l2Network.depositTimeout
 
     // try to wait for the retryable ticket to be created
     const _retryableCreationReceipt = await this.getRetryableCreationReceipt(
@@ -769,13 +747,19 @@ export class EthDepositMessage {
     else return L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
   }
 
-  public async wait(confirmations?: number, timeout = 900000) {
+  public async wait(confirmations?: number, timeout?: number) {
+    const l2Network = await getL2Network(this.l2ChainId)
+
+    const chosenTimeout = isDefined(timeout)
+      ? timeout
+      : l2Network.depositTimeout
+
     if (!this.l2DepositTxReceipt) {
       this.l2DepositTxReceipt = await getTransactionReceipt(
         this.l2Provider,
         this.l2DepositTxHash,
         confirmations,
-        timeout
+        chosenTimeout
       )
     }
 

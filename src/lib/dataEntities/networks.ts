@@ -35,6 +35,10 @@ export interface L2Network extends Network {
   isArbitrum: true
   confirmPeriodBlocks: number
   retryableLifetimeSeconds: number
+  /**
+   * How long to wait (ms) for a deposit to arrive on l2 before timing out a request
+   */
+  depositTimeout: number
 }
 export interface Network {
   chainID: number
@@ -180,6 +184,10 @@ export const l2Networks: L2Networks = {
     rpcURL: process.env['ARB_ONE_RPC'] || 'https://arb1.arbitrum.io/rpc',
     isCustom: false,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
+    /**
+     * Finalisation on mainnet can be up to 2 epochs = 64 blocks on mainnet
+     */
+    depositTimeout: 888000,
   },
   421611: {
     chainID: 421611,
@@ -193,6 +201,7 @@ export const l2Networks: L2Networks = {
     rpcURL: process.env['RINKARBY_RPC'] || 'https://rinkeby.arbitrum.io/rpc',
     isCustom: false,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
+    depositTimeout: 9000000,
   },
   421613: {
     chainID: 421613,
@@ -229,6 +238,11 @@ export const l2Networks: L2Networks = {
       l2Weth: '0xe39Ab88f8A4777030A534146A9Ca3B52bd5D43A3',
       l2WethGateway: '0xf9F2e89c8347BD96742Cc07095dee490e64301d6',
     },
+    /**
+     * Low validator participation on goerli means that it can take a long time to finalise
+     * Wait 10 epochs there on goerli = 320 blocks. Each block is 12 seconds.
+     */
+    depositTimeout: 3960000,
   },
   42170: {
     chainID: 42170,
@@ -264,6 +278,7 @@ export const l2Networks: L2Networks = {
       l2Weth: '0x722E8BdD2ce80A4422E880164f2079488e115365',
       l2WethGateway: '0x7626841cB6113412F9c88D3ADC720C9FAC88D9eD',
     },
+    depositTimeout: 888000,
   },
 }
 
