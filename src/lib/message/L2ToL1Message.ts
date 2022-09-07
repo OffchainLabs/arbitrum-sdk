@@ -221,6 +221,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
   }
 
   private parseNodeCreatedAssertion(event: FetchedEvent<NodeCreatedEvent>) {
+    // test comment
     return {
       afterState: {
         blockHash: event.event.assertion.afterState.globalState.bytes32Vals[0],
