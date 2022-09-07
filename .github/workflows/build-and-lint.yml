@@ -3,21 +3,20 @@ name: Build and lint
 on:
   pull_request:
 
-env:
-  TEST_PATH: /tmp/test-results
-
 jobs:
   sdk:
     name: lint sdk
     runs-on: ubuntu-20.04
+    env:
+      TEST_PATH: /tmp/test-results
     steps:
       - name: Checkout sdk
         uses: actions/checkout@v3
-      - name: Install dependencies
-        uses: actions/setup-node@v3
+      - uses: actions/setup-node@v3
         with:
           node-version: 14
           cache: 'yarn'
+      - name: Install dependencies
         run: yarn install --frozen-lockfile
       - name: Lint sdk
         run: |
@@ -35,11 +34,11 @@ jobs:
     steps:
       - name: Checkout sdk
         uses: actions/checkout@v3
-      - name: Install dependencies
-        uses: actions/setup-node@v3
+      - uses: actions/setup-node@v3
         with:
           node-version: 14
           cache: 'yarn'
+      - name: Install dependencies
         run: yarn install --frozen-lockfile
       - name: Audit
         run: yarn audit:ci
