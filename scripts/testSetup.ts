@@ -84,7 +84,6 @@ export const getCustomNetworks = async (
   const l1Network: L1Network = {
     blockTime: 10,
     chainID: l1NetworkInfo.chainId,
-    explorerUrl: '',
     isCustom: true,
     name: 'EthLocal',
     partnerChainIDs: [l2NetworkInfo.chainId],
@@ -100,7 +99,6 @@ export const getCustomNetworks = async (
       rollup: parsedDeploymentData.rollup,
       sequencerInbox: parsedDeploymentData['sequencer-inbox'],
     },
-    explorerUrl: '',
     isArbitrum: true,
     isCustom: true,
     name: 'ArbLocal',
