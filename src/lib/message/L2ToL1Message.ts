@@ -36,6 +36,7 @@ import { isDefined } from '../utils/lib'
 import { EventArgs } from '../dataEntities/event'
 import { L2ToL1MessageStatus } from '../dataEntities/message'
 import { getL2Network } from '../dataEntities/networks'
+import { ArbSdkError } from '../dataEntities/errors'
 
 export type L2ToL1TransactionEvent =
   | EventArgs<ClassicL2ToL1TransactionEvent>
@@ -98,22 +99,50 @@ export class L2ToL1Message {
     indexInBatch?: BigNumber
   ): Promise<(L2ToL1TransactionEvent & { transactionHash: string })[]> {
     const l2Network = await getL2Network(l2Provider)
-    const nitroGenesisBlock = l2Network.nitroGenesisBlock || 0
 
-    const stringOrMin = (blockTag: BlockTag, nitroGenesisBlock: number) =>
-      typeof blockTag === 'string'
-        ? blockTag
-        : Math.min(blockTag, nitroGenesisBlock)
+    const inClassicRange = (blockTag: BlockTag, nitroGenBlock: number) => {
+      if (typeof blockTag === 'string') {
+        // taking classic of "earliest", "latest", "earliest" and the nitro gen block
+        // yields 0, nitro gen, nitro gen since the classic range is always between 0 and nitro gen
 
-    const stringOrMax = (blockTag: BlockTag, nitroGenesisBlock: number) =>
-      typeof blockTag === 'string'
-        ? blockTag
-        : Math.max(blockTag, nitroGenesisBlock)
+        switch (blockTag) {
+          case 'earliest':
+            return 0
+          case 'latest':
+            return nitroGenBlock
+          case 'pending':
+            return nitroGenBlock
+          default:
+            throw new ArbSdkError('Unrecognised block tag.')
+        }
+      }
+      return Math.min(blockTag, nitroGenBlock)
+    }
+
+    const inNitroRange = (blockTag: BlockTag, nitroGenBlock: number) => {
+      // taking nitro range of "earliest", "latest", "earliest" and the nitro gen block
+      // yields nitro gen, latest, pending since the nitro range is always between nitro gen and latest/pending
+
+      if (typeof blockTag === 'string') {
+        switch (blockTag) {
+          case 'earliest':
+            return nitroGenBlock
+          case 'latest':
+            return 'latest'
+          case 'pending':
+            return 'pending'
+          default:
+            throw new ArbSdkError('Unrecognised block tag.')
+        }
+      }
+
+      return Math.max(blockTag, nitroGenBlock)
+    }
 
     // only fetch nitro events after the genesis block
     const classicFilter = {
-      fromBlock: stringOrMin(filter.fromBlock, nitroGenesisBlock),
-      toBlock: stringOrMin(filter.toBlock, nitroGenesisBlock),
+      fromBlock: inClassicRange(filter.fromBlock, l2Network.nitroGenesisBlock),
+      toBlock: inClassicRange(filter.toBlock, l2Network.nitroGenesisBlock),
     }
     const logQueries = []
     if (classicFilter.fromBlock !== classicFilter.toBlock) {
@@ -130,8 +159,8 @@ export class L2ToL1Message {
     }
 
     const nitroFilter = {
-      fromBlock: stringOrMax(filter.fromBlock, nitroGenesisBlock),
-      toBlock: stringOrMax(filter.toBlock, nitroGenesisBlock),
+      fromBlock: inNitroRange(filter.fromBlock, l2Network.nitroGenesisBlock),
+      toBlock: inNitroRange(filter.toBlock, l2Network.nitroGenesisBlock),
     }
     if (nitroFilter.fromBlock !== nitroFilter.toBlock) {
       logQueries.push(
