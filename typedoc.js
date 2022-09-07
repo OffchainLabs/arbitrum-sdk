@@ -4,5 +4,5 @@ module.exports = {
   exclude: ['./src/lib/abi'],
   excludeNotDocumented: true,
   excludeInternal: true,
-  entryPointStrategy: 'expand'
+  entryPointStrategy: 'expand',
 }
