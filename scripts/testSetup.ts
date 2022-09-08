@@ -106,7 +106,7 @@ export const getCustomNetworks = async (
     name: 'ArbLocal',
     partnerChainID: l1NetworkInfo.chainId,
     retryableLifetimeSeconds: 7 * 24 * 60 * 60,
-    nitroGenesisBlock: 0
+    nitroGenesisBlock: 0,
   }
   return {
     l1Network,

@@ -134,8 +134,7 @@ describe('L2ToL1Message events', () => {
   })
 
   it('does call for classic and nitro events from earliest to latest', async () => {
-    const { l2Network, l2Provider, l2ProviderMock, latestBlock } =
-      await createProviderMock()
+    const { l2Network, l2Provider, l2ProviderMock } = await createProviderMock()
     const fromBlock = 'earliest'
     const toBlock = 'latest'
 
@@ -168,8 +167,7 @@ describe('L2ToL1Message events', () => {
   })
 
   it('does call for only nitro for latest', async () => {
-    const { l2Network, l2Provider, l2ProviderMock, latestBlock } =
-      await createProviderMock()
+    const { l2Network, l2Provider, l2ProviderMock } = await createProviderMock()
     const fromBlock = l2Network.nitroGenesisBlock + 2
     const toBlock = 'latest'
 
