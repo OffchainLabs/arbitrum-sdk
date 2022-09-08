@@ -54,6 +54,10 @@
     // https://github.com/advisories/GHSA-4h98-2769-gh6h
     // OpenZeppelin Contracts vulnerable to ECDSA signature malleability
     // We don’t use signatures for replay protection anywhere
-    "GHSA-4h98-2769-gh6h"
+    "GHSA-4h98-2769-gh6h",
+    // https://github.com/advisories/GHSA-xvch-5gv4-984h
+    // Minimist <=1.2.5 is vulnerable to Prototype Pollution via file index.js, function setKey() (lines 69-95).
+    // GHSA-xvch-5gv4-984h|typedoc-plugin-markdown>handlebars>minimist
+    "GHSA-xvch-5gv4-984h"
   ]
 }
