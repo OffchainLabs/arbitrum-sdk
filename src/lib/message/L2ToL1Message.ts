@@ -113,7 +113,7 @@ export class L2ToL1Message {
           case 'pending':
             return nitroGenBlock
           default:
-            throw new ArbSdkError('Unrecognised block tag.')
+            throw new ArbSdkError(`Unrecognised block tag. ${blockTag}`)
         }
       }
       return Math.min(blockTag, nitroGenBlock)
@@ -132,7 +132,7 @@ export class L2ToL1Message {
           case 'pending':
             return 'pending'
           default:
-            throw new ArbSdkError('Unrecognised block tag.')
+            throw new ArbSdkError(`Unrecognised block tag. ${blockTag}`)
         }
       }
 
@@ -149,7 +149,7 @@ export class L2ToL1Message {
       logQueries.push(
         classic.L2ToL1MessageClassic.getL2ToL1Events(
           l2Provider,
-          filter,
+          classicFilter,
           position,
           destination,
           hash,
@@ -166,7 +166,7 @@ export class L2ToL1Message {
       logQueries.push(
         nitro.L2ToL1MessageNitro.getL2ToL1Events(
           l2Provider,
-          filter,
+          nitroFilter,
           position,
           destination,
           hash
