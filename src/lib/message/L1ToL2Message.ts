@@ -38,11 +38,6 @@ import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt, isDefined } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
 
-export enum L2TxnType {
-  L2_TX = 0,
-  AUTO_REDEEM = 1,
-}
-
 export enum L1ToL2MessageStatus {
   /**
    * The retryable ticket has yet to be created
@@ -351,14 +346,14 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
       // using fromBlock.number would lead to 1 block overlap
       // not fixing it here to keep the code simple
-      const blockRange = { from: fromBlock.number, to: toBlockNumber }
-      queriedRange.push(blockRange)
+      const outerBlockRange = { from: fromBlock.number, to: toBlockNumber }
+      queriedRange.push(outerBlockRange)
       const redeemEvents = await eventFetcher.getEvents(
         ArbRetryableTx__factory,
         contract => contract.filters.RedeemScheduled(this.retryableCreationId),
         {
-          fromBlock: blockRange.from,
-          toBlock: blockRange.to,
+          fromBlock: outerBlockRange.from,
+          toBlock: outerBlockRange.to,
           address: ARB_RETRYABLE_TX_ADDRESS,
         }
       )
@@ -631,8 +626,8 @@ export class EthDepositMessage {
     toAddress: string,
     value: BigNumber
   ): string {
-    const formatNumber = (value: BigNumber): Uint8Array => {
-      return ethers.utils.stripZeros(value.toHexString())
+    const formatNumber = (numberVal: BigNumber): Uint8Array => {
+      return ethers.utils.stripZeros(numberVal.toHexString())
     }
 
     const chainId = BigNumber.from(l2ChainId)

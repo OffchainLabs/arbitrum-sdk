@@ -12,7 +12,7 @@ export class SignerProviderUtils {
   public static isSigner(
     signerOrProvider: SignerOrProvider
   ): signerOrProvider is Signer {
-    return (signerOrProvider as Signer).signMessage !== undefined
+    return isDefined((signerOrProvider as Signer).signMessage)
   }
 
   /**

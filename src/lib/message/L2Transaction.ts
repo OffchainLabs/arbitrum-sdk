@@ -29,6 +29,7 @@ import {
   L2ToL1MessageReaderOrWriter,
   L2ToL1Message,
   L2ToL1MessageWriter,
+  L2ToL1TransactionEvent,
 } from './L2ToL1Message'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
@@ -90,8 +91,14 @@ export class L2TransactionReceipt implements TransactionReceipt {
    * Get an L2ToL1TxEvent events created by this transaction
    * @returns
    */
-  public getL2ToL1Events() {
-    return parseTypedLogs(ArbSys__factory, this.logs, 'L2ToL1Tx')
+  public getL2ToL1Events(): L2ToL1TransactionEvent[] {
+    const classicLogs = parseTypedLogs(
+      ArbSys__factory,
+      this.logs,
+      'L2ToL1Transaction'
+    )
+    const nitroLogs = parseTypedLogs(ArbSys__factory, this.logs, 'L2ToL1Tx')
+    return [...classicLogs, ...nitroLogs]
   }
 
   /**

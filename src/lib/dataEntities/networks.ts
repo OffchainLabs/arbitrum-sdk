@@ -33,6 +33,7 @@ export interface L2Network extends Network {
   isArbitrum: true
   confirmPeriodBlocks: number
   retryableLifetimeSeconds: number
+  nitroGenesisBlock: number
 }
 export interface Network {
   chainID: number
@@ -65,6 +66,9 @@ export interface EthBridge {
   sequencerInbox: string
   outbox: string
   rollup: string
+  classicOutboxes?: {
+    [addr: string]: number
+  }
 }
 
 export interface L1Networks {
@@ -115,6 +119,10 @@ const rinkebyETHBridge: EthBridge = {
   sequencerInbox: '0x957C9c64f7c2cE091E56aF3F33AB20259096355F',
   outbox: '0x36648F69cEb55Ce1B2920Bf2de321FBc9c378f0E',
   rollup: '0x71c6093C564EDDCFAf03481C3F59F88849F1e644',
+  classicOutboxes: {
+    '0xefa1a42D3c4699822eE42677515A64b658be1bFc': 0,
+    '0x2360A33905dc1c72b12d975d975F42BaBdcef9F3': 326,
+  },
 }
 
 const mainnetETHBridge: EthBridge = {
@@ -123,6 +131,10 @@ const mainnetETHBridge: EthBridge = {
   sequencerInbox: '0x4c6f947Ae67F572afa4ae0730947DE7C874F95Ef',
   outbox: '0x760723CD2e632826c38Fef8CD438A4CC7E7E1A40',
   rollup: '0xC12BA48c781F6e392B49Db2E25Cd0c28cD77531A',
+  classicOutboxes: {
+    '0x667e23ABd27E623c11d4CC00ca3EC4d0bD63337a': 0,
+    '0x760723CD2e632826c38Fef8CD438A4CC7E7E1A40': 30,
+  },
 }
 
 export const l1Networks: L1Networks = {
@@ -176,6 +188,7 @@ export const l2Networks: L2Networks = {
     confirmPeriodBlocks: 45818,
     isCustom: false,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
+    nitroGenesisBlock: 22207817,
   },
   421611: {
     chainID: 421611,
@@ -188,6 +201,7 @@ export const l2Networks: L2Networks = {
     confirmPeriodBlocks: 6545, // TODO
     isCustom: false,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
+    nitroGenesisBlock: 0,
   },
   421613: {
     chainID: 421613,
@@ -221,6 +235,7 @@ export const l2Networks: L2Networks = {
       l2Weth: '0xe39Ab88f8A4777030A534146A9Ca3B52bd5D43A3',
       l2WethGateway: '0xf9F2e89c8347BD96742Cc07095dee490e64301d6',
     },
+    nitroGenesisBlock: 0,
   },
   42170: {
     chainID: 42170,
@@ -254,6 +269,7 @@ export const l2Networks: L2Networks = {
       l2Weth: '0x722E8BdD2ce80A4422E880164f2079488e115365',
       l2WethGateway: '0x7626841cB6113412F9c88D3ADC720C9FAC88D9eD',
     },
+    nitroGenesisBlock: 0,
   },
 }
 

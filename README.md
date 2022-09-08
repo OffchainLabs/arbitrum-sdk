@@ -110,7 +110,6 @@ As part of normal operation the Arbitrum sequencer will messages into the rollup
 
 3. Once done, finally run `yarn test:integration` to run the integration tests.
 
-
 Defaults to `rinkArby`, for custom network use `--network` flag.
 
 `rinkArby` expects env var `ARB_KEY` to be prefunded with at least 0.02 ETH, and env var `INFURA_KEY` to be set.

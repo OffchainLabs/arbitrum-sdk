@@ -51,7 +51,7 @@
     "ethers": "^5.1.0"
   },
   "devDependencies": {
-    "@arbitrum/nitro-contracts": "1.0.0-beta.6",
+    "@arbitrum/nitro-contracts": "1.0.0-beta.8",
     "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@typechain/ethers-v5": "9.0.0",
     "@types/chai": "^4.2.11",
@@ -77,6 +77,7 @@
     "prettier": "^2.3.2",
     "prettier-plugin-solidity": "^1.0.0-beta.17",
     "prompts": "^2.4.2",
+    "ts-mockito": "^2.6.1",
     "ts-node": "^10.2.1",
     "tslint": "^6.1.3",
     "typechain": "7.0.0",

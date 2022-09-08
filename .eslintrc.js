@@ -84,6 +84,7 @@ module.exports = {
           },
         ],
         'no-implicit-coercion': 'error',
+        '@typescript-eslint/no-shadow': ['error'],
       },
     },
   ],
