@@ -25,8 +25,8 @@ jobs:
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
-          directory: $TEST_PATH
-          fail_ci_if_error: true
+          working-directory: ./packages
+          fail_ci_if_error: false
           verbose: false
 
   sdk-audit:
@@ -38,7 +38,7 @@ jobs:
         with:
           node-version: 14
           cache: 'yarn'
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-      - name: Audit
-        run: yarn audit:ci
+      - name: Install dependencies and audit
+        run: |
+          yarn install --cache-folder ~/.cache/yarn
+          yarn audit:ci
