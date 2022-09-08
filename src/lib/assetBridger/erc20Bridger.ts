@@ -518,11 +518,11 @@ export class Erc20Bridger extends AssetBridger<
     }
 
     const depositFunc = (
-      params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
+      depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
     ) => {
       const innerData = defaultAbiCoder.encode(
         ['uint256', 'bytes'],
-        [params.maxSubmissionCost, '0x']
+        [depositParams.maxSubmissionCost, '0x']
       )
       const iGatewayRouter = L1GatewayRouter__factory.createInterface()
 
@@ -531,15 +531,15 @@ export class Erc20Bridger extends AssetBridger<
           erc20L1Address,
           destinationAddress,
           amount,
-          params.gasLimit,
-          params.maxFeePerGas,
+          depositParams.gasLimit,
+          depositParams.maxFeePerGas,
           innerData,
         ]),
         to: this.l2Network.tokenBridge.l1GatewayRouter,
         from: defaultedParams.from,
-        value: params.gasLimit
-          .mul(params.maxFeePerGas)
-          .add(params.maxSubmissionCost),
+        value: depositParams.gasLimit
+          .mul(depositParams.maxFeePerGas)
+          .add(depositParams.maxSubmissionCost),
         // we dont include the l2 call value for token deposits because
         // they either have 0 call value, or their call value is withdrawn from
         // a contract by the gateway (weth). So in both of these cases the l2 call value
