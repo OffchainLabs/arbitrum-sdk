@@ -104,7 +104,12 @@ As part of normal operation the Arbitrum sequencer will messages into the rollup
 
 ### Run Integration tests
 
-`yarn test:integration`
+1. First, make sure you have a Nitro node running. Check out the nitro repo, and run the following command `./test-node.bash --init --no-blockscout`
+
+2. After the node has started up (that could take upto 20-30 mins), run `yarn gen:network`.
+
+3. Once done, finally run `yarn test:integration` to run the integration tests.
+
 
 Defaults to `rinkArby`, for custom network use `--network` flag.
 

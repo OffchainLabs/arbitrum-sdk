@@ -14,7 +14,7 @@ export interface L1ToL2TransactionRequest {
   /**
    * Core fields needed to form the L1 component of the transaction request
    */
-  core: Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
+  core: Required<Pick<TransactionRequest, 'to' | 'data' | 'value' | 'from'>>
 
   /**
    * Information about the retryable ticket, and it's subsequent execution, that

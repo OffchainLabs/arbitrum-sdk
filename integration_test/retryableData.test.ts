@@ -24,7 +24,7 @@ import { fundL1, skipIfMainnet } from './testHelpers'
 import { RetryableDataTools } from '../src'
 import { Wallet } from 'ethers'
 import { testSetup } from '../scripts/testSetup'
-import { randomBytes } from 'ethers/lib/utils'
+import { parseEther, randomBytes } from 'ethers/lib/utils'
 import { Inbox__factory } from '../src/lib/abi/factories/Inbox__factory'
 import { GasOverrides } from '../src/lib/message/L1ToL2MessageGasEstimator'
 const depositAmount = BigNumber.from(100)
@@ -122,7 +122,7 @@ describe('RevertData', () => {
 
   it('is the same as what we estimate in erc20Bridger', async () => {
     const { erc20Bridger, l1Signer, l2Signer } = await testSetup()
-    await fundL1(l1Signer)
+    await fundL1(l1Signer, parseEther('2'))
 
     const deployErc20 = new TestERC20__factory().connect(l1Signer)
     const testToken = await deployErc20.deploy()

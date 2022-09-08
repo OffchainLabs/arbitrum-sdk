@@ -88,6 +88,7 @@ export const getCustomNetworks = async (
     isCustom: true,
     name: 'EthLocal',
     partnerChainIDs: [l2NetworkInfo.chainId],
+    isArbitrum: false,
   }
 
   const l2Network: Omit<L2Network, 'tokenBridge'> = {
