@@ -95,6 +95,11 @@ export class EthBridger extends AssetBridger<
   EthDepositParams | L1ToL2TxReqAndSigner,
   EthWithdrawParams | L2ToL1TxReqAndSigner
 > {
+  /**
+   * Get a transaction request for an eth deposit
+   * @param params 
+   * @returns 
+   */
   public async getDepositRequest(
     params: EthDepositRequestParams
   ): Promise<OmitTyped<L1ToL2TransactionRequest, 'retryableData'>> {
@@ -110,7 +115,7 @@ export class EthBridger extends AssetBridger<
     ).encodeFunctionData('depositEth()')
 
     return {
-      core: {
+      txRequest: {
         to: this.l2Network.ethBridge.inbox,
         value: params.amount,
         data: functionData,
@@ -138,13 +143,18 @@ export class EthBridger extends AssetBridger<
         })
 
     const tx = await params.l1Signer.sendTransaction({
-      ...ethDeposit.core,
+      ...ethDeposit.txRequest,
       ...params.overrides,
     })
 
     return L1TransactionReceipt.monkeyPatchEthDepositWait(tx)
   }
 
+  /**
+   * Get a transaction request for an eth withdrawal
+   * @param params 
+   * @returns 
+   */
   public async getWithdrawalRequest(
     params: EthWithdrawParams
   ): Promise<L2ToL1TransactionRequest> {

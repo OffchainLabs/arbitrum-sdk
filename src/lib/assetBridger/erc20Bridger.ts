@@ -548,14 +548,14 @@ export class Erc20Bridger extends AssetBridger<
     }
 
     const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
-    const estimates = await gasEstimator.populateL1ToL2FunctionParams(
+    const estimates = await gasEstimator.populateFunctionParams(
       depositFunc,
       l1Provider,
       tokenGasOverrides
     )
 
     return {
-      core: {
+      txRequest: {
         to: this.l2Network.tokenBridge.l1GatewayRouter,
         data: estimates.data,
         value: estimates.value,
@@ -566,7 +566,7 @@ export class Erc20Bridger extends AssetBridger<
         ...estimates.estimates,
       },
       isValid: async () => {
-        const reEstimates = await gasEstimator.populateL1ToL2FunctionParams(
+        const reEstimates = await gasEstimator.populateFunctionParams(
           depositFunc,
           l1Provider,
           tokenGasOverrides
@@ -604,7 +604,7 @@ export class Erc20Bridger extends AssetBridger<
       : await this.getDepositRequest({ ...params, l1Provider })
 
     const tx = await params.l1Signer.sendTransaction({
-      ...tokenDeposit.core,
+      ...tokenDeposit.txRequest,
       ...params.overrides,
     })
 
@@ -787,7 +787,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
 
     const l1Provider = l1Signer.provider!
     const gEstimator = new L1ToL2MessageGasEstimator(l2Provider)
-    const setTokenEstimates2 = await gEstimator.populateL1ToL2FunctionParams(
+    const setTokenEstimates2 = await gEstimator.populateFunctionParams(
       (params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>) =>
         encodeFuncData(
           {
@@ -803,7 +803,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
       l1Provider
     )
 
-    const setGatewayEstimates2 = await gEstimator.populateL1ToL2FunctionParams(
+    const setGatewayEstimates2 = await gEstimator.populateFunctionParams(
       (params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>) =>
         encodeFuncData(
           {
@@ -927,7 +927,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
       }
     }
     const gEstimator = new L1ToL2MessageGasEstimator(l2Provider)
-    const estimates = await gEstimator.populateL1ToL2FunctionParams(
+    const estimates = await gEstimator.populateFunctionParams(
       setGatewaysFunc,
       l1Signer.provider,
       options

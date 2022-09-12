@@ -270,7 +270,7 @@ export class L1ToL2MessageGasEstimator {
    * @param gasOverrides
    * @returns
    */
-  public async populateL1ToL2FunctionParams(
+  public async populateFunctionParams(
     /**
      * Function that will internally make an L1->L2 transaction
      * Will initially be called with dummy values to trigger a special revert containing
@@ -278,7 +278,7 @@ export class L1ToL2MessageGasEstimator {
      */
     dataFunc: (
       params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
-    ) => L1ToL2TransactionRequest['core'],
+    ) => L1ToL2TransactionRequest['txRequest'],
     l1Provider: Provider,
     gasOverrides?: GasOverrides
   ) {
