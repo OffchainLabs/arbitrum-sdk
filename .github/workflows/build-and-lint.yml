@@ -1,0 +1,54 @@
+name: Build and lint
+
+on:
+  pull_request:
+
+jobs:
+  sdk:
+    name: lint sdk
+    runs-on: ubuntu-20.04
+    env:
+      TEST_PATH: /tmp/test-results
+    steps:
+      - name: Checkout sdk
+        uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 14
+          cache: 'yarn'
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      - name: Lint sdk
+        run: |
+          yarn build --reporter-options output=$TEST_PATH/sdk.xml
+          yarn lint --format junit -o $TEST_PATH/sdk-lint.xml
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: lint-results
+          path: ${{ env.TEST_PATH }}
+      - name: Publish Test Report
+        uses: mikepenz/action-junit-report@v3
+        if: always() # always run even if the previous step fails
+        with:
+          report_paths: '${{ env.TEST_PATH }}/sdk-lint.xml'
+          fail_on_failure: false
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          fail_ci_if_error: false
+          verbose: false
+
+  sdk-audit:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout sdk
+        uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 14
+          cache: 'yarn'
+      - name: Install dependencies and audit
+        run: |
+          yarn install --cache-folder ~/.cache/yarn
+          yarn audit:ci
