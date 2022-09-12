@@ -97,8 +97,8 @@ export class EthBridger extends AssetBridger<
 > {
   /**
    * Get a transaction request for an eth deposit
-   * @param params 
-   * @returns 
+   * @param params
+   * @returns
    */
   public async getDepositRequest(
     params: EthDepositRequestParams
@@ -152,8 +152,8 @@ export class EthBridger extends AssetBridger<
 
   /**
    * Get a transaction request for an eth withdrawal
-   * @param params 
-   * @returns 
+   * @param params
+   * @returns
    */
   public async getWithdrawalRequest(
     params: EthWithdrawParams
