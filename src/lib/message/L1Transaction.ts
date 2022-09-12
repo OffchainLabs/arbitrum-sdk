@@ -165,7 +165,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
    * Get any eth deposit messages created by this transaction
    * @param l2SignerOrProvider
    */
-  public async getEthDepositMessages(
+  public async getEthDeposits(
     l2Provider: Provider
   ): Promise<EthDepositMessage[]> {
     return Promise.all(
@@ -308,7 +308,7 @@ export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
       message: EthDepositMessage
     } & EthDepositMessageWaitResult
   > {
-    const message = (await this.getEthDepositMessages(l2Provider))[0]
+    const message = (await this.getEthDeposits(l2Provider))[0]
     if (!message)
       throw new ArbSdkError('Unexpected missing Eth Deposit message.')
     const res = await message.wait(confirmations, timeout)
