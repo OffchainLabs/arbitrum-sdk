@@ -212,7 +212,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
           mn.inboxMessageEvent.data
         )
 
-        return L1ToL2Message.fromTxComponents(
+        return L1ToL2Message.fromEventComponents(
           l2SignerOrProvider,
           BigNumber.from(chainID).toNumber(),
           mn.bridgeMessageEvent.sender,

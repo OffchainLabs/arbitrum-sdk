@@ -149,7 +149,7 @@ export abstract class L1ToL2Message {
     return ethers.utils.keccak256(rlpEnc)
   }
 
-  public static fromTxComponents<T extends SignerOrProvider>(
+  public static fromEventComponents<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
     chainId: number,
     sender: string,
@@ -158,7 +158,7 @@ export abstract class L1ToL2Message {
     messageData: RetryableMessageParams,
     retryableCreationId?: string // TODO: remove this after migration
   ): L1ToL2MessageReaderOrWriter<T>
-  public static fromTxComponents<T extends SignerOrProvider>(
+  public static fromEventComponents<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
     chainId: number,
     sender: string,
