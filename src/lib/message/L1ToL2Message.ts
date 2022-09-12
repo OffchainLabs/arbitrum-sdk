@@ -155,8 +155,7 @@ export abstract class L1ToL2Message {
     sender: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
-    messageData: RetryableMessageParams,
-    retryableCreationId?: string // TODO: remove this after migration
+    messageData: RetryableMessageParams
   ): L1ToL2MessageReaderOrWriter<T>
   public static fromTxComponents<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
@@ -164,8 +163,7 @@ export abstract class L1ToL2Message {
     sender: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
-    messageData: RetryableMessageParams,
-    retryableCreationId?: string // TODO: remove this after migration
+    messageData: RetryableMessageParams
   ): L1ToL2MessageReader | L1ToL2MessageWriter {
     return SignerProviderUtils.isSigner(l2SignerOrProvider)
       ? new L1ToL2MessageWriter(
@@ -174,8 +172,7 @@ export abstract class L1ToL2Message {
           sender,
           messageNumber,
           l1BaseFee,
-          messageData,
-          retryableCreationId
+          messageData
         )
       : new L1ToL2MessageReader(
           l2SignerOrProvider,
@@ -183,8 +180,7 @@ export abstract class L1ToL2Message {
           sender,
           messageNumber,
           l1BaseFee,
-          messageData,
-          retryableCreationId
+          messageData
         )
   }
 
@@ -193,28 +189,23 @@ export abstract class L1ToL2Message {
     public readonly sender: string,
     public readonly messageNumber: BigNumber,
     public readonly l1BaseFee: BigNumber,
-    public readonly messageData: RetryableMessageParams,
-    retryableCreationId?: string // TODO: remove this after migration
+    public readonly messageData: RetryableMessageParams
   ) {
-    if (isDefined(retryableCreationId)) {
-      this.retryableCreationId = retryableCreationId
-    } else {
-      this.retryableCreationId = L1ToL2Message.calculateSubmitRetryableId(
-        chainId,
-        sender,
-        messageNumber,
-        l1BaseFee,
-        messageData.destAddress,
-        messageData.l2CallValue,
-        messageData.l1Value,
-        messageData.maxSubmissionFee,
-        messageData.excessFeeRefundAddress,
-        messageData.callValueRefundAddress,
-        messageData.gasLimit,
-        messageData.maxFeePerGas,
-        messageData.data
-      )
-    }
+    this.retryableCreationId = L1ToL2Message.calculateSubmitRetryableId(
+      chainId,
+      sender,
+      messageNumber,
+      l1BaseFee,
+      messageData.destAddress,
+      messageData.l2CallValue,
+      messageData.l1Value,
+      messageData.maxSubmissionFee,
+      messageData.excessFeeRefundAddress,
+      messageData.callValueRefundAddress,
+      messageData.gasLimit,
+      messageData.maxFeePerGas,
+      messageData.data
+    )
   }
 }
 
@@ -238,17 +229,9 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     sender: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
-    messageData: RetryableMessageParams,
-    retryableCreationId?: string // TODO: remove this after migration
+    messageData: RetryableMessageParams
   ) {
-    super(
-      chainId,
-      sender,
-      messageNumber,
-      l1BaseFee,
-      messageData,
-      retryableCreationId
-    )
+    super(chainId, sender, messageNumber, l1BaseFee, messageData)
   }
 
   /**
@@ -518,8 +501,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
     sender: string,
     messageNumber: BigNumber,
     l1BaseFee: BigNumber,
-    messageData: RetryableMessageParams,
-    retryableCreationId?: string // TODO: remove this after migration
+    messageData: RetryableMessageParams
   ) {
     super(
       l2Signer.provider!,
@@ -527,8 +509,7 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
       sender,
       messageNumber,
       l1BaseFee,
-      messageData,
-      retryableCreationId
+      messageData
     )
     if (!l2Signer.provider)
       throw new ArbSdkError('Signer not connected to provider.')
