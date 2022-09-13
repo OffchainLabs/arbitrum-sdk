@@ -17,7 +17,8 @@
 'use strict'
 
 import { Provider } from '@ethersproject/abstract-provider'
-import { BigNumber } from 'ethers'
+import { BigNumber, utils } from 'ethers'
+import { arrayify } from '@ethersproject/bytes'
 
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { Multicall2 } from '../abi/Multicall2'
@@ -329,8 +330,16 @@ export class MultiCaller {
         input.push({
           targetAddr: t,
           encoder: () => erc20Iface.encodeFunctionData('name'),
-          decoder: (returnData: string) =>
-            erc20Iface.decodeFunctionResult('name', returnData)[0] as string,
+          decoder: (returnData: string) => {
+            if (arrayify(returnData).length === 32) {
+              return utils.parseBytes32String(returnData) as string
+            } else {
+              return erc20Iface.decodeFunctionResult(
+                'name',
+                returnData
+              )[0] as string
+            }
+          },
         })
       }
 
