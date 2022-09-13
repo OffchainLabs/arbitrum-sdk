@@ -199,7 +199,6 @@ describe('Ether', async () => {
     ])
     state.mining = false
 
-    // await withdrawMessage.waitUntilReadyToExecute(l2Signer.provider!)
     expect(
       await withdrawMessage.status(l2Signer.provider!),
       'confirmed status'
