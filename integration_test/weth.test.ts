@@ -98,7 +98,7 @@ describe.only('WETH', async () => {
     )
   })
 
-  it.only('withdraw WETH', async () => {
+  it('withdraw WETH', async () => {
     const wethToWrap = parseEther('0.00001')
     const wethToWithdraw = parseEther('0.00000001')
 
