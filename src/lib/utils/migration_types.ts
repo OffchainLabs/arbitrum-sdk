@@ -23,12 +23,8 @@ import { L1WethGateway__factory as ClassicL1WethGateway__factory } from '@arbitr
 import { L1ERC20Gateway__factory as NitroL1ERC20Gateway__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/L1ERC20Gateway__factory'
 import { L1WethGateway__factory as NitroL1WethGateway__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/L1WethGateway__factory'
 import { FetchedEvent } from './eventFetcher'
-import { L2Network as NitroL2Network } from '@arbitrum/sdk-nitro'
-import { Inbox__factory as NitroInbox__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/Inbox__factory'
 import { Inbox__factory as ClassicInbox__factory } from '@arbitrum/sdk-classic/dist/lib/abi/factories/Inbox__factory'
 import { InboxMessageDeliveredEvent as ClassicInboxMessageDeliveredEvent } from '@arbitrum/sdk-classic/dist/lib/abi/Inbox'
-import { Bridge__factory as NitroBridgeFactory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/Bridge__factory'
-import { RollupUserLogic__factory as NitroRollupUserLogic__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/RollupUserLogic__factory'
 import { L1ToL2MessageReader as ClassicL1ToL2MessageReader } from '@arbitrum/sdk-classic/dist/index'
 
 import { l1Networks as classicL1Networks } from '@arbitrum/sdk-classic/dist/lib/dataEntities/networks'
@@ -50,46 +46,6 @@ import {
   TokenWithdrawParams,
 } from '../assetBridger/erc20Bridger'
 import { GasOverrides } from '../message/L1ToL2MessageGasEstimator'
-
-export const generateL2NitroNetwork = async (
-  existingNitroL2Network: nitro.L2Network,
-  l1Provider: Provider
-): Promise<NitroL2Network> => {
-  // we know the inbox hasnt changed
-  const inboxAddr = existingNitroL2Network.ethBridge.inbox
-
-  const inbox = NitroInbox__factory.connect(inboxAddr, l1Provider)
-  const bridgeAddr = await inbox.bridge()
-
-  // the rollup is the bridge owner
-  const bridge = NitroBridgeFactory.connect(bridgeAddr, l1Provider)
-  const rollupAddr = await bridge.rollup()
-
-  const rollup = NitroRollupUserLogic__factory.connect(rollupAddr, l1Provider)
-  const sequencerInboxAddr = await rollup.sequencerInbox()
-  const outboxAddr = await rollup.outbox()
-
-  return {
-    chainID: existingNitroL2Network.chainID,
-    confirmPeriodBlocks: existingNitroL2Network.confirmPeriodBlocks,
-    ethBridge: {
-      inbox: inboxAddr,
-      bridge: bridgeAddr,
-      outbox: outboxAddr,
-      rollup: rollupAddr,
-      sequencerInbox: sequencerInboxAddr,
-    },
-    explorerUrl: existingNitroL2Network.explorerUrl,
-    isArbitrum: existingNitroL2Network.isArbitrum,
-    isCustom: existingNitroL2Network.isCustom,
-    name: existingNitroL2Network.name,
-    partnerChainID: existingNitroL2Network.partnerChainID,
-    retryableLifetimeSeconds: existingNitroL2Network.retryableLifetimeSeconds,
-    rpcURL: existingNitroL2Network.rpcURL,
-    tokenBridge: existingNitroL2Network.tokenBridge,
-    gif: existingNitroL2Network.gif,
-  }
-}
 
 /**
  * New outboxes can be added to the bridge, and withdrawals always use the latest outbox.
@@ -189,6 +145,7 @@ export const convertNetworkClassicToNitro = (
       outbox: outboxes[outboxes.length - 1],
     },
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
+    depositTimeout: l2Network.chainID === 421613 ? 3960000 : 888000,
   }
 }
 

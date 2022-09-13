@@ -45,6 +45,7 @@ export interface L2Network extends Network {
   isArbitrum: true
   confirmPeriodBlocks: number
   retryableLifetimeSeconds: number
+  depositTimeout: number
 }
 export interface Network {
   chainID: number
