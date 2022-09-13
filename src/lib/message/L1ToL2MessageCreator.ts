@@ -113,7 +113,7 @@ export class L1ToL2MessageCreator {
     )
 
     return {
-      core: {
+      txRequest: {
         to: l2Network.ethBridge.inbox,
         data: functionData,
         value: estimates.deposit,
