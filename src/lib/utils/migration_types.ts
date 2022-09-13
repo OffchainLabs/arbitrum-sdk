@@ -1,17 +1,13 @@
 import * as classic from '@arbitrum/sdk-classic'
 import * as nitro from '@arbitrum/sdk-nitro'
 import { BigNumber, ContractTransaction, ethers, Overrides } from 'ethers'
-import { JsonRpcProvider, TransactionReceipt } from '@ethersproject/providers'
+import { TransactionReceipt } from '@ethersproject/providers'
 import { Zero } from '@ethersproject/constants'
 import { ErrorCode, Logger } from '@ethersproject/logger'
-import {
-  ARB_SYS_ADDRESS,
-  SEVEN_DAYS_IN_SECONDS,
-} from '../dataEntities/constants'
+import { SEVEN_DAYS_IN_SECONDS } from '../dataEntities/constants'
 import { GasOverrides as ClassicGasOverrides } from '@arbitrum/sdk-classic/dist/lib/message/L1ToL2MessageGasEstimator'
 import { GasOverrides as NitroGasOverrides } from '@arbitrum/sdk-nitro/dist/lib/message/L1ToL2MessageGasEstimator'
 import { Provider } from '@ethersproject/abstract-provider'
-import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import {
   SignerOrProvider,
   SignerProviderUtils,
@@ -27,12 +23,8 @@ import { L1WethGateway__factory as ClassicL1WethGateway__factory } from '@arbitr
 import { L1ERC20Gateway__factory as NitroL1ERC20Gateway__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/L1ERC20Gateway__factory'
 import { L1WethGateway__factory as NitroL1WethGateway__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/L1WethGateway__factory'
 import { FetchedEvent } from './eventFetcher'
-import { L2Network as NitroL2Network } from '@arbitrum/sdk-nitro'
-import { Inbox__factory as NitroInbox__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/Inbox__factory'
 import { Inbox__factory as ClassicInbox__factory } from '@arbitrum/sdk-classic/dist/lib/abi/factories/Inbox__factory'
 import { InboxMessageDeliveredEvent as ClassicInboxMessageDeliveredEvent } from '@arbitrum/sdk-classic/dist/lib/abi/Inbox'
-import { Bridge__factory as NitroBridgeFactory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/Bridge__factory'
-import { RollupUserLogic__factory as NitroRollupUserLogic__factory } from '@arbitrum/sdk-nitro/dist/lib/abi/factories/RollupUserLogic__factory'
 import { L1ToL2MessageReader as ClassicL1ToL2MessageReader } from '@arbitrum/sdk-classic/dist/index'
 
 import { l1Networks as classicL1Networks } from '@arbitrum/sdk-classic/dist/lib/dataEntities/networks'
@@ -54,47 +46,6 @@ import {
   TokenWithdrawParams,
 } from '../assetBridger/erc20Bridger'
 import { GasOverrides } from '../message/L1ToL2MessageGasEstimator'
-import { isDefined } from './lib'
-
-export const generateL2NitroNetwork = async (
-  existingNitroL2Network: nitro.L2Network,
-  l1Provider: Provider
-): Promise<NitroL2Network> => {
-  // we know the inbox hasnt changed
-  const inboxAddr = existingNitroL2Network.ethBridge.inbox
-
-  const inbox = NitroInbox__factory.connect(inboxAddr, l1Provider)
-  const bridgeAddr = await inbox.bridge()
-
-  // the rollup is the bridge owner
-  const bridge = NitroBridgeFactory.connect(bridgeAddr, l1Provider)
-  const rollupAddr = await bridge.rollup()
-
-  const rollup = NitroRollupUserLogic__factory.connect(rollupAddr, l1Provider)
-  const sequencerInboxAddr = await rollup.sequencerInbox()
-  const outboxAddr = await rollup.outbox()
-
-  return {
-    chainID: existingNitroL2Network.chainID,
-    confirmPeriodBlocks: existingNitroL2Network.confirmPeriodBlocks,
-    ethBridge: {
-      inbox: inboxAddr,
-      bridge: bridgeAddr,
-      outbox: outboxAddr,
-      rollup: rollupAddr,
-      sequencerInbox: sequencerInboxAddr,
-    },
-    explorerUrl: existingNitroL2Network.explorerUrl,
-    isArbitrum: existingNitroL2Network.isArbitrum,
-    isCustom: existingNitroL2Network.isCustom,
-    name: existingNitroL2Network.name,
-    partnerChainID: existingNitroL2Network.partnerChainID,
-    retryableLifetimeSeconds: existingNitroL2Network.retryableLifetimeSeconds,
-    rpcURL: existingNitroL2Network.rpcURL,
-    tokenBridge: existingNitroL2Network.tokenBridge,
-    gif: existingNitroL2Network.gif,
-  }
-}
 
 /**
  * New outboxes can be added to the bridge, and withdrawals always use the latest outbox.
@@ -129,37 +80,7 @@ export const getOutboxAddr = (
   return res[0]
 }
 
-type LastUpdated = { timestamp: number; value: boolean }
 const fifthteenMinutesMs = 15 * 60 * 1000
-
-const makeCache = () => {
-  const isNitroCache: {
-    [l2ChainId: number]: { l1: LastUpdated; l2: LastUpdated }
-  } = {}
-
-  const getCacheWithDefault = (l2ChainId: number) => {
-    let nitroCacheRes = isNitroCache[l2ChainId]
-    if (!isDefined(nitroCacheRes))
-      nitroCacheRes = {
-        l1: { timestamp: 0, value: false },
-        l2: { timestamp: 0, value: false },
-      }
-    if (!isDefined(nitroCacheRes.l1))
-      nitroCacheRes.l1 = { timestamp: 0, value: false }
-    if (!isDefined(nitroCacheRes.l2))
-      nitroCacheRes.l2 = { timestamp: 0, value: false }
-    return nitroCacheRes
-  }
-
-  const setCache = (
-    l2ChainId: number,
-    val: { l1: LastUpdated; l2: LastUpdated }
-  ) => (isNitroCache[l2ChainId] = val)
-
-  return { setCache, getCacheWithDefault }
-}
-
-const cache = makeCache()
 
 export const isNitroL1 = async (
   l2ChainId: number,
@@ -167,76 +88,11 @@ export const isNitroL1 = async (
   /**
    * Wait at least this amount of time before rechecking if isNitro
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   timeSinceCheckMs: number = fifthteenMinutesMs
 ) => {
-  // the first argument to this function used to be an l1 provider
-  // if the calling code was javascript they may miss this change
-  if (typeof l2ChainId !== 'number')
-    throw new ArbSdkError(
-      `Unexpected l2 chain id type is not a number: ${l2ChainId}`
-    )
-
-  const cacheData = cache.getCacheWithDefault(l2ChainId)
-  if (cacheData.l1.value) return true
-  if (Date.now() - cacheData.l1.timestamp > timeSinceCheckMs) {
-    const _l1Network = await nitro.getL1Network(l1Provider)
-    const l1Network = isDefined(_l1Network.rpcURL)
-      ? _l1Network
-      : {
-          ..._l1Network,
-          rpcURL: process.env['L1RPC'] || 'undefined rpc',
-        }
-    const partner = l1Network.partnerChainIDs.filter(
-      pcId => pcId === l2ChainId
-    )[0]
-    const l2Network = await nitro.getL2Network(partner)
-    if (!l2Network)
-      throw new ArbSdkError(`No l2 network found with chain id ${partner}`)
-    try {
-      const inboxAddr = l2Network.ethBridge.inbox
-      const inbox = NitroInbox__factory.connect(inboxAddr, l1Provider)
-      const bridgeAddr = await inbox.bridge()
-      const bridge = NitroBridgeFactory.connect(bridgeAddr, l1Provider)
-      if (!(await bridge.allowedDelayedInboxes(inboxAddr))) {
-        // In the middle of the migration the bridge is switched over,
-        // but the inbox isn't enabled yet.
-        // This error will be caught below and return false.
-        throw new ArbSdkError(`Inbox isn't authorized by bridge`)
-      }
-      const rollupAdd = await bridge.rollup()
-      const rollup = NitroRollupUserLogic__factory.connect(
-        rollupAdd,
-        l1Provider
-      )
-      // this will error if we're not nitro
-      await rollup.wasmModuleRoot()
-
-      // when we've switched to nitro we need to regenerate the nitro
-      // network config and set it
-      const nitroL2Network = await generateL2NitroNetwork(
-        l2Network,
-        SignerProviderUtils.getProviderOrThrow(l1Provider)
-      )
-
-      nitroL2Networks[l2ChainId] = nitroL2Network
-      cache.setCache(nitroL2Network.chainID, {
-        ...cacheData,
-        l1: {
-          timestamp: Date.now(),
-          value: true,
-        },
-      })
-    } catch (err) {
-      cache.setCache(l2ChainId, {
-        ...cacheData,
-        l1: {
-          timestamp: Date.now(),
-          value: false,
-        },
-      })
-    }
-  }
-  return cache.getCacheWithDefault(l2ChainId).l1.value
+  // everything is nitro now
+  return true
 }
 
 export const isNitroL2 = async (
@@ -244,51 +100,11 @@ export const isNitroL2 = async (
   /**
    * Wait at least this amount of time before rechecking if isNitro
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   timeSinceCheckMs: number = fifthteenMinutesMs
 ): Promise<boolean> => {
-  const l2Network = await nitro.getL2Network(l2SignerOrProvider)
-  const cacheData = cache.getCacheWithDefault(l2Network.chainID)
-  if (cacheData.l2.value) return true
-  if (Date.now() - cacheData.l2.timestamp > timeSinceCheckMs) {
-    const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, l2SignerOrProvider)
-    const blockNumber = await arbSys.arbBlockNumber()
-    try {
-      // will throw an error if pre nitro
-      await arbSys.arbBlockHash(blockNumber.sub(1))
-
-      const _l1Network = await nitro.getL1Network(l2Network.partnerChainID)
-      const l1Network = isDefined(_l1Network.rpcURL)
-        ? _l1Network
-        : {
-            ..._l1Network,
-            rpcURL: process.env['L1RPC'] || 'undefined rpc',
-          }
-      const l1Provider = new JsonRpcProvider(l1Network.rpcURL)
-      // when we've switched to nitro we need to regenerate the nitro
-      // network config and set it
-      const nitroL2Network = await generateL2NitroNetwork(
-        l2Network,
-        SignerProviderUtils.getProviderOrThrow(l1Provider)
-      )
-      nitroL2Networks[nitroL2Network.chainID] = nitroL2Network
-      cache.setCache(l2Network.chainID, {
-        ...cacheData,
-        l2: {
-          timestamp: Date.now(),
-          value: true,
-        },
-      })
-    } catch {
-      cache.setCache(l2Network.chainID, {
-        ...cacheData,
-        l2: {
-          timestamp: Date.now(),
-          value: false,
-        },
-      })
-    }
-  }
-  return cache.getCacheWithDefault(l2Network.chainID).l2.value
+  // everything is nitro now
+  return true
 }
 
 export const lookupExistingNetwork = (
@@ -329,6 +145,7 @@ export const convertNetworkClassicToNitro = (
       outbox: outboxes[outboxes.length - 1],
     },
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
+    depositTimeout: l2Network.chainID === 421613 ? 3960000 : 888000,
   }
 }
 
