@@ -108,7 +108,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
    * Get any InboxMessageDelivered events that were emitted during this transaction
    * @returns
    */
-  public getInboxMessageDeliveredEvent() {
+  public getInboxMessageDeliveredEvents() {
     return parseTypedLogs(
       Inbox__factory,
       this.logs,
@@ -126,7 +126,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     bridgeMessageEvent: EventArgs<MessageDeliveredEvent>
   }[] {
     const bridgeMessages = this.getMessageDeliveredEvents()
-    const inboxMessages = this.getInboxMessageDeliveredEvent()
+    const inboxMessages = this.getInboxMessageDeliveredEvents()
 
     if (bridgeMessages.length !== inboxMessages.length) {
       throw new ArbSdkError(
