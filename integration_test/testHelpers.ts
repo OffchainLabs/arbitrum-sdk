@@ -25,7 +25,7 @@ import { parseEther } from '@ethersproject/units'
 
 import { config, getSigner, testSetup } from '../scripts/testSetup'
 
-import { Signer } from 'ethers'
+import { Signer, Wallet } from 'ethers'
 import { Erc20Bridger, L1ToL2MessageStatus, L2ToL1MessageStatus } from '../src'
 import { L2Network } from '../src/lib/dataEntities/networks'
 import { GasOverrides } from '../src/lib/message/L1ToL2MessageGasEstimator'
@@ -58,6 +58,21 @@ interface WithdrawalParams {
   l2Signer: Signer
   l1Signer: Signer
   gatewayType: GatewayType
+}
+
+export const mineUntilStop = async (
+  miner: Signer,
+  state: { mining: boolean }
+) => {
+  while (state.mining) {
+    await (
+      await miner.sendTransaction({
+        to: await miner.getAddress(),
+        value: 0,
+      })
+    ).wait()
+    await wait(15000)
+  }
 }
 
 /**
@@ -123,7 +138,20 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   const balBefore = await params.l1Token.balanceOf(
     await params.l1Signer.getAddress()
   )
-  await message.waitUntilReadyToExecute(params.l2Signer.provider!)
+
+  // whilst waiting for status we miner on both l1 and l2
+  const miner1 = Wallet.createRandom().connect(params.l1Signer.provider!)
+  const miner2 = Wallet.createRandom().connect(params.l2Signer.provider!)
+  await fundL1(miner1, parseEther('1'))
+  await fundL2(miner2, parseEther('1'))
+  const state = { mining: true }
+  await Promise.race([
+    mineUntilStop(miner1, state),
+    mineUntilStop(miner2, state),
+    message.waitUntilReadyToExecute(params.l2Signer.provider!),
+  ])
+  state.mining = false
+
   expect(
     await message.status(params.l2Signer.provider!),
     'confirmed status'
@@ -132,6 +160,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   const execTx = await message.execute(params.l2Signer.provider!)
 
   await execTx.wait()
+
   expect(
     await message.status(params.l2Signer.provider!),
     'executed status'

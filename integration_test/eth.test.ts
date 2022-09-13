@@ -22,7 +22,13 @@ import dotenv from 'dotenv'
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
 
-import { fundL1, fundL2, prettyLog, skipIfMainnet } from './testHelpers'
+import {
+  fundL1,
+  fundL2,
+  mineUntilStop,
+  prettyLog,
+  skipIfMainnet,
+} from './testHelpers'
 import {
   L2ToL1Message,
   L2ToL1MessageStatus,
@@ -170,7 +176,18 @@ describe('Ether', async () => {
     //   expectedFinalBalance.toString()
     // )
 
-    await withdrawMessage.waitUntilReadyToExecute(l2Signer.provider!)
+    const miner1 = Wallet.createRandom().connect(l1Signer.provider!)
+    const miner2 = Wallet.createRandom().connect(l2Signer.provider!)
+    await fundL1(miner1, parseEther('1'))
+    await fundL2(miner2, parseEther('1'))
+    const state = { mining: true }
+    await Promise.race([
+      mineUntilStop(miner1, state),
+      mineUntilStop(miner2, state),
+      withdrawMessage.waitUntilReadyToExecute(l2Signer.provider!),
+    ])
+    state.mining = false
+
     expect(
       await withdrawMessage.status(l2Signer.provider!),
       'confirmed status'
