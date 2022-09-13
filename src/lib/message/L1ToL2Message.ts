@@ -442,17 +442,30 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    */
   public async waitForStatus(
     confirmations?: number,
-    timeout = 900000
+    timeout?: number
   ): Promise<L1ToL2MessageWaitResult> {
+    const l2Network = await getL2Network(this.chainId)
+
+    const chosenTimeout = isDefined(timeout)
+      ? timeout
+      : l2Network.depositTimeout
+
     // try to wait for the retryable ticket to be created
     const _retryableCreationReceipt = await this.getRetryableCreationReceipt(
       confirmations,
-      timeout
+      chosenTimeout
     )
-    if (!_retryableCreationReceipt)
-      throw new ArbSdkError(
-        `Retryable creation receipt not found ${this.retryableCreationId}`
-      )
+    if (!_retryableCreationReceipt) {
+      if (confirmations || chosenTimeout) {
+        throw new ArbSdkError(
+          `Timed out waiting to retrieve retryable creation receipt: ${this.retryableCreationId}.`
+        )
+      } else {
+        throw new ArbSdkError(
+          `Retryable creation receipt not found ${this.retryableCreationId}.`
+        )
+      }
+    }
     return await this.getSuccessfulRedeem()
   }
 
@@ -713,13 +726,19 @@ export class EthDepositMessage {
     else return L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
   }
 
-  public async wait(confirmations?: number, timeout = 900000) {
+  public async wait(confirmations?: number, timeout?: number) {
+    const l2Network = await getL2Network(this.l2ChainId)
+
+    const chosenTimeout = isDefined(timeout)
+      ? timeout
+      : l2Network.depositTimeout
+
     if (!this.l2DepositTxReceipt) {
       this.l2DepositTxReceipt = await getTransactionReceipt(
         this.l2Provider,
         this.l2DepositTxHash,
         confirmations,
-        timeout
+        chosenTimeout
       )
     }
 

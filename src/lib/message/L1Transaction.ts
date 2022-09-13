@@ -301,7 +301,7 @@ export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
   public async waitForL2(
     l2Provider: Provider,
     confirmations?: number,
-    timeout = 900000
+    timeout?: number
   ): Promise<
     {
       complete: boolean
@@ -339,7 +339,7 @@ export class L1ContractCallTransactionReceipt extends L1TransactionReceipt {
   public async waitForL2<T extends SignerOrProvider>(
     l2SignerOrProvider: T,
     confirmations?: number,
-    timeout = 900000
+    timeout?: number
   ): Promise<
     {
       complete: boolean
