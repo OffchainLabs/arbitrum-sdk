@@ -260,7 +260,6 @@ export const depositToken = async (
     erc20L1Address: l1TokenAddress,
     amount: depositAmount,
     retryableGasOverrides: retryableOverrides,
-    from: await l2Signer.getAddress(),
   })
 
   const depositRec = await depositRes.wait()
