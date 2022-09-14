@@ -116,10 +116,6 @@ export interface Erc20DepositParams extends EthDepositParams {
    * Transaction overrides
    */
   overrides?: Overrides
-  /**
-   * Address that is depositing the assets
-   */
-  from: string
 }
 
 export interface Erc20WithdrawParams extends EthWithdrawParams {
@@ -158,6 +154,10 @@ type DepositRequest = OmitTyped<
   'overrides' | 'l1Signer'
 > & {
   l1Provider: Provider
+  /**
+   * Address that is depositing the assets
+   */
+  from: string
 }
 
 type DefaultedDepositRequest = RequiredPick<
@@ -601,7 +601,11 @@ export class Erc20Bridger extends AssetBridger<
     const l1Provider = SignerProviderUtils.getProviderOrThrow(params.l1Signer)
     const tokenDeposit = isL1ToL2TransactionRequest(params)
       ? params
-      : await this.getDepositRequest({ ...params, l1Provider })
+      : await this.getDepositRequest({
+          ...params,
+          l1Provider,
+          from: await params.l1Signer.getAddress(),
+        })
 
     const tx = await params.l1Signer.sendTransaction({
       ...tokenDeposit.txRequest,

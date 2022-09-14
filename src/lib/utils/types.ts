@@ -1,6 +1,6 @@
 /**
  * Omit doesnt enforce that the seconds generic is a keyof the first
- * OmitTyped guard against the underlying type prop names
+ * OmitTyped guards against the underlying type prop names
  * being refactored, and not being updated in the usage of OmitTyped
  */
 export type OmitTyped<T, K extends keyof T> = Omit<T, K>
