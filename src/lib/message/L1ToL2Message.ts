@@ -346,7 +346,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
             this.l2Provider.getTransactionReceipt(e.event.retryTxHash)
           )
         )
-      ).filter(r => r.status === 1)
+      ).filter(r => isDefined(r) && r.status === 1)
       if (successfulRedeem.length > 1)
         throw new ArbSdkError(
           `Unexpected number of successful redeems. Expected only one redeem for ticket ${this.retryableCreationId}, but found ${successfulRedeem.length}.`
