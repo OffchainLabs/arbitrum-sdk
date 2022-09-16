@@ -368,10 +368,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
             this.l2Provider.getTransactionReceipt(e.event.retryTxHash)
           )
         )
-      ).filter(r => {
-        if(r) return r.status
-        return false
-      })
+      ).filter(r => isDefined(r) && r.status === 1)
       
       if (successfulRedeem.length > 1)
         throw new ArbSdkError(
