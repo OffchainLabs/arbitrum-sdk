@@ -280,6 +280,9 @@ export class MultiCaller {
     const defaultedOptions: TokenMultiInput = options || { name: true }
     const erc20Iface = ERC20__factory.createInterface()
 
+    const isBytes32 = (data: string) =>
+      utils.isHexString(data) && utils.hexDataLength(data) === 32
+
     const input = []
     for (const t of erc20Addresses) {
       if (defaultedOptions.allowance) {
@@ -330,17 +333,13 @@ export class MultiCaller {
           targetAddr: t,
           encoder: () => erc20Iface.encodeFunctionData('name'),
           decoder: (returnData: string) => {
-            if (
-              utils.isBytesLike(returnData) &&
-              utils.hexDataLength(returnData) === 32
-            ) {
+            if (isBytes32(returnData)) {
               return utils.parseBytes32String(returnData) as string
-            } else {
+            } else
               return erc20Iface.decodeFunctionResult(
                 'name',
                 returnData
               )[0] as string
-            }
           },
         })
       }
@@ -349,8 +348,15 @@ export class MultiCaller {
         input.push({
           targetAddr: t,
           encoder: () => erc20Iface.encodeFunctionData('symbol'),
-          decoder: (returnData: string) =>
-            erc20Iface.decodeFunctionResult('symbol', returnData)[0] as string,
+          decoder: (returnData: string) => {
+            if (isBytes32(returnData)) {
+              return utils.parseBytes32String(returnData) as string
+            } else
+              return erc20Iface.decodeFunctionResult(
+                'symbol',
+                returnData
+              )[0] as string
+          },
         })
       }
     }
