@@ -18,7 +18,6 @@
 
 import { Provider } from '@ethersproject/abstract-provider'
 import { BigNumber, utils } from 'ethers'
-import { arrayify } from '@ethersproject/bytes'
 
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { Multicall2 } from '../abi/Multicall2'
@@ -331,7 +330,10 @@ export class MultiCaller {
           targetAddr: t,
           encoder: () => erc20Iface.encodeFunctionData('name'),
           decoder: (returnData: string) => {
-            if (arrayify(returnData).length === 32) {
+            if (
+              utils.isBytesLike(returnData) &&
+              utils.hexDataLength(returnData) === 32
+            ) {
               return utils.parseBytes32String(returnData) as string
             } else {
               return erc20Iface.decodeFunctionResult(
