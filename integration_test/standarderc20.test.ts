@@ -37,6 +37,14 @@ import { Signer } from 'ethers'
 import { TestERC20 } from '../src/lib/abi/TestERC20'
 import { testSetup } from '../scripts/testSetup'
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
+import {
+  ARB_RETRYABLE_TX_ADDRESS,
+  ARB_SYS_ADDRESS,
+  NODE_INTERFACE_ADDRESS,
+} from '../src/lib/dataEntities/constants'
+import { ArbRetryableTx__factory } from '../src/lib/abi/factories/ArbRetryableTx__factory'
+import { ArbSys__factory } from '../src/lib/abi/factories/ArbSys__factory'
+import { NodeInterface__factory } from '../src/lib/abi/factories/NodeInterface__factory'
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
@@ -87,7 +95,8 @@ describe('standard ERC20', () => {
   ) => {
     const manualRedeem = await message.redeem({ gasLimit })
     const retryRec = await manualRedeem.waitForRedeem()
-    const blockHash = (await manualRedeem.wait()).blockHash
+    const redeemRec = await manualRedeem.wait()
+    const blockHash = redeemRec.blockHash
 
     expect(retryRec.blockHash, 'redeemed in same block').to.eq(blockHash)
     expect(retryRec.to, 'redeemed in same block').to.eq(
@@ -132,10 +141,7 @@ describe('standard ERC20', () => {
     await redeemAndTest(waitRes.message, 1)
   })
 
-  // we currently skip this test because we need to find a gas limit that allows
-  // for the redeem transaction to execute, but not the following scheduled l2 tx
-  // we should calculate this using the l2's view of the l1 base fee
-  it.skip('deposit with low funds, fails first redeem, succeeds seconds', async () => {
+  it('deposit with low funds, fails first redeem, succeeds seconds', async () => {
     const { waitRes } = await depositToken(
       depositAmount,
       testState.l1Token.address,
@@ -149,9 +155,25 @@ describe('standard ERC20', () => {
         maxFeePerGas: { base: BigNumber.from(5) },
       }
     )
+    const arbRetryableTx = ArbRetryableTx__factory.connect(
+      ARB_RETRYABLE_TX_ADDRESS,
+      testState.l2Signer.provider!
+    )
+    const nInterface = NodeInterface__factory.connect(
+      NODE_INTERFACE_ADDRESS,
+      testState.l2Signer.provider!
+    )
+    const gasComponents = await nInterface.callStatic.gasEstimateComponents(
+      arbRetryableTx.address,
+      false,
+      arbRetryableTx.interface.encodeFunctionData('redeem', [
+        waitRes.message.retryableCreationId,
+      ])
+    )
 
-    // not enough gas
-    await redeemAndTest(waitRes.message, 0, BigNumber.from(130000))
+    // supply just enough gas to cover l1 costs - this also covers l2 costs since the
+    // that estimate returns some margin
+    await redeemAndTest(waitRes.message, 0, gasComponents.gasEstimateForL1)
     await redeemAndTest(waitRes.message, 1)
   })
 
@@ -165,7 +187,7 @@ describe('standard ERC20', () => {
       l2TokenAddr
     )
     // 3 deposits above - increase this number if more deposit tests added
-    const startBalance = depositAmount.mul(3)
+    const startBalance = depositAmount.mul(4)
     const l2BalanceStart = await l2Token.balanceOf(
       await testState.l2Signer.getAddress()
     )
