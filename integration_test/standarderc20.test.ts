@@ -39,11 +39,9 @@ import { testSetup } from '../scripts/testSetup'
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 import {
   ARB_RETRYABLE_TX_ADDRESS,
-  ARB_SYS_ADDRESS,
   NODE_INTERFACE_ADDRESS,
 } from '../src/lib/dataEntities/constants'
 import { ArbRetryableTx__factory } from '../src/lib/abi/factories/ArbRetryableTx__factory'
-import { ArbSys__factory } from '../src/lib/abi/factories/ArbSys__factory'
 import { NodeInterface__factory } from '../src/lib/abi/factories/NodeInterface__factory'
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
