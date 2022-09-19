@@ -94,6 +94,11 @@ describe('standard ERC20', () => {
       testState.l2Network.tokenBridge.l2ERC20Gateway
     )
     expect(retryRec.status, 'tx didnt fail').to.eq(expectedStatus)
+    expect(await message.status(), 'message status').to.eq(
+      expectedStatus === 0
+        ? L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+        : L1ToL2MessageStatus.REDEEMED
+    )
   }
 
   it('deposit with no funds, manual redeem', async () => {
@@ -126,6 +131,25 @@ describe('standard ERC20', () => {
       {
         gasLimit: { base: BigNumber.from(5) },
         maxFeePerGas: { base: BigNumber.from(5) },
+      }
+    )
+
+    await redeemAndTest(waitRes.message, 1)
+  })
+
+  it('deposit with only low gas limit, manual redeem succeeds', async () => {
+    // this should cause us to emit a RedeemScheduled event, but no actual
+    // redeem transaction
+    const { waitRes } = await depositToken(
+      depositAmount,
+      testState.l1Token.address,
+      testState.erc20Bridger,
+      testState.l1Signer,
+      testState.l2Signer,
+      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      GatewayType.STANDARD,
+      {
+        gasLimit: { base: BigNumber.from(21000) },
       }
     )
 
