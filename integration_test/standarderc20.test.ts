@@ -32,11 +32,13 @@ import {
   L1ToL2MessageStatus,
   L1ToL2MessageWriter,
   L2Network,
+  L2TransactionReceipt,
 } from '../src'
 import { Signer } from 'ethers'
 import { TestERC20 } from '../src/lib/abi/TestERC20'
 import { testSetup } from '../scripts/testSetup'
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
+import { isDefined } from '../src/lib/utils/lib'
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
@@ -153,6 +155,21 @@ describe('standard ERC20', () => {
       }
     )
 
+    // check that a RedeemScheduled event was emitted, but no retry tx receipt exists
+    const retryableCreation =
+      await waitRes.message.getRetryableCreationReceipt()
+    if (!isDefined(retryableCreation))
+      throw new Error('Missing retryable creation.')
+    const l2Receipt = new L2TransactionReceipt(retryableCreation)
+    const redeemsScheduled = l2Receipt.getRedeemScheduledEvents()
+    expect(redeemsScheduled.length, 'Unexpected redeem length').to.eq(1)
+    const retryReceipt =
+      await testState.l2Signer.provider!.getTransactionReceipt(
+        redeemsScheduled[0].retryTxHash
+      )
+    expect(isDefined(retryReceipt), 'Retry should not exist').to.be.false
+
+    // manual redeem succeeds
     await redeemAndTest(waitRes.message, 1)
   })
 
