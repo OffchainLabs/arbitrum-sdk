@@ -93,6 +93,23 @@ export class ArbTxHasher {
     return ethers.utils.stripZeros(value.toHexString())
   }
 
+  private static arbTxTypeToHex(txType: ArbTxType) {
+    switch (txType) {
+      case ArbTxType.Deposit:
+        return '0x64'
+      case ArbTxType.Unsigned:
+        return '0x65'
+      case ArbTxType.Contract:
+        return '0x66'
+      case ArbTxType.Retry:
+        return '0x68'
+      case ArbTxType.SubmitRetryable:
+        return '0x69'
+      case ArbTxType.Internal:
+        return '0x6A'
+    }
+  }
+
   public static hash(
     tx:
       | DepositTx
@@ -138,7 +155,7 @@ export class ArbTxHasher {
     const chainId = BigNumber.from(tx.l2ChainId)
     const msgNum = BigNumber.from(tx.messageNumber)
     const rlpEnc = ethers.utils.hexConcat([
-      '0x64',
+      this.arbTxTypeToHex(ArbTxType.Deposit),
       ethers.utils.RLP.encode([
         this.formatNumber(chainId),
         zeroPad(this.formatNumber(msgNum), 32),
@@ -167,7 +184,7 @@ export class ArbTxHasher {
     const chainId = BigNumber.from(tx.l2ChainId)
     const senderNonce = BigNumber.from(tx.nonce)
     const rlpEnc = ethers.utils.hexConcat([
-      '0x65',
+      this.arbTxTypeToHex(ArbTxType.Unsigned),
       ethers.utils.RLP.encode([
         this.formatNumber(chainId),
         tx.fromAddress,
@@ -199,7 +216,7 @@ export class ArbTxHasher {
     const chainId = BigNumber.from(tx.l2ChainId)
     const msgNum = BigNumber.from(tx.messageNumber)
     const rlpEnc = ethers.utils.hexConcat([
-      '0x66',
+      this.arbTxTypeToHex(ArbTxType.Contract),
       ethers.utils.RLP.encode([
         this.formatNumber(chainId),
         msgNum,
@@ -235,7 +252,7 @@ export class ArbTxHasher {
     const msgNum = BigNumber.from(tx.messageNumber)
     const ticketId = BigNumber.from(tx.ticketID)
     const rlpEnc = ethers.utils.hexConcat([
-      '0x68',
+      this.arbTxTypeToHex(ArbTxType.Retry),
       ethers.utils.RLP.encode([
         this.formatNumber(chainId),
         senderNonce,
@@ -276,7 +293,7 @@ export class ArbTxHasher {
     const chainId = BigNumber.from(tx.l2ChainId)
     const msgNum = BigNumber.from(tx.messageNumber)
     const rlpEnc = ethers.utils.hexConcat([
-      '0x69',
+      this.arbTxTypeToHex(ArbTxType.SubmitRetryable),
       ethers.utils.RLP.encode([
         this.formatNumber(chainId),
         zeroPad(this.formatNumber(msgNum), 32),
@@ -306,7 +323,7 @@ export class ArbTxHasher {
   public static hashInternalTx(tx: InternalTx): string {
     const chainId = BigNumber.from(tx.l2ChainId)
     const rlpEnc = ethers.utils.hexConcat([
-      '0x6A',
+      this.arbTxTypeToHex(ArbTxType.Internal),
       ethers.utils.RLP.encode([this.formatNumber(chainId), tx.data]),
     ])
     return ethers.utils.keccak256(rlpEnc)
