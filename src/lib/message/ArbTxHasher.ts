@@ -2,6 +2,9 @@ import { ethers } from 'ethers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { zeroPad } from '@ethersproject/bytes'
 
+/**
+ * Creating an ArbTxType enum for different Arbitrum specific tx types.
+ */
 enum ArbTxType {
   Deposit = 100,
   Unsigned = 101,
@@ -11,6 +14,9 @@ enum ArbTxType {
   Internal = 106,
 }
 
+/**
+ * Creating an interface for each Arbitrum specific tx type.
+ */
 interface DepositTx {
   type: ArbTxType.Deposit
   l2ChainId: number
@@ -87,12 +93,17 @@ export class ArbTxHasher {
   /**
    * Parse the input data into Uint8Array format
    * @param BigNumber
-   * @returns input value formatted into Uint8Array
+   * @returns Uint8Array
    */
   private static formatNumber(value: BigNumber): Uint8Array {
     return ethers.utils.stripZeros(value.toHexString())
   }
 
+  /**
+   * Return the hex encoding of Arbitrum specific tx types.
+   * @param ArbTxType
+   * @returns Hex encoding of ArbTxType
+   */
   private static arbTxTypeToHex(txType: ArbTxType) {
     switch (txType) {
       case ArbTxType.Deposit:
@@ -110,6 +121,11 @@ export class ArbTxHasher {
     }
   }
 
+  /**
+   * Accept the Arbitrum specific tx type and call the right function for creating the custom hash.
+   * @param ArbTxType
+   * @returns
+   */
   public static hash(
     tx:
       | DepositTx
@@ -142,14 +158,9 @@ export class ArbTxHasher {
   }
 
   /**
-   * ArbitrumDepositTx has type 0x64.
-   * @param type //type of the tx
-   * @param l2ChainId
-   * @param fromAddress
-   * @param messageNumber
-   * @param destAddress
-   * @param l1Value
-   * @returns
+   * Accept ArbTxType.Deposit and return its custom hash.
+   * @param DepositTx
+   * @returns Custom hash for Deposit tx
    */
   private static hashDepositTx(tx: DepositTx): string {
     const chainId = BigNumber.from(tx.l2ChainId)
@@ -168,17 +179,9 @@ export class ArbTxHasher {
   }
 
   /**
-   * ArbitrumUnsignedTx has type 0x65.
-   * @param type //type of the tx
-   * @param l2ChainId
-   * @param fromAddress
-   * @param nonce    //nonce of tx's sender account
-   * @param maxFeePerGas
-   * @param gasLimit
-   * @param destAddress
-   * @param l1Value
-   * @param data
-   * @returns
+   * Accept ArbTxType.UnsignedTx and return its custom hash.
+   * @param UnsignedTx
+   * @returns Custom hash for Unsigned tx
    */
   public static hashUnsignedTx(tx: UnsignedTx): string {
     const chainId = BigNumber.from(tx.l2ChainId)
@@ -200,17 +203,9 @@ export class ArbTxHasher {
   }
 
   /**
-   * The ArbitrumContractTx has type 0x66.
-   * @param type //type of the tx
-   * @param l2ChainId
-   * @param messageNumber
-   * @param fromAddress
-   * @param maxFeePerGas
-   * @param gasLimit
-   * @param destAddress
-   * @param l1Value
-   * @param data
-   * @returns
+   * Accept ArbTxType.ContractTx and return its custom hash.
+   * @param ContractTx
+   * @returns Custom hash for Contract tx
    */
   public static hashContractTx(tx: ContractTx): string {
     const chainId = BigNumber.from(tx.l2ChainId)
@@ -230,21 +225,11 @@ export class ArbTxHasher {
     ])
     return ethers.utils.keccak256(rlpEnc)
   }
+
   /**
-   * ArbitrumRetryTxType has type 0x68.
-   * @param type //type of the tx
-   * @param l2ChainId
-   * @param nonce
-   * @param messageNumber
-   * @param fromAddress
-   * @param maxFeePerGas
-   * @param gasLimit
-   * @param destAddress
-   * @param l1Value
-   * @param data
-   * @param ticketId
-   * @param refundAddress
-   * @returns
+   * Accept ArbTxType.RetryTx and return its custom hash.
+   * @param RetryTx
+   * @returns Custom hash for Retry tx
    */
   public static hashRetryTx(tx: RetryTx): string {
     const chainId = BigNumber.from(tx.l2ChainId)
@@ -272,22 +257,9 @@ export class ArbTxHasher {
   }
 
   /**
-   * ArbitrumSubmitRetryableTx has type 0x69.
-   * @param type //type of the tx
-   * @param l2ChainId
-   * @param fromAddress the aliased address that called the L1 inbox as emitted in the bridge event.
-   * @param messageNumber
-   * @param l1BaseFee
-   * @param destAddress
-   * @param l2CallValue
-   * @param l1Value
-   * @param maxSubmissionFee
-   * @param excessFeeRefundAddress refund address specified in the retryable creation. Note the L1 inbox aliases this address if it is a L1 smart contract. The user is expected to provide this value already aliased when needed.
-   * @param callValueRefundAddress refund address specified in the retryable creation. Note the L1 inbox aliases this address if it is a L1 smart contract. The user is expected to provide this value already aliased when needed.
-   * @param gasLimit
-   * @param maxFeePerGas
-   * @param data
-   * @returns
+   * Accept ArbTxType.SubmitRetryableTx and return its custom hash.
+   * @param SubmitRetryableTx
+   * @returns Custom hash for SubmitRetryable tx
    */
   public static hashSubmitRetryableTx(tx: SubmitRetryableTx): string {
     const chainId = BigNumber.from(tx.l2ChainId)
@@ -314,11 +286,9 @@ export class ArbTxHasher {
   }
 
   /**
-   * ArbitrumInternalTx has type 0x6A.
-   * @param type //type of the tx
-   * @param l2ChainId
-   * @param data
-   * @returns
+   * Accept ArbTxType.InternalTx and return its custom hash.
+   * @param InternalTx
+   * @returns Custom hash for Internal tx
    */
   public static hashInternalTx(tx: InternalTx): string {
     const chainId = BigNumber.from(tx.l2ChainId)
