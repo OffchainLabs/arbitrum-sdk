@@ -171,7 +171,7 @@ describe('standard ERC20', () => {
 
     // supply just enough gas to cover l1 costs - this also covers l2 costs since the
     // that estimate returns some margin
-    await redeemAndTest(waitRes.message, 0, gasComponents.gasEstimateForL1)
+    await redeemAndTest(waitRes.message, 0, gasComponents.gasEstimateForL1.sub(100000))
     await redeemAndTest(waitRes.message, 1)
   })
 
