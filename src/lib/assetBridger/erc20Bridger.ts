@@ -620,7 +620,7 @@ export class Erc20Bridger extends AssetBridger<
    * @param params
    * @returns
    */
-  public async getWithdrawalParams(
+  public async getWithdrawalRequest(
     params: Erc20WithdrawParams
   ): Promise<L2ToL1TransactionRequest> {
     const to = params.destinationAddress
@@ -685,7 +685,7 @@ export class Erc20Bridger extends AssetBridger<
       Erc20WithdrawParams & { l2Signer: Signer }
     >(params)
       ? params
-      : await this.getWithdrawalParams(params)
+      : await this.getWithdrawalRequest(params)
 
     const tx = await params.l2Signer.sendTransaction({
       ...withdrawalRequest.txRequest,
