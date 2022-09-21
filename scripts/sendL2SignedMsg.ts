@@ -22,7 +22,7 @@ import { InboxTools } from "../src/lib/inbox/inbox"
 import { getL2Network } from '../src/lib/dataEntities/networks'
 import { testSetup } from '../scripts/testSetup'
 //const { providers, Wallet, ethers } = require('ethers')
-const test =async () => {
+const sendSignedMsg = async () => {
     const { l1Signer, l2Signer } = await testSetup()
     const l2Network = await getL2Network(await l2Signer.getChainId())
     const inbox = new InboxTools(l1Signer, l2Network)
@@ -35,7 +35,7 @@ const test =async () => {
     await inbox.sendL2SignedMessage(signedTx)
 }
 
-test().then(() => {
+sendSignedMsg().then(() => {
     console.log('done')
 }).catch(error => {
     console.error(error)
