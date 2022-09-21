@@ -307,7 +307,14 @@ private async estimateGasWithoutL1Part(
     )
   }
 
-
+  /**
+   * Send l2 signed tx using delayed inox, which won't alias the sender's adddress
+   * It will auto-confirm on l2, if it doesn't confirm in 24 hours, you can force
+   * include it.
+   * @param message A signed transaction which can be sent directly to network, 
+   *                you can call inboxTools.signL2Message to get.
+   * @returns The l1 delayed inbox's transaction receipt.
+   */
   public async sendL2SignedMessage(
     message:string
     ): Promise<ContractTransaction | null>  {
@@ -324,6 +331,13 @@ private async estimateGasWithoutL1Part(
     return await delayedInbox.functions.sendL2Message(sendData)
   }
 
+  /**
+   * Sign a transaction with msg.to, msg.value and msg.data.
+   * You can use this as a helper to call inboxTools.sendL2SignedMessage 
+   * above.
+   * @param message A signed transaction which can be sent directly to network.
+   * @returns The l1 delayed inbox's transaction receipt.
+   */
   public async signL2Message(
     tx: {
       to: string

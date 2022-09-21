@@ -23,15 +23,15 @@ import { getL2Network } from '../src/lib/dataEntities/networks'
 import { testSetup } from '../scripts/testSetup'
 //const { providers, Wallet, ethers } = require('ethers')
 const sendSignedMsg = async () => {
-    const { l1Signer, l2Signer } = await testSetup()
-    const l2Network = await getL2Network(await l2Signer.getChainId())
-    const inbox = new InboxTools(l1Signer, l2Network)
+    const { l1Deployer,l2Deployer } = await testSetup()
+    const l2Network = await getL2Network(await l2Deployer.getChainId())
+    const inbox = new InboxTools(l1Deployer, l2Network)
     const message = {
-        to: await l2Signer.getAddress(),
+        to: await l2Deployer.getAddress(),
         value: BigNumber.from(0),
         data: "0x12"
     }
-    const signedTx = await inbox.signL2Message(message,l2Signer)
+    const signedTx = await inbox.signL2Message(message, l2Deployer)
     await inbox.sendL2SignedMessage(signedTx)
 }
 
