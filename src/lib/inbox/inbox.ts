@@ -17,13 +17,14 @@
 'use strict'
 
 import { Signer } from '@ethersproject/abstract-signer'
-import { Block } from '@ethersproject/abstract-provider'
-import { ContractTransaction, Overrides } from 'ethers'
+import { Block, Provider } from '@ethersproject/abstract-provider'
+import { BigNumber, BytesLike, ContractTransaction, ethers, Overrides } from 'ethers'
 
 import { Bridge } from '../abi/Bridge'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
 import { SequencerInbox } from '../abi/SequencerInbox'
 import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factory'
+import { IInbox__factory } from '../abi/factories/IInbox__factory'
 
 import { MessageDeliveredEvent } from '../abi/Bridge'
 import { l1Networks, L2Network } from '../dataEntities/networks'
@@ -31,6 +32,8 @@ import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
 import { MultiCaller, CallInput } from '../utils/multicall'
 import { ArbSdkError } from '../dataEntities/errors'
+import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
+import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
@@ -40,6 +43,8 @@ type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
  * Tools for interacting with the inbox and bridge contracts
  */
 export class InboxTools {
+  private readonly L2MSG_signedTx = 4
+
   private readonly l1Provider
   private readonly l1Network
 
@@ -80,6 +85,31 @@ export class InboxTools {
       blockTimestamp
     )
   }
+
+  /**
+ * We should use nodeInterface to get the gas estimate is because we
+ * are making a delayed inbox message which doesn't need l1 calldata
+ * gas fee part.
+ */
+private async estimateGasWithoutL1Part(
+  transactionl2Request: { to: string; data: BytesLike; from: any; value: any },
+  l2Signer: Signer
+  ): Promise<BigNumber>  {
+  const nodeInterface = NodeInterface__factory.connect(
+    NODE_INTERFACE_ADDRESS,
+    l2Signer
+  )
+  const gasComponents = await nodeInterface.callStatic.gasEstimateComponents(
+    transactionl2Request.to,
+    false,
+    transactionl2Request.data,
+    {
+      from: transactionl2Request.from,
+      value: transactionl2Request.value
+    }
+  )
+  return gasComponents.gasEstimate.sub(gasComponents.gasEstimateForL1)
+}
 
   /**
    * Get a range of blocks within messages eligible for force inclusion emitted events
@@ -276,4 +306,60 @@ export class InboxTools {
       overrides || {}
     )
   }
+
+
+  public async sendL2SignedMessage(
+    message:string
+    ): Promise<ContractTransaction | null>  {
+    const delayedInbox = IInbox__factory.connect(
+      this.l2Network.ethBridge.inbox,
+      this.l1Signer
+    )
+
+    const sendData = ethers.utils.solidityPack(
+      ['uint8', 'bytes'],
+      [ethers.utils.hexlify(this.L2MSG_signedTx), message]
+    )
+
+    return await delayedInbox.functions.sendL2Message(sendData)
+  }
+
+  public async signL2Message(
+    tx: {
+      to: string
+      value: BigNumber
+      data: string
+    },
+    l2Signer: Signer
+  ): Promise<string> {
+    const address:string = await l2Signer.getAddress();
+    const nonce = await l2Signer.getTransactionCount()
+    const gasPrice = await l2Signer.getGasPrice()
+    const chainId = await l2Signer.getChainId()
+    let gasLimit;
+    try {
+      gasLimit = await this.estimateGasWithoutL1Part({
+        ...tx,
+        from: address
+      }, l2Signer)
+    } catch (error) {
+      console.error(
+        "execution failed (estimate gas failed), try check your account's balance?"
+      )
+      throw error
+    }
+  
+    const transactionRequest = {
+      ...tx,
+      from: address,
+      nonce: nonce,
+      gasPrice: gasPrice,
+      gasLimit: gasLimit,
+      chainId: chainId
+    }
+
+    const signedTx = await l2Signer.signTransaction(transactionRequest)
+    return signedTx
+  }
 }
+
