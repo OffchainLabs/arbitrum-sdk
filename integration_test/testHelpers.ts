@@ -175,11 +175,6 @@ export const withdrawToken = async (params: WithdrawalParams) => {
     'Gas used greater than estimate'
   ).to.be.lessThan(l1GasEstimate.toNumber())
 
-<<<<<<< HEAD
-=======
-  await execTx.wait()
-
->>>>>>> c-nitro-stable
   expect(
     await message.status(params.l2Signer.provider!),
     'executed status'
