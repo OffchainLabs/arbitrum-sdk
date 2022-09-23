@@ -33,10 +33,10 @@ const sendSignedTx = async () => {
         data: "0x12"
     }
     const signedTx = await inbox.signL2Tx(message, false, l2Deployer)
-   // const l1TxReceipt = await inbox.sendL2SignedTx(signedTx)
+    const l1TxReceipt = await inbox.sendL2SignedTx(signedTx)
     return {
         signedMsg: signedTx,
-        l1TransactionReceipt: null
+        l1TransactionReceipt: l1TxReceipt
     }
 }
 
