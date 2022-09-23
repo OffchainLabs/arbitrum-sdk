@@ -79,7 +79,7 @@ export const mineUntilStop = async (
  * @param params
  */
 export const withdrawToken = async (params: WithdrawalParams) => {
-  const withdrawalParams = await params.erc20Bridger.getWithdrawalParams({
+  const withdrawalParams = await params.erc20Bridger.getWithdrawalRequest({
     amount: params.amount,
     erc20l1Address: params.l1Token.address,
     destinationAddress: await params.l2Signer.getAddress(),
