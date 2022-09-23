@@ -209,7 +209,7 @@ export const l2Networks: L2Networks = {
     confirmPeriodBlocks: 6545, // TODO
     isCustom: false,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
-    nitroGenesisBlock: 0,
+    nitroGenesisBlock: 13919179,
     depositTimeout: 9000000,
   },
   421613: {
