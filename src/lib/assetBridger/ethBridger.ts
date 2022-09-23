@@ -49,7 +49,7 @@ export interface EthWithdrawParams {
    */
   amount: BigNumber
   /**
-   * The L1 address to receive the value. Defaults to l2Signer's address
+   * The L1 address to receive the value.
    */
   destinationAddress: string
   /**
