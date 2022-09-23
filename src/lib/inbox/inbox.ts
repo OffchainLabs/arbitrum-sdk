@@ -18,7 +18,8 @@
 
 import { Signer } from '@ethersproject/abstract-signer'
 import { Block, Provider } from '@ethersproject/abstract-provider'
-import { BigNumber, BytesLike, ContractTransaction, ethers, Overrides } from 'ethers'
+import { BigNumber, BytesLike, ContractTransaction, ethers, Overrides, BigNumberish } from 'ethers'
+import { TransactionRequest } from '@ethersproject/providers'
 
 import { Bridge } from '../abi/Bridge'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
@@ -34,6 +35,7 @@ import { MultiCaller, CallInput } from '../utils/multicall'
 import { ArbSdkError } from '../dataEntities/errors'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
+import { InboxMessageKind } from '../dataEntities/message'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
@@ -43,7 +45,6 @@ type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
  * Tools for interacting with the inbox and bridge contracts
  */
 export class InboxTools {
-  private readonly L2MSG_signedTx = 4
 
   private readonly l1Provider
   private readonly l1Network
@@ -92,12 +93,14 @@ export class InboxTools {
  * gas fee part.
  */
 private async estimateGasWithoutL1Part(
-  transactionl2Request: { to: string; data: BytesLike; from: any; value: any },
-  l2Signer: Signer
+  transactionl2Request: Required<
+    Pick<TransactionRequest, 'to' | 'data' | 'value' | 'from'>
+  >,
+  l2Provider: Provider
   ): Promise<BigNumber>  {
   const nodeInterface = NodeInterface__factory.connect(
     NODE_INTERFACE_ADDRESS,
-    l2Signer
+    l2Provider
   )
   const gasComponents = await nodeInterface.callStatic.gasEstimateComponents(
     transactionl2Request.to,
@@ -313,9 +316,9 @@ private async estimateGasWithoutL1Part(
    * include it.
    * @param message A signed transaction which can be sent directly to network, 
    *                you can call inboxTools.signL2Message to get.
-   * @returns The l1 delayed inbox's transaction receipt.
+   * @returns The l1 delayed inbox's transaction.
    */
-  public async sendL2SignedMessage(
+  public async sendL2SignedTx(
     message:string
     ): Promise<ContractTransaction | null>  {
     const delayedInbox = IInbox__factory.connect(
@@ -325,7 +328,7 @@ private async estimateGasWithoutL1Part(
 
     const sendData = ethers.utils.solidityPack(
       ['uint8', 'bytes'],
-      [ethers.utils.hexlify(this.L2MSG_signedTx), message]
+      [ethers.utils.hexlify(InboxMessageKind.L2_MSG), message]
     )
 
     return await delayedInbox.functions.sendL2Message(sendData)
@@ -336,41 +339,40 @@ private async estimateGasWithoutL1Part(
    * You can use this as a helper to call inboxTools.sendL2SignedMessage 
    * above.
    * @param message A signed transaction which can be sent directly to network.
-   * @returns The l1 delayed inbox's transaction receipt.
+   * @returns The l1 delayed inbox's transaction signed data.
    */
-  public async signL2Message(
-    tx: {
-      to: string
-      value: BigNumber
-      data: string
-    },
+  public async signL2Tx(
+    tx: Required<
+    Pick<TransactionRequest, 'to' | 'data' | 'value' >
+  >,
     l2Signer: Signer
   ): Promise<string> {
-    const address:string = await l2Signer.getAddress();
+    const address:string = await l2Signer.getAddress()
     const nonce = await l2Signer.getTransactionCount()
-    const gasPrice = await l2Signer.getGasPrice()
+    const feeData = await l2Signer.getFeeData()
     const chainId = await l2Signer.getChainId()
     let gasLimit;
     try {
       gasLimit = await this.estimateGasWithoutL1Part({
         ...tx,
         from: address
-      }, l2Signer)
+      }, l2Signer.provider!)
     } catch (error) {
-      console.error(
+      console.log(
         "execution failed (estimate gas failed), try check your account's balance?"
       )
       throw error
     }
   
-    const transactionRequest = {
+    const transactionRequest: TransactionRequest = {
       ...tx,
+      maxPriorityFeePerGas: feeData.maxPriorityFeePerGas!,
       from: address,
       nonce: nonce,
-      gasPrice: gasPrice,
       gasLimit: gasLimit,
       chainId: chainId
     }
+    console.log(transactionRequest)
 
     const signedTx = await l2Signer.signTransaction(transactionRequest)
     return signedTx

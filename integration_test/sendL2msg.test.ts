@@ -32,8 +32,8 @@ const sendSignedTx = async () => {
         value: BigNumber.from(0),
         data: "0x12"
     }
-    const signedTx = await inbox.signL2Message(message, l2Deployer)
-    const l1TxReceipt = await inbox.sendL2SignedMessage(signedTx)
+    const signedTx = await inbox.signL2Tx(message, l2Deployer)
+    const l1TxReceipt = await inbox.sendL2SignedTx(signedTx)
     return {
         signedMsg: signedTx,
         l1TransactionReceipt: l1TxReceipt
