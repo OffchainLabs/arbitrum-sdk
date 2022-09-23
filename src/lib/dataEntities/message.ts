@@ -50,7 +50,7 @@ export interface RetryableMessageParams {
 export enum InboxMessageKind {
   L1MessageType_submitRetryableTx = 9,
   L1MessageType_ethDeposit = 12,
-  L2_MSG = 3
+  L2MessageType_signedTx = 4
 }
 
 export enum L2ToL1MessageStatus {
