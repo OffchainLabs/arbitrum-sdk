@@ -318,7 +318,7 @@ private async estimateGasWithoutL1Part(
    * @returns The l1 delayed inbox's transaction itself.
    */
   public async sendL2SignedTx(
-    signedTx: string,
+    signedTx: string
     ): Promise<ContractTransaction | null>  {
     const delayedInbox = IInbox__factory.connect(
       this.l2Network.ethBridge.inbox,
@@ -349,6 +349,7 @@ private async estimateGasWithoutL1Part(
     contractCreation: boolean,
     l2Signer: Signer
   ): Promise<string> {
+    //check required args
     if(!(tx.to && tx.data && tx.value)) {
       throw new ArbSdkError("Required arg not provided")
     }
@@ -366,6 +367,7 @@ private async estimateGasWithoutL1Part(
       if(!tx.maxPriorityFeePerGas) {
         const feeData = await l2Signer.getFeeData()
         tx.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas!
+        tx.maxFeePerGas = feeData.maxFeePerGas!
       }
       tx.type = 2
     }
