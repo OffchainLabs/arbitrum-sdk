@@ -207,7 +207,8 @@ export class L1TransactionReceipt implements TransactionReceipt {
         e =>
           e.bridgeMessageEvent.kind ===
             InboxMessageKind.L1MessageType_submitRetryableTx &&
-          e.bridgeMessageEvent.inbox === network.ethBridge.inbox
+          e.bridgeMessageEvent.inbox.toLowerCase() ===
+            network.ethBridge.inbox.toLowerCase()
       )
       .map(mn => {
         const messageDataParser = new SubmitRetryableMessageDataParser()
