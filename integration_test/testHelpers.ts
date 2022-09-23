@@ -74,6 +74,7 @@ export const mineUntilStop = async (
     await wait(15000)
   }
 }
+
 /**
  * Withdraws a token and tests that it occurred correctly
  * @param params
