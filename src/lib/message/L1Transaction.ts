@@ -45,6 +45,7 @@ import { MessageDeliveredEvent } from '../abi/Bridge'
 import { EventArgs, parseTypedLogs } from '../dataEntities/event'
 import { isDefined } from '../utils/lib'
 import { SubmitRetryableMessageDataParser } from './messageDataParser'
+import { getL2Network } from '../dataEntities/networks'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -197,14 +198,16 @@ export class L1TransactionReceipt implements TransactionReceipt {
     l2SignerOrProvider: T
   ): Promise<L1ToL2MessageReader[] | L1ToL2MessageWriter[]> {
     const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
-    const chainID = (await provider.getNetwork()).chainId.toString()
+    const network = await getL2Network(provider)
+    const chainID = network.chainID.toString()
     const events = this.getMessageEvents()
 
     return events
       .filter(
         e =>
           e.bridgeMessageEvent.kind ===
-          InboxMessageKind.L1MessageType_submitRetryableTx
+            InboxMessageKind.L1MessageType_submitRetryableTx &&
+          e.bridgeMessageEvent.inbox === network.ethBridge.inbox
       )
       .map(mn => {
         const messageDataParser = new SubmitRetryableMessageDataParser()
