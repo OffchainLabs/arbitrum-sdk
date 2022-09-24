@@ -17,39 +17,36 @@
 // import { instantiateBridge } from './instantiate_bridge'
 ;('use strict')
 
-import { BigNumber, ethers, providers, Wallet } from "ethers";
-import { InboxTools } from "../src/lib/inbox/inbox"
+import { BigNumber, ethers, providers, Wallet } from 'ethers'
+import { InboxTools } from '../src/lib/inbox/inbox'
 import { getL2Network } from '../src/lib/dataEntities/networks'
 import { testSetup } from '../scripts/testSetup'
-import { expect } from "chai";
+import { expect } from 'chai'
 
 const sendSignedTx = async () => {
-    const { l1Deployer,l2Deployer } = await testSetup()
-    const l2Network = await getL2Network(await l2Deployer.getChainId())
-    const inbox = new InboxTools(l1Deployer, l2Network)
-    const message = {
-        to: await l2Deployer.getAddress(),
-        value: BigNumber.from(0),
-        data: "0x12"
-    }
-    const signedTx = await inbox.signL2Tx(message, false, l2Deployer)
-    const l1TxReceipt = await inbox.sendL2SignedTx(signedTx)
-    return {
-        signedMsg: signedTx,
-        l1TransactionReceipt: l1TxReceipt
-    }
+  const { l1Deployer, l2Deployer } = await testSetup()
+  const l2Network = await getL2Network(await l2Deployer.getChainId())
+  const inbox = new InboxTools(l1Deployer, l2Network)
+  const message = {
+    to: await l2Deployer.getAddress(),
+    value: BigNumber.from(0),
+    data: '0x12',
+  }
+  const signedTx = await inbox.signL2Tx(message, false, l2Deployer)
+  const l1TxReceipt = await inbox.sendL2SignedTx(signedTx)
+  return {
+    signedMsg: signedTx,
+    l1TransactionReceipt: l1TxReceipt,
+  }
 }
 
-describe("Send signedTx to l2 using inbox", () => {
-    it("should confirm the same tx on l2", async () => {
-        const { l2Deployer } = await testSetup()
-        const { signedMsg, l1TransactionReceipt } = await sendSignedTx()
-        const l2Txhash = ethers.utils.parseTransaction(signedMsg).hash!
-        const l2TxReceipt = await l2Deployer.provider!.waitForTransaction(l2Txhash)
-        const status = l2TxReceipt.status
-        expect(status).to.equal(1)
-    })
+describe('Send signedTx to l2 using inbox', () => {
+  it('should confirm the same tx on l2', async () => {
+    const { l2Deployer } = await testSetup()
+    const { signedMsg, l1TransactionReceipt } = await sendSignedTx()
+    const l2Txhash = ethers.utils.parseTransaction(signedMsg).hash!
+    const l2TxReceipt = await l2Deployer.provider!.waitForTransaction(l2Txhash)
+    const status = l2TxReceipt.status
+    expect(status).to.equal(1)
+  })
 })
-
-
-

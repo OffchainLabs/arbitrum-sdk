@@ -18,7 +18,14 @@
 
 import { Signer } from '@ethersproject/abstract-signer'
 import { Block, Provider } from '@ethersproject/abstract-provider'
-import { BigNumber, BytesLike, ContractTransaction, ethers, Overrides, BigNumberish } from 'ethers'
+import {
+  BigNumber,
+  BytesLike,
+  ContractTransaction,
+  ethers,
+  Overrides,
+  BigNumberish,
+} from 'ethers'
 import { TransactionRequest } from '@ethersproject/providers'
 
 import { Bridge } from '../abi/Bridge'
@@ -45,7 +52,6 @@ type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
  * Tools for interacting with the inbox and bridge contracts
  */
 export class InboxTools {
-
   private readonly l1Provider
   private readonly l1Network
 
@@ -88,30 +94,30 @@ export class InboxTools {
   }
 
   /**
- * We should use nodeInterface to get the gas estimate is because we
- * are making a delayed inbox message which doesn't need l1 calldata
- * gas fee part.
- */
-private async estimateGasWithoutL1Part(
-  transactionl2Request: TransactionRequest,
-  contractCreation: boolean,
-  l2Provider: Provider
-  ): Promise<BigNumber>  {
-  const nodeInterface = NodeInterface__factory.connect(
-    NODE_INTERFACE_ADDRESS,
-    l2Provider
-  )
-  const gasComponents = await nodeInterface.callStatic.gasEstimateComponents(
-    transactionl2Request.to!,
-    false,
-    transactionl2Request.data!,
-    {
-      from: transactionl2Request.from,
-      value: transactionl2Request.value
-    }
-  )
-  return gasComponents.gasEstimate.sub(gasComponents.gasEstimateForL1)
-}
+   * We should use nodeInterface to get the gas estimate is because we
+   * are making a delayed inbox message which doesn't need l1 calldata
+   * gas fee part.
+   */
+  private async estimateGasWithoutL1Part(
+    transactionl2Request: TransactionRequest,
+    contractCreation: boolean,
+    l2Provider: Provider
+  ): Promise<BigNumber> {
+    const nodeInterface = NodeInterface__factory.connect(
+      NODE_INTERFACE_ADDRESS,
+      l2Provider
+    )
+    const gasComponents = await nodeInterface.callStatic.gasEstimateComponents(
+      transactionl2Request.to!,
+      false,
+      transactionl2Request.data!,
+      {
+        from: transactionl2Request.from,
+        value: transactionl2Request.value,
+      }
+    )
+    return gasComponents.gasEstimate.sub(gasComponents.gasEstimateForL1)
+  }
 
   /**
    * Get a range of blocks within messages eligible for force inclusion emitted events
@@ -313,13 +319,13 @@ private async estimateGasWithoutL1Part(
    * Send l2 signed tx using delayed inox, which won't alias the sender's adddress
    * It will be automatically included by the sequencer on l2, if it isn't included
    * within 24 hours, you can force include it
-   * @param signedTx A signed transaction which can be sent directly to network, 
+   * @param signedTx A signed transaction which can be sent directly to network,
    *                you can call inboxTools.signL2Message to get.
    * @returns The l1 delayed inbox's transaction itself.
    */
   public async sendL2SignedTx(
     signedTx: string
-    ): Promise<ContractTransaction | null>  {
+  ): Promise<ContractTransaction | null> {
     const delayedInbox = IInbox__factory.connect(
       this.l2Network.ethBridge.inbox,
       this.l1Signer
@@ -335,10 +341,10 @@ private async estimateGasWithoutL1Part(
 
   /**
    * Sign a transaction with msg.to, msg.value and msg.data.
-   * You can use this as a helper to call inboxTools.sendL2SignedMessage 
+   * You can use this as a helper to call inboxTools.sendL2SignedMessage
    * above.
    * @param message A signed transaction which can be sent directly to network,
-   * tx.to, tx.data, tx.value must be provided, while tx.gasPrice and tx.nonce 
+   * tx.to, tx.data, tx.value must be provided, while tx.gasPrice and tx.nonce
    * can be overrided.
    * @param contractCreation this transaction is used to create contract or not.
    * @param l2Signer ethers Signer type, used to sign l2 transaction
@@ -350,41 +356,44 @@ private async estimateGasWithoutL1Part(
     l2Signer: Signer
   ): Promise<string> {
     //check required args
-    if(!(tx.to && tx.data && tx.value)) {
-      throw new ArbSdkError("Required arg not provided")
+    if (!(tx.to && tx.data && tx.value)) {
+      throw new ArbSdkError('Required arg not provided')
     }
 
-    if(!tx.nonce) {
+    if (!tx.nonce) {
       tx.nonce = await l2Signer.getTransactionCount()
     }
 
     //check transaction type (if no transaction type or gasPrice provided, use eip1559 type)
-    if(tx.type === 1 || tx.gasPrice) {
-      if(tx.gasPrice) {
+    if (tx.type === 1 || tx.gasPrice) {
+      if (tx.gasPrice) {
         tx.gasPrice = await l2Signer.getGasPrice()
       }
     } else {
-      if(!tx.maxPriorityFeePerGas) {
+      if (!tx.maxPriorityFeePerGas) {
         const feeData = await l2Signer.getFeeData()
         tx.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas!
         tx.maxFeePerGas = feeData.maxFeePerGas!
       }
       tx.type = 2
     }
-    
+
     tx.from = await l2Signer.getAddress()
     tx.chainId = await l2Signer.getChainId()
     try {
-      tx.gasLimit = await this.estimateGasWithoutL1Part(tx, contractCreation, l2Signer.provider!)
+      tx.gasLimit = await this.estimateGasWithoutL1Part(
+        tx,
+        contractCreation,
+        l2Signer.provider!
+      )
     } catch (error) {
       console.log(
         "execution failed (estimate gas failed), try check your account's balance?"
       )
       throw error
     }
-  
+
     const signedTx = await l2Signer.signTransaction(tx)
     return signedTx
   }
 }
-
