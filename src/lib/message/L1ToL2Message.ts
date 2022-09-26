@@ -70,11 +70,11 @@ export enum EthDepositStatus {
   /**
    * ETH is not deposited on L2 yet
    */
-   PENDING= 1,
+  PENDING = 1,
   /**
    * ETH is deposited successfully on L2
    */
-   DEPOSITED = 2,
+  DEPOSITED = 2,
 }
 
 /**
