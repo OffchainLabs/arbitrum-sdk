@@ -68,13 +68,13 @@ export enum L1ToL2MessageStatus {
 
 export enum EthDepositStatus {
   /**
-   * Ethers are not deposited on L2 yet
+   * ETH is not deposited on L2 yet
    */
-   NOT_YET_DEPOSITED_ON_L2 = 1,
+   PENDING= 1,
   /**
-   * Ethers are deposited successfully on L2
+   * ETH is deposited successfully on L2
    */
-  FUNDS_DEPOSITED_ON_L2 = 2,
+   DEPOSITED = 2,
 }
 
 /**
