@@ -131,6 +131,7 @@ export class L1ToL2MessageGasEstimator {
    * @param l1BaseFee Current l1 base fee
    * @param excessFeeRefundAddress The address to send excess fee refunds too
    * @param callValueRefundAddress The address to send the call value
+   * @param l1Provider L1 provider
    * @param options
    * @returns
    */
