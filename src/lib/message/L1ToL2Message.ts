@@ -66,6 +66,17 @@ export enum L1ToL2MessageStatus {
   EXPIRED = 5,
 }
 
+export enum EthDepositStatus {
+  /**
+   * Ethers are not deposited on L2 yet
+   */
+   NOT_YET_DEPOSITED_ON_L2 = 1,
+  /**
+   * Ethers are deposited successfully on L2
+   */
+  FUNDS_DEPOSITED_ON_L2 = 2,
+}
+
 /**
  * Conditional type for Signer or Provider. If T is of type Provider
  * then L1ToL2MessageReaderOrWriter<T> will be of type L1ToL2MessageReader.
@@ -719,12 +730,12 @@ export class EthDepositMessage {
     )
   }
 
-  public async status(): Promise<L1ToL2MessageStatus> {
+  public async status(): Promise<EthDepositStatus> {
     const receipt = await this.l2Provider.getTransactionReceipt(
       this.l2DepositTxHash
     )
-    if (receipt === null) return L1ToL2MessageStatus.NOT_YET_CREATED
-    else return L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+    if (receipt === null) return EthDepositStatus.NOT_YET_DEPOSITED_ON_L2
+    else return EthDepositStatus.FUNDS_DEPOSITED_ON_L2
   }
 
   public async wait(confirmations?: number, timeout?: number) {
