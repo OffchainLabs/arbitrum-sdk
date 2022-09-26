@@ -33,6 +33,7 @@ export {
 } from './lib/message/L1Transaction'
 export {
   L1ToL2MessageStatus,
+  EthDepositStatus,
   L1ToL2Message,
   L1ToL2MessageReader,
   L1ToL2MessageWriter,
