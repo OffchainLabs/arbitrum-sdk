@@ -58,4 +58,4 @@ export {
   RetryableDataTools,
 } from './lib/dataEntities/retryableData'
 
-export { Address } from './lib/dataEntities/Address'
+export { Address } from './lib/dataEntities/address'
