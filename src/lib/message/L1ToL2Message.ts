@@ -734,8 +734,8 @@ export class EthDepositMessage {
     const receipt = await this.l2Provider.getTransactionReceipt(
       this.l2DepositTxHash
     )
-    if (receipt === null) return EthDepositStatus.NOT_YET_DEPOSITED_ON_L2
-    else return EthDepositStatus.FUNDS_DEPOSITED_ON_L2
+    if (receipt === null) return EthDepositStatus.PENDING
+    else return EthDepositStatus.DEPOSITED
   }
 
   public async wait(confirmations?: number, timeout?: number) {
