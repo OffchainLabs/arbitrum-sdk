@@ -398,8 +398,7 @@ export class InboxTools {
       )
     } catch (error) {
       console.log(
-        "execution failed (estimate gas failed), try check your account's balance?" +
-          error
+        "execution failed (estimate gas failed), try check your account's balance?"
       )
       throw error
     }
