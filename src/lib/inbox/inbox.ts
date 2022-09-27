@@ -109,7 +109,7 @@ export class InboxTools {
     )
     const gasComponents = await nodeInterface.callStatic.gasEstimateComponents(
       transactionl2Request.to!,
-      false,
+      contractCreation,
       transactionl2Request.data!,
       {
         from: transactionl2Request.from,
@@ -344,7 +344,8 @@ export class InboxTools {
    * You can use this as a helper to call inboxTools.sendL2SignedMessage
    * above.
    * @param message A signed transaction which can be sent directly to network,
-   * tx.to, tx.data, tx.value must be provided, while tx.gasPrice and tx.nonce
+   * tx.to, tx.data, tx.value must be provided when not contract creation, if 
+   * contractCreation is true, no need provide tx.to. tx.gasPrice and tx.nonce 
    * can be overrided.
    * @param contractCreation this transaction is used to create contract or not.
    * @param l2Signer ethers Signer type, used to sign l2 transaction
@@ -356,7 +357,7 @@ export class InboxTools {
     l2Signer: Signer
   ): Promise<string> {
     //check required args
-    if (!(tx.to && tx.data && tx.value)) {
+    if (!((tx.to || contractCreation) && tx.data && tx.value)) {
       throw new ArbSdkError('Required arg not provided')
     }
 
@@ -370,7 +371,7 @@ export class InboxTools {
         tx.gasPrice = await l2Signer.getGasPrice()
       }
     } else {
-      if (!tx.maxPriorityFeePerGas) {
+      if (!tx.maxFeePerGas) {
         const feeData = await l2Signer.getFeeData()
         tx.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas!
         tx.maxFeePerGas = feeData.maxFeePerGas!
@@ -380,6 +381,15 @@ export class InboxTools {
 
     tx.from = await l2Signer.getAddress()
     tx.chainId = await l2Signer.getChainId()
+    
+    // if this is contract creation, user might not input the to address,
+    // however, it is needed when we call to estimateGasWithoutL1Part, so 
+    // we add a zero address here.
+    if(!tx.to) {
+      tx.to = "0x0000000000000000000000000000000000000000"
+    }
+
+    //estimate gas on l2
     try {
       tx.gasLimit = await this.estimateGasWithoutL1Part(
         tx,
@@ -388,9 +398,14 @@ export class InboxTools {
       )
     } catch (error) {
       console.log(
-        "execution failed (estimate gas failed), try check your account's balance?"
+        "execution failed (estimate gas failed), try check your account's balance?"+error
       )
       throw error
+    }
+
+    // does't need to address when creating contract.
+    if(contractCreation) {
+      delete tx.to
     }
 
     const signedTx = await l2Signer.signTransaction(tx)
