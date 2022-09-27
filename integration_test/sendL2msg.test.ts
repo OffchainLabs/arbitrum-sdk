@@ -44,26 +44,6 @@ const sendSignedTx = async (contractCreation: boolean, info?: any) => {
 }
 
 describe('Send signedTx to l2 using inbox', () => {
-  // it('deploy', async () => {
-  //   const { l1Deployer,l2Deployer } = await testSetup()
-  // const l2Network = await getL2Network(await l2Deployer.getChainId())
-  // const inbox = new InboxTools(l1Deployer, l2Network)
-
-  //   let Greeter = new ethers.ContractFactory(greeter.abi, greeter.bytecode)
-  //   Greeter = Greeter.connect(l2Deployer)
-  //   const message = {
-  //     //from: await l2Deployer.getAddress(),
-  //     //to: await l2Deployer.getAddress(),
-  //     value: BigNumber.from(0),
-
-  //   }
-  //   const contractData = Greeter.getDeployTransaction(message)
-
-  //   const signedTx = await inbox.signL2Tx(contractData, true, l2Deployer)
-  //   //const unTx = ethers.utils.parseTransaction(signedTx)
-
-  //   await l2Deployer.provider!.sendTransaction(signedTx)
-  // })
   it('can deploy contract', async () => {
     const { l2Deployer } = await testSetup()
 
