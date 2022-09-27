@@ -344,8 +344,8 @@ export class InboxTools {
    * You can use this as a helper to call inboxTools.sendL2SignedMessage
    * above.
    * @param message A signed transaction which can be sent directly to network,
-   * tx.to, tx.data, tx.value must be provided when not contract creation, if 
-   * contractCreation is true, no need provide tx.to. tx.gasPrice and tx.nonce 
+   * tx.to, tx.data, tx.value must be provided when not contract creation, if
+   * contractCreation is true, no need provide tx.to. tx.gasPrice and tx.nonce
    * can be overrided.
    * @param contractCreation this transaction is used to create contract or not.
    * @param l2Signer ethers Signer type, used to sign l2 transaction
@@ -381,12 +381,12 @@ export class InboxTools {
 
     tx.from = await l2Signer.getAddress()
     tx.chainId = await l2Signer.getChainId()
-    
+
     // if this is contract creation, user might not input the to address,
-    // however, it is needed when we call to estimateGasWithoutL1Part, so 
+    // however, it is needed when we call to estimateGasWithoutL1Part, so
     // we add a zero address here.
-    if(!tx.to) {
-      tx.to = "0x0000000000000000000000000000000000000000"
+    if (!tx.to) {
+      tx.to = '0x0000000000000000000000000000000000000000'
     }
 
     //estimate gas on l2
@@ -398,13 +398,14 @@ export class InboxTools {
       )
     } catch (error) {
       console.log(
-        "execution failed (estimate gas failed), try check your account's balance?"+error
+        "execution failed (estimate gas failed), try check your account's balance?" +
+          error
       )
       throw error
     }
 
     // does't need to address when creating contract.
-    if(contractCreation) {
+    if (contractCreation) {
       delete tx.to
     }
 
