@@ -58,3 +58,5 @@ export {
   RetryableData,
   RetryableDataTools,
 } from './lib/dataEntities/retryableData'
+
+export { Address } from './lib/dataEntities/address'
