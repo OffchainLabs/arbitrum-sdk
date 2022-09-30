@@ -17,7 +17,7 @@
 'use strict'
 
 import { Provider } from '@ethersproject/abstract-provider'
-import { BigNumber } from 'ethers'
+import { BigNumber, utils } from 'ethers'
 
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { Multicall2 } from '../abi/Multicall2'
@@ -280,6 +280,9 @@ export class MultiCaller {
     const defaultedOptions: TokenMultiInput = options || { name: true }
     const erc20Iface = ERC20__factory.createInterface()
 
+    const isBytes32 = (data: string) =>
+      utils.isHexString(data) && utils.hexDataLength(data) === 32
+
     const input = []
     for (const t of erc20Addresses) {
       if (defaultedOptions.allowance) {
@@ -329,8 +332,17 @@ export class MultiCaller {
         input.push({
           targetAddr: t,
           encoder: () => erc20Iface.encodeFunctionData('name'),
-          decoder: (returnData: string) =>
-            erc20Iface.decodeFunctionResult('name', returnData)[0] as string,
+          decoder: (returnData: string) => {
+            // Maker doesn't follow the erc20 spec and returns bytes32 data.
+            // https://etherscan.io/token/0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2#readContract
+            if (isBytes32(returnData)) {
+              return utils.parseBytes32String(returnData) as string
+            } else
+              return erc20Iface.decodeFunctionResult(
+                'name',
+                returnData
+              )[0] as string
+          },
         })
       }
 
@@ -338,8 +350,17 @@ export class MultiCaller {
         input.push({
           targetAddr: t,
           encoder: () => erc20Iface.encodeFunctionData('symbol'),
-          decoder: (returnData: string) =>
-            erc20Iface.decodeFunctionResult('symbol', returnData)[0] as string,
+          decoder: (returnData: string) => {
+            // Maker doesn't follow the erc20 spec and returns bytes32 data.
+            // https://etherscan.io/token/0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2#readContract
+            if (isBytes32(returnData)) {
+              return utils.parseBytes32String(returnData) as string
+            } else
+              return erc20Iface.decodeFunctionResult(
+                'symbol',
+                returnData
+              )[0] as string
+          },
         })
       }
     }
