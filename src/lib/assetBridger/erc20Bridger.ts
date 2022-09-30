@@ -170,7 +170,7 @@ type DefaultedDepositRequest = RequiredPick<
  */
 export class Erc20Bridger extends AssetBridger<
   Erc20DepositParams | L1ToL2TxReqAndSignerProvider,
-  Erc20WithdrawParams | L2ToL1TransactionRequest
+  OmitTyped<Erc20WithdrawParams, 'from'> | L2ToL1TransactionRequest
 > {
   public static MAX_APPROVAL = MaxUint256
   public static MIN_CUSTOM_DEPOSIT_GAS_LIMIT = BigNumber.from(275000)
@@ -648,6 +648,7 @@ export class Erc20Bridger extends AssetBridger<
         data: functionData,
         to: this.l2Network.tokenBridge.l2GatewayRouter,
         value: BigNumber.from(0),
+        from: params.from,
       },
       // we make this async and expect a provider since we
       // in the future we want to do proper estimation here
@@ -674,7 +675,9 @@ export class Erc20Bridger extends AssetBridger<
    * @returns
    */
   public async withdraw(
-    params: (Erc20WithdrawParams & { l2Signer: Signer }) | L2ToL1TxReqAndSigner
+    params:
+      | (OmitTyped<Erc20WithdrawParams, 'from'> & { l2Signer: Signer })
+      | L2ToL1TxReqAndSigner
   ): Promise<L2ContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
       throw new MissingProviderArbSdkError('l2Signer')
@@ -682,10 +685,13 @@ export class Erc20Bridger extends AssetBridger<
     await this.checkL2Network(params.l2Signer)
 
     const withdrawalRequest = isL2ToL1TransactionRequest<
-      Erc20WithdrawParams & { l2Signer: Signer }
+      OmitTyped<Erc20WithdrawParams, 'from'> & { l2Signer: Signer }
     >(params)
       ? params
-      : await this.getWithdrawalRequest(params)
+      : await this.getWithdrawalRequest({
+          ...params,
+          from: await params.l2Signer.getAddress(),
+        })
 
     const tx = await params.l2Signer.sendTransaction({
       ...withdrawalRequest.txRequest,
