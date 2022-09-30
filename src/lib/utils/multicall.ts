@@ -333,6 +333,8 @@ export class MultiCaller {
           targetAddr: t,
           encoder: () => erc20Iface.encodeFunctionData('name'),
           decoder: (returnData: string) => {
+            // Maker doesn't follow the erc20 spec and returns bytes32 data.
+            // https://etherscan.io/token/0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2#readContract
             if (isBytes32(returnData)) {
               return utils.parseBytes32String(returnData) as string
             } else
