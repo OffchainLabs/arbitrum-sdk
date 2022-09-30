@@ -7,7 +7,7 @@ import { expect } from 'chai'
 
 import { MultiCaller } from '../src'
 
-describe('multicall events', async () => {
+describe('Multicall events', () => {
   const createProviderMock = async (networkChoiceOverride?: number) => {
     const l2Network = await getL2Network(networkChoiceOverride || 42161)
 
@@ -53,10 +53,9 @@ describe('multicall events', async () => {
     }
   }
 
-  const { l2Provider } = await createProviderMock(421613)
-  const multicaller = await MultiCaller.fromProvider(l2Provider)
-
   it('returns parsed data from bytes32', async function () {
+    const { l2Provider } = await createProviderMock(421613)
+    const multicaller = await MultiCaller.fromProvider(l2Provider)
     const [data] = await multicaller.getTokenData(
       ['0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2'],
       { symbol: true, name: true }
@@ -71,6 +70,8 @@ describe('multicall events', async () => {
   })
 
   it('returns parsed data from string', async function () {
+    const { l2Provider } = await createProviderMock(421613)
+    const multicaller = await MultiCaller.fromProvider(l2Provider)
     const [data] = await multicaller.getTokenData(
       ['0x1f9840a85d5af5bf1d1762f925bdaddc4201f984'],
       { symbol: true, name: true }
