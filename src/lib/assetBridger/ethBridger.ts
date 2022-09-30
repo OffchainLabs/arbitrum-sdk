@@ -53,6 +53,10 @@ export interface EthWithdrawParams {
    */
   destinationAddress: string
   /**
+   * The address of the withdrawal sender
+   */
+  from: string
+  /**
    * Transaction overrides
    */
   overrides?: PayableOverrides
@@ -168,6 +172,7 @@ export class EthBridger extends AssetBridger<
         to: ARB_SYS_ADDRESS,
         data: functionData,
         value: params.amount,
+        from: params.from,
       },
       // we make this async and expect a provider since we
       // in the future we want to do proper estimation here

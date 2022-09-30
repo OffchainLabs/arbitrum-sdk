@@ -134,6 +134,7 @@ describe('Ether', async () => {
     const request = await ethBridger.getWithdrawalRequest({
       amount: ethToWithdraw,
       destinationAddress: randomAddress,
+      from: await l2Signer.getAddress(),
     })
 
     const l1GasEstimate = await request.estimateL1GasLimit(l1Signer.provider!)
@@ -142,6 +143,7 @@ describe('Ether', async () => {
       amount: ethToWithdraw,
       l2Signer: l2Signer,
       destinationAddress: randomAddress,
+      from: await l2Signer.getAddress(),
     })
 
     const withdrawEthRec = await withdrawEthRes.wait()

@@ -32,7 +32,9 @@ export interface L1ToL2TransactionRequest {
  * A transaction request for a transaction that will trigger an L2 to L1 message
  */
 export interface L2ToL1TransactionRequest {
-  txRequest: Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
+  txRequest: Required<
+    Pick<TransactionRequest, 'to' | 'data' | 'value' | 'from'>
+  >
   /**
    * Estimate the gas limit required to execute the withdrawal on L1.
    * Note that this is only a rough estimate as it may not be possible to know

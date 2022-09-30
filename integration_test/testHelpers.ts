@@ -84,6 +84,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
     amount: params.amount,
     erc20l1Address: params.l1Token.address,
     destinationAddress: await params.l2Signer.getAddress(),
+    from: await params.l2Signer.getAddress(),
   })
   const l1GasEstimate = await withdrawalParams.estimateL1GasLimit(
     params.l1Signer.provider!
