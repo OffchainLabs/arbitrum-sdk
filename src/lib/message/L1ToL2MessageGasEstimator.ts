@@ -112,6 +112,7 @@ export class L1ToL2MessageGasEstimator {
 
   /**
    * Return the fee, in wei, of submitting a new retryable tx with a given calldata size.
+   * @param l1Provider
    * @param l1BaseFee
    * @param callDataSize
    * @param options
