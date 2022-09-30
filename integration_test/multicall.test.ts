@@ -69,7 +69,7 @@ describe('Multicall events', () => {
     )
   })
 
-  it('returns parsed data from string', async function () {
+  it('returns parsed data from byte string', async function () {
     const { l2Provider } = await createProviderMock(421613)
     const multicaller = await MultiCaller.fromProvider(l2Provider)
     const [data] = await multicaller.getTokenData(
@@ -77,11 +77,12 @@ describe('Multicall events', () => {
       { symbol: true, name: true }
     )
 
-    expect(data.name, 'Failed to get token name from string').to.be.equal(
+    expect(data.name, 'Failed to get token name from byte string').to.be.equal(
       'Uniswap'
     )
-    expect(data.symbol, 'Failed to get token symbol from string').to.be.equal(
-      'UNI'
-    )
+    expect(
+      data.symbol,
+      'Failed to get token symbol from byte string'
+    ).to.be.equal('UNI')
   })
 })
