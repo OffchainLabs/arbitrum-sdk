@@ -96,7 +96,7 @@ describe('Send signedTx to l2 using inbox', async () => {
 
   it('send two tx share the same nonce but with different gas price, should confirm the one which gas price higher than l2 base price', async () => {
     const currentNonce = await l2Deployer.getTransactionCount()
-    
+
     const lowFeeInfo = {
       data: '0x12',
       nonce: currentNonce,
