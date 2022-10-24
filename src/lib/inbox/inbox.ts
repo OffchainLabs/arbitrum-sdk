@@ -49,13 +49,16 @@ type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
 }
 
 type GasComponentsWithL2Part = {
-  gasEstimate: BigNumber;
-  gasEstimateForL1: BigNumber;
-  baseFee: BigNumber;
-  l1BaseFeeEstimate: BigNumber;
-  gasEstimateForL2: BigNumber;
+  gasEstimate: BigNumber
+  gasEstimateForL1: BigNumber
+  baseFee: BigNumber
+  l1BaseFeeEstimate: BigNumber
+  gasEstimateForL2: BigNumber
 }
-type requiredTransactionRequestType = RequiredPick<TransactionRequest, "data" | "value">;
+type requiredTransactionRequestType = RequiredPick<
+  TransactionRequest,
+  'data' | 'value'
+>
 /**
  * Tools for interacting with the inbox and bridge contracts
  */
@@ -102,9 +105,14 @@ export class InboxTools {
   }
 
   //Check if this request is contract creation or not.
-  private isContractCreation(transactionl2Request: TransactionRequest): boolean {
-    if(transactionl2Request.to === '0x' || transactionl2Request.to ==='0x0' ||
-      !transactionl2Request.to) {
+  private isContractCreation(
+    transactionl2Request: TransactionRequest
+  ): boolean {
+    if (
+      transactionl2Request.to === '0x' ||
+      transactionl2Request.to === '0x0' ||
+      !transactionl2Request.to
+    ) {
       return true
     }
     return false
@@ -134,8 +142,10 @@ export class InboxTools {
         value: transactionl2Request.value,
       }
     )
-    const gasEstimateForL2:BigNumber =  gasComponents.gasEstimate.sub(gasComponents.gasEstimateForL1)
-    return Object.assign(gasComponents, {gasEstimateForL2})
+    const gasEstimateForL2: BigNumber = gasComponents.gasEstimate.sub(
+      gasComponents.gasEstimateForL1
+    )
+    return Object.assign(gasComponents, { gasEstimateForL2 })
   }
 
   /**
@@ -376,8 +386,8 @@ export class InboxTools {
     l2Signer: Signer
   ): Promise<string> {
     const contractCreation = this.isContractCreation(txRequest)
-    
-    let tx = txRequest;
+
+    const tx = txRequest
 
     if (!tx.nonce) {
       tx.nonce = await l2Signer.getTransactionCount()
@@ -409,12 +419,13 @@ export class InboxTools {
 
     //estimate gas on l2
     try {
-      tx.gasLimit = (await this.estimateArbitrumGas(
-        tx,
-        l2Signer.provider!
-      )).gasEstimateForL2
+      tx.gasLimit = (
+        await this.estimateArbitrumGas(tx, l2Signer.provider!)
+      ).gasEstimateForL2
     } catch (error) {
-      throw new ArbSdkError("execution failed (estimate gas failed), try check your account's balance?")
+      throw new ArbSdkError(
+        "execution failed (estimate gas failed), try check your account's balance?"
+      )
     }
 
     const signedTx = await l2Signer.signTransaction(tx)
