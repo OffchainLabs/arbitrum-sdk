@@ -43,6 +43,7 @@ import { ArbSdkError } from '../dataEntities/errors'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { InboxMessageKind } from '../dataEntities/message'
+import { getAddress } from '@ethersproject/address'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
@@ -110,11 +111,12 @@ export class InboxTools {
   ): boolean {
     if (
       transactionl2Request.to === '0x' ||
-      transactionl2Request.to === '0x0' ||
-      !transactionl2Request.to
+      !transactionl2Request.to ||
+      transactionl2Request.to === '0x0000000000000000000000000000000000000000'
     ) {
       return true
     }
+
     return false
   }
 
@@ -424,11 +426,11 @@ export class InboxTools {
         await this.estimateArbitrumGas(tx, l2Signer.provider!)
       ).gasEstimateForL2
     } catch (error) {
-      throw new ArbSdkError(
-        "execution failed (estimate gas failed), try check your account's balance?"
-      )
+      throw new ArbSdkError('execution failed (estimate gas failed)')
     }
-
+    if (contractCreation) {
+      delete tx.to
+    }
     const signedTx = await l2Signer.signTransaction(tx)
     return signedTx
   }

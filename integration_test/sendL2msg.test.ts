@@ -33,7 +33,6 @@ const sendSignedTx = async (testState: any, info?: any) => {
   const inbox = new InboxTools(l1Deployer, l2Network)
   const message = {
     ...info,
-    to: await l2Deployer.getAddress(),
     value: BigNumber.from(0),
   }
   const signedTx = await inbox.signL2Tx(message, l2Deployer)
@@ -69,7 +68,6 @@ describe('Send signedTx to l2 using inbox', async () => {
       value: BigNumber.from(0),
     }
     const contractCreationData = Greeter.getDeployTransaction(info)
-
     const { signedMsg, l1TransactionReceipt } = await sendSignedTx(
       testState,
       contractCreationData
@@ -94,6 +92,7 @@ describe('Send signedTx to l2 using inbox', async () => {
     const l2Deployer = testState.l2Deployer
     const info = {
       data: '0x12',
+      to: await l2Deployer.getAddress(),
     }
     const { signedMsg, l1TransactionReceipt } = await sendSignedTx(
       testState,
@@ -114,6 +113,7 @@ describe('Send signedTx to l2 using inbox', async () => {
     const lowFeeInfo = {
       data: '0x12',
       nonce: currentNonce,
+      to: await l2Deployer.getAddress(),
       maxFeePerGas: BigNumber.from(10000000), //0.01gwei
       maxPriorityFeePerGas: BigNumber.from(1000000), //0.001gwei
     }
