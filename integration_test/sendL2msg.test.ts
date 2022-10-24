@@ -46,9 +46,7 @@ const sendSignedTx = async (contractCreation: boolean, info?: any) => {
 describe('Send signedTx to l2 using inbox', () => {
   it('can deploy contract', async () => {
     const { l2Deployer } = await testSetup()
-
-    let Greeter = new ethers.ContractFactory(greeter.abi, greeter.bytecode)
-    Greeter = Greeter.connect(l2Deployer)
+    const Greeter = (new ethers.ContractFactory(greeter.abi, greeter.bytecode)).connect(l2Deployer)
 
     const info = {
       value: BigNumber.from(0),

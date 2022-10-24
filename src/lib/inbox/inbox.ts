@@ -414,7 +414,7 @@ export class InboxTools {
         l2Signer.provider!
       )).gasEstimateForL2
     } catch (error) {
-      throw new ArbSdkError("execution failed (estimate gas failed), try check your account's balance?",error)
+      throw new ArbSdkError("execution failed (estimate gas failed), try check your account's balance?")
     }
 
     const signedTx = await l2Signer.signTransaction(tx)
