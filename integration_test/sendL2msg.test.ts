@@ -17,16 +17,18 @@
 // import { instantiateBridge } from './instantiate_bridge'
 ;('use strict')
 
-import { BigNumber, ethers, providers, Wallet } from 'ethers'
+import { BigNumber, ethers, providers, Signer, Wallet } from 'ethers'
 import { InboxTools } from '../src/lib/inbox/inbox'
-import { getL2Network } from '../src/lib/dataEntities/networks'
+import { getL2Network, L2Network } from '../src/lib/dataEntities/networks'
 import { testSetup } from '../scripts/testSetup'
 import { greeter } from './helper/greeter'
 import { expect } from 'chai'
 import { isBytes } from '@ethersproject/bytes'
+import { TestCustomTokenL1 } from '../src/lib/abi/TestCustomTokenL1'
+import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 
-const sendSignedTx = async (contractCreation: boolean, info?: any) => {
-  const { l1Deployer, l2Deployer } = await testSetup()
+const sendSignedTx = async (testState: any, info?: any) => {
+  const { l1Deployer, l2Deployer } = testState
   const l2Network = await getL2Network(await l2Deployer.getChainId())
   const inbox = new InboxTools(l1Deployer, l2Network)
   const message = {
@@ -44,13 +46,20 @@ const sendSignedTx = async (contractCreation: boolean, info?: any) => {
 }
 
 describe('Send signedTx to l2 using inbox', async () => {
-  let l2Deployer
+  // test globals
+  let testState: {
+    l1Deployer: Signer
+    l2Deployer: Signer
+    adminErc20Bridger: AdminErc20Bridger
+    l2Network: L2Network
+  }
 
   before('init', async () => {
-    l2Deployer = (await testSetup()).l2Deployer
+    testState = await testSetup()
   })
 
   it('can deploy contract', async () => {
+    const l2Deployer = testState.l2Deployer
     const Greeter = new ethers.ContractFactory(
       greeter.abi,
       greeter.bytecode
@@ -62,7 +71,7 @@ describe('Send signedTx to l2 using inbox', async () => {
     const contractCreationData = Greeter.getDeployTransaction(info)
 
     const { signedMsg, l1TransactionReceipt } = await sendSignedTx(
-      true,
+      testState,
       contractCreationData
     )
     const l1Status = l1TransactionReceipt?.status
@@ -82,10 +91,14 @@ describe('Send signedTx to l2 using inbox', async () => {
   })
 
   it('should confirm the same tx on l2', async () => {
+    const l2Deployer = testState.l2Deployer
     const info = {
       data: '0x12',
     }
-    const { signedMsg, l1TransactionReceipt } = await sendSignedTx(false, info)
+    const { signedMsg, l1TransactionReceipt } = await sendSignedTx(
+      testState,
+      info
+    )
     const l1Status = l1TransactionReceipt?.status
     expect(l1Status).to.equal(1)
     const l2Txhash = ethers.utils.parseTransaction(signedMsg).hash!
@@ -95,6 +108,7 @@ describe('Send signedTx to l2 using inbox', async () => {
   })
 
   it('send two tx share the same nonce but with different gas price, should confirm the one which gas price higher than l2 base price', async () => {
+    const l2Deployer = testState.l2Deployer
     const currentNonce = await l2Deployer.getTransactionCount()
 
     const lowFeeInfo = {
@@ -103,14 +117,14 @@ describe('Send signedTx to l2 using inbox', async () => {
       maxFeePerGas: BigNumber.from(10000000), //0.01gwei
       maxPriorityFeePerGas: BigNumber.from(1000000), //0.001gwei
     }
-    const lowFeeTx = await sendSignedTx(false, lowFeeInfo)
+    const lowFeeTx = await sendSignedTx(testState, lowFeeInfo)
     const lowFeeL1Status = lowFeeTx.l1TransactionReceipt?.status
     expect(lowFeeL1Status).to.equal(1)
     const info = {
       data: '0x12',
       nonce: currentNonce,
     }
-    const enoughFeeTx = await sendSignedTx(false, info)
+    const enoughFeeTx = await sendSignedTx(testState, info)
     const enoughFeeL1Status = enoughFeeTx.l1TransactionReceipt?.status
     expect(enoughFeeL1Status).to.equal(1)
     const l2LowFeeTxhash = ethers.utils.parseTransaction(lowFeeTx.signedMsg)
