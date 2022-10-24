@@ -57,36 +57,36 @@ describe('Send signedTx to l2 using inbox', async () => {
     testState = await testSetup()
   })
 
-  it('can deploy contract', async () => {
-    const l2Deployer = testState.l2Deployer
-    const Greeter = new ethers.ContractFactory(
-      greeter.abi,
-      greeter.bytecode
-    ).connect(l2Deployer)
+  // it('can deploy contract', async () => {
+  //   const l2Deployer = testState.l2Deployer
+  //   const Greeter = new ethers.ContractFactory(
+  //     greeter.abi,
+  //     greeter.bytecode
+  //   ).connect(l2Deployer)
 
-    const info = {
-      value: BigNumber.from(0),
-    }
-    const contractCreationData = Greeter.getDeployTransaction(info)
-    const { signedMsg, l1TransactionReceipt } = await sendSignedTx(
-      testState,
-      contractCreationData
-    )
-    const l1Status = l1TransactionReceipt?.status
-    expect(l1Status).to.equal(1, 'l1 txn failed')
-    const l2Tx = ethers.utils.parseTransaction(signedMsg)
-    const l2Txhash = l2Tx.hash!
-    const l2TxReceipt = await l2Deployer.provider!.waitForTransaction(l2Txhash)
-    const l2Status = l2TxReceipt.status
-    expect(l2Status).to.equal(1, 'l2 txn failed')
-    const contractAddress = ethers.ContractFactory.getContractAddress({
-      from: l2Tx.from!,
-      nonce: l2Tx.nonce,
-    })
-    const greeterImp = Greeter.attach(contractAddress)
-    const greetResult = await greeterImp.greet()
-    expect(greetResult).to.equal('hello world', 'contract returns not expected')
-  })
+  //   const info = {
+  //     value: BigNumber.from(0),
+  //   }
+  //   const contractCreationData = Greeter.getDeployTransaction(info)
+  //   const { signedMsg, l1TransactionReceipt } = await sendSignedTx(
+  //     testState,
+  //     contractCreationData
+  //   )
+  //   const l1Status = l1TransactionReceipt?.status
+  //   expect(l1Status).to.equal(1, 'l1 txn failed')
+  //   const l2Tx = ethers.utils.parseTransaction(signedMsg)
+  //   const l2Txhash = l2Tx.hash!
+  //   const l2TxReceipt = await l2Deployer.provider!.waitForTransaction(l2Txhash)
+  //   const l2Status = l2TxReceipt.status
+  //   expect(l2Status).to.equal(1, 'l2 txn failed')
+  //   const contractAddress = ethers.ContractFactory.getContractAddress({
+  //     from: l2Tx.from!,
+  //     nonce: l2Tx.nonce,
+  //   })
+  //   const greeterImp = Greeter.attach(contractAddress)
+  //   const greetResult = await greeterImp.greet()
+  //   expect(greetResult).to.equal('hello world', 'contract returns not expected')
+  // })
 
   it('should confirm the same tx on l2', async () => {
     const l2Deployer = testState.l2Deployer
@@ -122,6 +122,7 @@ describe('Send signedTx to l2 using inbox', async () => {
     expect(lowFeeL1Status).to.equal(1)
     const info = {
       data: '0x12',
+      to: await l2Deployer.getAddress(),
       nonce: currentNonce,
     }
     const enoughFeeTx = await sendSignedTx(testState, info)
