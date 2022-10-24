@@ -34,7 +34,7 @@ const sendSignedTx = async (contractCreation: boolean, info?: any) => {
     to: await l2Deployer.getAddress(),
     value: BigNumber.from(0),
   }
-  const signedTx = await inbox.signL2Tx(message, contractCreation, l2Deployer)
+  const signedTx = await inbox.signL2Tx(message, l2Deployer)
 
   const l1Tx = await inbox.sendL2SignedTx(signedTx)
   return {

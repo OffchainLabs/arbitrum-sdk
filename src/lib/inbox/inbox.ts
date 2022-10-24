@@ -33,7 +33,7 @@ import { Bridge__factory } from '../abi/factories/Bridge__factory'
 import { SequencerInbox } from '../abi/SequencerInbox'
 import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factory'
 import { IInbox__factory } from '../abi/factories/IInbox__factory'
-
+import { RequiredPick } from '../utils/types'
 import { MessageDeliveredEvent } from '../abi/Bridge'
 import { l1Networks, L2Network } from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
@@ -48,6 +48,14 @@ type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
 }
 
+type GasComponentsWithL2Part = {
+  gasEstimate: BigNumber;
+  gasEstimateForL1: BigNumber;
+  baseFee: BigNumber;
+  l1BaseFeeEstimate: BigNumber;
+  gasEstimateForL2: BigNumber;
+}
+type requiredTransactionRequestType = RequiredPick<TransactionRequest, "data" | "value">;
 /**
  * Tools for interacting with the inbox and bridge contracts
  */
@@ -93,30 +101,41 @@ export class InboxTools {
     )
   }
 
+  //Check if this request is contract creation or not.
+  private isContractCreation(transactionl2Request: TransactionRequest): boolean {
+    if(transactionl2Request.to === '0x' || transactionl2Request.to ==='0x0' ||
+      !transactionl2Request.to) {
+      return true
+    }
+    return false
+  }
+
   /**
    * We should use nodeInterface to get the gas estimate is because we
    * are making a delayed inbox message which doesn't need l1 calldata
    * gas fee part.
    */
-  private async estimateGasWithoutL1Part(
-    transactionl2Request: TransactionRequest,
-    contractCreation: boolean,
+  private async estimateArbitrumGas(
+    transactionl2Request: requiredTransactionRequestType,
     l2Provider: Provider
-  ): Promise<BigNumber> {
+  ): Promise<GasComponentsWithL2Part> {
     const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
       l2Provider
     )
+
+    const contractCreation = this.isContractCreation(transactionl2Request)
     const gasComponents = await nodeInterface.callStatic.gasEstimateComponents(
       transactionl2Request.to!,
       contractCreation,
-      transactionl2Request.data!,
+      transactionl2Request.data,
       {
         from: transactionl2Request.from,
         value: transactionl2Request.value,
       }
     )
-    return gasComponents.gasEstimate.sub(gasComponents.gasEstimateForL1)
+    const gasEstimateForL2:BigNumber =  gasComponents.gasEstimate.sub(gasComponents.gasEstimateForL1)
+    return Object.assign(gasComponents, {gasEstimateForL2})
   }
 
   /**
@@ -352,14 +371,13 @@ export class InboxTools {
    * @returns The l1 delayed inbox's transaction signed data.
    */
   public async signL2Tx(
-    tx: TransactionRequest,
-    contractCreation: boolean,
+    txRequest: requiredTransactionRequestType,
+    //contractCreation: boolean,
     l2Signer: Signer
   ): Promise<string> {
-    //check required args
-    if (!((tx.to || contractCreation) && tx.data && tx.value)) {
-      throw new ArbSdkError('Required arg not provided')
-    }
+    const contractCreation = this.isContractCreation(txRequest)
+    
+    let tx = txRequest;
 
     if (!tx.nonce) {
       tx.nonce = await l2Signer.getTransactionCount()
@@ -383,7 +401,7 @@ export class InboxTools {
     tx.chainId = await l2Signer.getChainId()
 
     // if this is contract creation, user might not input the to address,
-    // however, it is needed when we call to estimateGasWithoutL1Part, so
+    // however, it is needed when we call to estimateArbitrumGas, so
     // we add a zero address here.
     if (!tx.to) {
       tx.to = '0x0000000000000000000000000000000000000000'
@@ -391,21 +409,12 @@ export class InboxTools {
 
     //estimate gas on l2
     try {
-      tx.gasLimit = await this.estimateGasWithoutL1Part(
+      tx.gasLimit = (await this.estimateArbitrumGas(
         tx,
-        contractCreation,
         l2Signer.provider!
-      )
+      )).gasEstimateForL2
     } catch (error) {
-      console.log(
-        "execution failed (estimate gas failed), try check your account's balance?"
-      )
-      throw error
-    }
-
-    // does't need to address when creating contract.
-    if (contractCreation) {
-      delete tx.to
+      throw new ArbSdkError("execution failed (estimate gas failed), try check your account's balance?",error)
     }
 
     const signedTx = await l2Signer.signTransaction(tx)
