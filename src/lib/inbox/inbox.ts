@@ -146,7 +146,7 @@ export class InboxTools {
       gasComponents.gasEstimateForL1
     )
 
-    return {...gasComponents, gasEstimateForL2}
+    return { ...gasComponents, gasEstimateForL2 }
   }
 
   /**
