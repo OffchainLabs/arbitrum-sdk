@@ -43,13 +43,16 @@ const sendSignedTx = async (contractCreation: boolean, info?: any) => {
   }
 }
 
-describe('Send signedTx to l2 using inbox', () => {
+describe('Send signedTx to l2 using inbox', async () => {
+  let l2Deployer
+
+  before('init', async () => {
+    l2Deployer = (await testSetup()).l2Deployer
+  })
+  
   it('can deploy contract', async () => {
     const { l2Deployer } = await testSetup()
-    const Greeter = new ethers.ContractFactory(
-      greeter.abi,
-      greeter.bytecode
-    ).connect(l2Deployer)
+    const Greeter = (new ethers.ContractFactory(greeter.abi, greeter.bytecode)).connect(l2Deployer)
 
     const info = {
       value: BigNumber.from(0),
@@ -88,5 +91,36 @@ describe('Send signedTx to l2 using inbox', () => {
     const l2TxReceipt = await l2Deployer.provider!.waitForTransaction(l2Txhash)
     const l2Status = l2TxReceipt.status
     expect(l2Status).to.equal(1)
+  })
+
+  it('send two tx share the same nonce but with different gas price, should confirm the one which gas price higher than l2 base price', async () => {
+    const { l2Deployer } = await testSetup()
+    console.log(await l2Deployer.getAddress())
+    const currentNonce = await l2Deployer.getTransactionCount()
+    const l2FeeData = await l2Deployer.getFeeData()
+    const lowFeeInfo = {
+      data: '0x12',
+      nonce: currentNonce,
+      maxFeePerGas: (l2FeeData.maxFeePerGas)?.div(2),
+      maxPriorityFeePerGas: l2FeeData.maxPriorityFeePerGas?.div(2)
+    }
+    const lowFeeTx = await sendSignedTx(false, lowFeeInfo)
+    const lowFeeL1Status = lowFeeTx.l1TransactionReceipt?.status
+    expect(lowFeeL1Status).to.equal(1)
+    const info = {
+      data: '0x12',
+      nonce: currentNonce
+    }
+    const enoughFeeTx = await sendSignedTx(false, info)
+    const enoughFeeL1Status = enoughFeeTx.l1TransactionReceipt?.status
+    expect(enoughFeeL1Status).to.equal(1)
+    const l2LowFeeTxhash = ethers.utils.parseTransaction(lowFeeTx.signedMsg).hash!
+    const l2EnoughFeeTxhash = ethers.utils.parseTransaction(enoughFeeTx.signedMsg).hash!
+
+    const l2TEnoughFeeReceipt = await l2Deployer.provider!.waitForTransaction(l2EnoughFeeTxhash)
+    const l2Status = l2TEnoughFeeReceipt.status
+    expect(l2Status).to.equal(1)
+    const res = await l2Deployer.provider?.getTransactionReceipt(l2LowFeeTxhash)
+    expect(res).to.be.null
   })
 })

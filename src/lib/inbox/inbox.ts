@@ -145,7 +145,8 @@ export class InboxTools {
     const gasEstimateForL2: BigNumber = gasComponents.gasEstimate.sub(
       gasComponents.gasEstimateForL1
     )
-    return Object.assign(gasComponents, { gasEstimateForL2 })
+
+    return {...gasComponents, gasEstimateForL2}
   }
 
   /**
