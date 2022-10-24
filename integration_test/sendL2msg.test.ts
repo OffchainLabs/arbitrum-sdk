@@ -51,7 +51,6 @@ describe('Send signedTx to l2 using inbox', async () => {
   })
 
   it('can deploy contract', async () => {
-    const { l2Deployer } = await testSetup()
     const Greeter = new ethers.ContractFactory(
       greeter.abi,
       greeter.bytecode
@@ -83,7 +82,6 @@ describe('Send signedTx to l2 using inbox', async () => {
   })
 
   it('should confirm the same tx on l2', async () => {
-    const { l2Deployer } = await testSetup()
     const info = {
       data: '0x12',
     }
@@ -97,15 +95,13 @@ describe('Send signedTx to l2 using inbox', async () => {
   })
 
   it('send two tx share the same nonce but with different gas price, should confirm the one which gas price higher than l2 base price', async () => {
-    const { l2Deployer } = await testSetup()
-    console.log(await l2Deployer.getAddress())
     const currentNonce = await l2Deployer.getTransactionCount()
-    const l2FeeData = await l2Deployer.getFeeData()
+    
     const lowFeeInfo = {
       data: '0x12',
       nonce: currentNonce,
-      maxFeePerGas: l2FeeData.maxFeePerGas?.div(2),
-      maxPriorityFeePerGas: l2FeeData.maxPriorityFeePerGas?.div(2),
+      maxFeePerGas: BigNumber.from(10000000), //0.01gwei
+      maxPriorityFeePerGas: BigNumber.from(1000000), //0.001gwei
     }
     const lowFeeTx = await sendSignedTx(false, lowFeeInfo)
     const lowFeeL1Status = lowFeeTx.l1TransactionReceipt?.status
