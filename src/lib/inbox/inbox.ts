@@ -386,8 +386,8 @@ export class InboxTools {
     txRequest: requiredTransactionRequestType,
     l2Signer: Signer
   ): Promise<string> {
-    const contractCreation = this.isContractCreation(txRequest)
-    const tx = txRequest
+    let tx: requiredTransactionRequestType = {...txRequest}
+    const contractCreation = this.isContractCreation(tx)
 
     if (!tx.nonce) {
       tx.nonce = await l2Signer.getTransactionCount()
