@@ -384,11 +384,9 @@ export class InboxTools {
    */
   public async signL2Tx(
     txRequest: requiredTransactionRequestType,
-    //contractCreation: boolean,
     l2Signer: Signer
   ): Promise<string> {
     const contractCreation = this.isContractCreation(txRequest)
-
     const tx = txRequest
 
     if (!tx.nonce) {
