@@ -351,7 +351,7 @@ export class InboxTools {
    * It will be automatically included by the sequencer on l2, if it isn't included
    * within 24 hours, you can force include it
    * @param signedTx A signed transaction which can be sent directly to network,
-   *                you can call inboxTools.signL2Message to get.
+   * you can call inboxTools.signL2Message to get.
    * @returns The l1 delayed inbox's transaction itself.
    */
   public async sendL2SignedTx(
