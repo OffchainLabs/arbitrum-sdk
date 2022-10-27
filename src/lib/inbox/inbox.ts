@@ -377,8 +377,8 @@ export class InboxTools {
    * @param message A signed transaction which can be sent directly to network,
    * tx.to, tx.data, tx.value must be provided when not contract creation, if
    * contractCreation is true, no need provide tx.to. tx.gasPrice and tx.nonce
-   * can be overrided.
-   * @param contractCreation this transaction is used to create contract or not.
+   * can be overrided. (You can also send contract creation transaction by set tx.to
+   * to zero address or null)
    * @param l2Signer ethers Signer type, used to sign l2 transaction
    * @returns The l1 delayed inbox's transaction signed data.
    */
