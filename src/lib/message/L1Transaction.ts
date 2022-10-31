@@ -19,6 +19,8 @@
 import { TransactionReceipt } from '@ethersproject/providers'
 import { Log, Provider } from '@ethersproject/abstract-provider'
 import { ContractTransaction } from '@ethersproject/contracts'
+import { keccak256 } from '@ethersproject/keccak256'
+import { concat, zeroPad } from '@ethersproject/bytes'
 import { BigNumber } from '@ethersproject/bignumber'
 import {
   L1ToL2Message,
@@ -45,8 +47,15 @@ import { MessageDeliveredEvent } from '../abi/Bridge'
 import { EventArgs, parseTypedLogs } from '../dataEntities/event'
 import { isDefined } from '../utils/lib'
 import { SubmitRetryableMessageDataParser } from './messageDataParser'
-import { getL2Network } from '../dataEntities/networks'
+import { getL2Network, L2Network } from '../dataEntities/networks'
 
+interface ClassicL1ToL2Message {
+  messageNumber: BigNumber
+  retryableCreationId: string
+  autoRedeemId: string
+  l2TxHash: string
+  l2Provider: Provider
+}
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
 > extends ContractTransaction {
@@ -57,6 +66,46 @@ export type L1EthDepositTransaction =
   L1ContractTransaction<L1EthDepositTransactionReceipt>
 export type L1ContractCallTransaction =
   L1ContractTransaction<L1ContractCallTransactionReceipt>
+
+class ClassicL1ToL2MessageReader implements ClassicL1ToL2Message {
+  public readonly messageNumber: BigNumber
+  public readonly retryableCreationId: string
+  public readonly autoRedeemId: string
+  public readonly l2TxHash: string
+  public readonly l2Provider: Provider
+
+  constructor(props: {
+    messageNumber: BigNumber
+    l2Provider: Provider
+    l2Network: L2Network
+  }) {
+    this.messageNumber = props.messageNumber
+    this.l2Provider = props.l2Provider
+
+    const bitFlip = (num: BigNumber) => num.or(BigNumber.from(1).shl(255))
+
+    this.retryableCreationId = keccak256(
+      concat([
+        zeroPad(BigNumber.from(props.l2Network.chainID).toHexString(), 32),
+        zeroPad(bitFlip(this.messageNumber).toHexString(), 32),
+      ])
+    )
+
+    this.autoRedeemId = keccak256(
+      concat([
+        zeroPad(this.retryableCreationId, 32),
+        zeroPad(BigNumber.from(1).toHexString(), 32),
+      ])
+    )
+
+    this.l2TxHash = keccak256(
+      concat([
+        zeroPad(this.retryableCreationId, 32),
+        zeroPad(BigNumber.from(0).toHexString(), 32),
+      ])
+    )
+  }
+}
 
 export class L1TransactionReceipt implements TransactionReceipt {
   public readonly to: string
@@ -196,12 +245,24 @@ export class L1TransactionReceipt implements TransactionReceipt {
   ): Promise<L1ToL2MessageReaderOrWriter<T>[]>
   public async getL1ToL2Messages<T extends SignerOrProvider>(
     l2SignerOrProvider: T
-  ): Promise<L1ToL2MessageReader[] | L1ToL2MessageWriter[]> {
+  ): Promise<
+    L1ToL2MessageReader[] | L1ToL2MessageWriter[] | ClassicL1ToL2MessageReader
+  > {
     const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
     const network = await getL2Network(provider)
     const chainID = network.chainID.toString()
-    const events = this.getMessageEvents()
 
+    // Classic events
+    if (this.blockNumber < network.nitroGenesisBlock) {
+      const { messageNum } = this.getInboxMessageDeliveredEvents()[0]
+      return new ClassicL1ToL2MessageReader({
+        messageNumber: messageNum,
+        l2Provider: provider,
+        l2Network: network,
+      })
+    }
+
+    const events = this.getMessageEvents()
     return events
       .filter(
         e =>
