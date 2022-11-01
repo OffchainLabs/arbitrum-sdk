@@ -75,13 +75,13 @@ export interface EthBridge {
   }
 }
 
-export interface L1Networks {
-  [id: string]: L1Network
+export interface NetworkList<T extends Network> {
+  [id: string]: T
 }
 
-export interface L2Networks {
-  [id: string]: L2Network
-}
+export interface L1Networks extends NetworkList<L1Network> {}
+
+export interface L2Networks extends NetworkList<L2Network> {}
 
 const mainnetTokenBridge: TokenBridge = {
   l1GatewayRouter: '0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef',
@@ -288,40 +288,43 @@ export const l2Networks: L2Networks = {
   },
 }
 
-const getNetwork = async (
-  signerOrProviderOrChainID: SignerOrProvider | number,
-  layer: 1 | 2
+const getNetworkByChainID = <T extends Network>(
+  chainID: number,
+  networks: NetworkList<T>
 ) => {
-  const chainID = await (async () => {
-    if (typeof signerOrProviderOrChainID === 'number') {
-      return signerOrProviderOrChainID
-    }
-    const provider = SignerProviderUtils.getProviderOrThrow(
-      signerOrProviderOrChainID
-    )
-
-    const { chainId } = await provider.getNetwork()
-    return chainId
-  })()
-
-  const networks = layer === 1 ? l1Networks : l2Networks
   if (networks[chainID]) {
     return networks[chainID]
-  } else {
-    throw new ArbSdkError(`Unrecognized network ${chainID}.`)
   }
+  throw new ArbSdkError(`Unrecognized network ${chainID}.`)
+}
+
+const getChainIDfromSignerOrProvider = async (
+  signerOrProvider: SignerOrProvider
+) => {
+  const provider = SignerProviderUtils.getProviderOrThrow(signerOrProvider)
+  const { chainId } = await provider.getNetwork()
+  return chainId
+}
+
+const getNetwork = <T extends Network>(
+  signerOrProviderOrChainID: SignerOrProvider | number,
+  networks: NetworkList<T>
+) => {
+  if (typeof signerOrProviderOrChainID === 'number') {
+    return getNetworkByChainID(signerOrProviderOrChainID, networks)
+  }
+  return getChainIDfromSignerOrProvider(signerOrProviderOrChainID).then(
+    chainID => getNetworkByChainID(chainID, networks)
+  )
 }
 
 export const getL1Network = (
   signerOrProviderOrChainID: SignerOrProvider | number
-): Promise<L1Network> => {
-  return getNetwork(signerOrProviderOrChainID, 1) as Promise<L1Network>
-}
+) => getNetwork<L1Network>(signerOrProviderOrChainID, l1Networks)
+
 export const getL2Network = (
   signerOrProviderOrChainID: SignerOrProvider | number
-): Promise<L2Network> => {
-  return getNetwork(signerOrProviderOrChainID, 2) as Promise<L2Network>
-}
+) => getNetwork<L2Network>(signerOrProviderOrChainID, l2Networks)
 
 export const addCustomNetwork = ({
   customL1Network,
