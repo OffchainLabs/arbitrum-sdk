@@ -79,9 +79,9 @@ export interface NetworkList<T extends Network> {
   [id: string]: T
 }
 
-export interface L1Networks extends NetworkList<L1Network> {}
+export type L1Networks = NetworkList<L1Network>
 
-export interface L2Networks extends NetworkList<L2Network> {}
+export type L2Networks = NetworkList<L2Network>
 
 const mainnetTokenBridge: TokenBridge = {
   l1GatewayRouter: '0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef',
