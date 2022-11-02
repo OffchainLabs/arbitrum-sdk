@@ -306,10 +306,19 @@ const getChainIDfromSignerOrProvider = async (
   return chainId
 }
 
-const getNetwork = <T extends Network>(
-  signerOrProviderOrChainID: SignerOrProvider | number,
+type ReturnedNetwork<
+  T extends Network,
+  K extends SignerOrProvider | number
+> = K extends SignerOrProvider ? Promise<T> : T
+
+function getNetwork<T extends Network, K extends SignerOrProvider | number>(
+  signerOrProviderOrChainID: K,
   networks: NetworkList<T>
-) => {
+): ReturnedNetwork<T, K>
+function getNetwork<T extends Network, K extends SignerOrProvider | number>(
+  signerOrProviderOrChainID: K,
+  networks: NetworkList<T>
+): Promise<T> | T {
   if (typeof signerOrProviderOrChainID === 'number') {
     return getNetworkByChainID(signerOrProviderOrChainID, networks)
   }
@@ -318,13 +327,13 @@ const getNetwork = <T extends Network>(
   )
 }
 
-export const getL1Network = (
-  signerOrProviderOrChainID: SignerOrProvider | number
-) => getNetwork<L1Network>(signerOrProviderOrChainID, l1Networks)
+export const getL1Network = <T extends SignerOrProvider | number>(
+  signerOrProviderOrChainID: T
+) => getNetwork(signerOrProviderOrChainID, l1Networks)
 
-export const getL2Network = (
-  signerOrProviderOrChainID: SignerOrProvider | number
-) => getNetwork<L2Network>(signerOrProviderOrChainID, l2Networks)
+export const getL2Network = <T extends SignerOrProvider | number>(
+  signerOrProviderOrChainID: T
+) => getNetwork(signerOrProviderOrChainID, l2Networks)
 
 export const addCustomNetwork = ({
   customL1Network,
