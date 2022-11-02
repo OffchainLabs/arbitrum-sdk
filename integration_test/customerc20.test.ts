@@ -26,6 +26,7 @@ import { L2GatewayRouter__factory } from '../src/lib/abi/factories/L2GatewayRout
 import { TestArbCustomToken__factory } from '../src/lib/abi/factories/TestArbCustomToken__factory'
 import { TestCustomTokenL1 } from '../src/lib/abi/TestCustomTokenL1'
 import { TestCustomTokenL1__factory } from '../src/lib/abi/factories/TestCustomTokenL1__factory'
+import { L1ToL2MessageReader } from '../src/lib/message/L1ToL2Message'
 
 import {
   fundL1,
@@ -180,7 +181,9 @@ const registerCustomToken = async (
   const regRec = await regTx.wait()
 
   // wait on messages
-  const l1ToL2Messages = await regRec.getL1ToL2Messages(l2Signer.provider!)
+  const l1ToL2Messages = (await regRec.getL1ToL2Messages(
+    l2Signer.provider!
+  )) as L1ToL2MessageReader[]
   expect(l1ToL2Messages.length, 'Should be 2 messages.').to.eq(2)
 
   const setTokenTx = await l1ToL2Messages[0].waitForStatus()

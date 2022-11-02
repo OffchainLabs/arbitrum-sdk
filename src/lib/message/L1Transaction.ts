@@ -242,11 +242,11 @@ export class L1TransactionReceipt implements TransactionReceipt {
    */
   public async getL1ToL2Messages<T extends SignerOrProvider>(
     l2SignerOrProvider: T
-  ): Promise<L1ToL2MessageReaderOrWriter<T>[]>
+  ): Promise<L1ToL2MessageReaderOrWriter<T>[] | ClassicL1ToL2MessageReader[]>
   public async getL1ToL2Messages<T extends SignerOrProvider>(
     l2SignerOrProvider: T
   ): Promise<
-    L1ToL2MessageReader[] | L1ToL2MessageWriter[] | ClassicL1ToL2MessageReader
+    L1ToL2MessageReader[] | L1ToL2MessageWriter[] | ClassicL1ToL2MessageReader[]
   > {
     const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
     const network = await getL2Network(provider)
@@ -255,11 +255,15 @@ export class L1TransactionReceipt implements TransactionReceipt {
     // Classic events
     if (this.blockNumber < network.nitroGenesisBlock) {
       const { messageNum } = this.getInboxMessageDeliveredEvents()[0]
-      return new ClassicL1ToL2MessageReader({
-        messageNumber: messageNum,
-        l2Provider: provider,
-        l2Network: network,
-      })
+      return [
+        {
+          ...new ClassicL1ToL2MessageReader({
+            messageNumber: messageNum,
+            l2Provider: provider,
+            l2Network: network,
+          }),
+        },
+      ]
     }
 
     const events = this.getMessageEvents()
@@ -411,7 +415,16 @@ export class L1ContractCallTransactionReceipt extends L1TransactionReceipt {
       message: L1ToL2MessageReaderOrWriter<T>
     } & L1ToL2MessageWaitResult
   > {
-    const message = (await this.getL1ToL2Messages(l2SignerOrProvider))[0]
+    const network = await getL2Network(l2SignerOrProvider)
+
+    if (this.blockNumber < network.nitroGenesisBlock) {
+      throw new ArbSdkError('Unexpected classic transaction.')
+    }
+
+    const message = (
+      await this.getL1ToL2Messages(l2SignerOrProvider)
+    )[0] as L1ToL2MessageReaderOrWriter<T>
+
     if (!message) throw new ArbSdkError('Unexpected missing L1ToL2 message.')
     const res = await message.waitForStatus(confirmations, timeout)
 
