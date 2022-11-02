@@ -33,7 +33,7 @@ jobs:
       - name: Start background nitro test-node.bash
         run: |
           cd nitro
-          ./test-node.bash --init --no-blockscout &
+          ./test-node.bash --init --no-blockscout
       - name: Copy .env
         run: |
           cd sdk
