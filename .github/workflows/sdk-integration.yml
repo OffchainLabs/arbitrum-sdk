@@ -18,7 +18,7 @@ jobs:
           repository: OffchainLabs/nitro
           submodules: 'recursive'
           path: 'nitro'
-          ref: 'v2.0.0'
+          ref: 'v2.0.8'
       - name: Setup node/yarn
         uses: actions/setup-node@v3
         with:
