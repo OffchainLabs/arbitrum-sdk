@@ -44,6 +44,7 @@ import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { InboxMessageKind } from '../dataEntities/message'
 import { getAddress } from '@ethersproject/address'
+import { isDefined } from '../utils/lib'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
@@ -56,7 +57,7 @@ type GasComponentsWithL2Part = {
   l1BaseFeeEstimate: BigNumber
   gasEstimateForL2: BigNumber
 }
-type requiredTransactionRequestType = RequiredPick<
+type RequiredTransactionRequestType = RequiredPick<
   TransactionRequest,
   'data' | 'value'
 >
@@ -111,12 +112,11 @@ export class InboxTools {
   ): boolean {
     if (
       transactionl2Request.to === '0x' ||
-      !transactionl2Request.to ||
+      !isDefined(transactionl2Request.to) ||
       transactionl2Request.to === '0x0000000000000000000000000000000000000000'
     ) {
       return true
     }
-
     return false
   }
 
@@ -126,7 +126,7 @@ export class InboxTools {
    * gas fee part.
    */
   private async estimateArbitrumGas(
-    transactionl2Request: requiredTransactionRequestType,
+    transactionl2Request: RequiredTransactionRequestType,
     l2Provider: Provider
   ): Promise<GasComponentsWithL2Part> {
     const nodeInterface = NodeInterface__factory.connect(
@@ -136,7 +136,7 @@ export class InboxTools {
 
     const contractCreation = this.isContractCreation(transactionl2Request)
     const gasComponents = await nodeInterface.callStatic.gasEstimateComponents(
-      transactionl2Request.to!,
+      transactionl2Request.to || ethers.constants.AddressZero,
       contractCreation,
       transactionl2Request.data,
       {
@@ -383,13 +383,13 @@ export class InboxTools {
    * @returns The l1 delayed inbox's transaction signed data.
    */
   public async signL2Tx(
-    txRequest: requiredTransactionRequestType,
+    txRequest: RequiredTransactionRequestType,
     l2Signer: Signer
   ): Promise<string> {
-    const tx: requiredTransactionRequestType = { ...txRequest }
+    const tx: RequiredTransactionRequestType = { ...txRequest }
     const contractCreation = this.isContractCreation(tx)
 
-    if (!tx.nonce) {
+    if (!isDefined(tx.nonce)) {
       tx.nonce = await l2Signer.getTransactionCount()
     }
 
@@ -399,7 +399,7 @@ export class InboxTools {
         tx.gasPrice = await l2Signer.getGasPrice()
       }
     } else {
-      if (!tx.maxFeePerGas) {
+      if (!isDefined(tx.maxFeePerGas)) {
         const feeData = await l2Signer.getFeeData()
         tx.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas!
         tx.maxFeePerGas = feeData.maxFeePerGas!
@@ -413,7 +413,7 @@ export class InboxTools {
     // if this is contract creation, user might not input the to address,
     // however, it is needed when we call to estimateArbitrumGas, so
     // we add a zero address here.
-    if (!tx.to) {
+    if (!isDefined(tx.to)) {
       tx.to = '0x0000000000000000000000000000000000000000'
     }
 
@@ -428,7 +428,6 @@ export class InboxTools {
     if (contractCreation) {
       delete tx.to
     }
-    const signedTx = await l2Signer.signTransaction(tx)
-    return signedTx
+    return await l2Signer.signTransaction(tx)
   }
 }
