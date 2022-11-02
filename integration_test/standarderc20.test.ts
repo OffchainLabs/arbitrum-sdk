@@ -229,7 +229,7 @@ describe('standard ERC20', () => {
       testState.l2Signer.provider!,
       l2TokenAddr
     )
-    // 3 deposits above - increase this number if more deposit tests added
+    // 5 deposits above - increase this number if more deposit tests added
     const startBalance = depositAmount.mul(5)
     const l2BalanceStart = await l2Token.balanceOf(
       await testState.l2Signer.getAddress()
