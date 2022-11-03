@@ -54,6 +54,12 @@
     // https://github.com/advisories/GHSA-4h98-2769-gh6h
     // OpenZeppelin Contracts vulnerable to ECDSA signature malleability
     // We don’t use signatures for replay protection anywhere
-    "GHSA-4h98-2769-gh6h"
+    "GHSA-4h98-2769-gh6h",
+    // https://github.com/advisories/GHSA-xvch-5gv4-984h
+    // Minimist <=1.2.5 is vulnerable to Prototype Pollution via file index.js, function setKey() (lines 69-95).
+    // from dev dependency: typedoc-plugin-markdown>handlebars>minimist
+    // Minimist is a typedoc plugin's dependency and is never included in the sdk build
+    // Typedoc was only called by the nitro-docs repo to generate sdk docs
+    "GHSA-xvch-5gv4-984h"
   ]
 }
