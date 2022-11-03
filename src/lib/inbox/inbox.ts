@@ -113,7 +113,7 @@ export class InboxTools {
     if (
       transactionl2Request.to === '0x' ||
       !isDefined(transactionl2Request.to) ||
-      transactionl2Request.to === '0x0000000000000000000000000000000000000000'
+      transactionl2Request.to === ethers.constants.AddressZero
     ) {
       return true
     }
@@ -414,7 +414,7 @@ export class InboxTools {
     // however, it is needed when we call to estimateArbitrumGas, so
     // we add a zero address here.
     if (!isDefined(tx.to)) {
-      tx.to = '0x0000000000000000000000000000000000000000'
+      tx.to = ethers.constants.AddressZero
     }
 
     //estimate gas on l2
