@@ -3,7 +3,7 @@ import { BigNumber, constants, providers } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { assert } from 'chai'
 
-describe.only('L1toL2Message events', () => {
+describe('L1toL2Message events', () => {
   it('does call for nitro events', async () => {
     // Receipt from mainnet tx: 0x7cb3395fca076033d84be787ef6e8eba90423a97cd244cc2f2f0e66d8df5d54e
     const receipt: providers.TransactionReceipt = {
