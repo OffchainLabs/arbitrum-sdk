@@ -309,13 +309,21 @@ const getChainIDfromSignerOrProvider = async (
 type NetworkOrPromiseOfNetwork<
   TNetwork extends Network,
   TSignerOrProviderOrNumber extends SignerOrProvider | number
-> = TSignerOrProviderOrNumber extends SignerOrProvider ? Promise<TNetwork> : TNetwork
+> = TSignerOrProviderOrNumber extends SignerOrProvider
+  ? Promise<TNetwork>
+  : TNetwork
 
-function getNetwork<TNetwork extends Network, TSignerOrProviderOrNumber extends SignerOrProvider | number>(
+function getNetwork<
+  TNetwork extends Network,
+  TSignerOrProviderOrNumber extends SignerOrProvider | number
+>(
   signerOrProviderOrChainID: TSignerOrProviderOrNumber,
   networks: NetworkList<TNetwork>
 ): NetworkOrPromiseOfNetwork<TNetwork, TSignerOrProviderOrNumber>
-function getNetwork<TNetwork extends Network, TSignerOrProviderOrNumber extends SignerOrProvider | number>(
+function getNetwork<
+  TNetwork extends Network,
+  TSignerOrProviderOrNumber extends SignerOrProvider | number
+>(
   signerOrProviderOrChainID: TSignerOrProviderOrNumber,
   networks: NetworkList<TNetwork>
 ): Promise<TNetwork> | TNetwork {
@@ -327,11 +335,15 @@ function getNetwork<TNetwork extends Network, TSignerOrProviderOrNumber extends 
   )
 }
 
-export const getL1Network = <TSignerOrProviderOrNumber extends SignerOrProvider | number>(
+export const getL1Network = <
+  TSignerOrProviderOrNumber extends SignerOrProvider | number
+>(
   signerOrProviderOrChainID: TSignerOrProviderOrNumber
 ) => getNetwork(signerOrProviderOrChainID, l1Networks)
 
-export const getL2Network = <TSignerOrProviderOrNumber extends SignerOrProvider | number>(
+export const getL2Network = <
+  TSignerOrProviderOrNumber extends SignerOrProvider | number
+>(
   signerOrProviderOrChainID: TSignerOrProviderOrNumber
 ) => getNetwork(signerOrProviderOrChainID, l2Networks)
 
