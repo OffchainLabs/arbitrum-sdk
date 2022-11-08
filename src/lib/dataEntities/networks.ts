@@ -75,8 +75,8 @@ export interface EthBridge {
   }
 }
 
-export interface NetworkList<T extends Network> {
-  [id: string]: T
+export interface NetworkList<TNetwork extends Network> {
+  [id: string]: TNetwork
 }
 
 export type L1Networks = NetworkList<L1Network>
@@ -288,9 +288,9 @@ export const l2Networks: L2Networks = {
   },
 }
 
-const getNetworkByChainID = <T extends Network>(
+const getNetworkByChainID = <TNetwork extends Network>(
   chainID: number,
-  networks: NetworkList<T>
+  networks: NetworkList<TNetwork>
 ) => {
   if (networks[chainID]) {
     return networks[chainID]
@@ -311,14 +311,14 @@ type NetworkOrPromiseOfNetwork<
   TSignerOrProviderOrNumber extends SignerOrProvider | number
 > = TSignerOrProviderOrNumber extends SignerOrProvider ? Promise<TNetwork> : TNetwork
 
-function getNetwork<T extends Network, K extends SignerOrProvider | number>(
-  signerOrProviderOrChainID: K,
-  networks: NetworkList<T>
-): ReturnedNetwork<T, K>
-function getNetwork<T extends Network, K extends SignerOrProvider | number>(
-  signerOrProviderOrChainID: K,
-  networks: NetworkList<T>
-): Promise<T> | T {
+function getNetwork<TNetwork extends Network, TSignerOrProviderOrNumber extends SignerOrProvider | number>(
+  signerOrProviderOrChainID: TSignerOrProviderOrNumber,
+  networks: NetworkList<TNetwork>
+): NetworkOrPromiseOfNetwork<TNetwork, TSignerOrProviderOrNumber>
+function getNetwork<TNetwork extends Network, TSignerOrProviderOrNumber extends SignerOrProvider | number>(
+  signerOrProviderOrChainID: TSignerOrProviderOrNumber,
+  networks: NetworkList<TNetwork>
+): Promise<TNetwork> | TNetwork {
   if (typeof signerOrProviderOrChainID === 'number') {
     return getNetworkByChainID(signerOrProviderOrChainID, networks)
   }
@@ -327,12 +327,12 @@ function getNetwork<T extends Network, K extends SignerOrProvider | number>(
   )
 }
 
-export const getL1Network = <T extends SignerOrProvider | number>(
-  signerOrProviderOrChainID: T
+export const getL1Network = <TSignerOrProviderOrNumber extends SignerOrProvider | number>(
+  signerOrProviderOrChainID: TSignerOrProviderOrNumber
 ) => getNetwork(signerOrProviderOrChainID, l1Networks)
 
-export const getL2Network = <T extends SignerOrProvider | number>(
-  signerOrProviderOrChainID: T
+export const getL2Network = <TSignerOrProviderOrNumber extends SignerOrProvider | number>(
+  signerOrProviderOrChainID: TSignerOrProviderOrNumber
 ) => getNetwork(signerOrProviderOrChainID, l2Networks)
 
 export const addCustomNetwork = ({
