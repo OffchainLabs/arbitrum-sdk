@@ -306,10 +306,10 @@ const getChainIDfromSignerOrProvider = async (
   return chainId
 }
 
-type ReturnedNetwork<
-  T extends Network,
-  K extends SignerOrProvider | number
-> = K extends SignerOrProvider ? Promise<T> : T
+type NetworkOrPromiseOfNetwork<
+  TNetwork extends Network,
+  TSignerOrProviderOrNumber extends SignerOrProvider | number
+> = TSignerOrProviderOrNumber extends SignerOrProvider ? Promise<TNetwork> : TNetwork
 
 function getNetwork<T extends Network, K extends SignerOrProvider | number>(
   signerOrProviderOrChainID: K,
