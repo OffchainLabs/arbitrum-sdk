@@ -18,14 +18,7 @@
 
 import { Signer } from '@ethersproject/abstract-signer'
 import { Block, Provider } from '@ethersproject/abstract-provider'
-import {
-  BigNumber,
-  BytesLike,
-  ContractTransaction,
-  ethers,
-  Overrides,
-  BigNumberish,
-} from 'ethers'
+import { BigNumber, ContractTransaction, ethers, Overrides } from 'ethers'
 import { TransactionRequest } from '@ethersproject/providers'
 
 import { Bridge } from '../abi/Bridge'
@@ -43,7 +36,6 @@ import { ArbSdkError } from '../dataEntities/errors'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { InboxMessageKind } from '../dataEntities/message'
-import { getAddress } from '@ethersproject/address'
 import { isDefined } from '../utils/lib'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
