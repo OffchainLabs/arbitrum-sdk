@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 /* eslint-env node */
-// import { instantiateBridge } from './instantiate_bridge'
 ;('use strict')
 
-import { BigNumber, providers, Wallet } from 'ethers'
+import { BigNumber } from 'ethers'
 import { InboxTools } from '../src/lib/inbox/inbox'
 import { getL2Network } from '../src/lib/dataEntities/networks'
 import { testSetup } from '../scripts/testSetup'
-//const { providers, Wallet, ethers } = require('ethers')
 const sendSignedMsg = async () => {
   const { l1Deployer, l2Deployer } = await testSetup()
   const l2Network = await getL2Network(await l2Deployer.getChainId())

@@ -17,14 +17,12 @@
 // import { instantiateBridge } from './instantiate_bridge'
 ;('use strict')
 
-import { BigNumber, ethers, providers, Signer, Wallet } from 'ethers'
+import { BigNumber, ethers, Signer } from 'ethers'
 import { InboxTools } from '../src/lib/inbox/inbox'
 import { getL2Network, L2Network } from '../src/lib/dataEntities/networks'
 import { testSetup } from '../scripts/testSetup'
 import { greeter } from './helper/greeter'
 import { expect } from 'chai'
-import { isBytes } from '@ethersproject/bytes'
-import { TestCustomTokenL1 } from '../src/lib/abi/TestCustomTokenL1'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 
 const sendSignedTx = async (testState: any, info?: any) => {
