@@ -17,25 +17,50 @@
 'use strict'
 
 import { Signer } from '@ethersproject/abstract-signer'
-import { Block } from '@ethersproject/abstract-provider'
-import { ContractTransaction, Overrides } from 'ethers'
+import { Block, Provider } from '@ethersproject/abstract-provider'
+import {
+  BigNumber,
+  BytesLike,
+  ContractTransaction,
+  ethers,
+  Overrides,
+  BigNumberish,
+} from 'ethers'
+import { TransactionRequest } from '@ethersproject/providers'
 
 import { Bridge } from '../abi/Bridge'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
 import { SequencerInbox } from '../abi/SequencerInbox'
 import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factory'
-
+import { IInbox__factory } from '../abi/factories/IInbox__factory'
+import { RequiredPick } from '../utils/types'
 import { MessageDeliveredEvent } from '../abi/Bridge'
 import { l1Networks, L2Network } from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
 import { MultiCaller, CallInput } from '../utils/multicall'
 import { ArbSdkError } from '../dataEntities/errors'
+import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
+import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
+import { InboxMessageKind } from '../dataEntities/message'
+import { getAddress } from '@ethersproject/address'
+import { isDefined } from '../utils/lib'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
 }
 
+type GasComponentsWithL2Part = {
+  gasEstimate: BigNumber
+  gasEstimateForL1: BigNumber
+  baseFee: BigNumber
+  l1BaseFeeEstimate: BigNumber
+  gasEstimateForL2: BigNumber
+}
+type RequiredTransactionRequestType = RequiredPick<
+  TransactionRequest,
+  'data' | 'value'
+>
 /**
  * Tools for interacting with the inbox and bridge contracts
  */
@@ -79,6 +104,50 @@ export class InboxTools {
       blockNumber - diffBlocks,
       blockTimestamp
     )
+  }
+
+  //Check if this request is contract creation or not.
+  private isContractCreation(
+    transactionl2Request: TransactionRequest
+  ): boolean {
+    if (
+      transactionl2Request.to === '0x' ||
+      !isDefined(transactionl2Request.to) ||
+      transactionl2Request.to === ethers.constants.AddressZero
+    ) {
+      return true
+    }
+    return false
+  }
+
+  /**
+   * We should use nodeInterface to get the gas estimate is because we
+   * are making a delayed inbox message which doesn't need l1 calldata
+   * gas fee part.
+   */
+  private async estimateArbitrumGas(
+    transactionl2Request: RequiredTransactionRequestType,
+    l2Provider: Provider
+  ): Promise<GasComponentsWithL2Part> {
+    const nodeInterface = NodeInterface__factory.connect(
+      NODE_INTERFACE_ADDRESS,
+      l2Provider
+    )
+
+    const contractCreation = this.isContractCreation(transactionl2Request)
+    const gasComponents = await nodeInterface.callStatic.gasEstimateComponents(
+      transactionl2Request.to || ethers.constants.AddressZero,
+      contractCreation,
+      transactionl2Request.data,
+      {
+        from: transactionl2Request.from,
+        value: transactionl2Request.value,
+      }
+    )
+    const gasEstimateForL2: BigNumber = gasComponents.gasEstimate.sub(
+      gasComponents.gasEstimateForL1
+    )
+    return { ...gasComponents, gasEstimateForL2 }
   }
 
   /**
@@ -275,5 +344,90 @@ export class InboxTools {
       // we need to pass in {} because if overrides is undefined it thinks we've provided too many params
       overrides || {}
     )
+  }
+
+  /**
+   * Send l2 signed tx using delayed inox, which won't alias the sender's adddress
+   * It will be automatically included by the sequencer on l2, if it isn't included
+   * within 24 hours, you can force include it
+   * @param signedTx A signed transaction which can be sent directly to network,
+   * you can call inboxTools.signL2Message to get.
+   * @returns The l1 delayed inbox's transaction itself.
+   */
+  public async sendL2SignedTx(
+    signedTx: string
+  ): Promise<ContractTransaction | null> {
+    const delayedInbox = IInbox__factory.connect(
+      this.l2Network.ethBridge.inbox,
+      this.l1Signer
+    )
+
+    const sendData = ethers.utils.solidityPack(
+      ['uint8', 'bytes'],
+      [ethers.utils.hexlify(InboxMessageKind.L2MessageType_signedTx), signedTx]
+    )
+
+    return await delayedInbox.functions.sendL2Message(sendData)
+  }
+
+  /**
+   * Sign a transaction with msg.to, msg.value and msg.data.
+   * You can use this as a helper to call inboxTools.sendL2SignedMessage
+   * above.
+   * @param message A signed transaction which can be sent directly to network,
+   * tx.to, tx.data, tx.value must be provided when not contract creation, if
+   * contractCreation is true, no need provide tx.to. tx.gasPrice and tx.nonce
+   * can be overrided. (You can also send contract creation transaction by set tx.to
+   * to zero address or null)
+   * @param l2Signer ethers Signer type, used to sign l2 transaction
+   * @returns The l1 delayed inbox's transaction signed data.
+   */
+  public async signL2Tx(
+    txRequest: RequiredTransactionRequestType,
+    l2Signer: Signer
+  ): Promise<string> {
+    const tx: RequiredTransactionRequestType = { ...txRequest }
+    const contractCreation = this.isContractCreation(tx)
+
+    if (!isDefined(tx.nonce)) {
+      tx.nonce = await l2Signer.getTransactionCount()
+    }
+
+    //check transaction type (if no transaction type or gasPrice provided, use eip1559 type)
+    if (tx.type === 1 || tx.gasPrice) {
+      if (tx.gasPrice) {
+        tx.gasPrice = await l2Signer.getGasPrice()
+      }
+    } else {
+      if (!isDefined(tx.maxFeePerGas)) {
+        const feeData = await l2Signer.getFeeData()
+        tx.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas!
+        tx.maxFeePerGas = feeData.maxFeePerGas!
+      }
+      tx.type = 2
+    }
+
+    tx.from = await l2Signer.getAddress()
+    tx.chainId = await l2Signer.getChainId()
+
+    // if this is contract creation, user might not input the to address,
+    // however, it is needed when we call to estimateArbitrumGas, so
+    // we add a zero address here.
+    if (!isDefined(tx.to)) {
+      tx.to = ethers.constants.AddressZero
+    }
+
+    //estimate gas on l2
+    try {
+      tx.gasLimit = (
+        await this.estimateArbitrumGas(tx, l2Signer.provider!)
+      ).gasEstimateForL2
+    } catch (error) {
+      throw new ArbSdkError('execution failed (estimate gas failed)')
+    }
+    if (contractCreation) {
+      delete tx.to
+    }
+    return await l2Signer.signTransaction(tx)
   }
 }

@@ -42,6 +42,7 @@ import {
 import { OmitTyped } from '../utils/types'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
+import { getL2Network } from '../dataEntities/networks'
 
 export interface EthWithdrawParams {
   /**
@@ -99,6 +100,15 @@ export class EthBridger extends AssetBridger<
   EthDepositParams | L1ToL2TxReqAndSigner,
   EthWithdrawParams | L2ToL1TxReqAndSigner
 > {
+  /**
+   * Instantiates a new EthBridger from an L2 Provider
+   * @param l2Provider
+   * @returns
+   */
+  public static async fromProvider(l2Provider: Provider) {
+    return new EthBridger(await getL2Network(l2Provider))
+  }
+
   /**
    * Get a transaction request for an eth deposit
    * @param params

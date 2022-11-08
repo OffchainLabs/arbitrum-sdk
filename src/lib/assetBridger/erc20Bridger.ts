@@ -45,7 +45,7 @@ import {
   L1ToL2MessageGasEstimator,
 } from '../message/L1ToL2MessageGasEstimator'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
-import { L2Network } from '../dataEntities/networks'
+import { L2Network, getL2Network } from '../dataEntities/networks'
 import { ArbSdkError, MissingProviderArbSdkError } from '../dataEntities/errors'
 import { DISABLED_GATEWAY } from '../dataEntities/constants'
 import { EventFetcher } from '../utils/eventFetcher'
@@ -180,6 +180,15 @@ export class Erc20Bridger extends AssetBridger<
    */
   public constructor(l2Network: L2Network) {
     super(l2Network)
+  }
+
+  /**
+   * Instantiates a new Erc20Bridger from an L2 Provider
+   * @param l2Provider
+   * @returns
+   */
+  public static async fromProvider(l2Provider: Provider) {
+    return new Erc20Bridger(await getL2Network(l2Provider))
   }
 
   /**
