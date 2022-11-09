@@ -34,7 +34,7 @@ import { SEVEN_DAYS_IN_SECONDS } from '../src/lib/dataEntities/constants'
  * This is a unit test rather than an integration test.
  * TODO -> We'll move it out of integration_test/ when we restructure the tests
  */
-describe.only('Methods in networks.ts', () => {
+describe('Methods in networks.ts', () => {
   const createProviderMock = (chainId: number) => {
     const providerMock = mock(providers.JsonRpcProvider)
     when(providerMock.getNetwork()).thenResolve({
