@@ -16,6 +16,9 @@
 'use strict'
 
 import { expect } from 'chai'
+import { providers } from 'ethers'
+import { instance, mock, when } from 'ts-mockito'
+
 import { getL1Network } from '../src'
 import {
   addCustomNetwork,
@@ -26,8 +29,6 @@ import {
   L2Network,
   l2Networks,
 } from '../src/lib/dataEntities/networks'
-import { providers } from 'ethers'
-import { instance, mock, when } from 'ts-mockito'
 import { SEVEN_DAYS_IN_SECONDS } from '../src/lib/dataEntities/constants'
 
 /**
