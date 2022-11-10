@@ -368,7 +368,8 @@ export class L1ToL2MessageReader extends L1ToL2Message {
             this.l2Provider.getTransactionReceipt(e.event.retryTxHash)
           )
         )
-      ).filter(r => r.status === 1)
+      ).filter(r => isDefined(r) && r.status === 1)
+
       if (successfulRedeem.length > 1)
         throw new ArbSdkError(
           `Unexpected number of successful redeems. Expected only one redeem for ticket ${this.retryableCreationId}, but found ${successfulRedeem.length}.`
@@ -487,9 +488,11 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     confirmations?: number,
     timeout?: number
   ): Promise<L1ToL2MessageWaitResult> {
+    const l2Network = await getL2Network(this.chainId)
+
     const chosenTimeout = isDefined(timeout)
       ? timeout
-      : this.getDepositTimeout(this.chainId)
+      : l2Network.depositTimeout
 
     // try to wait for the retryable ticket to be created
     const _retryableCreationReceipt = await this.getRetryableCreationReceipt(
@@ -769,13 +772,19 @@ export class EthDepositMessage {
     else return L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
   }
 
-  public async wait(confirmations?: number, timeout = 900000) {
+  public async wait(confirmations?: number, timeout?: number) {
+    const l2Network = await getL2Network(this.l2ChainId)
+
+    const chosenTimeout = isDefined(timeout)
+      ? timeout
+      : l2Network.depositTimeout
+
     if (!this.l2DepositTxReceipt) {
       this.l2DepositTxReceipt = await getTransactionReceipt(
         this.l2Provider,
         this.l2DepositTxHash,
         confirmations,
-        timeout
+        chosenTimeout
       )
     }
 

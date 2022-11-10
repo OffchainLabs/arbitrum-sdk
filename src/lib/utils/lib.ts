@@ -28,7 +28,7 @@ export const getTransactionReceipt = async (
   provider: Provider,
   txHash: string,
   confirmations?: number,
-  timeout = 900000
+  timeout?: number
 ): Promise<TransactionReceipt | null> => {
   if (confirmations || timeout) {
     try {

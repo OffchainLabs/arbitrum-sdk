@@ -108,6 +108,7 @@ export const getCustomNetworks = async (
     partnerChainID: l1NetworkInfo.chainId,
     rpcURL: l2Url,
     retryableLifetimeSeconds: 7 * 24 * 60 * 60,
+    depositTimeout: 900000,
   }
   return {
     l1Network,

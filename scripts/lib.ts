@@ -128,43 +128,45 @@ export const checkRetryableStatus = async (l1Hash: string): Promise<void> => {
   const l2Provider = l2Signer.provider!
   const rec = await l1Provider.getTransactionReceipt(l1Hash)
   if (!rec) throw new Error('L1 tx not found!')
-  const message = (
-    await new L1TransactionReceipt(rec).getL1ToL2Messages(l2Provider)
-  )[0]
+  const messages = await new L1TransactionReceipt(rec).getL1ToL2Messages(
+    l2Provider
+  )
 
-  if (!message) throw new Error('no seq nums')
+  for (const message of messages) {
+    if (!message) throw new Error('no seq nums')
 
-  const messageStatus = await message.waitForStatus()
+    const messageStatus = await message.waitForStatus()
 
-  const autoRedeemTxnRec = await message.getAutoRedeemAttempt()
-  const autoRedeemTxnHash = autoRedeemTxnRec
-    ? autoRedeemTxnRec.transactionHash
-    : null
-
-  const retryableTicketId = message.retryableCreationId
-  const retryableTicketRec =
-    messageStatus.status === L1ToL2MessageStatus.REDEEMED
-      ? messageStatus.l2TxReceipt
+    const autoRedeemTxnRec = await message.getAutoRedeemAttempt()
+    const autoRedeemTxnHash = autoRedeemTxnRec
+      ? autoRedeemTxnRec.transactionHash
       : null
 
-  console.log('*** autoRedeemTxnHash', autoRedeemTxnHash)
-  console.log(
-    '*** autoRedeemTxn status',
-    autoRedeemTxnRec ? autoRedeemTxnRec.status : autoRedeemTxnRec
-  )
-  if (autoRedeemTxnRec && autoRedeemTxnRec.status !== 1) {
-    console.log('**** autoRedeemTxn receipt', autoRedeemTxnHash)
-  }
+    const retryableTicketId = message.retryableCreationId
+    const retryableTicketRec =
+      messageStatus.status === L1ToL2MessageStatus.REDEEMED
+        ? messageStatus.l2TxReceipt
+        : null
 
-  console.log('*** retryableTicketId', retryableTicketId)
-  console.log(
-    '*** retryableTicket status',
-    retryableTicketRec ? retryableTicketRec.status : messageStatus.status
-  )
-  if (retryableTicketRec) {
+    console.log('*** autoRedeemTxnHash', autoRedeemTxnHash)
     console.log(
-      '**** retryableTicket receipt',
-      retryableTicketRec.transactionHash
+      '*** autoRedeemTxn status',
+      autoRedeemTxnRec ? autoRedeemTxnRec.status : autoRedeemTxnRec
     )
+    if (autoRedeemTxnRec && autoRedeemTxnRec.status !== 1) {
+      console.log('**** autoRedeemTxn receipt', autoRedeemTxnHash)
+    }
+
+    console.log('*** retryableTicketId', retryableTicketId)
+    console.log(
+      '*** retryableTicket status',
+      retryableTicketRec ? retryableTicketRec.status : messageStatus.status
+    )
+    if (retryableTicketRec) {
+      console.log(
+        '**** retryableTicket receipt',
+        retryableTicketRec.transactionHash
+      )
+    }
   }
 }
