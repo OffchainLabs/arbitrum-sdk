@@ -49,10 +49,9 @@ export class EventFetcher {
 
   /**
    * Fetch logs and parse logs
-   * @param addr The address of the contract emitting the events
    * @param contractFactory A contract factory for generating a contract of type TContract at the addr
    * @param topicGenerator Generator function for creating
-   * @param filter Block filter parameters
+   * @param filter Block and address filter parameters
    * @returns
    */
   public async getEvents<
