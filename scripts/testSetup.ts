@@ -116,7 +116,7 @@ export const getCustomNetworks = async (
     retryableLifetimeSeconds: 7 * 24 * 60 * 60,
     nitroGenesisBlock: 0,
     depositTimeout: 900000,
-    genesisL1Block: 0
+    genesisL1Block: 0,
   }
   return {
     l1Network,
