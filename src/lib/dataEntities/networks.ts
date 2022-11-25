@@ -37,7 +37,8 @@ export interface L2Network extends Network {
   /**
    * How long to wait (ms) for a deposit to arrive on l2 before timing out a request
    */
-  depositTimeout: number
+  depositTimeout: number,
+  genesisL1Block: number
 }
 export interface Network {
   chainID: number
@@ -197,6 +198,7 @@ export const l2Networks: L2Networks = {
      * Finalisation on mainnet can be up to 2 epochs = 64 blocks on mainnet
      */
     depositTimeout: 888000,
+    genesisL1Block: 12526074
   },
   421611: {
     chainID: 421611,
@@ -211,6 +213,7 @@ export const l2Networks: L2Networks = {
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     nitroGenesisBlock: 13919179,
     depositTimeout: 9000000,
+    genesisL1Block: 8700798
   },
   421613: {
     chainID: 421613,
@@ -250,6 +253,7 @@ export const l2Networks: L2Networks = {
      * Wait 10 epochs there on goerli = 320 blocks. Each block is 12 seconds.
      */
     depositTimeout: 3960000,
+    genesisL1Block: 7222879
   },
   42170: {
     chainID: 42170,
@@ -285,6 +289,7 @@ export const l2Networks: L2Networks = {
     },
     nitroGenesisBlock: 0,
     depositTimeout: 888000,
+    genesisL1Block: 15021336
   },
 }
 
