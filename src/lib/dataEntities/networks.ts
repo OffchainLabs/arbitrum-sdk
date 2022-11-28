@@ -39,7 +39,7 @@ export interface L2Network extends Network {
    */
   depositTimeout: number
   /**
-   * The first transaction's block.number (block.number is l1's block number on arbitrum) 
+   * The first transaction's block.number (block.number is l1's block number on arbitrum)
    * return on each l2
    */
   genesisL1Block: number
