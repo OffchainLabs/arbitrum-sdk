@@ -38,6 +38,10 @@ export interface L2Network extends Network {
    * How long to wait (ms) for a deposit to arrive on l2 before timing out a request
    */
   depositTimeout: number
+  /**
+   * The first transaction's block.number (block.number is l1's block number on arbitrum) 
+   * return on each l2
+   */
   genesisL1Block: number
 }
 export interface Network {
