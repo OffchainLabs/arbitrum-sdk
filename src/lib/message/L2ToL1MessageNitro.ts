@@ -368,7 +368,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
       return BigNumber.from(l2Network.confirmPeriodBlocks)
         .add(ASSERTION_CREATED_PADDING)
         .add(ASSERTION_CONFIRMED_PADDING)
-        .add(latestBlock)
+        .add(this.event.ethBlockNum)
 
     // use binary search to find the first node with sendCount > this.event.position
     // default to the last node since we already checked above
