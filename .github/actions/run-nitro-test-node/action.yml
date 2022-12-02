@@ -21,6 +21,4 @@ runs:
 
     - name: Wait for nitro startup
       shell: bash
-      run: |
-        cd ..
-        ./waitForNitro.sh
+      run: waitForNitro.sh
