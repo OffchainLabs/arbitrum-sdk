@@ -3,7 +3,7 @@ description: 'Checks out the Nitro repository and runs the local test node'
 runs:
   using: 'composite'
   steps:
-    - name: Checkout Nitro
+    - name: Checkout
       uses: actions/checkout@v3
       with:
         repository: OffchainLabs/nitro
@@ -18,14 +18,6 @@ runs:
         cd nitro
         ./test-node.bash --init --no-blockscout
 
-    - name: Copy .env
-      shell: bash
-      run: |
-        cd sdk
-        cp ./.env-sample ./.env
-
     - name: Wait for nitro startup
       shell: bash
-      run: |
-        cd sdk/scripts
-        ./waitForNitro.sh
+      run: ./waitForNitro.sh
