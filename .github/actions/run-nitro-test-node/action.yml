@@ -12,11 +12,15 @@ runs:
         # TODO: Update with a stable ref once available
         ref: 'test-node-prod'
 
-    - name: Wait for nitro startup
-      shell: bash
-      # The reason for the "&" at the end is https://stackoverflow.com/a/72203688
-      run: ./waitForNitro.sh &
-
     - name: Start background nitro test-node.bash
       shell: bash
-      run: cd nitro && ./test-node.bash --init --no-blockscout
+      # The reason for the "&" at the end is https://stackoverflow.com/a/72203688
+      run: |
+        cd nitro
+        ./test-node.bash --init --no-blockscout &
+
+    - name: Wait for nitro startup
+      shell: bash
+      run: |
+        cd ..
+        ./waitForNitro.sh
