@@ -82,4 +82,5 @@ jobs:
     runs-on: ubuntu-20.04
     needs: install
     steps:
+      - uses: ./.github/actions/restore-cache
       - uses: ./.github/actions/run-nitro-test-node
