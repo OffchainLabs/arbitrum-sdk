@@ -21,4 +21,4 @@ runs:
 
     - name: Wait for nitro startup
       shell: bash
-      run: waitForNitro.sh
+      run: pwd && waitForNitro.sh
