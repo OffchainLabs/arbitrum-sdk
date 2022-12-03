@@ -84,5 +84,8 @@ jobs:
       - uses: ./.github/actions/restore-cache
       - uses: ./.github/actions/run-nitro-test-node
 
+      - name: Generate ABIs
+        run: yarn gen:abi
+
       - name: Run integration tests
         run: CI=true yarn test:integration
