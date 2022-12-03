@@ -21,4 +21,4 @@ runs:
 
     - name: Wait for nitro startup
       shell: bash
-      run: pwd && waitForNitro.sh
+      run: ${{ github.action_path }}/waitForNitro.sh
