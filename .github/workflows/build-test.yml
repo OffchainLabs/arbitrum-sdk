@@ -85,16 +85,10 @@ jobs:
       - uses: ./.github/actions/run-nitro-test-node
 
       - name: Copy .env
-        run: |
-          cd sdk
-          cp ./.env-sample ./.env
+        run: cp .env-sample .env
 
       - name: Generate network file
-        run: |
-          cd sdk
-          yarn gen:network
+        run: yarn gen:network
 
       - name: Run integration tests
-        run: |
-          cd sdk
-          CI=true yarn test:integration
+        run: CI=true yarn test:integration
