@@ -77,18 +77,12 @@ jobs:
 
   test-integration:
     name: Test (Integration)
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     needs: install
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/restore-cache
       - uses: ./.github/actions/run-nitro-test-node
-
-      - name: Copy .env
-        run: cp .env-sample .env
-
-      - name: Generate network file
-        run: yarn gen:network
 
       - name: Run integration tests
         run: CI=true yarn test:integration
