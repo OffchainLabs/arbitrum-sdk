@@ -8,7 +8,7 @@ runs:
       with:
         repository: OffchainLabs/nitro
         submodules: 'recursive'
-        path: 'nitro'
+        path: 'run-nitro-test-node--nitro'
         # TODO: Update with a stable ref once available
         ref: 'test-node-prod'
 
@@ -16,7 +16,7 @@ runs:
       shell: bash
       # The reason for the "&" at the end is https://stackoverflow.com/a/72203688
       run: |
-        cd nitro
+        cd run-nitro-test-node--nitro
         ./test-node.bash --init --no-blockscout &
 
     - name: Wait for nitro startup
