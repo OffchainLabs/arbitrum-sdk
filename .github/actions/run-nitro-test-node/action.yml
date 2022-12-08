@@ -8,7 +8,7 @@ runs:
       with:
         repository: OffchainLabs/nitro
         submodules: 'recursive'
-        path: 'run-nitro-test-node--nitro'
+        path: 'nitro'
         # TODO: Update with a stable ref once available
         ref: 'test-node-prod'
 
@@ -18,7 +18,7 @@ runs:
       #
       # See https://stackoverflow.com/a/72203688 for more info
       run: |
-        cd run-nitro-test-node--nitro
+        cd nitro
         ./test-node.bash --init --no-blockscout &
 
     - name: Wait for nitro startup
