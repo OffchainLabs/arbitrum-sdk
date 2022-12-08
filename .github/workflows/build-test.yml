@@ -84,11 +84,13 @@ jobs:
       - uses: ./.github/actions/restore-cache
       - uses: ./.github/actions/run-nitro-test-node
 
-      - name: Build
-        run: yarn build
-
       - name: Copy .env
         run: cp ./.env-sample ./.env
+
+      - name: Build
+        run: |
+          yarn gen:abi
+          yarn build
 
       - name: Generate network file
         run: yarn gen:network
