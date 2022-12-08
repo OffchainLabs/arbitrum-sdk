@@ -14,7 +14,9 @@ runs:
 
     - name: Start background nitro test-node.bash
       shell: bash
-      # The reason for the "&" at the end is https://stackoverflow.com/a/72203688
+      # Currently, you can't run parallel steps, so we add the "&" to run this step in the background
+      #
+      # See https://stackoverflow.com/a/72203688 for more info
       run: |
         cd run-nitro-test-node--nitro
         ./test-node.bash --init --no-blockscout &
