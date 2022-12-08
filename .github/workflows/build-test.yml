@@ -84,8 +84,11 @@ jobs:
       - uses: ./.github/actions/restore-cache
       - uses: ./.github/actions/run-nitro-test-node
 
-      - name: Generate ABIs
-        run: yarn gen:abi
+      - name: Build
+        run: yarn build
+
+      - name: Copy .env
+        run: cp ./.env-sample ./.env
 
       - name: Generate network file
         run: yarn gen:network
