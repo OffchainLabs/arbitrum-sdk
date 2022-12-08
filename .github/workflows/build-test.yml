@@ -87,5 +87,8 @@ jobs:
       - name: Generate ABIs
         run: yarn gen:abi
 
+      - name: Generate network file
+        run: yarn gen:network
+
       - name: Run integration tests
         run: CI=true yarn test:integration
