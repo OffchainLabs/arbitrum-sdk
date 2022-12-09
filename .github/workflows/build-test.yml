@@ -82,7 +82,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/restore-cache
-      - uses: ./.github/actions/run-nitro-test-node
+      - uses: OffchainLabs/actions/run-nitro-test-node
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
