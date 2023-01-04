@@ -418,11 +418,11 @@ export class L1ContractCallTransactionReceipt extends L1TransactionReceipt {
       message: L1ToL2MessageReaderOrWriter<T>
     } & L1ToL2MessageWaitResult
   > {
-    const network = await getL2Network(l2SignerOrProvider)
+    // const network = await getL2Network(l2SignerOrProvider)
 
-    if (this.blockNumber < network.nitroGenesisBlock) {
-      throw new ArbSdkError('Unexpected classic transaction.')
-    }
+    // if (this.blockNumber < network.nitroGenesisBlock) {
+    //   throw new ArbSdkError('Unexpected classic transaction.')
+    // }
 
     const message = (
       await this.getL1ToL2Messages(l2SignerOrProvider)
