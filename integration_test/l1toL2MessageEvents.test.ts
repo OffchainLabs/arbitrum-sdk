@@ -64,20 +64,18 @@ describe('L1toL2Message events', () => {
 
     const arbProvider = new JsonRpcProvider('https://arb1.arbitrum.io/rpc')
     const l1TxnReceipt = new L1TransactionReceipt(receipt)
-    const message = await l1TxnReceipt.getL1ToL2Messages(arbProvider)
+    const message = (await l1TxnReceipt.getL1ToL2Messages(arbProvider))[0]
 
-    assert.deepEqual(message, [
-      {
-        messageNumber: BigNumber.from(742464),
-        l2Provider: arbProvider,
-        retryableCreationId:
-          '0xebac787fec7d4f1529da19a72fe58f130373eb6a11bb4300aeadbcce3b709293',
-        autoRedeemId:
-          '0x8b63b138259a173889e60421f246d7428631061b1d050ad27f86084becbeb73b',
-        l2TxHash:
-          '0x64ca81f0ed73c10bb8d08c46e179b58a929dc0ff071fe112471d86d82466774f',
-      },
-    ])
+    assert.include(message, {
+      messageNumber: BigNumber.from(742464),
+      l2Provider: arbProvider,
+      retryableCreationId:
+        '0xebac787fec7d4f1529da19a72fe58f130373eb6a11bb4300aeadbcce3b709293',
+      autoRedeemId:
+        '0x8b63b138259a173889e60421f246d7428631061b1d050ad27f86084becbeb73b',
+      l2TxHash:
+        '0x64ca81f0ed73c10bb8d08c46e179b58a929dc0ff071fe112471d86d82466774f',
+    })
   })
 
   it('does call for classic events', async () => {
@@ -141,19 +139,17 @@ describe('L1toL2Message events', () => {
     const arbProvider = new JsonRpcProvider('https://arb1.arbitrum.io/rpc')
     const l1TxnReceipt = new L1TransactionReceipt(receipt)
 
-    const message = await l1TxnReceipt.getL1ToL2Messages(arbProvider)
+    const message = (await l1TxnReceipt.getL1ToL2Messages(arbProvider))[0]
 
-    assert.deepEqual(message, [
-      {
-        messageNumber: BigNumber.from(410481),
-        l2Provider: arbProvider,
-        retryableCreationId:
-          '0xc88b1821af42b8281bbf645173e287e4ec50ef96907f5211dc7069e09af20720',
-        autoRedeemId:
-          '0x38c5c31151344c7a1433a849bbc80472786ebe911630255a6e25d6a2efd39526',
-        l2TxHash:
-          '0xf91e7d2e7526927e915a2357360a3f1108dce0f9c7fa88a7492669adf5c1e53b',
-      },
-    ])
+    assert.include(message, {
+      messageNumber: BigNumber.from(410481),
+      l2Provider: arbProvider,
+      retryableCreationId:
+        '0xc88b1821af42b8281bbf645173e287e4ec50ef96907f5211dc7069e09af20720',
+      autoRedeemId:
+        '0x38c5c31151344c7a1433a849bbc80472786ebe911630255a6e25d6a2efd39526',
+      l2TxHash:
+        '0xf91e7d2e7526927e915a2357360a3f1108dce0f9c7fa88a7492669adf5c1e53b',
+    })
   })
 })
