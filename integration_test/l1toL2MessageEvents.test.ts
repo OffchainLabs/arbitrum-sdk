@@ -1,9 +1,9 @@
 import { L1TransactionReceipt } from '../src'
-import { BigNumber, constants, providers } from 'ethers'
+import { constants, providers } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { assert } from 'chai'
 
-describe('L1toL2Message events', () => {
+describe.only('L1toL2Message events', () => {
   it('does call for nitro events', async () => {
     // Receipt from mainnet tx: 0x7cb3395fca076033d84be787ef6e8eba90423a97cd244cc2f2f0e66d8df5d54e
     const receipt: providers.TransactionReceipt = {
@@ -65,9 +65,13 @@ describe('L1toL2Message events', () => {
     const arbProvider = new JsonRpcProvider('https://arb1.arbitrum.io/rpc')
     const l1TxnReceipt = new L1TransactionReceipt(receipt)
     const message = (await l1TxnReceipt.getL1ToL2Messages(arbProvider))[0]
+    const parsedMessage = {
+      ...message,
+      messageNumber: message.messageNumber.toString(),
+    }
 
-    assert.include(message, {
-      messageNumber: BigNumber.from(742464),
+    assert.deepInclude(parsedMessage, {
+      messageNumber: '742464',
       l2Provider: arbProvider,
       retryableCreationId:
         '0xebac787fec7d4f1529da19a72fe58f130373eb6a11bb4300aeadbcce3b709293',
@@ -140,9 +144,13 @@ describe('L1toL2Message events', () => {
     const l1TxnReceipt = new L1TransactionReceipt(receipt)
 
     const message = (await l1TxnReceipt.getL1ToL2Messages(arbProvider))[0]
+    const parsedMessage = {
+      ...message,
+      messageNumber: message.messageNumber.toString(),
+    }
 
-    assert.include(message, {
-      messageNumber: BigNumber.from(410481),
+    assert.deepInclude(parsedMessage, {
+      messageNumber: '410481',
       l2Provider: arbProvider,
       retryableCreationId:
         '0xc88b1821af42b8281bbf645173e287e4ec50ef96907f5211dc7069e09af20720',
