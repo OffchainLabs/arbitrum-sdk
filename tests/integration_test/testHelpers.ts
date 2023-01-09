@@ -23,14 +23,18 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { parseEther } from '@ethersproject/units'
 
-import { config, getSigner, testSetup } from '../scripts/testSetup'
+import { config, getSigner, testSetup } from '../../scripts/testSetup'
 
 import { Signer, Wallet } from 'ethers'
-import { Erc20Bridger, L1ToL2MessageStatus, L2ToL1MessageStatus } from '../src'
-import { L2Network } from '../src/lib/dataEntities/networks'
-import { GasOverrides } from '../src/lib/message/L1ToL2MessageGasEstimator'
-import { ArbSdkError } from '../src/lib/dataEntities/errors'
-import { ERC20 } from '../src/lib/abi/ERC20'
+import {
+  Erc20Bridger,
+  L1ToL2MessageStatus,
+  L2ToL1MessageStatus,
+} from '../../src'
+import { L2Network } from '../../src/lib/dataEntities/networks'
+import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
+import { ArbSdkError } from '../../src/lib/dataEntities/errors'
+import { ERC20 } from '../../src/lib/abi/ERC20'
 
 export const preFundAmount = parseEther('0.1')
 

@@ -18,7 +18,7 @@
 
 import { expect } from 'chai'
 import { parseEther } from '@ethersproject/units'
-import { AeWETH__factory } from '../src/lib/abi/factories/AeWETH__factory'
+import { AeWETH__factory } from '../../src/lib/abi/factories/AeWETH__factory'
 import {
   fundL1,
   fundL2,
@@ -27,10 +27,10 @@ import {
   GatewayType,
   depositToken,
 } from './testHelpers'
-import { L1ToL2MessageStatus } from '../src'
+import { L1ToL2MessageStatus } from '../../src'
 import { Wallet } from 'ethers'
-import { testSetup } from '../scripts/testSetup'
-import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
+import { testSetup } from '../../scripts/testSetup'
+import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 
 describe('WETH', async () => {
   beforeEach('skipIfMainnet', async function () {
