@@ -19,14 +19,14 @@
 import { assert, expect } from 'chai'
 import { BigNumber } from '@ethersproject/bignumber'
 import { hexlify } from '@ethersproject/bytes'
-import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
+import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import { fundL1, skipIfMainnet } from './testHelpers'
-import { RetryableDataTools } from '../src'
+import { RetryableDataTools } from '../../src'
 import { Wallet } from 'ethers'
-import { testSetup } from '../scripts/testSetup'
+import { testSetup } from '../../scripts/testSetup'
 import { parseEther, randomBytes } from 'ethers/lib/utils'
-import { Inbox__factory } from '../src/lib/abi/factories/Inbox__factory'
-import { GasOverrides } from '../src/lib/message/L1ToL2MessageGasEstimator'
+import { Inbox__factory } from '../../src/lib/abi/factories/Inbox__factory'
+import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
 const depositAmount = BigNumber.from(100)
 
 describe('RevertData', () => {

@@ -1,11 +1,11 @@
 'use strict'
 
-import { getL2Network } from '../src/lib/dataEntities/networks'
+import { getL2Network } from '../../src/lib/dataEntities/networks'
 import { providers } from 'ethers'
 import { mock, when, anything, instance, deepEqual } from 'ts-mockito'
 import { expect } from 'chai'
 
-import { MultiCaller } from '../src'
+import { MultiCaller } from '../../src'
 
 describe('Multicall', () => {
   const createProviderMock = async (networkChoiceOverride?: number) => {

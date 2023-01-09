@@ -20,12 +20,12 @@ import { expect } from 'chai'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Logger, LogLevel } from '@ethersproject/logger'
 Logger.setLogLevel(LogLevel.ERROR)
-import { L1CustomGateway__factory } from '../src/lib/abi/factories/L1CustomGateway__factory'
-import { L1GatewayRouter__factory } from '../src/lib/abi/factories/L1GatewayRouter__factory'
-import { L2GatewayRouter__factory } from '../src/lib/abi/factories/L2GatewayRouter__factory'
-import { TestArbCustomToken__factory } from '../src/lib/abi/factories/TestArbCustomToken__factory'
-import { TestCustomTokenL1 } from '../src/lib/abi/TestCustomTokenL1'
-import { TestCustomTokenL1__factory } from '../src/lib/abi/factories/TestCustomTokenL1__factory'
+import { L1CustomGateway__factory } from '../../src/lib/abi/factories/L1CustomGateway__factory'
+import { L1GatewayRouter__factory } from '../../src/lib/abi/factories/L1GatewayRouter__factory'
+import { L2GatewayRouter__factory } from '../../src/lib/abi/factories/L2GatewayRouter__factory'
+import { TestArbCustomToken__factory } from '../../src/lib/abi/factories/TestArbCustomToken__factory'
+import { TestCustomTokenL1 } from '../../src/lib/abi/TestCustomTokenL1'
+import { TestCustomTokenL1__factory } from '../../src/lib/abi/factories/TestCustomTokenL1__factory'
 
 import {
   fundL1,
@@ -35,11 +35,11 @@ import {
   GatewayType,
   withdrawToken,
 } from './testHelpers'
-import { L1ToL2MessageStatus, L2Network } from '../src'
+import { L1ToL2MessageStatus, L2Network } from '../../src'
 import { Signer, constants } from 'ethers'
-import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
-import { testSetup } from '../scripts/testSetup'
-import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
+import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
+import { testSetup } from '../../scripts/testSetup'
+import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)

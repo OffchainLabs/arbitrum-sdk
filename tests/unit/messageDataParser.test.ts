@@ -5,7 +5,7 @@ import { expect } from 'chai'
 
 import { BigNumber } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
-import { SubmitRetryableMessageDataParser } from '../src/lib/message/messageDataParser'
+import { SubmitRetryableMessageDataParser } from '../../src/lib/message/messageDataParser'
 
 describe('SubmitRetryableMessageDataParser', () => {
   it('does parse l1 to l2 message', async () => {
