@@ -18,7 +18,7 @@
 
 import { expect } from 'chai'
 import { BigNumber } from '@ethersproject/bignumber'
-import { TestERC20__factory } from '../src/lib/abi/factories/TestERC20__factory'
+import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import {
   fundL1,
   fundL2,
@@ -33,18 +33,18 @@ import {
   L1ToL2MessageWriter,
   L2Network,
   L2TransactionReceipt,
-} from '../src'
+} from '../../src'
 import { Signer } from 'ethers'
-import { TestERC20 } from '../src/lib/abi/TestERC20'
-import { testSetup } from '../scripts/testSetup'
-import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
+import { TestERC20 } from '../../src/lib/abi/TestERC20'
+import { testSetup } from '../../scripts/testSetup'
+import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import {
   ARB_RETRYABLE_TX_ADDRESS,
   NODE_INTERFACE_ADDRESS,
-} from '../src/lib/dataEntities/constants'
-import { ArbRetryableTx__factory } from '../src/lib/abi/factories/ArbRetryableTx__factory'
-import { NodeInterface__factory } from '../src/lib/abi/factories/NodeInterface__factory'
-import { isDefined } from '../src/lib/utils/lib'
+} from '../../src/lib/dataEntities/constants'
+import { ArbRetryableTx__factory } from '../../src/lib/abi/factories/ArbRetryableTx__factory'
+import { NodeInterface__factory } from '../../src/lib/abi/factories/NodeInterface__factory'
+import { isDefined } from '../../src/lib/utils/lib'
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
