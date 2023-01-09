@@ -82,7 +82,12 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: ./.github/actions/restore-cache
-      
+
+      - name: Build
+        run: |
+          yarn gen:abi
+          yarn build
+
       - name: Run unit tests
         run: CI=true yarn test:unit
 
