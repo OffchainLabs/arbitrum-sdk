@@ -78,6 +78,7 @@ jobs:
   test-unit:
     name: Test (Unit)
     runs-on: ubuntu-latest
+    needs: install
     steps:
       - uses: actions/checkout@v3
 
