@@ -81,6 +81,8 @@ jobs:
     needs: install
     steps:
       - uses: actions/checkout@v3
+      - uses: ./.github/actions/restore-cache
+      
       - name: Run unit tests
         run: CI=true yarn test:unit
 
