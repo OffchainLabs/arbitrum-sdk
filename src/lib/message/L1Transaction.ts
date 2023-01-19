@@ -41,10 +41,7 @@ import {
 import { ArbSdkError } from '../dataEntities/errors'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { InboxMessageDeliveredEvent } from '../abi/Inbox'
-import {
-  InboxMessageKind,
-  RetryableMessageParams,
-} from '../dataEntities/message'
+import { InboxMessageKind } from '../dataEntities/message'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
 import { MessageDeliveredEvent } from '../abi/Bridge'
 import { EventArgs, parseTypedLogs } from '../dataEntities/event'
@@ -64,15 +61,18 @@ export type L1ContractCallTransaction =
   L1ContractTransaction<L1ContractCallTransactionReceipt>
 
 class ClassicL1ToL2MessageReader extends L1ToL2MessageReader {
-  constructor(
-    l2Provider: Provider,
-    chainId: number,
-    sender: string,
-    messageNumber: BigNumber,
-    l1BaseFee: BigNumber,
-    messageData: RetryableMessageParams
-  ) {
-    super(l2Provider, chainId, sender, messageNumber, l1BaseFee, messageData)
+  constructor(l2Provider: Provider, chainId: number, messageNumber: BigNumber) {
+    super(l2Provider, chainId, '0x', messageNumber, BigNumber.from(0), {
+      l1Value: BigNumber.from(0),
+      l2CallValue: BigNumber.from(0),
+      gasLimit: BigNumber.from(0),
+      maxFeePerGas: BigNumber.from(0),
+      maxSubmissionFee: BigNumber.from(0),
+      destAddress: '0x',
+      excessFeeRefundAddress: '0x',
+      callValueRefundAddress: '0x',
+      data: '0x',
+    })
   }
   private bitFlip = (num: BigNumber) => num.or(BigNumber.from(1).shl(255))
 
@@ -83,14 +83,14 @@ class ClassicL1ToL2MessageReader extends L1ToL2MessageReader {
     ])
   )
 
-  public override readonly autoRedeemId = keccak256(
+  public readonly autoRedeemId = keccak256(
     concat([
       zeroPad(this.retryableCreationId, 32),
       zeroPad(BigNumber.from(1).toHexString(), 32),
     ])
   )
 
-  public override readonly l2TxHash = keccak256(
+  public readonly l2TxHash = keccak256(
     concat([
       zeroPad(this.retryableCreationId, 32),
       zeroPad(BigNumber.from(0).toHexString(), 32),
@@ -243,30 +243,18 @@ export class L1TransactionReceipt implements TransactionReceipt {
 
     // Classic events
     if (this.blockNumber < network.nitroGenesisBlock) {
-      const { messageNum } = this.getInboxMessageDeliveredEvents()[0]
+      const messageNums = this.getInboxMessageDeliveredEvents().map(
+        msg => msg.messageNum
+      )
 
-      return [
-        new ClassicL1ToL2MessageReader(
-          provider,
-          BigNumber.from(chainID).toNumber(),
-          '0x',
-          messageNum,
-          BigNumber.from(0),
-          // No message params required for classic events
-          // Populate with empty data
-          {
-            l1Value: BigNumber.from(0),
-            l2CallValue: BigNumber.from(0),
-            gasLimit: BigNumber.from(0),
-            maxFeePerGas: BigNumber.from(0),
-            maxSubmissionFee: BigNumber.from(0),
-            destAddress: '0x',
-            excessFeeRefundAddress: '0x',
-            callValueRefundAddress: '0x',
-            data: '0x',
-          }
-        ),
-      ]
+      return messageNums.map(
+        messageNum =>
+          new ClassicL1ToL2MessageReader(
+            provider,
+            BigNumber.from(chainID).toNumber(),
+            messageNum
+          )
+      )
     }
 
     const events = this.getMessageEvents()
@@ -418,12 +406,6 @@ export class L1ContractCallTransactionReceipt extends L1TransactionReceipt {
       message: L1ToL2MessageReaderOrWriter<T>
     } & L1ToL2MessageWaitResult
   > {
-    // const network = await getL2Network(l2SignerOrProvider)
-
-    // if (this.blockNumber < network.nitroGenesisBlock) {
-    //   throw new ArbSdkError('Unexpected classic transaction.')
-    // }
-
     const message = (
       await this.getL1ToL2Messages(l2SignerOrProvider)
     )[0] as L1ToL2MessageReaderOrWriter<T>

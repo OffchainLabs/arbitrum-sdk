@@ -93,9 +93,6 @@ export abstract class L1ToL2Message {
    * creation of the retryable ticket.
    */
   public readonly retryableCreationId: string
-  // autoRedeemId & l2TxHash used for classic events
-  public readonly autoRedeemId: string | undefined
-  public readonly l2TxHash: string | undefined
 
   /**
    * The submit retryable transactions use the typed transaction envelope 2718.
