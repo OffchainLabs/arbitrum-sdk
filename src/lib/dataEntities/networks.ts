@@ -169,15 +169,6 @@ export const l1Networks: L1Networks = {
     isCustom: false,
     isArbitrum: false,
   },
-  5: {
-    blockTime: 15,
-    chainID: 5,
-    explorerUrl: 'https://goerli.etherscan.io',
-    isCustom: false,
-    name: 'Goerli',
-    partnerChainIDs: [421613],
-    isArbitrum: false,
-  },
 }
 
 export const l2Networks: L2Networks = {
