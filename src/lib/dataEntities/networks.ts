@@ -160,13 +160,13 @@ export const l1Networks: L1Networks = {
     isCustom: false,
     isArbitrum: false,
   },
-  4: {
-    chainID: 4,
-    name: 'Rinkeby',
-    explorerUrl: 'https://rinkeby.etherscan.io',
-    partnerChainIDs: [421611],
+  5: {
     blockTime: 15,
+    chainID: 5,
+    explorerUrl: 'https://goerli.etherscan.io',
     isCustom: false,
+    name: 'Goerli',
+    partnerChainIDs: [421613],
     isArbitrum: false,
   },
 }
