@@ -49,8 +49,8 @@ export interface RedeemTransaction extends L2ContractTransaction {
 }
 
 /**
- *  Extension of ethers-js TransactionReceipt, adding Arbitrum-specific functionality
- * */
+ * Extension of ethers-js TransactionReceipt, adding Arbitrum-specific functionality
+ */
 export class L2TransactionReceipt implements TransactionReceipt {
   public readonly to: string
   public readonly from: string
