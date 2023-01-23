@@ -189,20 +189,6 @@ export const l2Networks: L2Networks = {
      */
     depositTimeout: 888000,
   },
-  421611: {
-    chainID: 421611,
-    name: 'ArbRinkeby',
-    explorerUrl: 'https://testnet.arbiscan.io',
-    partnerChainID: 4,
-    isArbitrum: true,
-    tokenBridge: rinkebyTokenBridge,
-    ethBridge: rinkebyETHBridge,
-    confirmPeriodBlocks: 6545, // TODO
-    isCustom: false,
-    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
-    nitroGenesisBlock: 13919179,
-    depositTimeout: 9000000,
-  },
   421613: {
     chainID: 421613,
     confirmPeriodBlocks: 960,
