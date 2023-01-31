@@ -19,13 +19,12 @@
 import { TransactionReceipt } from '@ethersproject/providers'
 import { Log, Provider } from '@ethersproject/abstract-provider'
 import { ContractTransaction } from '@ethersproject/contracts'
-import { keccak256 } from '@ethersproject/keccak256'
-import { concat, zeroPad } from '@ethersproject/bytes'
 import { BigNumber } from '@ethersproject/bignumber'
 import {
   L1ToL2Message,
   L1ToL2MessageReaderOrWriter,
   L1ToL2MessageReader,
+  L1ToL2MessageReaderClassic,
   L1ToL2MessageWriter,
   L1ToL2MessageStatus,
   L1ToL2MessageWaitResult,
@@ -59,44 +58,6 @@ export type L1EthDepositTransaction =
   L1ContractTransaction<L1EthDepositTransactionReceipt>
 export type L1ContractCallTransaction =
   L1ContractTransaction<L1ContractCallTransactionReceipt>
-
-class ClassicL1ToL2MessageReader extends L1ToL2MessageReader {
-  constructor(l2Provider: Provider, chainId: number, messageNumber: BigNumber) {
-    super(l2Provider, chainId, '0x', messageNumber, BigNumber.from(0), {
-      l1Value: BigNumber.from(0),
-      l2CallValue: BigNumber.from(0),
-      gasLimit: BigNumber.from(0),
-      maxFeePerGas: BigNumber.from(0),
-      maxSubmissionFee: BigNumber.from(0),
-      destAddress: '0x',
-      excessFeeRefundAddress: '0x',
-      callValueRefundAddress: '0x',
-      data: '0x',
-    })
-  }
-  private bitFlip = (num: BigNumber) => num.or(BigNumber.from(1).shl(255))
-
-  public override readonly retryableCreationId = keccak256(
-    concat([
-      zeroPad(BigNumber.from(this.chainId).toHexString(), 32),
-      zeroPad(this.bitFlip(this.messageNumber).toHexString(), 32),
-    ])
-  )
-
-  public readonly autoRedeemId = keccak256(
-    concat([
-      zeroPad(this.retryableCreationId, 32),
-      zeroPad(BigNumber.from(1).toHexString(), 32),
-    ])
-  )
-
-  public readonly l2TxHash = keccak256(
-    concat([
-      zeroPad(this.retryableCreationId, 32),
-      zeroPad(BigNumber.from(0).toHexString(), 32),
-    ])
-  )
-}
 
 export class L1TransactionReceipt implements TransactionReceipt {
   public readonly to: string
@@ -228,6 +189,37 @@ export class L1TransactionReceipt implements TransactionReceipt {
   }
 
   /**
+   * Get classic l1tol2 messages created by this transaction
+   * @param l2SignerOrProvider
+   */
+  public async getL1ToL2MessagesClassic(
+    l2Provider: Provider
+  ): Promise<L1ToL2MessageReaderClassic[]> {
+    const network = await getL2Network(l2Provider)
+    const chainID = network.chainID.toString()
+
+    // throw on nitro events
+    if (this.blockNumber >= network.nitroGenesisBlock) {
+      throw new Error(
+        "This method is only for classic transactions. Use 'getL1ToL2Messages' for nitro transactions."
+      )
+    }
+
+    const messageNums = this.getInboxMessageDeliveredEvents().map(
+      msg => msg.messageNum
+    )
+
+    return messageNums.map(
+      messageNum =>
+        new L1ToL2MessageReaderClassic(
+          l2Provider,
+          BigNumber.from(chainID).toNumber(),
+          messageNum
+        )
+    )
+  }
+
+  /**
    * Get any l1tol2 messages created by this transaction
    * @param l2SignerOrProvider
    */
@@ -241,19 +233,10 @@ export class L1TransactionReceipt implements TransactionReceipt {
     const network = await getL2Network(provider)
     const chainID = network.chainID.toString()
 
-    // Classic events
+    // throw on classic events
     if (this.blockNumber < network.nitroGenesisBlock) {
-      const messageNums = this.getInboxMessageDeliveredEvents().map(
-        msg => msg.messageNum
-      )
-
-      return messageNums.map(
-        messageNum =>
-          new ClassicL1ToL2MessageReader(
-            provider,
-            BigNumber.from(chainID).toNumber(),
-            messageNum
-          )
+      throw new Error(
+        "This method is only for nitro transactions. Use 'getL1ToL2MessagesClassic' for classic transactions."
       )
     }
 
