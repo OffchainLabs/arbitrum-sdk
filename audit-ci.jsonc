@@ -60,6 +60,11 @@
     // from dev dependency: typedoc-plugin-markdown>handlebars>minimist
     // Minimist is a typedoc plugin's dependency and is never included in the sdk build
     // Typedoc was only called by the nitro-docs repo to generate sdk docs
-    "GHSA-xvch-5gv4-984h"
+    "GHSA-xvch-5gv4-984h",
+    // https://github.com/advisories/GHSA-9c47-m6qq-7p4h
+    // Prototype Pollution in JSON5 via Parse Method
+    // from: nyc>istanbul-lib-instrument>@babel/core>json5
+    // not used in ci
+    "GHSA-9c47-m6qq-7p4h"
   ]
 }

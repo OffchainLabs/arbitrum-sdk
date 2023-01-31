@@ -22,15 +22,15 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { Logger, LogLevel } from '@ethersproject/logger'
 Logger.setLogLevel(LogLevel.ERROR)
 
-import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
-import { Inbox__factory } from '../src/lib/abi/factories/Inbox__factory'
-import { SequencerInbox__factory } from '../src/lib/abi/factories/SequencerInbox__factory'
+import { Bridge__factory } from '../../src/lib/abi/factories/Bridge__factory'
+import { Inbox__factory } from '../../src/lib/abi/factories/Inbox__factory'
+import { SequencerInbox__factory } from '../../src/lib/abi/factories/SequencerInbox__factory'
 
-import { InboxTools } from '../src'
+import { InboxTools } from '../../src'
 
 import { ethers, network } from 'hardhat'
 import { hexZeroPad } from '@ethersproject/bytes'
-import { L2Network, getL2Network } from '../src/lib/dataEntities/networks'
+import { L2Network, getL2Network } from '../../src/lib/dataEntities/networks'
 import { solidityKeccak256 } from 'ethers/lib/utils'
 import { ContractTransaction, Signer } from 'ethers'
 

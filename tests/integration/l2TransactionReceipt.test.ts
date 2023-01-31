@@ -25,11 +25,11 @@ import {
   skipIfMainnet,
   wait,
 } from './testHelpers'
-import { L2TransactionReceipt } from '../src'
+import { L2TransactionReceipt } from '../../src'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { BigNumber, Wallet } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
-import { testSetup } from '../scripts/testSetup'
+import { testSetup } from '../../scripts/testSetup'
 
 describe('ArbProvider', () => {
   beforeEach('skipIfMainnet', async function () {

@@ -18,12 +18,12 @@
 ;('use strict')
 
 import { BigNumber, ethers, Signer } from 'ethers'
-import { InboxTools } from '../src/lib/inbox/inbox'
-import { getL2Network, L2Network } from '../src/lib/dataEntities/networks'
-import { testSetup } from '../scripts/testSetup'
+import { InboxTools } from '../../src/lib/inbox/inbox'
+import { getL2Network, L2Network } from '../../src/lib/dataEntities/networks'
+import { testSetup } from '../../scripts/testSetup'
 import { greeter } from './helper/greeter'
 import { expect } from 'chai'
-import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
+import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 
 const sendSignedTx = async (testState: any, info?: any) => {
   const { l1Deployer, l2Deployer } = testState
