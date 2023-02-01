@@ -389,9 +389,7 @@ export class L1ContractCallTransactionReceipt extends L1TransactionReceipt {
       message: L1ToL2MessageReaderOrWriter<T>
     } & L1ToL2MessageWaitResult
   > {
-    const message = (
-      await this.getL1ToL2Messages(l2SignerOrProvider)
-    )[0] as L1ToL2MessageReaderOrWriter<T>
+    const message = (await this.getL1ToL2Messages(l2SignerOrProvider))[0]
 
     if (!message) throw new ArbSdkError('Unexpected missing L1ToL2 message.')
     const res = await message.waitForStatus(confirmations, timeout)
