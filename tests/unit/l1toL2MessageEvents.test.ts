@@ -152,14 +152,22 @@ describe('L1toL2Message events', () => {
     const arbProvider = new JsonRpcProvider('https://arb1.arbitrum.io/rpc')
     const l1TxnReceipt = new L1TransactionReceipt(receipt)
 
-    // Throw when trying to get classic messages
+    let txReceipt
     try {
-      await l1TxnReceipt.getL1ToL2MessagesClassic(arbProvider)
+      // Try getting classic messages using a nitro tx
+      txReceipt = await l1TxnReceipt.getL1ToL2MessagesClassic(arbProvider)
     } catch (err) {
+      // This call should throw an error
       expect(err).to.be.an('error')
       expect((err as Error).message).to.be.eq(
         "This method is only for classic transactions. Use 'getL1ToL2Messages' for nitro transactions."
       )
+    } finally {
+      // Should not successfully get classic messages
+      expect(
+        txReceipt,
+        'Classic method was successful using a nitro transaction.'
+      ).be.undefined
     }
 
     const msg = (await l1TxnReceipt.getL1ToL2Messages(arbProvider))[0]
@@ -277,14 +285,22 @@ describe('L1toL2Message events', () => {
     const arbProvider = new JsonRpcProvider('https://arb1.arbitrum.io/rpc')
     const l1TxnReceipt = new L1TransactionReceipt(receipt)
 
-    // Throw when trying to get nitro messages
+    let txReceipt
     try {
-      await l1TxnReceipt.getL1ToL2Messages(arbProvider)
+      // Try getting nitro messages using a classic tx
+      txReceipt = await l1TxnReceipt.getL1ToL2Messages(arbProvider)
     } catch (err) {
+      // This call should throw an error
       expect(err).to.be.an('error')
       expect((err as Error).message).to.be.eq(
         "This method is only for nitro transactions. Use 'getL1ToL2MessagesClassic' for classic transactions."
       )
+    } finally {
+      // Should not successfully get nitro messages
+      expect(
+        txReceipt,
+        'Nitro method was successful using a classic transaction.'
+      ).be.undefined
     }
 
     const msg = (await l1TxnReceipt.getL1ToL2MessagesClassic(arbProvider))[0]
