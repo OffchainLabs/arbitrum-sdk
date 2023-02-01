@@ -167,7 +167,7 @@ describe('L1toL2Message events', () => {
       expect(
         txReceipt,
         'Classic method was successful using a nitro transaction.'
-      ).be.undefined
+      ).to.be.undefined
     }
 
     const msg = (await l1TxnReceipt.getL1ToL2Messages(arbProvider))[0]
@@ -300,7 +300,7 @@ describe('L1toL2Message events', () => {
       expect(
         txReceipt,
         'Nitro method was successful using a classic transaction.'
-      ).be.undefined
+      ).to.be.undefined
     }
 
     const msg = (await l1TxnReceipt.getL1ToL2MessagesClassic(arbProvider))[0]
