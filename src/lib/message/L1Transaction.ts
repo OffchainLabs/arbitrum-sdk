@@ -190,7 +190,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
 
   /**
    * Get classic l1tol2 messages created by this transaction
-   * @param l2SignerOrProvider
+   * @param l2Provider
    */
   public async getL1ToL2MessagesClassic(
     l2Provider: Provider
