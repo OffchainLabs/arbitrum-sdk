@@ -94,7 +94,7 @@ type EthDepositRequestParams = OmitTyped<
 > & { from: string }
 
 /**
- * Bridger for moving ETH back and forth betwen L1 to L2
+ * Bridger for moving ETH back and forth between L1 to L2
  */
 export class EthBridger extends AssetBridger<
   EthDepositParams | L1ToL2TxReqAndSigner,

@@ -166,7 +166,7 @@ type DefaultedDepositRequest = RequiredPick<
 >
 
 /**
- * Bridger for moving ERC20 tokens back and forth betwen L1 to L2
+ * Bridger for moving ERC20 tokens back and forth between L1 to L2
  */
 export class Erc20Bridger extends AssetBridger<
   Erc20DepositParams | L1ToL2TxReqAndSignerProvider,
@@ -176,7 +176,7 @@ export class Erc20Bridger extends AssetBridger<
   public static MIN_CUSTOM_DEPOSIT_GAS_LIMIT = BigNumber.from(275000)
 
   /**
-   * Bridger for moving ERC20 tokens back and forth betwen L1 to L2
+   * Bridger for moving ERC20 tokens back and forth between L1 to L2
    */
   public constructor(l2Network: L2Network) {
     super(l2Network)

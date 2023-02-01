@@ -199,7 +199,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     const chainID = network.chainID.toString()
 
     // throw on nitro events
-    if (this.blockNumber >= network.nitroGenesisBlock) {
+    if (this.blockNumber >= network.firstNitroBlock) {
       throw new Error(
         "This method is only for classic transactions. Use 'getL1ToL2Messages' for nitro transactions."
       )
@@ -234,7 +234,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     const chainID = network.chainID.toString()
 
     // throw on classic events
-    if (this.blockNumber < network.nitroGenesisBlock) {
+    if (this.blockNumber < network.firstNitroBlock) {
       throw new Error(
         "This method is only for nitro transactions. Use 'getL1ToL2MessagesClassic' for classic transactions."
       )
