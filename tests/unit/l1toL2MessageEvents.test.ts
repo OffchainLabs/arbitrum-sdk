@@ -1,7 +1,7 @@
 import { L1TransactionReceipt } from '../../src'
 import { BigNumber, constants, providers } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { assert, expect } from 'chai'
+import { expect } from 'chai'
 
 describe('L1toL2Message events', () => {
   it('does call for nitro events', async () => {
