@@ -75,7 +75,8 @@ describe('L1ToL2MessageCreator', () => {
     // Getting and checking updated balances
     const finalL2Balance = await l2Signer.getBalance()
 
-    // Balance will add the excess ETH to the same address
+    // When sending ETH through retryables, the same address will receive the ETH sent through the callvalue
+    // plus any gas that was not used in the operation.
     expect(
       initialL2Balance.add(testAmount).lt(finalL2Balance),
       'L2 balance not updated'
@@ -134,7 +135,8 @@ describe('L1ToL2MessageCreator', () => {
     // Getting and checking updated balances
     const finalL2Balance = await l2Signer.getBalance()
 
-    // Balance will add the excess ETH to the same address
+    // When sending ETH through retryables, the same address will receive the ETH sent through the callvalue
+    // plus any gas that was not used in the operation.
     expect(
       initialL2Balance.add(testAmount).lt(finalL2Balance),
       'L2 balance not updated'
