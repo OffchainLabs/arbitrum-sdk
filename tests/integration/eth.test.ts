@@ -31,6 +31,8 @@ import {
 } from './testHelpers'
 import { L2ToL1Message } from '../../src/lib/message/L2ToL1Message'
 import { L2ToL1MessageStatus } from '../../src/lib/dataEntities/message'
+import { L2TransactionReceipt } from '../../src/lib/message/L2Transaction'
+import { L1ToL2MessageStatus } from '../../src/lib/message/L1ToL2Message'
 import { testSetup } from '../../scripts/testSetup'
 dotenv.config()
 
@@ -118,6 +120,76 @@ describe('Ether', async () => {
     expect(waitResult.l2TxReceipt).to.not.be.null
 
     const testWalletL2EthBalance = await l2Signer.getBalance()
+    expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(
+      ethToDeposit.toString()
+    )
+  })
+
+  it('deposits ether to a specific L2 address', async () => {
+    const { ethBridger, l1Signer, l2Signer } = await testSetup()
+
+    await fundL1(l1Signer)
+    const inboxAddress = ethBridger.l2Network.ethBridge.inbox
+    const destWallet = Wallet.createRandom()
+
+    const initialInboxBalance = await l1Signer.provider!.getBalance(
+      inboxAddress
+    )
+    const ethToDeposit = parseEther('0.0002')
+    const res = await ethBridger.depositTo(
+      {
+        amount: ethToDeposit,
+        l1Signer: l1Signer,
+        to: destWallet.address,
+      },
+      l2Signer.provider!
+    )
+    const rec = await res.wait()
+
+    expect(rec.status).to.equal(1, 'eth deposit L1 txn failed')
+    const finalInboxBalance = await l1Signer.provider!.getBalance(inboxAddress)
+    expect(
+      initialInboxBalance.add(ethToDeposit).eq(finalInboxBalance),
+      'balance failed to update after eth deposit'
+    )
+
+    const l1ToL2Messages = await rec.getL1ToL2Messages(l2Signer.provider!)
+    expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
+    const l1ToL2Message = l1ToL2Messages[0]
+
+    expect(l1ToL2Message.messageData.destAddress).to.eq(
+      destWallet.address,
+      'message inputs value error'
+    )
+    expect(
+      l1ToL2Message.messageData.l2CallValue.toString(),
+      'message inputs value error'
+    ).to.eq(ethToDeposit.toString())
+
+    const retryableTicketResult = await l1ToL2Message.waitForStatus()
+    expect(retryableTicketResult.status).to.eq(
+      L1ToL2MessageStatus.REDEEMED,
+      'Retryable ticket not redeemed'
+    )
+
+    const retryableTxReceipt = await l2Signer.provider!.getTransactionReceipt(
+      l1ToL2Message.retryableCreationId
+    )
+    expect(retryableTxReceipt).to.exist
+    expect(retryableTxReceipt).to.not.be.null
+
+    const l2RetryableTxReceipt = new L2TransactionReceipt(retryableTxReceipt)
+    const ticketRedeemEvents = l2RetryableTxReceipt.getRedeemScheduledEvents()
+    expect(ticketRedeemEvents.length).to.eq(
+      1,
+      'failed finding the redeem event'
+    )
+    expect(ticketRedeemEvents[0].retryTxHash).to.exist
+    expect(ticketRedeemEvents[0].retryTxHash).to.not.be.null
+
+    const testWalletL2EthBalance = await l2Signer.provider!.getBalance(
+      destWallet.address
+    )
     expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(
       ethToDeposit.toString()
     )

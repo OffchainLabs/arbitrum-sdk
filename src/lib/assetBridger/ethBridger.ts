@@ -27,12 +27,15 @@ import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 import { AssetBridger } from './assetBridger'
 import {
   L1EthDepositTransaction,
+  L1ContractTransaction,
   L1TransactionReceipt,
 } from '../message/L1Transaction'
 import {
   L2ContractTransaction,
   L2TransactionReceipt,
 } from '../message/L2Transaction'
+import { L1ToL2MessageCreator } from '../message/L1ToL2MessageCreator'
+import { GasOverrides } from '../message/L1ToL2MessageGasEstimator'
 import {
   isL1ToL2TransactionRequest,
   isL2ToL1TransactionRequest,
@@ -76,6 +79,10 @@ export type EthDepositParams = {
    * Transaction overrides
    */
   overrides?: PayableOverrides
+}
+
+export type EthDepositToParams = EthDepositParams & {
+  to: string
 }
 
 export type L1ToL2TxReqAndSigner = L1ToL2TransactionRequest & {
@@ -192,6 +199,37 @@ export class EthBridger extends AssetBridger<
         return BigNumber.from(130000)
       },
     }
+  }
+
+  /**
+   * Deposit ETH from L1 onto a different L2 address
+   * @param params
+   * @returns
+   */
+  public async depositTo(
+    params: EthDepositToParams,
+    l2Provider: Provider,
+    gasOverrides?: GasOverrides
+  ): Promise<L1ContractTransaction> {
+    await this.checkL1Network(params.l1Signer)
+    const from = await params.l1Signer.getAddress()
+
+    const retryableTicketParams = {
+      from: from,
+      to: params.to,
+      l2CallValue: params.amount,
+      callValueRefundAddress: params.to,
+      excessFeeRefundAddress: from,
+      data: '0x',
+    }
+
+    const l1ToL2MessageCreator = new L1ToL2MessageCreator(params.l1Signer)
+    const tx = await l1ToL2MessageCreator.createRetryableTicket(
+      retryableTicketParams,
+      l2Provider,
+      gasOverrides
+    )
+    return tx
   }
 
   /**
