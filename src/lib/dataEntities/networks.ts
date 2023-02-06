@@ -34,6 +34,7 @@ export interface L2Network extends Network {
   confirmPeriodBlocks: number
   retryableLifetimeSeconds: number
   nitroGenesisBlock: number
+  firstNitroBlock: number
   /**
    * How long to wait (ms) for a deposit to arrive on l2 before timing out a request
    */
@@ -155,6 +156,7 @@ export const l2Networks: L2Networks = {
     isCustom: false,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     nitroGenesisBlock: 22207817,
+    firstNitroBlock: 15447158,
     /**
      * Finalisation on mainnet can be up to 2 epochs = 64 blocks on mainnet
      */
@@ -193,6 +195,7 @@ export const l2Networks: L2Networks = {
       l2WethGateway: '0xf9F2e89c8347BD96742Cc07095dee490e64301d6',
     },
     nitroGenesisBlock: 0,
+    firstNitroBlock: 0,
     /**
      * Low validator participation on goerli means that it can take a long time to finalise
      * Wait 10 epochs there on goerli = 320 blocks. Each block is 12 seconds.
@@ -232,6 +235,7 @@ export const l2Networks: L2Networks = {
       l2WethGateway: '0x7626841cB6113412F9c88D3ADC720C9FAC88D9eD',
     },
     nitroGenesisBlock: 0,
+    firstNitroBlock: 0,
     depositTimeout: 888000,
   },
 }
