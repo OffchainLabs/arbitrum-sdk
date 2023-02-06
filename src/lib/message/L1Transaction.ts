@@ -24,6 +24,7 @@ import {
   L1ToL2Message,
   L1ToL2MessageReaderOrWriter,
   L1ToL2MessageReader,
+  L1ToL2MessageReaderClassic,
   L1ToL2MessageWriter,
   L1ToL2MessageStatus,
   L1ToL2MessageWaitResult,
@@ -188,6 +189,37 @@ export class L1TransactionReceipt implements TransactionReceipt {
   }
 
   /**
+   * Get classic l1tol2 messages created by this transaction
+   * @param l2Provider
+   */
+  public async getL1ToL2MessagesClassic(
+    l2Provider: Provider
+  ): Promise<L1ToL2MessageReaderClassic[]> {
+    const network = await getL2Network(l2Provider)
+    const chainID = network.chainID.toString()
+
+    // throw on nitro events
+    if (this.blockNumber >= network.firstNitroBlock) {
+      throw new Error(
+        "This method is only for classic transactions. Use 'getL1ToL2Messages' for nitro transactions."
+      )
+    }
+
+    const messageNums = this.getInboxMessageDeliveredEvents().map(
+      msg => msg.messageNum
+    )
+
+    return messageNums.map(
+      messageNum =>
+        new L1ToL2MessageReaderClassic(
+          l2Provider,
+          BigNumber.from(chainID).toNumber(),
+          messageNum
+        )
+    )
+  }
+
+  /**
    * Get any l1tol2 messages created by this transaction
    * @param l2SignerOrProvider
    */
@@ -200,8 +232,15 @@ export class L1TransactionReceipt implements TransactionReceipt {
     const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
     const network = await getL2Network(provider)
     const chainID = network.chainID.toString()
-    const events = this.getMessageEvents()
 
+    // throw on classic events
+    if (this.blockNumber < network.firstNitroBlock) {
+      throw new Error(
+        "This method is only for nitro transactions. Use 'getL1ToL2MessagesClassic' for classic transactions."
+      )
+    }
+
+    const events = this.getMessageEvents()
     return events
       .filter(
         e =>
