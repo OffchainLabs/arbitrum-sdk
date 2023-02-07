@@ -99,6 +99,18 @@ export class L1TransactionReceipt implements TransactionReceipt {
   }
 
   /**
+   * Check if is a classic transaction
+   * @param l2SignerOrProvider
+   */
+  public async isClassic<T extends SignerOrProvider>(
+    l2SignerOrProvider: T
+  ): Promise<boolean> {
+    const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
+    const network = await getL2Network(provider)
+    return this.blockNumber < network.firstNitroBlock
+  }
+
+  /**
    * Get any MessageDelivered events that were emitted during this transaction
    * @returns
    */
