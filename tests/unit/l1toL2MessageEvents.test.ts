@@ -170,8 +170,11 @@ describe('L1toL2Message events', () => {
       ).to.be.undefined
     }
 
+    const isClassic = await l1TxnReceipt.isClassic(arbProvider)
     const msg = (await l1TxnReceipt.getL1ToL2Messages(arbProvider))[0]
 
+    expect(isClassic, 'incorrect tx type returned by isClassic call').to.be
+      .false
     expect(msg.chainId, 'incorrect chain id').to.be.eq(42161)
     expect(msg.sender, 'incorrect sender').to.be.eq(
       '0xeA3123E9d9911199a6711321d1277285e6d4F3EC'
@@ -303,8 +306,10 @@ describe('L1toL2Message events', () => {
       ).to.be.undefined
     }
 
+    const isClassic = await l1TxnReceipt.isClassic(arbProvider)
     const msg = (await l1TxnReceipt.getL1ToL2MessagesClassic(arbProvider))[0]
 
+    expect(isClassic, 'incorrect tx type returned by isClassic call').to.be.true
     expect(
       msg.messageNumber.eq(BigNumber.from('0x064371')),
       'incorrect message number'
