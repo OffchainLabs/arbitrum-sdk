@@ -90,7 +90,7 @@ When assets are moved by the L1 and L2 cross chain messages are sent. The lifecy
 
 ### Networks
 
-Arbitrum SDK comes pre-configured for the Mainnet and Rinkeby, and their Arbitrum counterparts. However the networks functionlity can be used register networks for custom Arbitrum instances. Most of the classes in Arbitrum SDK depend on network objects so this must be configured before using other Arbitrum SDK functionlity.
+Arbitrum SDK comes pre-configured for Mainnet and Goerli, and their Arbitrum counterparts. However, the networks functionality can be used to register networks for custom Arbitrum instances. Most of the classes in Arbitrum SDK depend on network objects so this must be configured before using other Arbitrum SDK functionality.
 
 ### Inbox tools
 
@@ -110,9 +110,9 @@ As part of normal operation the Arbitrum sequencer will messages into the rollup
 
 3. Once done, finally run `yarn test:integration` to run the integration tests.
 
-Defaults to `rinkArby`, for custom network use `--network` flag.
+Defaults to `Arbitrum Goerli`, for custom network use `--network` flag.
 
-`rinkArby` expects env var `ARB_KEY` to be prefunded with at least 0.02 ETH, and env var `INFURA_KEY` to be set.
+`Arbitrum Goerli` expects env var `ARB_KEY` to be prefunded with at least 0.02 ETH, and env var `INFURA_KEY` to be set.
 (see `integration_test/config.ts`)
 
 ### Bridge A Standard Token

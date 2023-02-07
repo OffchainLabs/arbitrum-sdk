@@ -164,7 +164,7 @@ export class L1ToL2MessageCreator {
         )
 
     const tx = await this.l1Signer.sendTransaction({
-      ...createRequest,
+      ...createRequest.txRequest,
       ...params.overrides,
     })
 

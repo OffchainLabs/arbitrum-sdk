@@ -21,8 +21,9 @@ import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
-import { zeroPad } from '@ethersproject/bytes'
+import { concat, zeroPad } from '@ethersproject/bytes'
 import { getAddress } from '@ethersproject/address'
+import { keccak256 } from '@ethersproject/keccak256'
 
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
 import { ARB_RETRYABLE_TX_ADDRESS } from '../dataEntities/constants'
@@ -516,6 +517,41 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       this.l2Provider
     )
     return arbRetryableTx.getBeneficiary(this.retryableCreationId)
+  }
+}
+
+export class L1ToL2MessageReaderClassic {
+  public readonly messageNumber: BigNumber
+  public readonly retryableCreationId: string
+  public readonly autoRedeemId: string
+  public readonly l2TxHash: string
+  public readonly l2Provider: Provider
+
+  constructor(l2Provider: Provider, chainId: number, messageNumber: BigNumber) {
+    const bitFlip = (num: BigNumber) => num.or(BigNumber.from(1).shl(255))
+    this.messageNumber = messageNumber
+    this.l2Provider = l2Provider
+
+    this.retryableCreationId = keccak256(
+      concat([
+        zeroPad(BigNumber.from(chainId).toHexString(), 32),
+        zeroPad(bitFlip(this.messageNumber).toHexString(), 32),
+      ])
+    )
+
+    this.autoRedeemId = keccak256(
+      concat([
+        zeroPad(this.retryableCreationId, 32),
+        zeroPad(BigNumber.from(1).toHexString(), 32),
+      ])
+    )
+
+    this.l2TxHash = keccak256(
+      concat([
+        zeroPad(this.retryableCreationId, 32),
+        zeroPad(BigNumber.from(0).toHexString(), 32),
+      ])
+    )
   }
 }
 

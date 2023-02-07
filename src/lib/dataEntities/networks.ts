@@ -34,6 +34,7 @@ export interface L2Network extends Network {
   confirmPeriodBlocks: number
   retryableLifetimeSeconds: number
   nitroGenesisBlock: number
+  firstNitroBlock: number
   /**
    * How long to wait (ms) for a deposit to arrive on l2 before timing out a request
    */
@@ -100,35 +101,6 @@ const mainnetTokenBridge: TokenBridge = {
   l2Multicall: '0x842eC2c7D803033Edf55E478F461FC547Bc54EB2',
 }
 
-const rinkebyTokenBridge: TokenBridge = {
-  l1GatewayRouter: '0x70C143928eCfFaf9F5b406f7f4fC28Dc43d68380',
-  l2GatewayRouter: '0x9413AD42910c1eA60c737dB5f58d1C504498a3cD',
-  l1ERC20Gateway: '0x91169Dbb45e6804743F94609De50D511C437572E',
-  l2ERC20Gateway: '0x195C107F3F75c4C93Eba7d9a1312F19305d6375f',
-  l1CustomGateway: '0x917dc9a69F65dC3082D518192cd3725E1Fa96cA2',
-  l2CustomGateway: '0x9b014455AcC2Fe90c52803849d0002aeEC184a06',
-  l1WethGateway: '0x81d1a19cf7071732D4313c75dE8DD5b8CF697eFD',
-  l2WethGateway: '0xf94bc045c4E926CC0b34e8D1c41Cd7a043304ac9',
-  l2Weth: '0xB47e6A5f8b33b3F17603C83a0535A9dcD7E32681',
-  l1Weth: '0xc778417E063141139Fce010982780140Aa0cD5Ab',
-  l1ProxyAdmin: '0x0DbAF24efA2bc9Dd1a6c0530DD252BCcF883B89A',
-  l2ProxyAdmin: '0x58816566EB91815Cc07f3Ad5230eE0820fe1A19a',
-  l1MultiCall: '0x5ba1e12693dc8f9c48aad8770482f4739beed696',
-  l2Multicall: '0x5D6e06d3E154C5DBEC91317f0d04AE03AB49A273',
-}
-
-const rinkebyETHBridge: EthBridge = {
-  bridge: '0x85C720444e436E1F9407E0C3895d3fE149f41168',
-  inbox: '0x578BAde599406A8fE3d24Fd7f7211c0911F5B29e',
-  sequencerInbox: '0x957C9c64f7c2cE091E56aF3F33AB20259096355F',
-  outbox: '0x36648F69cEb55Ce1B2920Bf2de321FBc9c378f0E',
-  rollup: '0x71c6093C564EDDCFAf03481C3F59F88849F1e644',
-  classicOutboxes: {
-    '0xefa1a42D3c4699822eE42677515A64b658be1bFc': 0,
-    '0x2360A33905dc1c72b12d975d975F42BaBdcef9F3': 326,
-  },
-}
-
 const mainnetETHBridge: EthBridge = {
   bridge: '0x8315177aB297bA92A06054cE80a67Ed4DBd7ed3a',
   inbox: '0x4Dbd4fc535Ac27206064B68FfCf827b0A60BAB3f',
@@ -160,13 +132,13 @@ export const l1Networks: L1Networks = {
     isCustom: false,
     isArbitrum: false,
   },
-  4: {
-    chainID: 4,
-    name: 'Rinkeby',
-    explorerUrl: 'https://rinkeby.etherscan.io',
-    partnerChainIDs: [421611],
+  5: {
     blockTime: 15,
+    chainID: 5,
+    explorerUrl: 'https://goerli.etherscan.io',
     isCustom: false,
+    name: 'Goerli',
+    partnerChainIDs: [421613],
     isArbitrum: false,
   },
 }
@@ -184,24 +156,11 @@ export const l2Networks: L2Networks = {
     isCustom: false,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     nitroGenesisBlock: 22207817,
+    firstNitroBlock: 15447158,
     /**
      * Finalisation on mainnet can be up to 2 epochs = 64 blocks on mainnet
      */
     depositTimeout: 888000,
-  },
-  421611: {
-    chainID: 421611,
-    name: 'ArbRinkeby',
-    explorerUrl: 'https://testnet.arbiscan.io',
-    partnerChainID: 4,
-    isArbitrum: true,
-    tokenBridge: rinkebyTokenBridge,
-    ethBridge: rinkebyETHBridge,
-    confirmPeriodBlocks: 6545, // TODO
-    isCustom: false,
-    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
-    nitroGenesisBlock: 13919179,
-    depositTimeout: 9000000,
   },
   421613: {
     chainID: 421613,
@@ -236,6 +195,7 @@ export const l2Networks: L2Networks = {
       l2WethGateway: '0xf9F2e89c8347BD96742Cc07095dee490e64301d6',
     },
     nitroGenesisBlock: 0,
+    firstNitroBlock: 0,
     /**
      * Low validator participation on goerli means that it can take a long time to finalise
      * Wait 10 epochs there on goerli = 320 blocks. Each block is 12 seconds.
@@ -275,6 +235,7 @@ export const l2Networks: L2Networks = {
       l2WethGateway: '0x7626841cB6113412F9c88D3ADC720C9FAC88D9eD',
     },
     nitroGenesisBlock: 0,
+    firstNitroBlock: 0,
     depositTimeout: 888000,
   },
 }
