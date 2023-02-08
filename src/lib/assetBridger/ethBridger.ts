@@ -208,6 +208,7 @@ export class EthBridger extends AssetBridger<
       ...params,
       to: params.destinationAddress,
       l2CallValue: params.amount,
+      callValueRefundAddress: params.destinationAddress,
       data: '0x',
     }
 
