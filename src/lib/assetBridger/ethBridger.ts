@@ -83,6 +83,10 @@ export type EthDepositParams = {
 
 export type EthDepositToParams = EthDepositParams & {
   /**
+   * An L2 provider
+   */
+  l2Provider: Provider
+  /**
    * L2 address of the entity receiving the funds
    */
   destinationAddress: string
@@ -106,6 +110,20 @@ type EthDepositRequestParams = OmitTyped<
   EthDepositParams,
   'overrides' | 'l1Signer'
 > & { from: string }
+
+type EthDepositToRequestParams = OmitTyped<
+  EthDepositToParams,
+  'overrides' | 'l1Signer'
+> & {
+  /**
+   * The L1 provider
+   */
+  l1Provider: Provider
+  /**
+   * Address that is depositing the ETH
+   */
+  from: string
+}
 
 /**
  * Bridger for moving ETH back and forth between L1 to L2
@@ -179,37 +197,56 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
+   * Get a transaction request for an ETH deposit to a different L2 address using Retryables
+   * @param params
+   * @returns
+   */
+  public async getDepositToRequest(
+    params: EthDepositToRequestParams
+  ): Promise<L1ToL2TransactionRequest> {
+    const requestParams = {
+      ...params,
+      to: params.destinationAddress,
+      l2CallValue: params.amount,
+      data: '0x',
+    }
+
+    // Gas overrides can be passed in the parameters
+    const gasOverrides = params.retryableGasOverrides || undefined
+
+    return L1ToL2MessageCreator.getTicketCreationRequest(
+      requestParams,
+      params.l1Provider,
+      params.l2Provider,
+      gasOverrides
+    )
+  }
+
+  /**
    * Deposit ETH from L1 onto a different L2 address
    * @param params
    * @returns
    */
   public async depositTo(
-    params: EthDepositToParams | L1ToL2TxReqAndSigner,
-    l2Provider: Provider
+    params:
+      | EthDepositToParams
+      | (L1ToL2TxReqAndSigner & { l2Provider: Provider })
   ): Promise<L1ContractCallTransaction> {
     await this.checkL1Network(params.l1Signer)
-    const from = await params.l1Signer.getAddress()
+    await this.checkL2Network(params.l2Provider)
 
-    const isL1ToL2TxRequest = isL1ToL2TransactionRequest(params)
-    const retryableTicketParams = isL1ToL2TxRequest
+    const retryableTicketRequest = isL1ToL2TransactionRequest(params)
       ? params
-      : {
-          from: from,
-          to: params.destinationAddress,
-          l2CallValue: params.amount,
-          callValueRefundAddress: params.destinationAddress,
-          excessFeeRefundAddress: from,
-          data: '0x',
-        }
-    const gasOverrides = isL1ToL2TxRequest
-      ? undefined
-      : params.retryableGasOverrides
+      : await this.getDepositToRequest({
+          ...params,
+          from: await params.l1Signer.getAddress(),
+          l1Provider: params.l1Signer.provider!,
+        })
 
     const l1ToL2MessageCreator = new L1ToL2MessageCreator(params.l1Signer)
     const tx = await l1ToL2MessageCreator.createRetryableTicket(
-      retryableTicketParams,
-      l2Provider,
-      gasOverrides
+      retryableTicketRequest,
+      params.l2Provider
     )
 
     // Replace the wait() function from monkeyPatchWait (in createRetryableTicket)

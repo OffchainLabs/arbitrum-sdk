@@ -136,14 +136,12 @@ describe('Ether', async () => {
       inboxAddress
     )
     const ethToDeposit = parseEther('0.0002')
-    const res = await ethBridger.depositTo(
-      {
-        amount: ethToDeposit,
-        l1Signer: l1Signer,
-        destinationAddress: destWallet.address,
-      },
-      l2Signer.provider!
-    )
+    const res = await ethBridger.depositTo({
+      amount: ethToDeposit,
+      l1Signer: l1Signer,
+      destinationAddress: destWallet.address,
+      l2Provider: l2Signer.provider!,
+    })
     const rec = await res.wait()
 
     expect(rec.status).to.equal(1, 'eth deposit L1 txn failed')
