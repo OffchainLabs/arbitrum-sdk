@@ -140,7 +140,7 @@ describe('Ether', async () => {
       {
         amount: ethToDeposit,
         l1Signer: l1Signer,
-        to: destWallet.address,
+        destinationAddress: destWallet.address,
       },
       l2Signer.provider!
     )
