@@ -99,6 +99,18 @@ export class L1TransactionReceipt implements TransactionReceipt {
   }
 
   /**
+   * Check if is a classic transaction
+   * @param l2SignerOrProvider
+   */
+  public async isClassic<T extends SignerOrProvider>(
+    l2SignerOrProvider: T
+  ): Promise<boolean> {
+    const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
+    const network = await getL2Network(provider)
+    return this.blockNumber < network.firstNitroBlock
+  }
+
+  /**
    * Get any MessageDelivered events that were emitted during this transaction
    * @returns
    */
@@ -197,9 +209,10 @@ export class L1TransactionReceipt implements TransactionReceipt {
   ): Promise<L1ToL2MessageReaderClassic[]> {
     const network = await getL2Network(l2Provider)
     const chainID = network.chainID.toString()
+    const isClassic = await this.isClassic(l2Provider)
 
     // throw on nitro events
-    if (this.blockNumber >= network.firstNitroBlock) {
+    if (!isClassic) {
       throw new Error(
         "This method is only for classic transactions. Use 'getL1ToL2Messages' for nitro transactions."
       )
@@ -232,9 +245,10 @@ export class L1TransactionReceipt implements TransactionReceipt {
     const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
     const network = await getL2Network(provider)
     const chainID = network.chainID.toString()
+    const isClassic = await this.isClassic(provider)
 
     // throw on classic events
-    if (this.blockNumber < network.firstNitroBlock) {
+    if (isClassic) {
       throw new Error(
         "This method is only for nitro transactions. Use 'getL1ToL2MessagesClassic' for classic transactions."
       )
