@@ -308,7 +308,7 @@ describe('L1toL2Message events', () => {
 
     const isClassic = await l1TxnReceipt.isClassic(arbProvider)
     const msg = (await l1TxnReceipt.getL1ToL2MessagesClassic(arbProvider))[0]
-    const status = await msg.getMessageStatus()
+    const status = await msg.status()
 
     expect(isClassic, 'incorrect tx type returned by isClassic call').to.be.true
     expect(status, 'invalid message status').to.be.eq(4)
