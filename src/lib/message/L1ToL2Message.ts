@@ -555,6 +555,16 @@ export class L1ToL2MessageReaderClassic {
     )
   }
 
+  private calculateL2DerivedHash(retryableCreationId: string): string {
+    return keccak256(
+      concat([
+        zeroPad(retryableCreationId, 32),
+        // BN 0 meaning L2 TX
+        zeroPad(BigNumber.from(0).toHexString(), 32),
+      ])
+    )
+  }
+
   /**
    * Try to get the receipt for the retryable ticket creation.
    * This is the L2 transaction that creates the retryable ticket.
@@ -577,7 +587,7 @@ export class L1ToL2MessageReaderClassic {
     return this.retryableCreationReceipt || null
   }
 
-  public async getMessageStatus(): Promise<L1ToL2MessageStatus> {
+  public async status(): Promise<L1ToL2MessageStatus> {
     const creationReceipt = await this.getRetryableCreationReceipt()
 
     if (!isDefined(creationReceipt)) {
@@ -588,7 +598,16 @@ export class L1ToL2MessageReaderClassic {
       return L1ToL2MessageStatus.CREATION_FAILED
     }
 
-    return L1ToL2MessageStatus.REDEEMED
+    const l2DerivedHash = this.calculateL2DerivedHash(this.retryableCreationId)
+    const l2TxReceipt = await this.l2Provider.getTransactionReceipt(
+      l2DerivedHash
+    )
+
+    if (l2TxReceipt && l2TxReceipt.status === 1) {
+      return L1ToL2MessageStatus.REDEEMED
+    }
+
+    return L1ToL2MessageStatus.EXPIRED
   }
 }
 
