@@ -311,7 +311,7 @@ describe('L1toL2Message events', () => {
     const status = await msg.status()
 
     expect(isClassic, 'incorrect tx type returned by isClassic call').to.be.true
-    expect(status, 'invalid message status').to.be.eq(4)
+    expect(status, 'invalid message status').to.be.eq(5)
     expect(
       msg.messageNumber.eq(BigNumber.from('0x064371')),
       'incorrect message number'
