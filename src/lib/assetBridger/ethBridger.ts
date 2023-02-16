@@ -27,12 +27,15 @@ import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 import { AssetBridger } from './assetBridger'
 import {
   L1EthDepositTransaction,
+  L1ContractCallTransaction,
   L1TransactionReceipt,
 } from '../message/L1Transaction'
 import {
   L2ContractTransaction,
   L2TransactionReceipt,
 } from '../message/L2Transaction'
+import { L1ToL2MessageCreator } from '../message/L1ToL2MessageCreator'
+import { GasOverrides } from '../message/L1ToL2MessageGasEstimator'
 import {
   isL1ToL2TransactionRequest,
   isL2ToL1TransactionRequest,
@@ -78,6 +81,21 @@ export type EthDepositParams = {
   overrides?: PayableOverrides
 }
 
+export type EthDepositToParams = EthDepositParams & {
+  /**
+   * An L2 provider
+   */
+  l2Provider: Provider
+  /**
+   * L2 address of the entity receiving the funds
+   */
+  destinationAddress: string
+  /**
+   * Overrides for the retryable ticket parameters
+   */
+  retryableGasOverrides?: GasOverrides
+}
+
 export type L1ToL2TxReqAndSigner = L1ToL2TransactionRequest & {
   l1Signer: Signer
   overrides?: Overrides
@@ -93,11 +111,25 @@ type EthDepositRequestParams = OmitTyped<
   'overrides' | 'l1Signer'
 > & { from: string }
 
+type EthDepositToRequestParams = OmitTyped<
+  EthDepositToParams,
+  'overrides' | 'l1Signer'
+> & {
+  /**
+   * The L1 provider
+   */
+  l1Provider: Provider
+  /**
+   * Address that is depositing the ETH
+   */
+  from: string
+}
+
 /**
  * Bridger for moving ETH back and forth between L1 to L2
  */
 export class EthBridger extends AssetBridger<
-  EthDepositParams | L1ToL2TxReqAndSigner,
+  EthDepositParams | EthDepositToParams | L1ToL2TxReqAndSigner,
   EthWithdrawParams | L2ToL1TxReqAndSigner
 > {
   /**
@@ -162,6 +194,62 @@ export class EthBridger extends AssetBridger<
     })
 
     return L1TransactionReceipt.monkeyPatchEthDepositWait(tx)
+  }
+
+  /**
+   * Get a transaction request for an ETH deposit to a different L2 address using Retryables
+   * @param params
+   * @returns
+   */
+  public async getDepositToRequest(
+    params: EthDepositToRequestParams
+  ): Promise<L1ToL2TransactionRequest> {
+    const requestParams = {
+      ...params,
+      to: params.destinationAddress,
+      l2CallValue: params.amount,
+      callValueRefundAddress: params.destinationAddress,
+      data: '0x',
+    }
+
+    // Gas overrides can be passed in the parameters
+    const gasOverrides = params.retryableGasOverrides || undefined
+
+    return L1ToL2MessageCreator.getTicketCreationRequest(
+      requestParams,
+      params.l1Provider,
+      params.l2Provider,
+      gasOverrides
+    )
+  }
+
+  /**
+   * Deposit ETH from L1 onto a different L2 address
+   * @param params
+   * @returns
+   */
+  public async depositTo(
+    params:
+      | EthDepositToParams
+      | (L1ToL2TxReqAndSigner & { l2Provider: Provider })
+  ): Promise<L1ContractCallTransaction> {
+    await this.checkL1Network(params.l1Signer)
+    await this.checkL2Network(params.l2Provider)
+
+    const retryableTicketRequest = isL1ToL2TransactionRequest(params)
+      ? params
+      : await this.getDepositToRequest({
+          ...params,
+          from: await params.l1Signer.getAddress(),
+          l1Provider: params.l1Signer.provider!,
+        })
+
+    const tx = await params.l1Signer.sendTransaction({
+      ...retryableTicketRequest.txRequest,
+      ...params.overrides,
+    })
+
+    return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
   /**
