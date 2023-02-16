@@ -244,14 +244,11 @@ export class EthBridger extends AssetBridger<
           l1Provider: params.l1Signer.provider!,
         })
 
-    const l1ToL2MessageCreator = new L1ToL2MessageCreator(params.l1Signer)
-    const tx = await l1ToL2MessageCreator.createRetryableTicket(
-      retryableTicketRequest,
-      params.l2Provider
-    )
+    const tx = await params.l1Signer.sendTransaction({
+      ...retryableTicketRequest.txRequest,
+      ...params.overrides,
+    })
 
-    // Replace the wait() function from monkeyPatchWait (in createRetryableTicket)
-    // with this one, so we have method waitForL2() available
     return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
