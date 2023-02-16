@@ -521,6 +521,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 }
 
 export class L1ToL2MessageReaderClassic {
+  private retryableCreationReceipt: TransactionReceipt | undefined | null
   public readonly messageNumber: BigNumber
   public readonly retryableCreationId: string
   public readonly autoRedeemId: string
@@ -552,6 +553,61 @@ export class L1ToL2MessageReaderClassic {
         zeroPad(BigNumber.from(0).toHexString(), 32),
       ])
     )
+  }
+
+  private calculateL2DerivedHash(retryableCreationId: string): string {
+    return keccak256(
+      concat([
+        zeroPad(retryableCreationId, 32),
+        // BN 0 meaning L2 TX
+        zeroPad(BigNumber.from(0).toHexString(), 32),
+      ])
+    )
+  }
+
+  /**
+   * Try to get the receipt for the retryable ticket creation.
+   * This is the L2 transaction that creates the retryable ticket.
+   * If confirmations or timeout is provided, this will wait for the ticket to be created
+   * @returns Null if retryable has not been created
+   */
+  public async getRetryableCreationReceipt(
+    confirmations?: number,
+    timeout?: number
+  ): Promise<TransactionReceipt | null> {
+    if (!this.retryableCreationReceipt) {
+      this.retryableCreationReceipt = await getTransactionReceipt(
+        this.l2Provider,
+        this.retryableCreationId,
+        confirmations,
+        timeout
+      )
+    }
+
+    return this.retryableCreationReceipt || null
+  }
+
+  public async status(): Promise<L1ToL2MessageStatus> {
+    const creationReceipt = await this.getRetryableCreationReceipt()
+
+    if (!isDefined(creationReceipt)) {
+      return L1ToL2MessageStatus.NOT_YET_CREATED
+    }
+
+    if (creationReceipt.status === 0) {
+      return L1ToL2MessageStatus.CREATION_FAILED
+    }
+
+    const l2DerivedHash = this.calculateL2DerivedHash(this.retryableCreationId)
+    const l2TxReceipt = await this.l2Provider.getTransactionReceipt(
+      l2DerivedHash
+    )
+
+    if (l2TxReceipt && l2TxReceipt.status === 1) {
+      return L1ToL2MessageStatus.REDEEMED
+    }
+
+    return L1ToL2MessageStatus.EXPIRED
   }
 }
 
