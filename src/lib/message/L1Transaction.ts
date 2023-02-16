@@ -107,7 +107,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
   ): Promise<boolean> {
     const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
     const network = await getL2Network(provider)
-    return this.blockNumber < network.firstNitroBlock
+    return this.blockNumber < network.nitroGenesisL1Block
   }
 
   /**
