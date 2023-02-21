@@ -98,11 +98,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Restore "node_modules" from cache
-        uses: martijnhols/actions-cache/restore@v3
-        with:
-          path: '**/node_modules'
-          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
+      - name: Restore node_modules
+        uses: OffchainLabs/actions/node-modules/restore@main
 
       - uses: OffchainLabs/actions/run-nitro-test-node@main
 
