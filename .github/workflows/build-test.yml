@@ -9,15 +9,25 @@ jobs:
     name: 'Install'
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - uses: actions/setup-node@v3
+      - name: Check cache for "node_modules"
+        id: cache
+        uses: martijnhols/actions-cache/check@v3
         with:
-          node-version: 16
+          path: '**/node_modules'
+          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
 
-      - name: Install node_modules
-        uses: OffchainLabs/actions/node-modules/install@main
+      - name: Install dependencies
+        if: steps.cache.outputs.cache-hit != 'true'
+        run: yarn install --frozen-lockfile
+
+      - name: Save "node_modules" to cache
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: martijnhols/actions-cache/save@v3
+        with:
+          path: '**/node_modules'
+          key: ${{ steps.cache.outputs.primary-key }}
 
   lint:
     name: Lint
@@ -26,11 +36,8 @@ jobs:
     env:
       TEST_PATH: /tmp/test-results
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Restore node_modules
-        uses: OffchainLabs/actions/node-modules/restore@main
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/restore-cache
 
       - name: Lint sdk
         run: |
@@ -63,11 +70,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: install
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Restore node_modules
-        uses: OffchainLabs/actions/node-modules/restore@main
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/restore-cache
 
       - run: yarn audit:ci
 
@@ -76,11 +80,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: install
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Restore node_modules
-        uses: OffchainLabs/actions/node-modules/restore@main
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/restore-cache
 
       - name: Build
         run: |
@@ -95,13 +96,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: install
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Restore node_modules
-        uses: OffchainLabs/actions/node-modules/restore@main
-
-      - uses: OffchainLabs/actions/run-nitro-test-node@bump-nitro-to-2.0.10
+      - uses: actions/checkout@v3
+      - uses: ./.github/actions/restore-cache
+      - uses: OffchainLabs/actions/run-nitro-test-node@main
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
