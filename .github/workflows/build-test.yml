@@ -9,6 +9,10 @@ jobs:
     name: 'Install'
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 14
+
       - uses: actions/checkout@v3
 
       - name: Check cache for "node_modules"
@@ -96,12 +100,19 @@ jobs:
     runs-on: ubuntu-latest
     needs: install
     steps:
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 14
       - uses: actions/checkout@v3
       - uses: ./.github/actions/restore-cache
       - uses: OffchainLabs/actions/run-nitro-test-node@e741dbeb539f4858d6a501708bdfd8aaf1b3fa08
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
+
+      - name: Debug
+        run: |
+          cat ./.env
 
       - name: Build
         run: |
