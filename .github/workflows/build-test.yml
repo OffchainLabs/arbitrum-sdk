@@ -13,25 +13,11 @@ jobs:
         with:
           node-version: 14
 
-      - uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@v3
 
-      - name: Check cache for "node_modules"
-        id: cache
-        uses: martijnhols/actions-cache/check@v3
-        with:
-          path: '**/node_modules'
-          key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
-
-      - name: Install dependencies
-        if: steps.cache.outputs.cache-hit != 'true'
-        run: yarn install --frozen-lockfile
-
-      - name: Save "node_modules" to cache
-        if: steps.cache.outputs.cache-hit != 'true'
-        uses: martijnhols/actions-cache/save@v3
-        with:
-          path: '**/node_modules'
-          key: ${{ steps.cache.outputs.primary-key }}
+      - name: Install node_modules
+        uses: OffchainLabs/actions/node-modules/install@main
 
   lint:
     name: Lint
@@ -40,8 +26,11 @@ jobs:
     env:
       TEST_PATH: /tmp/test-results
     steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/restore-cache
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Restore node_modules
+        uses: OffchainLabs/actions/node-modules/restore@main
 
       - name: Lint sdk
         run: |
@@ -74,8 +63,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: install
     steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/restore-cache
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Restore node_modules
+        uses: OffchainLabs/actions/node-modules/restore@main
 
       - run: yarn audit:ci
 
@@ -84,8 +76,11 @@ jobs:
     runs-on: ubuntu-latest
     needs: install
     steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/restore-cache
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Restore node_modules
+        uses: OffchainLabs/actions/node-modules/restore@main
 
       - name: Build
         run: |
@@ -103,16 +98,19 @@ jobs:
       - uses: actions/setup-node@v3
         with:
           node-version: 14
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/restore-cache
-      - uses: OffchainLabs/actions/run-nitro-test-node@e741dbeb539f4858d6a501708bdfd8aaf1b3fa08
+
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Restore node_modules
+        uses: OffchainLabs/actions/node-modules/restore@main
+
+      - uses: OffchainLabs/actions/run-nitro-test-node@mains
+        with:
+          no-token-bridge: true
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
-
-      - name: Debug
-        run: |
-          cat ./.env
 
       - name: Build
         run: |
