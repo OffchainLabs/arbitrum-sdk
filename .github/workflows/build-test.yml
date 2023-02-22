@@ -101,7 +101,7 @@ jobs:
       - name: Restore node_modules
         uses: OffchainLabs/actions/node-modules/restore@main
 
-      - uses: OffchainLabs/actions/run-nitro-test-node@main
+      - uses: OffchainLabs/actions/run-nitro-test-node@e741dbeb539f4858d6a501708bdfd8aaf1b3fa08
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
