@@ -62,7 +62,7 @@
     "@typescript-eslint/eslint-plugin": "^5.14.0",
     "@typescript-eslint/eslint-plugin-tslint": "^5.27.1",
     "@typescript-eslint/parser": "^5.14.0",
-    "arb-bridge-peripherals": "1.0.10",
+    "arb-bridge-peripherals": "1.0.11",
     "audit-ci": "^6.3.0",
     "axios": "^0.21.3",
     "chai": "^4.2.0",

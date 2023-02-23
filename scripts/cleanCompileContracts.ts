@@ -4,8 +4,8 @@ import { execSync } from 'child_process'
 
 const cleanCompileContracts = async () => {
   const arbosPath = getPackagePath('arbos-precompiles')
-  const ethBridgePath = getPackagePath('arb-bridge-eth')
-  const peripheralsPath = getPackagePath('arb-bridge-eth')
+  const ethBridgePath = getPackagePath('@arbitrum/nitro-contracts')
+  const peripheralsPath = getPackagePath('@arbitrum/nitro-contracts')
 
   console.log('Clean building arbos')
   execSync(`cd ${arbosPath} && yarn clean:build`)
