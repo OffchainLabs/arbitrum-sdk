@@ -24,6 +24,14 @@
     // Nodejs ‘undici’ Vulnerable to CRLF
     // Used only in hardhat, so only in dev. Even then we dont use remote requests.
     "GHSA-f772-66g8-q5h3",
+    // https://github.com/advisories/GHSA-r6ch-mqf9-qc9w
+    // Nodejs ‘undici’ Vulnerable to DoS
+    // Used only in hardhat, so only in dev. Even then we dont use remote requests.
+    "GHSA-r6ch-mqf9-qc9w",
+    // https://github.com/advisories/GHSA-5r9g-qh6m-jxff
+    // Nodejs ‘undici’ Vulnerable to CRLF
+    // Used only in hardhat, so only in dev. Even then we dont use remote requests.
+    "GHSA-5r9g-qh6m-jxff",
 
     // Open Zepplin
     ////////////
