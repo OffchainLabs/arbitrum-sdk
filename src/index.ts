@@ -36,6 +36,7 @@ export {
   EthDepositStatus,
   L1ToL2Message,
   L1ToL2MessageReader,
+  L1ToL2MessageReaderClassic,
   L1ToL2MessageWriter,
 } from './lib/message/L1ToL2Message'
 export { L1ToL2MessageGasEstimator } from './lib/message/L1ToL2MessageGasEstimator'
