@@ -144,7 +144,7 @@ export abstract class L1ToL2Message {
       formatNumber(l1Value),
       formatNumber(maxFeePerGas),
       formatNumber(gasLimit),
-      // when destAddress is 0x0, arbos treat that as contract deployment e.g. to == undefined
+      // when destAddress is 0x0, arbos treat that as nil
       destAddress == ethers.constants.AddressZero ? '0x' : destAddress,
       formatNumber(l2CallValue),
       callValueRefundAddress,
