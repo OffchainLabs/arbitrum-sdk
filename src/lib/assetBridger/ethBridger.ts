@@ -46,6 +46,7 @@ import { OmitTyped } from '../utils/types'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getL2Network } from '../dataEntities/networks'
+import { Address } from '../dataEntities/address'
 
 export interface EthWithdrawParams {
   /**
@@ -139,6 +140,28 @@ export class EthBridger extends AssetBridger<
    */
   public static async fromProvider(l2Provider: Provider) {
     return new EthBridger(await getL2Network(l2Provider))
+  }
+
+  /**
+   * Returns true if an address has funds in its aliased address on L2
+   * @param address Address to analyze
+   * @param l2Provider An L2 provider
+   * @param minBalance Minimum balance to consider for returning true (Default is 0.0005 ETH)
+   * @returns
+   */
+  public async addressHasFundsInAliasOnL2(
+    address: string,
+    l2Provider: Provider,
+    minBalance = BigNumber.from('500000000000000')
+  ): Promise<boolean> {
+    await this.checkL2Network(l2Provider)
+
+    // Obtain the aliased address of the signer
+    const aliasedAddress = new Address(address).applyAlias()
+
+    // Check its balance on L2
+    const aliasedBalance = await l2Provider.getBalance(aliasedAddress.value)
+    return !aliasedBalance.lte(minBalance)
   }
 
   /**

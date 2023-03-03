@@ -21,6 +21,7 @@ import dotenv from 'dotenv'
 
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
+import { BigNumber } from '@ethersproject/bignumber'
 
 import {
   fundL1,
@@ -33,12 +34,60 @@ import { L2ToL1Message } from '../../src/lib/message/L2ToL1Message'
 import { L2ToL1MessageStatus } from '../../src/lib/dataEntities/message'
 import { L2TransactionReceipt } from '../../src/lib/message/L2Transaction'
 import { L1ToL2MessageStatus } from '../../src/lib/message/L1ToL2Message'
+import { Address } from '../../src/lib/dataEntities/address'
 import { testSetup } from '../../scripts/testSetup'
 dotenv.config()
 
 describe('Ether', async () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
+  })
+
+  it('detects funds in an aliased address on l2', async () => {
+    const { ethBridger, l2Signer } = await testSetup()
+    const address = await l2Signer.getAddress()
+    const aliasedAddress = new Address(address).applyAlias()
+
+    // Detecting no funds on aliased address
+    expect(
+      await ethBridger.addressHasFundsInAliasOnL2(address, l2Signer.provider!),
+      'Detecting funds when there is no funds'
+    ).to.eq(false)
+
+    // Funding address on L2
+    await fundL2(l2Signer)
+
+    // Sending few funds to aliased address (below minBalance)
+    await (
+      await l2Signer.sendTransaction({
+        to: aliasedAddress.value,
+        value: BigNumber.from('100000000000000'),
+        maxFeePerGas: 15000000000,
+        maxPriorityFeePerGas: 0,
+      })
+    ).wait()
+
+    // Detecting no funds on aliased address (again)
+    expect(
+      await ethBridger.addressHasFundsInAliasOnL2(address, l2Signer.provider!),
+      'Detecting funds when there is no funds'
+    ).to.eq(false)
+
+    // Sending some more funds to aliased address
+    await (
+      await l2Signer.sendTransaction({
+        to: aliasedAddress.value,
+        value: BigNumber.from('1000000000000000'),
+        maxFeePerGas: 15000000000,
+        maxPriorityFeePerGas: 0,
+      })
+    ).wait()
+
+    // Detecting funds on aliased address
+    expect(
+      await ethBridger.addressHasFundsInAliasOnL2(address, l2Signer.provider!),
+      'Detecting funds when there is no funds'
+    ).to.eq(true)
   })
 
   it('transfers ether on l2', async () => {
