@@ -50,6 +50,7 @@ export {
   getL1Network,
   getL2Network,
   addCustomNetwork,
+  addDefaultLocalNetwork,
 } from './lib/dataEntities/networks'
 export { InboxTools } from './lib/inbox/inbox'
 export { EventFetcher } from './lib/utils/eventFetcher'
