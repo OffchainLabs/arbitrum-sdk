@@ -318,8 +318,9 @@ export const addCustomNetwork = ({
 }
 
 /**
- * This network configuration is meant to be used for development using the default
- * smartcontracts deployed on a nitro local node
+ * Registers a custom network that matches the one created by a Nitro local node. Useful in development.
+ *
+ * @see {@link https://github.com/OffchainLabs/nitro}
  */
 export const addDefaultLocalNetwork = (): {
   l1Network: L1Network
