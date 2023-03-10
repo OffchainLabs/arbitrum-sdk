@@ -23,6 +23,7 @@ import { BigNumber } from 'ethers'
 
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
+import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 import { AssetBridger } from './assetBridger'
 import {
@@ -45,7 +46,7 @@ import {
 import { OmitTyped } from '../utils/types'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
-import { getL2Network } from '../dataEntities/networks'
+import { EthBridge, getL2Network } from '../dataEntities/networks'
 
 export interface EthWithdrawParams {
   /**
@@ -139,6 +140,36 @@ export class EthBridger extends AssetBridger<
    */
   public static async fromProvider(l2Provider: Provider) {
     return new EthBridger(await getL2Network(l2Provider))
+  }
+
+  /**
+   * Returns the addresses of all contracts that make up the ETH bridge
+   * @param rollupContractAddress Address of the Rollup contract
+   * @param l1Provider An L1 provider
+   * @returns EthBridge object with all information about the ETH bridge
+   */
+  public async getBridgeInformation(
+    rollupContractAddress: string,
+    l1Provider: Provider
+  ): Promise<EthBridge> {
+    await this.checkL1Network(l1Provider)
+
+    const rollup = RollupAdminLogic__factory.connect(
+      rollupContractAddress,
+      l1Provider
+    )
+    const bridgeContractAddress = await rollup.bridge()
+    const inboxContractAddress = await rollup.inbox()
+    const outboxContractAddress = await rollup.outbox()
+    const sequencerInboxContractAddress = await rollup.sequencerInbox()
+
+    return {
+      bridge: bridgeContractAddress,
+      inbox: inboxContractAddress,
+      outbox: outboxContractAddress,
+      rollup: rollupContractAddress,
+      sequencerInbox: sequencerInboxContractAddress,
+    }
   }
 
   /**
