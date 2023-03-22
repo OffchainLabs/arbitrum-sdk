@@ -71,6 +71,7 @@ export interface EthBridge {
   sequencerInbox: string
   outbox: string
   rollup: string
+  proxyAdmin: string
   classicOutboxes?: {
     [addr: string]: number
   }
@@ -107,6 +108,7 @@ const mainnetETHBridge: EthBridge = {
   sequencerInbox: '0x1c479675ad559DC151F6Ec7ed3FbF8ceE79582B6',
   outbox: '0x0B9857ae2D4A3DBe74ffE1d7DF045bb7F96E4840',
   rollup: '0x5eF0D09d1E6204141B4d37530808eD19f60FBa35',
+  proxyAdmin: '0x554723262467F125Ac9e1cDFa9Ce15cc53822dbD',
   classicOutboxes: {
     '0x667e23ABd27E623c11d4CC00ca3EC4d0bD63337a': 0,
     '0x760723CD2e632826c38Fef8CD438A4CC7E7E1A40': 30,
@@ -174,6 +176,7 @@ export const l2Networks: L2Networks = {
       outbox: '0x45Af9Ed1D03703e480CE7d328fB684bb67DA5049',
       rollup: '0x45e5cAea8768F42B385A366D3551Ad1e0cbFAb17',
       sequencerInbox: '0x0484A87B144745A2E5b7c359552119B6EA2917A9',
+      proxyAdmin: '0x4e845acf190e4b36f8e6057be87e8715bee7c56b'
     },
     explorerUrl: 'https://goerli.arbiscan.io',
     isArbitrum: true,
@@ -213,6 +216,7 @@ export const l2Networks: L2Networks = {
       outbox: '0xD4B80C3D7240325D18E645B49e6535A3Bf95cc58',
       rollup: '0xfb209827c58283535b744575e11953dcc4bead88',
       sequencerInbox: '0x211e1c4c7f1bf5351ac850ed10fd68cffcf6c21b',
+      proxyAdmin: '0x71D78dC7cCC0e037e12de1E50f5470903ce37148'
     },
     explorerUrl: 'https://nova.arbiscan.io',
     isArbitrum: true,
