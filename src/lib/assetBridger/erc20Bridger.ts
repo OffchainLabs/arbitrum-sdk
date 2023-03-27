@@ -456,6 +456,32 @@ export class Erc20Bridger extends AssetBridger<
     return l1Address
   }
 
+  public async getL1ERC20AddressFromGateway(
+    erc20L2Address: string,
+    l2Provider: Provider,
+    l2GatewayAddress: string
+  ): Promise<string> {
+    await this.checkL2Network(l2Provider)
+
+    const arbERC20 = L2GatewayToken__factory.connect(erc20L2Address, l2Provider)
+    const l1Address = await arbERC20.functions.l1Address().then(([res]) => res)
+
+    // check that this l1 address is indeed registered to this l2 token
+    const l2Gateway = L2ArbitrumGateway__factory.connect(
+      l2GatewayAddress,
+      l2Provider
+    )
+
+    const l2Address = await l2Gateway.calculateL2TokenAddress(l1Address)
+    if (l2Address.toLowerCase() !== erc20L2Address.toLowerCase()) {
+      throw new ArbSdkError(
+        `Unexpected l1 address. L1 address from token is not registered to the provided l2 address. ${l1Address} ${l2Address} ${erc20L2Address}`
+      )
+    }
+
+    return l1Address
+  }
+
   /**
    * Whether the token has been disabled on the router
    * @param l1TokenAddress
@@ -702,7 +728,7 @@ export class Erc20Bridger extends AssetBridger<
           ...params,
           from: await params.l2Signer.getAddress(),
         })
-    if (forceUseGateway) withdrawalRequest.txRequest.to = forceUseGateway 
+    if (forceUseGateway) withdrawalRequest.txRequest.to = forceUseGateway
 
     const tx = await params.l2Signer.sendTransaction({
       ...withdrawalRequest.txRequest,
