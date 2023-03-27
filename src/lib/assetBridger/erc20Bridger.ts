@@ -433,12 +433,14 @@ export class Erc20Bridger extends AssetBridger<
    */
   public async getL1ERC20Address(
     erc20L2Address: string,
-    l2Provider: Provider
+    l2Provider: Provider,
+    skipValidation = false
   ): Promise<string> {
     await this.checkL2Network(l2Provider)
 
     const arbERC20 = L2GatewayToken__factory.connect(erc20L2Address, l2Provider)
     const l1Address = await arbERC20.functions.l1Address().then(([res]) => res)
+    if (skipValidation) return l1Address
 
     // check that this l1 address is indeed registered to this l2 token
     const l2GatewayRouter = L2GatewayRouter__factory.connect(
