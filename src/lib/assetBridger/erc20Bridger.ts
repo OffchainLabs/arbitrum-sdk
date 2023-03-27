@@ -688,7 +688,8 @@ export class Erc20Bridger extends AssetBridger<
   public async withdraw(
     params:
       | (OmitTyped<Erc20WithdrawParams, 'from'> & { l2Signer: Signer })
-      | L2ToL1TxReqAndSigner
+      | L2ToL1TxReqAndSigner,
+    forceUseGateway?: string
   ): Promise<L2ContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
       throw new MissingProviderArbSdkError('l2Signer')
@@ -703,6 +704,7 @@ export class Erc20Bridger extends AssetBridger<
           ...params,
           from: await params.l2Signer.getAddress(),
         })
+    if (forceUseGateway) withdrawalRequest.txRequest.to = forceUseGateway 
 
     const tx = await params.l2Signer.sendTransaction({
       ...withdrawalRequest.txRequest,
