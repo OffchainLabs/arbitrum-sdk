@@ -312,5 +312,6 @@ packages/issues
 packages/**/issues
 
 docs
+!.autodoc/docs
 json_data
 abi
