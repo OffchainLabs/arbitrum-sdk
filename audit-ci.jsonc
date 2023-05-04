@@ -76,14 +76,18 @@
     "GHSA-9c47-m6qq-7p4h",
     // https://github.com/advisories/GHSA-mx2q-35m2-x2rh
     // OpenZeppelin Contracts TransparentUpgradeableProxy clashing selector calls may not be delegated
-    // from: @openzeppelin/contracts
-    // from: @openzeppelin/contracts-upgradeable
+    // from: @arbitrum/nitro-contracts>@openzeppelin/contracts-upgradeable
+    // from: arb-bridge-peripherals>@openzeppelin/contracts-upgradeable
+    // from: arb-bridge-peripherals>arb-bridge-eth>@openzeppelin/contracts-upgradeable
+    // from: @arbitrum/nitro-contracts>@openzeppelin/contracts
+    // from: arb-bridge-peripherals>@openzeppelin/contracts
+    // from: arb-bridge-peripherals>arb-bridge-eth>@openzeppelin/contracts
     // Clashing selector between proxy and implementation can only be caused deliberately
     "GHSA-mx2q-35m2-x2rh",
     // https://github.com/advisories/GHSA-93hq-5wgc-jc82
     // GovernorCompatibilityBravo may trim proposal calldata
-    // from: @openzeppelin/contracts
-    // from: @openzeppelin/contracts-upgradeable
+    // from: @arbitrum/nitro-contracts>@openzeppelin/contracts-upgradeable
+    // from: @arbitrum/nitro-contracts>@openzeppelin/contracts
     // We don't use GovernorCompatibilityBravo
     "GHSA-93hq-5wgc-jc82"
   ]
