@@ -73,6 +73,18 @@
     // Prototype Pollution in JSON5 via Parse Method
     // from: nyc>istanbul-lib-instrument>@babel/core>json5
     // not used in ci
-    "GHSA-9c47-m6qq-7p4h"
+    "GHSA-9c47-m6qq-7p4h",
+    // https://github.com/advisories/GHSA-mx2q-35m2-x2rh
+    // OpenZeppelin Contracts TransparentUpgradeableProxy clashing selector calls may not be delegated
+    // from: @openzeppelin/contracts
+    // from: @openzeppelin/contracts-upgradeable
+    // Clashing selector between proxy and implementation can only be caused deliberately
+    "GHSA-mx2q-35m2-x2rh",
+    // https://github.com/advisories/GHSA-93hq-5wgc-jc82
+    // GovernorCompatibilityBravo may trim proposal calldata
+    // from: @openzeppelin/contracts
+    // from: @openzeppelin/contracts-upgradeable
+    // We don't use GovernorCompatibilityBravo
+    "GHSA-93hq-5wgc-jc82"
   ]
 }
