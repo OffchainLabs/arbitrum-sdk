@@ -435,18 +435,30 @@ export class Erc20Bridger extends AssetBridger<
     erc20L2Address: string,
     l2Provider: Provider
   ): Promise<string> {
+    return this.getL1ERC20AddressFromGateway(
+      erc20L2Address,
+      l2Provider,
+      this.l2Network.tokenBridge.l2GatewayRouter
+    )
+  }
+
+  public async getL1ERC20AddressFromGateway(
+    erc20L2Address: string,
+    l2Provider: Provider,
+    l2GatewayAddress: string
+  ): Promise<string> {
     await this.checkL2Network(l2Provider)
 
     const arbERC20 = L2GatewayToken__factory.connect(erc20L2Address, l2Provider)
     const l1Address = await arbERC20.functions.l1Address().then(([res]) => res)
 
     // check that this l1 address is indeed registered to this l2 token
-    const l2GatewayRouter = L2GatewayRouter__factory.connect(
-      this.l2Network.tokenBridge.l2GatewayRouter,
+    const l2Gateway = L2ArbitrumGateway__factory.connect(
+      l2GatewayAddress,
       l2Provider
     )
 
-    const l2Address = await l2GatewayRouter.calculateL2TokenAddress(l1Address)
+    const l2Address = await l2Gateway.calculateL2TokenAddress(l1Address)
     if (l2Address.toLowerCase() !== erc20L2Address.toLowerCase()) {
       throw new ArbSdkError(
         `Unexpected l1 address. L1 address from token is not registered to the provided l2 address. ${l1Address} ${l2Address} ${erc20L2Address}`
@@ -686,7 +698,8 @@ export class Erc20Bridger extends AssetBridger<
   public async withdraw(
     params:
       | (OmitTyped<Erc20WithdrawParams, 'from'> & { l2Signer: Signer })
-      | L2ToL1TxReqAndSigner
+      | L2ToL1TxReqAndSigner,
+    forceUseGateway?: string
   ): Promise<L2ContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
       throw new MissingProviderArbSdkError('l2Signer')
@@ -701,6 +714,7 @@ export class Erc20Bridger extends AssetBridger<
           ...params,
           from: await params.l2Signer.getAddress(),
         })
+    if (forceUseGateway) withdrawalRequest.txRequest.to = forceUseGateway
 
     const tx = await params.l2Signer.sendTransaction({
       ...withdrawalRequest.txRequest,
