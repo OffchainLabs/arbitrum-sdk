@@ -437,6 +437,14 @@ export class Erc20Bridger extends AssetBridger<
   ): Promise<string> {
     await this.checkL2Network(l2Provider)
 
+    // L2 WETH contract doesn't have the l1Address method on it
+    if (
+      erc20L2Address.toLowerCase() ===
+      this.l2Network.tokenBridge.l2Weth.toLowerCase()
+    ) {
+      return this.l2Network.tokenBridge.l1Weth
+    }
+
     const arbERC20 = L2GatewayToken__factory.connect(erc20L2Address, l2Provider)
     const l1Address = await arbERC20.functions.l1Address().then(([res]) => res)
 
