@@ -11,7 +11,7 @@ async function main() {
   const cwd = process.cwd()
 
   const nitroPath = getPackagePath('@arbitrum/nitro-contracts')
-  const peripheralsPath = getPackagePath('arb-bridge-peripherals')
+  const tokenBridge = getPackagePath('@arbitrum/token-bridge-contracts')
 
   console.log('Compiling paths.')
 
@@ -32,15 +32,15 @@ async function main() {
     cwd: nitroPath,
   })
 
-  console.log('building peripherals')
-  execSync(`${npmExec} run hardhat:prod compile`, {
-    cwd: peripheralsPath,
+  console.log('building token bridge')
+  execSync(`${npmExec} run build`, {
+    cwd: tokenBridge,
   })
 
   console.log('Done compiling')
 
   const nitroFiles = glob(cwd, [
-    `${peripheralsPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
+    `${tokenBridge}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
     `${nitroPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
   ])
 
