@@ -101,6 +101,10 @@ export interface Erc20DepositParams extends EthDepositParams {
    */
   destinationAddress?: string
   /**
+   * The maximum cost to be paid for submitting the transaction
+   */
+  maxSubmissionCost?: BigNumber
+  /**
    * The address to return the any gas that was not spent on fees
    */
   excessFeeRefundAddress?: string
@@ -529,6 +533,9 @@ export class Erc20Bridger extends AssetBridger<
     const depositFunc = (
       depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
     ) => {
+      depositParams.maxSubmissionCost =
+        params.maxSubmissionCost || depositParams.maxSubmissionCost
+
       const innerData = defaultAbiCoder.encode(
         ['uint256', 'bytes'],
         [depositParams.maxSubmissionCost, '0x']
@@ -554,11 +561,6 @@ export class Erc20Bridger extends AssetBridger<
               depositParams.maxFeePerGas,
               innerData,
             ])
-
-      // Tested to send extra ETH
-      // depositParams.maxSubmissionCost = depositParams.maxSubmissionCost.add(
-      //   parseUnits('0.1', 18)
-      // )
 
       return {
         data: functionData,
