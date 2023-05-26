@@ -30,7 +30,6 @@ import { BigNumber, BigNumberish, ethers, BytesLike } from 'ethers'
 import { L1GatewayRouter__factory } from '../abi/factories/L1GatewayRouter__factory'
 import { L2GatewayRouter__factory } from '../abi/factories/L2GatewayRouter__factory'
 import { L1WethGateway__factory } from '../abi/factories/L1WethGateway__factory'
-import { L1ArbitrumGateway__factory } from '../abi/factories/L1ArbitrumGateway__factory'
 import { L2ArbitrumGateway__factory } from '../abi/factories/L2ArbitrumGateway__factory'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { ERC20 } from '../abi/ERC20'
@@ -166,33 +165,6 @@ type DefaultedDepositRequest = RequiredPick<
   'callValueRefundAddress' | 'excessFeeRefundAddress' | 'destinationAddress'
 >
 
-export interface ERC20GatewayInformation {
-  /**
-   * L1GatewayRouter
-   */
-  l1GatewayRouter: string
-  /**
-   * L2GatewayRouter
-   */
-  l2GatewayRouter: string
-  /**
-   * L1 standard gateway
-   */
-  l1ERC20Gateway: string
-  /**
-   * L2 standard gateway
-   */
-  l2ERC20Gateway: string
-  /**
-   * L1 counterpart of the gateway being analyzed
-   */
-  l1Gateway: string
-  /**
-   * L2 counterpart of the gateway being analyzed
-   */
-  l2Gateway: string
-}
-
 /**
  * Bridger for moving ERC20 tokens back and forth between L1 to L2
  */
@@ -217,76 +189,6 @@ export class Erc20Bridger extends AssetBridger<
    */
   public static async fromProvider(l2Provider: Provider) {
     return new Erc20Bridger(await getL2Network(l2Provider))
-  }
-
-  /**
-   * Returns the addresses of all contracts that make up the gateway system
-   * @param gatewayAddress address of the gateway being queried (on L1 or L2)
-   * @param l1Provider An L1 provider
-   * @param l2Provider An L2 provider
-   * @returns Object containing the addresses of the contracts that make up the gateway system
-   */
-  public async getGatewayInformation(
-    gatewayAddress: string,
-    l1Provider: Provider,
-    l2Provider: Provider
-  ): Promise<ERC20GatewayInformation> {
-    // Checking providers
-    await this.checkL1Network(l1Provider)
-    await this.checkL2Network(l2Provider)
-
-    const gatewayInformation: ERC20GatewayInformation = {
-      l1GatewayRouter: '',
-      l2GatewayRouter: '',
-      l1ERC20Gateway: '',
-      l2ERC20Gateway: '',
-      l1Gateway: '',
-      l2Gateway: '',
-    }
-
-    try {
-      const l1Gateway = L1ArbitrumGateway__factory.connect(
-        gatewayAddress,
-        l1Provider
-      )
-
-      gatewayInformation.l1Gateway = gatewayAddress
-      gatewayInformation.l2Gateway = await l1Gateway.counterpartGateway()
-      gatewayInformation.l1GatewayRouter = await l1Gateway.router()
-    } catch (error) {
-      // It's an L2 Gateway
-      const l2Gateway = L2ArbitrumGateway__factory.connect(
-        gatewayAddress,
-        l2Provider
-      )
-      gatewayInformation.l2Gateway = gatewayAddress
-      gatewayInformation.l1Gateway = await l2Gateway.counterpartGateway()
-      gatewayInformation.l2GatewayRouter = await l2Gateway.router()
-
-      const l2GatewayRouter = L2GatewayRouter__factory.connect(
-        gatewayInformation.l2GatewayRouter,
-        l2Provider
-      )
-      gatewayInformation.l1GatewayRouter =
-        await l2GatewayRouter.counterpartGateway()
-    }
-
-    const l1GatewayRouter = L1GatewayRouter__factory.connect(
-      gatewayInformation.l1GatewayRouter,
-      l1Provider
-    )
-    gatewayInformation.l2GatewayRouter =
-      await l1GatewayRouter.counterpartGateway()
-    gatewayInformation.l1ERC20Gateway = await l1GatewayRouter.defaultGateway()
-
-    const l1ERC20Gateway = L1ArbitrumGateway__factory.connect(
-      gatewayInformation.l1ERC20Gateway,
-      l1Provider
-    )
-    gatewayInformation.l2ERC20Gateway =
-      await l1ERC20Gateway.counterpartGateway()
-
-    return gatewayInformation
   }
 
   /**

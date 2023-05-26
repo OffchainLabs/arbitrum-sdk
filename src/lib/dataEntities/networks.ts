@@ -19,6 +19,7 @@
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
 import { SEVEN_DAYS_IN_SECONDS } from './constants'
+import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__factory'
 
 export interface L1Network extends Network {
   partnerChainIDs: number[]
@@ -280,6 +281,42 @@ export const getL2Network = (
   signerOrProviderOrChainID: SignerOrProvider | number
 ): Promise<L2Network> => {
   return getNetwork(signerOrProviderOrChainID, 2) as Promise<L2Network>
+}
+
+/**
+ * Returns the addresses of all contracts that make up the ETH bridge
+ * @param rollupContractAddress Address of the Rollup contract
+ * @param l1SignerOrProvider An L1 signer or provider
+ * @returns EthBridge object with all information about the ETH bridge
+ */
+export const getEthBridgeInformation = async (
+  rollupContractAddress: string,
+  l1SignerOrProvider: SignerOrProvider
+): Promise<EthBridge> => {
+  const rollup = RollupAdminLogic__factory.connect(
+    rollupContractAddress,
+    l1SignerOrProvider
+  )
+
+  const [
+    bridgeContractAddress,
+    inboxContractAddress,
+    outboxContractAddress,
+    sequencerInboxContractAddress,
+  ] = await Promise.all([
+    await rollup.bridge(),
+    await rollup.inbox(),
+    await rollup.outbox(),
+    await rollup.sequencerInbox(),
+  ])
+
+  return {
+    bridge: bridgeContractAddress,
+    inbox: inboxContractAddress,
+    sequencerInbox: sequencerInboxContractAddress,
+    outbox: outboxContractAddress,
+    rollup: rollupContractAddress,
+  }
 }
 
 export const addCustomNetwork = ({
