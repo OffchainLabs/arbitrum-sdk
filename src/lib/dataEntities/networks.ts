@@ -298,23 +298,18 @@ export const getEthBridgeInformation = async (
     l1SignerOrProvider
   )
 
-  const [
-    bridgeContractAddress,
-    inboxContractAddress,
-    outboxContractAddress,
-    sequencerInboxContractAddress,
-  ] = await Promise.all([
-    await rollup.bridge(),
-    await rollup.inbox(),
-    await rollup.outbox(),
-    await rollup.sequencerInbox(),
+  const [bridge, inbox, sequencerInbox, outbox] = await Promise.all([
+    rollup.bridge(),
+    rollup.inbox(),
+    rollup.sequencerInbox(),
+    rollup.outbox(),
   ])
 
   return {
-    bridge: bridgeContractAddress,
-    inbox: inboxContractAddress,
-    sequencerInbox: sequencerInboxContractAddress,
-    outbox: outboxContractAddress,
+    bridge,
+    inbox,
+    sequencerInbox,
+    outbox,
     rollup: rollupContractAddress,
   }
 }
