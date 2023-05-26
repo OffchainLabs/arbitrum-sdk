@@ -1,23 +1,22 @@
 import { Provider } from '@ethersproject/abstract-provider'
-import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
-import { Inbox__factory } from '../abi/factories/Inbox__factory'
-import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { BigNumber } from '@ethersproject/bignumber'
-import { constants } from 'ethers'
-import { utils } from 'ethers'
+import { constants, utils } from 'ethers'
+import { Inbox__factory } from '../abi/factories/Inbox__factory'
+import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
+import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
+import { ArbSdkError } from '../dataEntities/errors'
 import { getL2Network } from '../dataEntities/networks'
-import {
-  L1ToL2MessageGasParams,
-  L1ToL2MessageNoGasParams,
-} from './L1ToL2MessageCreator'
 import {
   RetryableData,
   RetryableDataTools,
 } from '../dataEntities/retryableData'
-import { getBaseFee, isDefined } from '../utils/lib'
 import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
+import { getBaseFee, isDefined } from '../utils/lib'
 import { OmitTyped } from '../utils/types'
-import { ArbSdkError } from '../dataEntities/errors'
+import {
+  L1ToL2MessageGasParams,
+  L1ToL2MessageNoGasParams,
+} from './L1ToL2MessageCreator'
 
 /**
  * The default amount to increase the maximum submission cost. Submission cost is calculated
@@ -222,10 +221,10 @@ export class L1ToL2MessageGasEstimator {
     const gasLimitDefaults = this.applyGasLimitDefaults(options?.gasLimit)
 
     // estimate the l1 gas price
-    const maxFeePerGas = await this.estimateMaxFeePerGas(options?.maxFeePerGas)
+    const maxFeePerGasPromise = this.estimateMaxFeePerGas(options?.maxFeePerGas)
 
     // estimate the submission fee
-    const maxSubmissionFee = await this.estimateSubmissionFee(
+    const maxSubmissionFeePromise = this.estimateSubmissionFee(
       l1Provider,
       l1BaseFee,
       utils.hexDataLength(data),
@@ -241,6 +240,11 @@ export class L1ToL2MessageGasEstimator {
         )),
       gasLimitDefaults.percentIncrease
     )
+
+    const [maxFeePerGas, maxSubmissionFee] = await Promise.all([
+      maxFeePerGasPromise,
+      maxSubmissionFeePromise,
+    ])
 
     // always ensure the max gas is greater than the min - this can be useful if we know that
     // gas estimation is bad for the provided transaction
