@@ -47,6 +47,22 @@ export const config = {
   ethKey: process.env['ETH_KEY'] as string,
 }
 
+
+function getDeploymentData(): string {
+  const dockerNames = ["nitro_sequencer_1", "nitro-sequencer-1", "nitro-testnode-sequencer-1", "nitro-testnode_sequencer_1"]
+
+  for (const dockerName of dockerNames)  {
+    try {
+      return execSync(
+        'docker exec ' + dockerName + ' cat /config/deployment.json'
+      ).toString()
+    } catch (e) {
+    }
+  }
+
+  throw new Error("nitro-testnode sequencer not found");
+}
+
 export const getCustomNetworks = async (
   l1Url: string,
   l2Url: string
@@ -56,16 +72,7 @@ export const getCustomNetworks = async (
 }> => {
   const l1Provider = new JsonRpcProvider(l1Url)
   const l2Provider = new JsonRpcProvider(l2Url)
-  let deploymentData: string
-  try {
-    deploymentData = execSync(
-      'docker exec nitro_sequencer_1 cat /config/deployment.json'
-    ).toString()
-  } catch (e) {
-    deploymentData = execSync(
-      'docker exec nitro-sequencer-1 cat /config/deployment.json'
-    ).toString()
-  }
+  const deploymentData = getDeploymentData()
   const parsedDeploymentData = JSON.parse(deploymentData) as {
     bridge: string
     inbox: string
