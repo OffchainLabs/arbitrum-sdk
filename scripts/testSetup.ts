@@ -47,20 +47,23 @@ export const config = {
   ethKey: process.env['ETH_KEY'] as string,
 }
 
-
 function getDeploymentData(): string {
-  const dockerNames = ["nitro_sequencer_1", "nitro-sequencer-1", "nitro-testnode-sequencer-1", "nitro-testnode_sequencer_1"]
-
-  for (const dockerName of dockerNames)  {
+  const dockerNames = [
+    'nitro_sequencer_1',
+    'nitro-sequencer-1',
+    'nitro-testnode-sequencer-1',
+    'nitro-testnode_sequencer_1',
+  ]
+  for (const dockerName of dockerNames) {
     try {
       return execSync(
         'docker exec ' + dockerName + ' cat /config/deployment.json'
       ).toString()
-    } catch (e) {
+    } catch {
+      // empty on purpose
     }
   }
-
-  throw new Error("nitro-testnode sequencer not found");
+  throw new Error('nitro-testnode sequencer not found')
 }
 
 export const getCustomNetworks = async (
