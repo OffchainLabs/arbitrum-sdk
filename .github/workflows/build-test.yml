@@ -4,6 +4,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+env:
+  MAINNET_RPC: ${{ secrets.MAINNET_RPC }}
+
 jobs:
   install:
     name: 'Install'
