@@ -80,7 +80,7 @@ export const deployErc20L1 = async (deployer: Signer) => {
 
   const multicall = await new Multicall2__factory().connect(deployer).deploy()
   await multicall.deployed()
-  console.log('multicall', weth.address)
+  console.log('multicall', multicall.address)
 
   return {
     proxyAdmin,
