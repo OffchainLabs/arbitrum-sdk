@@ -15,14 +15,13 @@
     "@jridgewell/gen-mapping" "^0.1.0"
     "@jridgewell/trace-mapping" "^0.3.9"
 
-"@arbitrum/nitro-contracts@1.0.1":
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.0.1.tgz#c9b4e6fba7375f8a2e7cacbda8248870bef2d61b"
-  integrity sha512-gNbtcWM1QkLPYs4nxvC1RnoHqcg+uk6acs11C4XRcp77vC72izpQ1+4GqMVXV6viHCNquz8posG9rButW8nHFw==
+"@arbitrum/nitro-contracts@1.1.0-alpha.0":
+  version "1.1.0-alpha.0"
+  resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.1.0-alpha.0.tgz#68f89b2c9a3baa0382fc5046d57d1e94cc8c867b"
+  integrity sha512-whJCnJLAAJiVV9Z6oWr+HHLTPdC1Od1P6f7nyp5iaOSeKvLd0/sRKrgdbmSU9nLxtPhnMFy/Dh2J8fTS7mht7Q==
   dependencies:
     "@openzeppelin/contracts" "4.5.0"
     "@openzeppelin/contracts-upgradeable" "4.5.2"
-    hardhat "^2.6.6"
     patch-package "^6.4.7"
   optionalDependencies:
     sol2uml "2.2.0"
@@ -3209,7 +3208,7 @@ handlebars@^4.7.7:
   optionalDependencies:
     uglify-js "^3.1.4"
 
-hardhat@^2.6.1, hardhat@^2.6.4, hardhat@^2.6.6, hardhat@^2.8.3:
+hardhat@^2.6.1, hardhat@^2.6.4, hardhat@^2.8.3:
   version "2.9.3"
   resolved "https://registry.yarnpkg.com/hardhat/-/hardhat-2.9.3.tgz#4759dc3c468c7d15f34334ca1be7d59b04e47b1e"
   integrity sha512-7Vw99RbYbMZ15UzegOR/nqIYIqddZXvLwJGaX5sX4G5bydILnbjmDU6g3jMKJSiArEixS3vHAEaOs5CW1JQ3hg==
