@@ -27,8 +27,11 @@ async function main() {
   // https://yarnpkg.com/advanced/rulebook#packages-should-never-write-inside-their-own-folder-outside-of-postinstall
   // instead of writing in postinstall in each of those packages, we should target a local folder in sdk's postinstall
 
+  // copy the hardhat config to the nitro package
+  execSync(`cp ${cwd}/hardhat-abigen.ts ${nitroPath}/hardhat-abigen.ts`)
+
   console.log('building nitro')
-  execSync(`${npmExec} run hardhat:prod compile`, {
+  execSync(`${npmExec} run build --config hardhat-abigen.ts`, {
     cwd: nitroPath,
   })
 
