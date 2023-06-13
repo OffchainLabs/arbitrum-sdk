@@ -195,7 +195,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     nodeNum: BigNumber,
     l2Provider: Provider
   ): Promise<ArbBlock> {
-    const node = await rollup.getNode(nodeNum)
+    const createdAtBlock = await rollup.getNodeCreationBlockForLogLookup(nodeNum)
 
     // now get the block hash and sendroot for that node
     const eventFetcher = new EventFetcher(rollup.provider)
@@ -203,8 +203,8 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
       RollupUserLogic__factory,
       t => t.filters.NodeCreated(nodeNum),
       {
-        fromBlock: node.createdAtBlock.toNumber(),
-        toBlock: node.createdAtBlock.toNumber(),
+        fromBlock: createdAtBlock.toNumber(),
+        toBlock: createdAtBlock.toNumber(),
         address: rollup.address,
       }
     )
@@ -338,13 +338,16 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
         RollupUserLogic__factory,
         t => t.filters.NodeCreated(),
         {
-          fromBlock: Math.max(
-            latestBlock -
-              BigNumber.from(l2Network.confirmPeriodBlocks)
-                .add(ASSERTION_CONFIRMED_PADDING)
-                .toNumber(),
-            0
-          ),
+          // fromBlock: Math.max(
+          //   latestBlock -
+          //     BigNumber.from(l2Network.confirmPeriodBlocks)
+          //       .add(ASSERTION_CONFIRMED_PADDING)
+          //       .toNumber(),
+          //   0
+          // ),
+          // The above does not work on a L3 where the base chain is a Arbitrum Chain because
+          // latestBlock would be in L2 blocks but confirmPeriodBlocks and ASSERTION_CONFIRMED_PADDING are in L1 blocks
+          fromBlock: 0, // dirty hack to do a full range event lookup, TODO: fix this
           toBlock: 'latest',
           address: rollup.address,
         }
