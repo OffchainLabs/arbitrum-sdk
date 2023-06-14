@@ -19,7 +19,7 @@
 import { Signer } from '@ethersproject/abstract-signer'
 import { Provider } from '@ethersproject/abstract-provider'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
-import { JsonRpcProvider } from '@ethersproject/providers'
+import { JsonRpcProvider, WebSocketProvider } from '@ethersproject/providers'
 import { BigNumber } from 'ethers'
 
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
@@ -147,6 +147,11 @@ export class EthBridger extends AssetBridger<
 
     if (!url) {
       throw new Error('Unable to get URL from provider')
+    }
+
+    if (url.startsWith('ws')) {
+      const provider = new WebSocketProvider(url)
+      return new EthBridger(await getL2Network(provider))
     }
 
     try {

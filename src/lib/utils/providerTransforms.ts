@@ -3,6 +3,8 @@ export type Providerish = {
   currentProvider?: { clientUrl?: unknown }
   transport?: { url?: unknown }
   connection?: { url?: unknown }
+  clientUrl?: unknown
+  _socketPath?: unknown
 }
 
 export const getEthersV5Url = (provider: Providerish) => {
@@ -28,6 +30,10 @@ export const getEthersV6Url = (provider: Providerish) => {
 }
 
 export const getWeb3Url = (provider: Providerish) => {
+  if ('clientUrl' in provider && typeof provider.clientUrl === 'string') {
+    const url = provider.clientUrl
+    return url
+  }
   if (
     'currentProvider' in provider &&
     typeof provider.currentProvider === 'object' &&
@@ -39,6 +45,11 @@ export const getWeb3Url = (provider: Providerish) => {
       return url
     }
   }
+  if ('_socketPath' in provider && typeof provider._socketPath === 'string') {
+    const url = provider._socketPath
+    return url
+  }
+
   return undefined
 }
 
