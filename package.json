@@ -11,7 +11,7 @@
     "url": "git+https://github.com/offchainlabs/arbitrum-sdk.git"
   },
   "engines": {
-    "node": ">=v11",
+    "node": ">=11.0.0 <17.0.0",
     "npm": "please-use-yarn",
     "yarn": ">= 1.0.0"
   },
@@ -58,6 +58,7 @@
     "@types/chai": "^4.2.11",
     "@types/mocha": "^9.0.0",
     "@types/prompts": "^2.0.14",
+    "@types/semver": "^7.5.0",
     "@types/yargs": "^17.0.9",
     "@typescript-eslint/eslint-plugin": "^5.14.0",
     "@typescript-eslint/eslint-plugin-tslint": "^5.27.1",
@@ -78,6 +79,7 @@
     "prettier": "^2.3.2",
     "prettier-plugin-solidity": "^1.0.0-beta.17",
     "prompts": "^2.4.2",
+    "semver": "^7.5.1",
     "ts-mockito": "^2.6.1",
     "ts-node": "^10.2.1",
     "tslint": "^6.1.3",

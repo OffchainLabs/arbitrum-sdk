@@ -31,6 +31,10 @@ jobs:
     env:
       TEST_PATH: /tmp/test-results
     steps:
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 14
+
       - name: Checkout
         uses: actions/checkout@v3
 
@@ -68,6 +72,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: install
     steps:
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 14
+
       - name: Checkout
         uses: actions/checkout@v3
 
@@ -81,6 +89,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: install
     steps:
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 14
+
       - name: Checkout
         uses: actions/checkout@v3
 

@@ -1,5 +1,10 @@
 {
-  "extension": ["ts"],
+  "extension": [
+    "ts"
+  ],
   "package": "./package.json",
-  "require": "ts-node/register"
+  "require": [
+    "ts-node/register",
+    "./tests/checkNodeVersion.ts"
+  ]
 }
