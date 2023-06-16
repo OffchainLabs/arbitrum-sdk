@@ -2,6 +2,7 @@
 .DS_Store
 .idea
 .vscode
+!.vscode/launch.json
 *.ao
 compiled.json
 ci
