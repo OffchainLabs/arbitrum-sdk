@@ -424,14 +424,13 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   }
 
   private async retryableExists(): Promise<boolean> {
+    const currentTimestamp = BigNumber.from(
+      (await this.l2Provider.getBlock('latest')).timestamp
+    )
     try {
       const timeoutTimestamp = await this.getTimeout()
-      const currentTimestamp = BigNumber.from(
-        (await this.l2Provider.getBlock('latest')).timestamp
-      )
-
       // timeoutTimestamp returns the timestamp at which the retryable ticket expires
-      // it can also return 0 if the ticket l2Tx does not exist
+      // it can also return revert if the ticket l2Tx does not exist
       return currentTimestamp.lte(timeoutTimestamp)
     } catch (err) {
       return false
@@ -496,7 +495,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   }
 
   /**
-   * How long until this message expires
+   * Timestamp at which this message expires
    * @returns
    */
   public async getTimeout(): Promise<BigNumber> {
