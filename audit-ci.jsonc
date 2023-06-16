@@ -89,6 +89,12 @@
     // from: @arbitrum/nitro-contracts>@openzeppelin/contracts-upgradeable
     // from: @arbitrum/nitro-contracts>@openzeppelin/contracts
     // We don't use GovernorCompatibilityBravo
-    "GHSA-93hq-5wgc-jc82"
+    "GHSA-93hq-5wgc-jc82",
+    // https://github.com/advisories/GHSA-5h3x-9wvq-w4m2
+    // OpenZeppelin Contracts's governor proposal creation may be blocked by frontrunning
+    // from: @arbitrum/nitro-contracts>@openzeppelin/contracts-upgradeable
+    // from: @arbitrum/nitro-contracts>@openzeppelin/contracts
+    // We don't use Governor or GovernorCompatibilityBravo
+    "GHSA-5h3x-9wvq-w4m2"
   ]
 }
