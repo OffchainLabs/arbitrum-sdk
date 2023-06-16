@@ -58,6 +58,7 @@
     "@typechain/ethers-v5": "9.0.0",
     "@types/chai": "^4.2.11",
     "@types/mocha": "^9.0.0",
+    "@types/node-fetch": "^2.6.4",
     "@types/prompts": "^2.0.14",
     "@types/yargs": "^17.0.9",
     "@typescript-eslint/eslint-plugin": "^5.14.0",

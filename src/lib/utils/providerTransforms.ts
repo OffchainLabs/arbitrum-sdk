@@ -1,3 +1,7 @@
+import { EthBridger } from '../assetBridger/ethBridger'
+import { getL2Network } from '../dataEntities/networks'
+import { JsonRpcProvider, WebSocketProvider } from '@ethersproject/providers'
+
 export type Providerish = {
   _getConnection?: () => { url?: unknown }
   currentProvider?: { clientUrl?: unknown }
@@ -71,4 +75,26 @@ export const getProviderUrl = (provider: Providerish) => {
     if (url) return url
   }
   return undefined
+}
+
+export const transformUniversalProviderToEthersV5Provider = async (
+  provider: Providerish
+) => {
+  const url = getProviderUrl(provider)
+
+  if (!url) {
+    throw new Error('Unable to get URL from provider')
+  }
+
+  if (url.startsWith('ws')) {
+    return new WebSocketProvider(url)
+  }
+
+  try {
+    new URL(url)
+  } catch (_) {
+    throw new Error('Invalid URL received from provider')
+  }
+
+  return new JsonRpcProvider(url)
 }

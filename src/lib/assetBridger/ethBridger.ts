@@ -19,7 +19,6 @@
 import { Signer } from '@ethersproject/abstract-signer'
 import { Provider } from '@ethersproject/abstract-provider'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
-import { JsonRpcProvider, WebSocketProvider } from '@ethersproject/providers'
 import { BigNumber } from 'ethers'
 
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
@@ -47,7 +46,11 @@ import { OmitTyped } from '../utils/types'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getL2Network } from '../dataEntities/networks'
-import { Providerish, getProviderUrl } from '../utils/providerTransforms'
+import {
+  Providerish,
+  getProviderUrl,
+  transformUniversalProviderToEthersV5Provider,
+} from '../utils/providerTransforms'
 
 export interface EthWithdrawParams {
   /**
@@ -143,25 +146,11 @@ export class EthBridger extends AssetBridger<
     if (l2Provider instanceof Provider) {
       return new EthBridger(await getL2Network(l2Provider))
     }
-    const url = getProviderUrl(l2Provider)
 
-    if (!url) {
-      throw new Error('Unable to get URL from provider')
-    }
-
-    if (url.startsWith('ws')) {
-      const provider = new WebSocketProvider(url)
-      return new EthBridger(await getL2Network(provider))
-    }
-
-    try {
-      new URL(url)
-    } catch (_) {
-      throw new Error('Invalid URL received from provider')
-    }
-
-    const provider = new JsonRpcProvider(url)
-    return new EthBridger(await getL2Network(provider))
+    const ethersV5Provider = await transformUniversalProviderToEthersV5Provider(
+      l2Provider
+    )
+    return new EthBridger(await getL2Network(ethersV5Provider))
   }
 
   /**
