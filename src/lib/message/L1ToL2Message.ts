@@ -79,7 +79,7 @@ export enum EthDepositStatus {
   DEPOSITED = 2,
 }
 
-// for handling errors through in retryableExists()
+// for handling errors thrown in retryableExists()
 interface RetryableExistsError extends Error {
   code: ErrorCode
   errorName: string
@@ -442,7 +442,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     } catch (err) {
       if (
         err instanceof Error &&
-        (err as unknown as  RetryableExistsError).code ===
+        (err as unknown as RetryableExistsError).code ===
           Logger.errors.CALL_EXCEPTION &&
         (err as unknown as RetryableExistsError).errorName === 'NoTicketWithID'
       ) {
