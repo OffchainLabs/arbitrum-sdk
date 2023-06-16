@@ -38,6 +38,7 @@ import { getL2Network } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt, isDefined } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
+import { ErrorCode, Logger } from '@ethersproject/logger'
 
 export enum L1ToL2MessageStatus {
   /**
@@ -76,6 +77,12 @@ export enum EthDepositStatus {
    * ETH is deposited successfully on L2
    */
   DEPOSITED = 2,
+}
+
+// for handling errors through in retryableExists()
+interface RetryableExistsError extends Error {
+  code: ErrorCode
+  errorName: string
 }
 
 /**
@@ -433,7 +440,15 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       // it can also return revert if the ticket l2Tx does not exist
       return currentTimestamp.lte(timeoutTimestamp)
     } catch (err) {
-      return false
+      if (
+        err instanceof Error &&
+        (err as unknown as  RetryableExistsError).code ===
+          Logger.errors.CALL_EXCEPTION &&
+        (err as unknown as RetryableExistsError).errorName === 'NoTicketWithID'
+      ) {
+        return false
+      }
+      throw err
     }
   }
 
