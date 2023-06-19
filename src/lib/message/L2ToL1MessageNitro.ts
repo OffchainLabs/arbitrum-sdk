@@ -39,7 +39,7 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { wait } from '../utils/lib'
-import { getL2Network } from '../dataEntities/networks'
+import { getL2Network, l2Networks } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
 import { ArbitrumProvider } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
@@ -334,22 +334,26 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
       throw new ArbSdkError('L2ToL1Msg expected to be unconfirmed')
 
     const latestBlock = await this.l1Provider.getBlockNumber()
+    const isL3 = l2Networks[l2Network.partnerChainID] !== undefined
+    // The original logic does not work on a L3 where the base chain is a Arbitrum Chain because
+    // latestBlock would be in L2 blocks but confirmPeriodBlocks and ASSERTION_CONFIRMED_PADDING are in L1 blocks
+    const rollupCreatedAtBlock = isL3
+      ? (await rollup.getNodeCreationBlockForLogLookup(0)).toNumber() // dirty hack to do a full range event lookup, TODO: fix this
+      : Math.max(
+          latestBlock -
+            BigNumber.from(l2Network.confirmPeriodBlocks)
+              .add(ASSERTION_CONFIRMED_PADDING)
+              .toNumber(),
+          0
+        )
+
     const eventFetcher = new EventFetcher(this.l1Provider)
     const logs = (
       await eventFetcher.getEvents(
         RollupUserLogic__factory,
         t => t.filters.NodeCreated(),
         {
-          // fromBlock: Math.max(
-          //   latestBlock -
-          //     BigNumber.from(l2Network.confirmPeriodBlocks)
-          //       .add(ASSERTION_CONFIRMED_PADDING)
-          //       .toNumber(),
-          //   0
-          // ),
-          // The above does not work on a L3 where the base chain is a Arbitrum Chain because
-          // latestBlock would be in L2 blocks but confirmPeriodBlocks and ASSERTION_CONFIRMED_PADDING are in L1 blocks
-          fromBlock: 0, // dirty hack to do a full range event lookup, TODO: fix this
+          fromBlock: rollupCreatedAtBlock,
           toBlock: 'latest',
           address: rollup.address,
         }
