@@ -39,7 +39,7 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { wait } from '../utils/lib'
-import { getL2Network, l2Networks } from '../dataEntities/networks'
+import { getL2Network } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
 import { ArbitrumProvider } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
