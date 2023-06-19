@@ -195,11 +195,18 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     nodeNum: BigNumber,
     l2Provider: Provider
   ): Promise<ArbBlock> {
-    const l2Network = await getL2Network(l2Provider)
-    const isL3 = l2Networks[l2Network.partnerChainID] !== undefined
-    const createdAtBlock = isL3
-      ? await rollup.getNodeCreationBlockForLogLookup(nodeNum)
-      : (await rollup.getNode(nodeNum)).createdAtBlock
+    let createdAtBlock: BigNumber
+    try {
+      if ([42161, 421613].includes((await l2Provider.getNetwork()).chainId)) {
+        // save some rpc calls as we know these network does not support the new method yet
+        createdAtBlock = (await rollup.getNode(nodeNum)).createdAtBlock
+      } else {
+        createdAtBlock = await rollup.getNodeCreationBlockForLogLookup(nodeNum)
+      }
+    } catch (e) {
+      // fallback to old method if the new method fails
+      createdAtBlock = (await rollup.getNode(nodeNum)).createdAtBlock
+    }
 
     // now get the block hash and sendroot for that node
     const eventFetcher = new EventFetcher(rollup.provider)
@@ -336,18 +343,26 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
       throw new ArbSdkError('L2ToL1Msg expected to be unconfirmed')
 
     const latestBlock = await this.l1Provider.getBlockNumber()
-    const isL3 = l2Networks[l2Network.partnerChainID] !== undefined
-    // The original logic does not work on a L3 where the base chain is a Arbitrum Chain because
+
+    // This does not work on a L3 where the base chain is a Arbitrum Chain because
     // latestBlock would be in L2 blocks but confirmPeriodBlocks and ASSERTION_CONFIRMED_PADDING are in L1 blocks
-    const lookupBlock = isL3
-      ? (await rollup.getNodeCreationBlockForLogLookup(0)).toNumber() // dirty hack to do a full range event lookup, TODO: fix this
-      : Math.max(
-          latestBlock -
-            BigNumber.from(l2Network.confirmPeriodBlocks)
-              .add(ASSERTION_CONFIRMED_PADDING)
-              .toNumber(),
-          0
-        )
+    let lookupBlock: number = Math.max(
+      latestBlock -
+        BigNumber.from(l2Network.confirmPeriodBlocks)
+          .add(ASSERTION_CONFIRMED_PADDING)
+          .toNumber(),
+      0
+    )
+    if (![1, 5].includes(l2Network.partnerChainID)) {
+      // save some rpc call on L1 chain that don't need this
+      try {
+        lookupBlock = (
+          await rollup.getNodeCreationBlockForLogLookup(0)
+        ).toNumber() // dirty hack to do a full range event lookup, TODO: fix this
+      } catch (e) {
+        // do nothing, this might happen if the rollup contract deployed does not support the new method yet
+      }
+    }
 
     const eventFetcher = new EventFetcher(this.l1Provider)
     const logs = (
