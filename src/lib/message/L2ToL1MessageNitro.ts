@@ -195,9 +195,11 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     nodeNum: BigNumber,
     l2Provider: Provider
   ): Promise<ArbBlock> {
-    const createdAtBlock = await rollup.getNodeCreationBlockForLogLookup(
-      nodeNum
-    )
+    const l2Network = await getL2Network(l2Provider)
+    const isL3 = l2Networks[l2Network.partnerChainID] !== undefined
+    const createdAtBlock = isL3
+      ? await rollup.getNodeCreationBlockForLogLookup(nodeNum)
+      : (await rollup.getNode(nodeNum)).createdAtBlock
 
     // now get the block hash and sendroot for that node
     const eventFetcher = new EventFetcher(rollup.provider)
