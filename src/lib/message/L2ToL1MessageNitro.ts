@@ -196,16 +196,16 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     l2Provider: Provider
   ): Promise<ArbBlock> {
     let createdAtBlock: BigNumber
-    try {
-      if ([42161, 421613].includes((await l2Provider.getNetwork()).chainId)) {
-        // save some rpc calls as we know these network does not support the new method yet
-        createdAtBlock = (await rollup.getNode(nodeNum)).createdAtBlock
-      } else {
-        createdAtBlock = await rollup.getNodeCreationBlockForLogLookup(nodeNum)
-      }
-    } catch (e) {
-      // fallback to old method if the new method fails
+    if ([42161, 421613].includes((await l2Provider.getNetwork()).chainId)) {
+      // save some rpc calls as we know these network does not support the new method yet
       createdAtBlock = (await rollup.getNode(nodeNum)).createdAtBlock
+    } else {
+      try {
+        createdAtBlock = await rollup.getNodeCreationBlockForLogLookup(nodeNum)
+      } catch (e) {
+        // fallback to old method if the new method fails
+        createdAtBlock = (await rollup.getNode(nodeNum)).createdAtBlock
+      }
     }
 
     // now get the block hash and sendroot for that node
