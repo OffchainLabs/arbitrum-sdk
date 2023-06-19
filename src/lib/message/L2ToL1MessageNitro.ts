@@ -337,7 +337,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     const isL3 = l2Networks[l2Network.partnerChainID] !== undefined
     // The original logic does not work on a L3 where the base chain is a Arbitrum Chain because
     // latestBlock would be in L2 blocks but confirmPeriodBlocks and ASSERTION_CONFIRMED_PADDING are in L1 blocks
-    const rollupCreatedAtBlock = isL3
+    const lookupBlock = isL3
       ? (await rollup.getNodeCreationBlockForLogLookup(0)).toNumber() // dirty hack to do a full range event lookup, TODO: fix this
       : Math.max(
           latestBlock -
@@ -353,7 +353,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
         RollupUserLogic__factory,
         t => t.filters.NodeCreated(),
         {
-          fromBlock: rollupCreatedAtBlock,
+          fromBlock: lookupBlock,
           toBlock: 'latest',
           address: rollup.address,
         }
