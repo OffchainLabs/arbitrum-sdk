@@ -7,7 +7,7 @@
       "name": "Test File",
       "program": "${workspaceFolder}/node_modules/mocha/bin/_mocha",
       "args": [
-        "${workspaceFolder}/tests/integration/universalSigner.test.ts"
+        "${workspaceFolder}/tests/integration/universalProvider.test.ts"
       ],
       "internalConsoleOptions": "openOnSessionStart",
       "runtimeVersion": "16.16.0",

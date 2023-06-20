@@ -6,16 +6,26 @@ import Web3 from 'web3'
 import { config } from '../../scripts/testSetup'
 import { EthBridger, addDefaultLocalNetwork } from '../../src'
 import 'dotenv/config'
+import { arbitrumGoerli } from 'viem/chains'
 
 addDefaultLocalNetwork()
 const defaultUrl = config.arbUrl
 
 describe('provider', () => {
   it('should convert viem public client to ethers-v5 provider', async () => {
-    const publicClient = createPublicClient({ transport: http(defaultUrl) })
+    // TODO: Fix arb goerli url to use local rpc
+    const url = arbitrumGoerli.rpcUrls.default.http[0]
+    const publicClient = createPublicClient({
+      // chain: {
+      //   ...arbitrumGoerli,
+      //   rpcUrls: { default: { http: [defaultUrl] } },
+      // },
+      chain: arbitrumGoerli,
+      transport: http(url),
+    }) as any // as any is required here for strange type reasons
     const viemEthBridger = await EthBridger.fromProvider(publicClient)
 
-    const provider = new providers.StaticJsonRpcProvider(defaultUrl)
+    const provider = new providers.StaticJsonRpcProvider(url)
     const ethersEthBridger = await EthBridger.fromProvider(provider)
 
     expect(viemEthBridger).to.be.deep.equal(ethersEthBridger)
@@ -23,7 +33,7 @@ describe('provider', () => {
 
   it('should convert generic web3 provider to ethers-v5 provider', async () => {
     const l2Provider = new Web3(defaultUrl)
-    //@ts-expect-error - TODO: update Providerish type
+
     const web3EthBridger = await EthBridger.fromProvider(l2Provider)
 
     const provider = new providers.StaticJsonRpcProvider(defaultUrl)
@@ -34,7 +44,6 @@ describe('provider', () => {
 
   it('should convert web3 HttpProvider to ethers-v5 provider', async () => {
     const l2Provider = new Web3.providers.HttpProvider(defaultUrl)
-    //@ts-expect-error - TODO: update Providerish type
     const web3EthBridger = await EthBridger.fromProvider(l2Provider)
 
     const provider = new providers.StaticJsonRpcProvider(defaultUrl)
@@ -47,7 +56,6 @@ describe('provider', () => {
     const url = 'ws://localhost:8548'
 
     const l2Provider = new Web3.providers.WebsocketProvider(url)
-    //@ts-expect-error - TODO: update Providerish type
     const web3EthBridger = await EthBridger.fromProvider(l2Provider)
     const provider = new providers.WebSocketProvider(url)
     const ethersEthBridger = await EthBridger.fromProvider(provider)

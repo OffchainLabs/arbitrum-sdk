@@ -1,20 +1,22 @@
-import { EthBridger } from '../assetBridger/ethBridger'
-import { getL2Network } from '../dataEntities/networks'
-import { JsonRpcProvider, WebSocketProvider } from '@ethersproject/providers'
+import EthersV5, {
+  JsonRpcProvider,
+  WebSocketProvider,
+  FallbackProvider,
+} from '@ethersproject/providers'
+import { HttpTransport, PublicClient } from 'viem'
+import EthersV6 from 'ethers-v6'
+import Web3, { Web3BaseProvider } from 'web3'
 
-export type Providerish = {
-  _getConnection?: () => { url?: unknown }
-  currentProvider?: { clientUrl?: unknown }
-  transport?: { url?: unknown }
-  connection?: { url?: unknown }
-  clientUrl?: unknown
-  _socketPath?: unknown
-}
+export type Providerish =
+  | PublicClient
+  | EthersV5.JsonRpcProvider
+  | EthersV6.JsonRpcProvider
+  | Web3BaseProvider
+  | Web3
 
 export const getEthersV5Url = (provider: Providerish) => {
-  if (typeof provider.connection === 'object') {
-    const connection = provider.connection
-    const url = connection.url
+  if (isEthersV5JsonRpcProvider(provider)) {
+    const url = provider.connection.url
     if (typeof url === 'string') {
       return url
     }
@@ -23,7 +25,7 @@ export const getEthersV5Url = (provider: Providerish) => {
 }
 
 export const getEthersV6Url = (provider: Providerish) => {
-  if (typeof provider._getConnection === 'function') {
+  if (isEthers6Provider(provider)) {
     const connection = provider._getConnection()
     const url = connection.url
     if (typeof url === 'string') {
@@ -34,40 +36,95 @@ export const getEthersV6Url = (provider: Providerish) => {
 }
 
 export const getWeb3Url = (provider: Providerish) => {
-  if ('clientUrl' in provider && typeof provider.clientUrl === 'string') {
-    const url = provider.clientUrl
-    return url
-  }
-  if (
-    'currentProvider' in provider &&
-    typeof provider.currentProvider === 'object' &&
-    'clientUrl' in provider?.currentProvider &&
-    typeof provider.currentProvider.clientUrl === 'string'
-  ) {
-    const url = provider.currentProvider.clientUrl
-    if (typeof url === 'string') {
-      return url
-    }
-  }
-  if ('_socketPath' in provider && typeof provider._socketPath === 'string') {
-    const url = provider._socketPath
-    return url
-  }
-
-  return undefined
-}
-
-export const getViemUrl = (publicClient: Providerish) => {
-  if (publicClient?.transport && 'url' in publicClient.transport) {
-    const url = publicClient.transport.url
-    if (typeof url === 'string') {
-      return url
+  if (isHttpProvider(provider)) {
+    // @ts-expect-error - private member
+    if (provider.clientUrl) {
+      // @ts-expect-error - private member
+      return provider.clientUrl
+      // @ts-expect-error - private member
+    } else if (provider.currentProvider && provider.currentProvider.clientUrl) {
+      // @ts-expect-error - private member
+      return provider.currentProvider.clientUrl
+      // @ts-expect-error - private member
+    } else if (provider._socketPath) {
+      // @ts-expect-error - private member
+      return provider._socketPath
     }
   }
   return undefined
 }
 
-const providerGetters = [getEthersV5Url, getEthersV6Url, getWeb3Url, getViemUrl]
+export function isEthersV5JsonRpcProvider(
+  object: any
+): object is EthersV5.JsonRpcProvider {
+  return (
+    object !== undefined &&
+    object !== null &&
+    typeof object === 'object' &&
+    'connection' in object &&
+    typeof object.connection === 'object' &&
+    'url' in object.connection &&
+    typeof object.connection.url === 'string'
+  )
+}
+
+export function isEthers6Provider(
+  object: any
+): object is EthersV6.JsonRpcProvider {
+  return (
+    object !== undefined &&
+    object !== null &&
+    typeof object === 'object' &&
+    '_getConnection' in object &&
+    typeof object._getConnection === 'function'
+  )
+}
+
+export function isHttpProvider(object: any): object is Web3BaseProvider {
+  return (
+    object !== undefined &&
+    object !== null &&
+    typeof object === 'object' &&
+    (('clientUrl' in object && typeof object.clientUrl === 'string') ||
+      ('currentProvider' in object &&
+        typeof object.currentProvider === 'object' &&
+        'clientUrl' in object.currentProvider &&
+        typeof object.currentProvider.clientUrl === 'string') ||
+      ('_socketPath' in object && typeof object._socketPath === 'string'))
+  )
+}
+
+export function publicClientToProvider(publicClient: PublicClient) {
+  const { chain, transport } = publicClient
+  if (!chain) throw new Error('Missing chain')
+  const network = {
+    chainId: chain.id,
+    name: chain.name,
+    ensAddress: chain?.contracts?.ensRegistry?.address,
+  }
+  if (transport.type === 'fallback' && network)
+    return new FallbackProvider(
+      (transport.transports as ReturnType<HttpTransport>[]).map(
+        ({ value }) => new JsonRpcProvider(value?.url, network)
+      )
+    )
+  return new JsonRpcProvider(transport.url, network)
+}
+
+export function isPublicClient(object: any): object is PublicClient {
+  return (
+    object !== undefined &&
+    object !== null &&
+    typeof object === 'object' &&
+    'transport' in object &&
+    object.transport !== null &&
+    typeof object.transport === 'object' &&
+    'url' in object.transport &&
+    typeof object.transport.url === 'string'
+  )
+}
+
+const providerGetters = [getEthersV5Url, getEthersV6Url, getWeb3Url]
 
 export const getProviderUrl = (provider: Providerish) => {
   for (const getter of providerGetters) {
@@ -80,6 +137,9 @@ export const getProviderUrl = (provider: Providerish) => {
 export const transformUniversalProviderToEthersV5Provider = async (
   provider: Providerish
 ) => {
+  if (isPublicClient(provider)) {
+    return publicClientToProvider(provider)
+  }
   const url = getProviderUrl(provider)
 
   if (!url) {
