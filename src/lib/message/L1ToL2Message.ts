@@ -38,6 +38,7 @@ import { getL2Network } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt, isDefined } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
+import { ErrorCode, Logger } from '@ethersproject/logger'
 
 export enum L1ToL2MessageStatus {
   /**
@@ -76,6 +77,12 @@ export enum EthDepositStatus {
    * ETH is deposited successfully on L2
    */
   DEPOSITED = 2,
+}
+
+// for handling errors thrown in retryableExists()
+interface RetryableExistsError extends Error {
+  code: ErrorCode
+  errorName: string
 }
 
 /**
@@ -424,17 +431,24 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   }
 
   private async retryableExists(): Promise<boolean> {
+    const currentTimestamp = BigNumber.from(
+      (await this.l2Provider.getBlock('latest')).timestamp
+    )
     try {
       const timeoutTimestamp = await this.getTimeout()
-      const currentTimestamp = BigNumber.from(
-        (await this.l2Provider.getBlock('latest')).timestamp
-      )
-
       // timeoutTimestamp returns the timestamp at which the retryable ticket expires
-      // it can also return 0 if the ticket l2Tx does not exist
+      // it can also return revert if the ticket l2Tx does not exist
       return currentTimestamp.lte(timeoutTimestamp)
     } catch (err) {
-      return false
+      if (
+        err instanceof Error &&
+        (err as unknown as RetryableExistsError).code ===
+          Logger.errors.CALL_EXCEPTION &&
+        (err as unknown as RetryableExistsError).errorName === 'NoTicketWithID'
+      ) {
+        return false
+      }
+      throw err
     }
   }
 
@@ -496,7 +510,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   }
 
   /**
-   * How long until this message expires
+   * Timestamp at which this message expires
    * @returns
    */
   public async getTimeout(): Promise<BigNumber> {
