@@ -167,7 +167,7 @@ export const l2Networks: L2Networks = {
   },
   421613: {
     chainID: 421613,
-    confirmPeriodBlocks: 960,
+    confirmPeriodBlocks: 20,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     ethBridge: {
       bridge: '0xaf4159a80b6cc41ed517db1c453d1ef5c2e4db72',
