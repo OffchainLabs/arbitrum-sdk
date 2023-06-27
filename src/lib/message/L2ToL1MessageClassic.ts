@@ -117,18 +117,21 @@ export class L2ToL1MessageClassic {
   public static fromBatchNumber<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
     batchNumber: BigNumber,
-    indexInBatch: BigNumber
+    indexInBatch: BigNumber,
+    l1Provider?: Provider
   ): L2ToL1MessageReaderOrWriterClassic<T>
   public static fromBatchNumber<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
     batchNumber: BigNumber,
-    indexInBatch: BigNumber
+    indexInBatch: BigNumber,
+    l1Provider?: Provider
   ): L2ToL1MessageReaderClassic | L2ToL1MessageWriterClassic {
     return SignerProviderUtils.isSigner(l1SignerOrProvider)
       ? new L2ToL1MessageWriterClassic(
           l1SignerOrProvider,
           batchNumber,
-          indexInBatch
+          indexInBatch,
+          l1Provider
         )
       : new L2ToL1MessageReaderClassic(
           l1SignerOrProvider,
@@ -373,9 +376,10 @@ export class L2ToL1MessageWriterClassic extends L2ToL1MessageReaderClassic {
   constructor(
     private readonly l1Signer: Signer,
     batchNumber: BigNumber,
-    indexInBatch: BigNumber
+    indexInBatch: BigNumber,
+    l1Provider?: Provider
   ) {
-    super(l1Signer.provider!, batchNumber, indexInBatch)
+    super(l1Provider ?? l1Signer.provider!, batchNumber, indexInBatch)
   }
 
   /**

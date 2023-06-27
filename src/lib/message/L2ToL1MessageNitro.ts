@@ -69,14 +69,16 @@ export class L2ToL1MessageNitro {
 
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event: EventArgs<L2ToL1TxEvent>
+    event: EventArgs<L2ToL1TxEvent>,
+    l1Provider?: Provider
   ): L2ToL1MessageReaderOrWriterNitro<T>
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event: EventArgs<L2ToL1TxEvent>
+    event: EventArgs<L2ToL1TxEvent>,
+    l1Provider?: Provider
   ): L2ToL1MessageReaderNitro | L2ToL1MessageWriterNitro {
     return SignerProviderUtils.isSigner(l1SignerOrProvider)
-      ? new L2ToL1MessageWriterNitro(l1SignerOrProvider, event)
+      ? new L2ToL1MessageWriterNitro(l1SignerOrProvider, event, l1Provider)
       : new L2ToL1MessageReaderNitro(l1SignerOrProvider, event)
   }
 
@@ -403,9 +405,10 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
 export class L2ToL1MessageWriterNitro extends L2ToL1MessageReaderNitro {
   constructor(
     private readonly l1Signer: Signer,
-    event: EventArgs<L2ToL1TxEvent>
+    event: EventArgs<L2ToL1TxEvent>,
+    l1Provider?: Provider
   ) {
-    super(l1Signer.provider!, event)
+    super(l1Provider ?? l1Signer.provider!, event)
   }
 
   /**

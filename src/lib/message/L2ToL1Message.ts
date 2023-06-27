@@ -65,14 +65,16 @@ export class L2ToL1Message {
 
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event: L2ToL1TransactionEvent
+    event: L2ToL1TransactionEvent,
+    l1Provider?: Provider
   ): L2ToL1MessageReaderOrWriter<T>
   static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event: L2ToL1TransactionEvent
+    event: L2ToL1TransactionEvent,
+    l1Provider?: Provider
   ): L2ToL1MessageReader | L2ToL1MessageWriter {
     return SignerProviderUtils.isSigner(l1SignerOrProvider)
-      ? new L2ToL1MessageWriter(l1SignerOrProvider, event)
+      ? new L2ToL1MessageWriter(l1SignerOrProvider, event, l1Provider)
       : new L2ToL1MessageReader(l1SignerOrProvider, event)
   }
 
@@ -262,17 +264,26 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
   private readonly classicWriter?: classic.L2ToL1MessageWriterClassic
   private readonly nitroWriter?: nitro.L2ToL1MessageWriterNitro
 
-  constructor(l1Signer: Signer, event: L2ToL1TransactionEvent) {
-    super(l1Signer.provider!, event)
+  constructor(
+    l1Signer: Signer,
+    event: L2ToL1TransactionEvent,
+    l1Provider?: Provider
+  ) {
+    super(l1Provider ?? l1Signer.provider!, event)
 
     if (this.isClassic(event)) {
       this.classicWriter = new classic.L2ToL1MessageWriterClassic(
         l1Signer,
         event.batchNumber,
-        event.indexInBatch
+        event.indexInBatch,
+        l1Provider
       )
     } else {
-      this.nitroWriter = new nitro.L2ToL1MessageWriterNitro(l1Signer, event)
+      this.nitroWriter = new nitro.L2ToL1MessageWriterNitro(
+        l1Signer,
+        event,
+        l1Provider
+      )
     }
   }
 
