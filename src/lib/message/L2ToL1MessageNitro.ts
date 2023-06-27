@@ -67,6 +67,13 @@ const ASSERTION_CONFIRMED_PADDING = 20
 export class L2ToL1MessageNitro {
   protected constructor(public readonly event: EventArgs<L2ToL1TxEvent>) {}
 
+  /**
+   * Instantiates a new `L2ToL1MessageWriterNitro` or `L2ToL1MessageReaderNitro` object.
+   *
+   * @param {SignerOrProvider} l1SignerOrProvider Signer or provider to be used for executing or reading the L2-to-L1 message.
+   * @param {EventArgs<L2ToL1TxEvent>} event The event containing the data of the L2-to-L1 message.
+   * @param {Provider} [l1Provider] Optional. Used to override the Provider which is attached to `l1SignerOrProvider` in case you need more control. This will be a required parameter in a future major version update.
+   */
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
     event: EventArgs<L2ToL1TxEvent>,
@@ -403,6 +410,13 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
  * Provides read and write access for nitro l2-to-l1-messages
  */
 export class L2ToL1MessageWriterNitro extends L2ToL1MessageReaderNitro {
+  /**
+   * Instantiates a new `L2ToL1MessageWriterNitro` object.
+   *
+   * @param {Signer} l1Signer The signer to be used for executing the L2-to-L1 message.
+   * @param {EventArgs<L2ToL1TxEvent>} event The event containing the data of the L2-to-L1 message.
+   * @param {Provider} [l1Provider] Optional. Used to override the Provider which is attached to `l1Signer` in case you need more control. This will be a required parameter in a future major version update.
+   */
   constructor(
     private readonly l1Signer: Signer,
     event: EventArgs<L2ToL1TxEvent>,

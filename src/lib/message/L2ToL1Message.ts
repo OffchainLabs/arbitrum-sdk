@@ -63,6 +63,13 @@ export class L2ToL1Message {
     )
   }
 
+  /**
+   * Instantiates a new `L2ToL1MessageWriter` or `L2ToL1MessageReader` object.
+   *
+   * @param {SignerOrProvider} l1SignerOrProvider Signer or provider to be used for executing or reading the L2-to-L1 message.
+   * @param {L2ToL1TransactionEvent} event The event containing the data of the L2-to-L1 message.
+   * @param {Provider} [l1Provider] Optional. Used to override the Provider which is attached to `l1SignerOrProvider` in case you need more control. This will be a required parameter in a future major version update.
+   */
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
     event: L2ToL1TransactionEvent,
@@ -264,6 +271,13 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
   private readonly classicWriter?: classic.L2ToL1MessageWriterClassic
   private readonly nitroWriter?: nitro.L2ToL1MessageWriterNitro
 
+  /**
+   * Instantiates a new `L2ToL1MessageWriter` object.
+   *
+   * @param {Signer} l1Signer The signer to be used for executing the L2-to-L1 message.
+   * @param {L2ToL1TransactionEvent} event The event containing the data of the L2-to-L1 message.
+   * @param {Provider} [l1Provider] Optional. Used to override the Provider which is attached to `l1Signer` in case you need more control. This will be a required parameter in a future major version update.
+   */
   constructor(
     l1Signer: Signer,
     event: L2ToL1TransactionEvent,

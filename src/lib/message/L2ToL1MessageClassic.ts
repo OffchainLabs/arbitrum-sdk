@@ -114,6 +114,14 @@ export class L2ToL1MessageClassic {
     this.indexInBatch = indexInBatch
   }
 
+  /**
+   * Instantiates a new `L2ToL1MessageWriterClassic` or `L2ToL1MessageReaderClassic` object.
+   *
+   * @param {SignerOrProvider} l1SignerOrProvider Signer or provider to be used for executing or reading the L2-to-L1 message.
+   * @param {BigNumber} batchNumber The number of the batch containing the L2-to-L1 message.
+   * @param {BigNumber} indexInBatch The index of the L2-to-L1 message within the batch.
+   * @param {Provider} [l1Provider] Optional. Used to override the Provider which is attached to `l1SignerOrProvider` in case you need more control. This will be a required parameter in a future major version update.
+   */
   public static fromBatchNumber<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
     batchNumber: BigNumber,
@@ -373,6 +381,14 @@ export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
  * Provides read and write access for classic l2-to-l1-messages
  */
 export class L2ToL1MessageWriterClassic extends L2ToL1MessageReaderClassic {
+  /**
+   * Instantiates a new `L2ToL1MessageWriterClassic` object.
+   *
+   * @param {Signer} l1Signer The signer to be used for executing the L2-to-L1 message.
+   * @param {BigNumber} batchNumber The number of the batch containing the L2-to-L1 message.
+   * @param {BigNumber} indexInBatch The index of the L2-to-L1 message within the batch.
+   * @param {Provider} [l1Provider] Optional. Used to override the Provider which is attached to `l1Signer` in case you need more control. This will be a required parameter in a future major version update.
+   */
   constructor(
     private readonly l1Signer: Signer,
     batchNumber: BigNumber,
