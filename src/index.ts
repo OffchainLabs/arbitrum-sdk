@@ -63,3 +63,7 @@ export {
 } from './lib/dataEntities/retryableData'
 
 export { Address } from './lib/dataEntities/address'
+export {
+  enableExperimentalFeatures,
+  experimentalFeaturesEnabled,
+} from './lib/utils/globalConfig'
