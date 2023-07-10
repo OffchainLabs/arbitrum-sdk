@@ -1,3 +1,4 @@
+import { transformUniversalProviderToEthersV5Provider } from './../src/lib/utils/providerTransforms'
 /*
  * Copyright 2021, Offchain Labs, Inc.
  *
@@ -14,7 +15,7 @@
  * limitations under the License.
  */
 /* eslint-env node */
-'use strict'
+;('use strict')
 
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { Wallet } from '@ethersproject/wallet'
@@ -37,6 +38,7 @@ import { deployErc20AndInit } from './deployBridge'
 import * as path from 'path'
 import * as fs from 'fs'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
+import { setupViemArbProvider, setupViemEthProvider } from './setupViemProvider'
 
 dotenv.config()
 
@@ -45,6 +47,7 @@ export const config = {
   ethUrl: process.env['ETH_URL'] as string,
   arbKey: process.env['ARB_KEY'] as string,
   ethKey: process.env['ETH_KEY'] as string,
+  experimentalFeaturesEnabled: process.env['EXPERIMENTAL_FEATURES'] === 'true',
 }
 
 function getDeploymentData(): string {
@@ -196,7 +199,7 @@ export const setupNetworks = async (
   }
 }
 
-export const getSigner = (provider: JsonRpcProvider, key?: string) => {
+export const getSigner = (provider: any, key?: string) => {
   if (!key && !provider)
     throw new ArbSdkError('Provide at least one of key or provider.')
   if (key) return new Wallet(key).connect(provider)
@@ -215,8 +218,22 @@ export const testSetup = async (): Promise<{
   l1Deployer: Signer
   l2Deployer: Signer
 }> => {
-  const ethProvider = new JsonRpcProvider(config.ethUrl)
-  const arbProvider = new JsonRpcProvider(config.arbUrl)
+  let ethProvider
+  let arbProvider
+
+  if (config.experimentalFeaturesEnabled) {
+    console.log('Experimental features enabled')
+    ethProvider = await transformUniversalProviderToEthersV5Provider(
+      setupViemEthProvider(config)
+    )
+
+    arbProvider = await transformUniversalProviderToEthersV5Provider(
+      setupViemArbProvider(config)
+    )
+  } else {
+    ethProvider = new JsonRpcProvider(config.ethUrl)
+    arbProvider = new JsonRpcProvider(config.arbUrl)
+  }
 
   const l1Deployer = getSigner(ethProvider, config.ethKey)
   const l2Deployer = getSigner(arbProvider, config.arbKey)

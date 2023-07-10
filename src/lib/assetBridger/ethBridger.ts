@@ -48,9 +48,9 @@ import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getL2Network } from '../dataEntities/networks'
 import {
   Providerish,
-  getProviderUrl,
   transformUniversalProviderToEthersV5Provider,
 } from '../utils/providerTransforms'
+import { experimentalFeaturesEnabled } from '../utils/globalConfig'
 
 export interface EthWithdrawParams {
   /**
@@ -146,11 +146,13 @@ export class EthBridger extends AssetBridger<
     if (l2Provider instanceof Provider) {
       return new EthBridger(await getL2Network(l2Provider))
     }
-
-    const ethersV5Provider = await transformUniversalProviderToEthersV5Provider(
-      l2Provider
-    )
-    return new EthBridger(await getL2Network(ethersV5Provider))
+    if (experimentalFeaturesEnabled()) {
+      const ethersV5Provider =
+        await transformUniversalProviderToEthersV5Provider(l2Provider)
+      return new EthBridger(await getL2Network(ethersV5Provider))
+    } else {
+      throw new MissingProviderArbSdkError('l2Provider')
+    }
   }
 
   /**

@@ -24,6 +24,7 @@
       "type": "node",
       "request": "launch",
       "name": "Run Unit Tests",
+      "runtimeVersion": "16.16.0",
       "runtimeExecutable": "npm",
       "runtimeArgs": [
         "run-script",
@@ -37,6 +38,7 @@
       "type": "node",
       "request": "launch",
       "name": "Run Integration Tests",
+      "runtimeVersion": "16.16.0",
       "runtimeExecutable": "npm",
       "runtimeArgs": [
         "run-script",
