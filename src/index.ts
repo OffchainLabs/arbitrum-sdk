@@ -18,6 +18,7 @@
 
 export { EthBridger } from './lib/assetBridger/ethBridger'
 export { Erc20Bridger } from './lib/assetBridger/erc20Bridger'
+export { NativeErc20Bridger } from './lib/assetBridger/NativeErc20Bridger'
 export {
   L2TransactionReceipt,
   L2ContractTransaction,
