@@ -157,4 +157,6 @@ describe('NativeErc20Bridger', async () => {
       'incorrect balance in depositor account after deposit'
     )
   })
+
+  // TODO(spsjvc): add withdrawal tests
 })
