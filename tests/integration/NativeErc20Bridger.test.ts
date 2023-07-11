@@ -23,7 +23,7 @@ import dotenv from 'dotenv'
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
 
-import { skipIfMainnet } from './testHelpers'
+import { skipIfMainnet, wait } from './testHelpers'
 
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
@@ -32,8 +32,12 @@ import { ERC20 } from '../../src/lib/abi/ERC20'
 dotenv.config()
 
 const l1Provider = new providers.StaticJsonRpcProvider(process.env.ETH_URL)
+const l2Provider = new providers.StaticJsonRpcProvider(process.env.ARB_URL)
+
 // create a fresh random wallet for a clean slate
-const l1Signer = Wallet.createRandom().connect(l1Provider)
+const wallet = Wallet.createRandom()
+const l1Signer = wallet.connect(l1Provider)
+const l2Signer = wallet.connect(l2Provider)
 
 const l1DeployerWallet = new ethers.Wallet(
   ethers.utils.sha256(ethers.utils.toUtf8Bytes('user_l1user')),
@@ -113,6 +117,44 @@ describe('NativeErc20Bridger', async () => {
     expect(allowance.toString()).to.equal(
       constants.MaxUint256.toString(),
       'allowance incorrect'
+    )
+  })
+
+  it('deposits erc-20 token via params', async function () {
+    const { ethBridger } = await testSetup(true)
+    const bridge = ethBridger.l2Network.ethBridge.bridge
+
+    const amount = parseEther('2')
+
+    const initialBalanceBridge = await nativeToken.balanceOf(bridge)
+    const initialBalanceDepositor = await l2Signer.getBalance()
+
+    // perform the deposit
+    const depositTx = await ethBridger.deposit({
+      amount,
+      l1Signer,
+    })
+    await depositTx.wait()
+
+    expect(
+      // balance in the bridge after the deposit
+      (await nativeToken.balanceOf(bridge)).toString()
+    ).to.equal(
+      // balance in the bridge after the deposit should equal to the initial balance in the bridge + the amount deposited
+      initialBalanceBridge.add(amount).toString(),
+      'incorrect balance in bridge after deposit'
+    )
+
+    // wait for minting on L2
+    await wait(30 * 1000)
+
+    expect(
+      // balance in the depositor account after the deposit
+      (await l2Signer.getBalance()).toString()
+    ).to.equal(
+      // balance in the depositor account after the deposit should equal to the initial balance in th depositor account + the amount deposited
+      initialBalanceDepositor.add(amount).toString(),
+      'incorrect balance in depositor account after deposit'
     )
   })
 })

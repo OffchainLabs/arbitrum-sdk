@@ -169,28 +169,28 @@ export class NativeErc20Bridger extends AssetBridger<
   }
 
   /**
-   * Get a transaction request for an eth deposit
+   * Get a transaction request for a native ERC-20 deposit
    * @param params
    * @returns
    */
   public async getDepositRequest(
     params: EthDepositRequestParams
   ): Promise<OmitTyped<L1ToL2TransactionRequest, 'retryableData'>> {
-    const inboxInterface = Inbox__factory.createInterface()
+    const inboxInterface = ERC20Inbox__factory.createInterface()
 
     const functionData = (
       inboxInterface as unknown as {
         encodeFunctionData(
-          functionFragment: 'depositEth()',
-          values?: undefined
+          functionFragment: 'depositERC20(uint256)',
+          values: [BigNumber]
         ): string
       }
-    ).encodeFunctionData('depositEth()')
+    ).encodeFunctionData('depositERC20(uint256)', [params.amount])
 
     return {
       txRequest: {
         to: this.l2Network.ethBridge.inbox,
-        value: params.amount,
+        value: constants.Zero,
         data: functionData,
         from: params.from,
       },
@@ -199,7 +199,7 @@ export class NativeErc20Bridger extends AssetBridger<
   }
 
   /**
-   * Deposit ETH from L1 onto L2
+   * Deposit native ERC-20 from L1 onto L2
    * @param params
    * @returns
    */
