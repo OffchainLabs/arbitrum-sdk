@@ -19,9 +19,10 @@
 import { Signer } from '@ethersproject/abstract-signer'
 import { Provider } from '@ethersproject/abstract-provider'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
-import { BigNumber } from 'ethers'
+import { BigNumber, constants } from 'ethers'
 
-import { Inbox__factory } from '../abi/factories/Inbox__factory'
+import { ERC20Inbox__factory } from '../abi/factories/ERC20Inbox__factory'
+import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 import { AssetBridger } from './assetBridger'
@@ -44,8 +45,8 @@ import {
 } from '../dataEntities/transactionRequest'
 import { OmitTyped } from '../utils/types'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
-import { MissingProviderArbSdkError } from '../dataEntities/errors'
-import { getL2Network } from '../dataEntities/networks'
+import { ArbSdkError, MissingProviderArbSdkError } from '../dataEntities/errors'
+import { L2Network, getL2Network } from '../dataEntities/networks'
 
 export interface EthWithdrawParams {
   /**
@@ -133,12 +134,38 @@ export class NativeErc20Bridger extends AssetBridger<
   EthWithdrawParams | L2ToL1TxReqAndSigner
 > {
   /**
-   * Instantiates a new EthBridger from an L2 Provider
+   * The address of the native ERC-20 token on the parent chain.
+   */
+  protected readonly nativeToken: string
+
+  public constructor(public readonly l2Network: L2Network) {
+    super(l2Network)
+
+    if (typeof l2Network.nativeToken === 'undefined') {
+      throw new ArbSdkError(
+        `native token is missing from the l2 network object`
+      )
+    }
+
+    this.nativeToken = l2Network.nativeToken
+  }
+
+  /**
+   * Instantiates a new NativeErc20Bridger from an L2 Provider
    * @param l2Provider
    * @returns
    */
   public static async fromProvider(l2Provider: Provider) {
     return new NativeErc20Bridger(await getL2Network(l2Provider))
+  }
+
+  // TODO(spsjvc): clean up, support tx request and add jsdoc
+  public async approve(params: { amount?: BigNumber; l1Signer: Signer }) {
+    const token = ERC20__factory.connect(this.nativeToken, params.l1Signer)
+    return token.approve(
+      this.l2Network.ethBridge.inbox,
+      params.amount ?? constants.MaxUint256
+    )
   }
 
   /**

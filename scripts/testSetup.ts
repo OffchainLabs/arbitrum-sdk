@@ -20,7 +20,12 @@ import { JsonRpcProvider } from '@ethersproject/providers'
 import { Wallet } from '@ethersproject/wallet'
 
 import dotenv from 'dotenv'
-import { EthBridger, InboxTools, Erc20Bridger } from '../src'
+import {
+  EthBridger,
+  InboxTools,
+  Erc20Bridger,
+  NativeErc20Bridger,
+} from '../src'
 import {
   L1Network,
   L2Network,
@@ -203,13 +208,15 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
   else return provider.getSigner(0)
 }
 
-export const testSetup = async (): Promise<{
+export const testSetup = async <TIsERC20Rollup extends boolean>(
+  isERC20Rollup: TIsERC20Rollup = false as TIsERC20Rollup
+): Promise<{
   l1Network: L1Network
   l2Network: L2Network
   l1Signer: Signer
   l2Signer: Signer
   erc20Bridger: Erc20Bridger
-  ethBridger: EthBridger
+  ethBridger: TIsERC20Rollup extends true ? NativeErc20Bridger : EthBridger
   adminErc20Bridger: AdminErc20Bridger
   inboxTools: InboxTools
   l1Deployer: Signer
@@ -264,7 +271,9 @@ export const testSetup = async (): Promise<{
 
   const erc20Bridger = new Erc20Bridger(setL2Network)
   const adminErc20Bridger = new AdminErc20Bridger(setL2Network)
-  const ethBridger = new EthBridger(setL2Network)
+  const ethBridger = isERC20Rollup
+    ? new NativeErc20Bridger(setL2Network)
+    : new EthBridger(setL2Network)
   const inboxTools = new InboxTools(l1Signer, setL2Network)
 
   return {
@@ -274,6 +283,7 @@ export const testSetup = async (): Promise<{
     l2Network: setL2Network,
     erc20Bridger,
     adminErc20Bridger,
+    // @ts-ignore TODO(spsjvc): fix
     ethBridger,
     inboxTools,
     l1Deployer,
