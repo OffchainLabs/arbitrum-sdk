@@ -40,7 +40,12 @@ export interface L2Network extends Network {
    * How long to wait (ms) for a deposit to arrive on l2 before timing out a request
    */
   depositTimeout: number
+  /**
+   * In case of a chain that uses an ERC-20 token as its native currency, this is the address of said token on the parent chain.
+   */
+  nativeToken?: string
 }
+
 export interface Network {
   chainID: number
   name: string
