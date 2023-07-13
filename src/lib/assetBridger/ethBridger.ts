@@ -19,9 +19,10 @@
 import { Signer } from '@ethersproject/abstract-signer'
 import { Provider } from '@ethersproject/abstract-provider'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
-import { BigNumber } from 'ethers'
+import { BigNumber, BigNumberish, BytesLike, constants } from 'ethers'
 
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
+import { ERC20Inbox__factory } from '../abi/factories/ERC20Inbox__factory'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 import { AssetBridger } from './assetBridger'
@@ -45,7 +46,8 @@ import {
 import { OmitTyped } from '../utils/types'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
-import { getL2Network } from '../dataEntities/networks'
+import { L2Network, getL2Network } from '../dataEntities/networks'
+import { ERC20__factory } from '../abi/factories/ERC20__factory'
 
 export interface EthWithdrawParams {
   /**
@@ -133,12 +135,40 @@ export class EthBridger extends AssetBridger<
   EthWithdrawParams | L2ToL1TxReqAndSigner
 > {
   /**
+   * In case of a chain that uses ETH as its native token, this is undefined.
+   * In case of a chain that uses an ERC-20 token from the parent chain as its native token, this is the address of said token on the parent chain.
+   */
+  protected readonly nativeToken?: string
+
+  public constructor(public readonly l2Network: L2Network) {
+    super(l2Network)
+
+    this.nativeToken = l2Network.nativeToken
+  }
+
+  /**
    * Instantiates a new EthBridger from an L2 Provider
    * @param l2Provider
    * @returns
    */
   public static async fromProvider(l2Provider: Provider) {
     return new EthBridger(await getL2Network(l2Provider))
+  }
+
+  // TODO(spsjvc): clean up, support tx request and add jsdoc
+  public async approve(params: { amount?: BigNumber; l1Signer: Signer }) {
+    if (typeof this.nativeToken === 'undefined') {
+      throw new Error(
+        `approve can't be called for a network that uses ETH as its native token`
+      )
+    }
+
+    const token = ERC20__factory.connect(this.nativeToken, params.l1Signer)
+
+    return token.approve(
+      this.l2Network.ethBridge.inbox,
+      params.amount ?? constants.MaxUint256
+    )
   }
 
   /**
@@ -149,22 +179,40 @@ export class EthBridger extends AssetBridger<
   public async getDepositRequest(
     params: EthDepositRequestParams
   ): Promise<OmitTyped<L1ToL2TransactionRequest, 'retryableData'>> {
-    const inboxInterface = Inbox__factory.createInterface()
+    let data: BytesLike
+    let value: BigNumberish
 
-    const functionData = (
-      inboxInterface as unknown as {
-        encodeFunctionData(
-          functionFragment: 'depositEth()',
-          values?: undefined
-        ): string
-      }
-    ).encodeFunctionData('depositEth()')
+    if (typeof this.nativeToken === 'undefined') {
+      const inboxInterface = Inbox__factory.createInterface()
+
+      value = params.amount
+      data = (
+        inboxInterface as unknown as {
+          encodeFunctionData(
+            functionFragment: 'depositEth()',
+            values?: undefined
+          ): string
+        }
+      ).encodeFunctionData('depositEth()')
+    } else {
+      const inboxInterface = ERC20Inbox__factory.createInterface()
+
+      value = 0
+      data = (
+        inboxInterface as unknown as {
+          encodeFunctionData(
+            functionFragment: 'depositERC20(uint256)',
+            values: [BigNumber]
+          ): string
+        }
+      ).encodeFunctionData('depositERC20(uint256)', [params.amount])
+    }
 
     return {
       txRequest: {
         to: this.l2Network.ethBridge.inbox,
-        value: params.amount,
-        data: functionData,
+        value,
+        data,
         from: params.from,
       },
       isValid: async () => true,

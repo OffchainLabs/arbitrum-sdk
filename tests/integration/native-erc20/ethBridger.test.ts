@@ -23,11 +23,12 @@ import dotenv from 'dotenv'
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
 
-import { skipIfMainnet, wait } from './testHelpers'
+import { skipIfMainnet, wait } from '../testHelpers'
 
-import { testSetup } from '../../scripts/testSetup'
-import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
-import { ERC20 } from '../../src/lib/abi/ERC20'
+import { testSetup as _testSetup } from '../../../scripts/testSetup'
+import { ERC20__factory } from '../../../src/lib/abi/factories/ERC20__factory'
+import { ERC20 } from '../../../src/lib/abi/ERC20'
+import { EthBridger } from '../../../src'
 
 dotenv.config()
 
@@ -46,8 +47,13 @@ const l1DeployerWallet = new ethers.Wallet(
 
 let nativeToken: ERC20
 
+async function testSetup() {
+  const result = await _testSetup()
+  return { ...result, ethBridger: new EthBridger(result.l2Network) }
+}
+
 async function fundL1(account: string) {
-  const { ethBridger } = await testSetup(true)
+  const { ethBridger } = await testSetup()
 
   const nativeTokenAddress = ethBridger.l2Network.nativeToken!
   nativeToken = ERC20__factory.connect(nativeTokenAddress, l1Provider)
@@ -64,7 +70,7 @@ async function fundL1(account: string) {
   await fundTokenTx.wait()
 }
 
-describe('NativeErc20Bridger', async () => {
+describe('EthBridger (with erc-20 as native token)', async () => {
   before(async function () {
     await fundL1(await l1Signer.getAddress())
   })
@@ -79,7 +85,7 @@ describe('NativeErc20Bridger', async () => {
     const randomL1Signer = Wallet.createRandom().connect(l1Provider)
     await fundL1(await randomL1Signer.getAddress())
 
-    const { ethBridger } = await testSetup(true)
+    const { ethBridger } = await testSetup()
 
     const inbox = ethBridger.l2Network.ethBridge.inbox
     const amount = ethers.utils.parseEther('1')
@@ -102,7 +108,7 @@ describe('NativeErc20Bridger', async () => {
   })
 
   it('approves the erc-20 token on the parent chain for the max amount', async function () {
-    const { ethBridger } = await testSetup(true)
+    const { ethBridger } = await testSetup()
 
     const inbox = ethBridger.l2Network.ethBridge.inbox
 
@@ -121,7 +127,7 @@ describe('NativeErc20Bridger', async () => {
   })
 
   it('deposits erc-20 token via params', async function () {
-    const { ethBridger } = await testSetup(true)
+    const { ethBridger } = await testSetup()
     const bridge = ethBridger.l2Network.ethBridge.bridge
 
     const amount = parseEther('2')
@@ -157,6 +163,4 @@ describe('NativeErc20Bridger', async () => {
       'incorrect balance in depositor account after deposit'
     )
   })
-
-  // TODO(spsjvc): add withdrawal tests
 })

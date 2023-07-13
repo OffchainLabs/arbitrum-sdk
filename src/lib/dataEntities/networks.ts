@@ -41,7 +41,8 @@ export interface L2Network extends Network {
    */
   depositTimeout: number
   /**
-   * In case of a chain that uses an ERC-20 token as its native currency, this is the address of said token on the parent chain.
+   * In case of a chain that uses ETH as its native token, this is undefined.
+   * In case of a chain that uses an ERC-20 token from the parent chain as its native token, this is the address of said token on the parent chain.
    */
   nativeToken?: string
 }
