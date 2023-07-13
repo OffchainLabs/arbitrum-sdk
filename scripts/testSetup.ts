@@ -18,8 +18,10 @@
 
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { Wallet } from '@ethersproject/wallet'
-
+import { Signer } from 'ethers'
+import { Provider } from '@ethersproject/abstract-provider'
 import dotenv from 'dotenv'
+
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
   L1Network,
@@ -28,7 +30,6 @@ import {
   getL2Network,
   addCustomNetwork,
 } from '../src/lib/dataEntities/networks'
-import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { execSync } from 'child_process'
 import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
@@ -208,6 +209,8 @@ export const testSetup = async (): Promise<{
   l2Network: L2Network
   l1Signer: Signer
   l2Signer: Signer
+  l1Provider: Provider
+  l2Provider: Provider
   erc20Bridger: Erc20Bridger
   ethBridger: EthBridger
   adminErc20Bridger: AdminErc20Bridger
@@ -270,6 +273,8 @@ export const testSetup = async (): Promise<{
   return {
     l1Signer,
     l2Signer,
+    l1Provider: ethProvider,
+    l2Provider: arbProvider,
     l1Network: setL1Network,
     l2Network: setL2Network,
     erc20Bridger,
