@@ -159,7 +159,7 @@ export class EthBridger extends AssetBridger<
   public async approve(params: { amount?: BigNumber; l1Signer: Signer }) {
     if (typeof this.nativeToken === 'undefined') {
       throw new Error(
-        `approve can't be called for a network that uses ETH as its native token`
+        `can't call "EthBridger.approve" for network that uses eth as native token`
       )
     }
 
