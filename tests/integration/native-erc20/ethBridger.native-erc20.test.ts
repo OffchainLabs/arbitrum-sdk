@@ -24,7 +24,7 @@ import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
 
 import { testSetup as _testSetup, fundL1 } from './testHelpers.native-erc20'
-import { skipIfMainnet, wait } from '../testHelpers'
+import { prettyLog, skipIfMainnet, wait } from '../testHelpers'
 
 dotenv.config()
 
@@ -43,7 +43,9 @@ async function testSetup() {
 describe('EthBridger (with erc-20 as native token)', async () => {
   before(async function () {
     const { l1Signer } = await testSetup()
-    await fundL1(await l1Signer.getAddress())
+    const address = await l1Signer.getAddress()
+    prettyLog(`testing with account: ${address}`)
+    await fundL1(address)
   })
 
   beforeEach('skipIfMainnet', async function () {
@@ -98,7 +100,8 @@ describe('EthBridger (with erc-20 as native token)', async () => {
 
   it('deposits erc-20 token via params', async function () {
     const result = await testSetup()
-    const { ethBridger, nativeTokenContract, l1Signer, l2Signer } = result
+    const { ethBridger, nativeTokenContract, l1Signer, l2Signer, l2Provider } =
+      result
     const bridge = ethBridger.l2Network.ethBridge.bridge
 
     const amount = parseEther('2')
@@ -111,7 +114,8 @@ describe('EthBridger (with erc-20 as native token)', async () => {
       amount,
       l1Signer,
     })
-    await depositTx.wait()
+    const depositTxReceipt = await depositTx.wait()
+    expect(depositTxReceipt.status).to.equal(1, 'deposit tx failed')
 
     expect(
       // balance in the bridge after the deposit
@@ -124,6 +128,13 @@ describe('EthBridger (with erc-20 as native token)', async () => {
 
     // wait for minting on L2
     await wait(30 * 1000)
+
+    // check for cross-chain messages
+    const depositMessages = await depositTxReceipt.getEthDeposits(l2Provider)
+    expect(depositMessages.length).to.equal(1, 'failed to find deposit message')
+    const [depositMessage] = depositMessages
+    expect(depositMessage.value.toString()).to.equal(amount.toString())
+    expect(depositMessage.to).to.equal(await l2Signer.getAddress())
 
     expect(
       // balance in the depositor account after the deposit
