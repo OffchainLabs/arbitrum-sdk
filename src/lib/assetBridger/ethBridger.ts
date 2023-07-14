@@ -108,12 +108,12 @@ export type L2ToL1TxReqAndSigner = L2ToL1TransactionRequest & {
   overrides?: Overrides
 }
 
-export type EthDepositRequestParams = OmitTyped<
+type EthDepositRequestParams = OmitTyped<
   EthDepositParams,
   'overrides' | 'l1Signer'
 > & { from: string }
 
-export type EthDepositToRequestParams = OmitTyped<
+type EthDepositToRequestParams = OmitTyped<
   EthDepositToParams,
   'overrides' | 'l1Signer'
 > & {
