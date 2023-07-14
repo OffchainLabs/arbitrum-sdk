@@ -23,49 +23,21 @@ import dotenv from 'dotenv'
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
 
+import { testSetup as _testSetup, fundL1 } from './testHelpers.native-erc20'
 import { skipIfMainnet, wait } from '../testHelpers'
-
-import { testSetup as _testSetup } from '../../../scripts/testSetup'
-import { ERC20__factory } from '../../../src/lib/abi/factories/ERC20__factory'
 
 dotenv.config()
 
-// create one random wallet for the test
+// random wallet for the test
 const wallet = Wallet.createRandom()
 
 async function testSetup() {
   const result = await _testSetup()
-  const { l2Network, l1Provider, l2Provider } = result
 
-  const nativeToken = l2Network.nativeToken!
-  const nativeTokenContract = ERC20__factory.connect(nativeToken, l1Provider)
+  const l1Signer = wallet.connect(result.l1Provider)
+  const l2Signer = wallet.connect(result.l2Provider)
 
-  const l1Signer = wallet.connect(l1Provider)
-  const l2Signer = wallet.connect(l2Provider)
-
-  return { ...result, nativeTokenContract, l1Signer, l2Signer }
-}
-
-async function fundL1(account: string) {
-  const { l1Provider, nativeTokenContract } = await testSetup()
-
-  const l1DeployerWallet = new ethers.Wallet(
-    ethers.utils.sha256(ethers.utils.toUtf8Bytes('user_l1user')),
-    l1Provider
-  )
-
-  // send 1 eth to account
-  const fundEthTx = await l1DeployerWallet.sendTransaction({
-    to: account,
-    value: parseEther('1'),
-  })
-  await fundEthTx.wait()
-
-  // send 10 erc-20 tokens to account
-  const fundTokenTx = await nativeTokenContract
-    .connect(l1DeployerWallet)
-    .transfer(account, parseEther('10'))
-  await fundTokenTx.wait()
+  return { ...result, l1Signer, l2Signer }
 }
 
 describe('EthBridger (with erc-20 as native token)', async () => {
