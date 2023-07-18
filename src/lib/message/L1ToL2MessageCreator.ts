@@ -1,3 +1,4 @@
+import { BigNumber, constants } from 'ethers'
 import { Signer } from '@ethersproject/abstract-signer'
 import { Provider } from '@ethersproject/abstract-provider'
 
@@ -7,6 +8,7 @@ import {
 } from './L1ToL2MessageGasEstimator'
 import { L1ContractTransaction, L1TransactionReceipt } from './L1Transaction'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
+import { ERC20Inbox__factory } from '../abi/factories/ERC20Inbox__factory'
 import { getL2Network } from '../dataEntities/networks'
 import { PayableOverrides } from '@ethersproject/contracts'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
@@ -97,10 +99,17 @@ export class L1ToL2MessageCreator {
     )
 
     const l2Network = await getL2Network(l2Provider)
-    const inboxInterface = Inbox__factory.createInterface()
-    const functionData = inboxInterface.encodeFunctionData(
-      'createRetryableTicket',
-      [
+
+    let value: BigNumber
+    let tokenTotalFeeAmount: BigNumber | undefined
+    let data: string
+
+    if (typeof l2Network.nativeToken === 'undefined') {
+      const inboxInterface = Inbox__factory.createInterface()
+
+      value = estimates.deposit
+      tokenTotalFeeAmount = undefined
+      data = inboxInterface.encodeFunctionData('createRetryableTicket', [
         params.to,
         params.l2CallValue,
         estimates.maxSubmissionCost,
@@ -109,14 +118,30 @@ export class L1ToL2MessageCreator {
         estimates.gasLimit,
         estimates.maxFeePerGas,
         params.data,
-      ]
-    )
+      ])
+    } else {
+      const inboxInterface = ERC20Inbox__factory.createInterface()
+
+      value = constants.Zero
+      tokenTotalFeeAmount = estimates.deposit
+      data = inboxInterface.encodeFunctionData('createRetryableTicket', [
+        params.to,
+        params.l2CallValue,
+        estimates.maxSubmissionCost,
+        excessFeeRefundAddress,
+        callValueRefundAddress,
+        estimates.gasLimit,
+        estimates.maxFeePerGas,
+        estimates.deposit,
+        params.data,
+      ])
+    }
 
     return {
       txRequest: {
         to: l2Network.ethBridge.inbox,
-        data: functionData,
-        value: estimates.deposit,
+        data,
+        value,
         from: params.from,
       },
       retryableData: {
@@ -129,6 +154,7 @@ export class L1ToL2MessageCreator {
         maxSubmissionCost: estimates.maxSubmissionCost,
         maxFeePerGas: estimates.maxFeePerGas,
         gasLimit: estimates.gasLimit,
+        tokenTotalFeeAmount,
         deposit: estimates.deposit,
       },
       isValid: async () => {

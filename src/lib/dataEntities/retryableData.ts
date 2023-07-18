@@ -43,6 +43,10 @@ export interface RetryableData {
    */
   maxFeePerGas: BigNumber
   /**
+   * todo(spsjvc)
+   */
+  tokenTotalFeeAmount?: BigNumber
+  /**
    * The data to call the L2 address with
    */
   data: string
