@@ -242,7 +242,7 @@ export class EthBridger extends AssetBridger<
       ? this.getApproveFeeTokenTxRequest(params)
       : params.txRequest
 
-    return params.l1Signer.sendTransaction({
+    return await params.l1Signer.sendTransaction({
       ...approveFeeTokenRequest,
       ...params.overrides,
     })
