@@ -17,7 +17,7 @@
 'use strict'
 
 import { expect } from 'chai'
-import { ethers, constants } from 'ethers'
+import { ethers, constants, Wallet } from 'ethers'
 import dotenv from 'dotenv'
 
 import { parseEther } from '@ethersproject/units'
@@ -25,9 +25,16 @@ import { parseEther } from '@ethersproject/units'
 import {
   testSetup,
   fundL1CustomFeeToken,
+  fundL2CustomFeeToken,
   approveL1CustomFeeToken,
 } from './testHelpers.native-erc20'
-import { fundL1 as fundL1Ether, skipIfMainnet, wait } from '../testHelpers'
+import {
+  fundL1 as fundL1Ether,
+  mineUntilStop,
+  skipIfMainnet,
+  wait,
+} from '../testHelpers'
+import { L2ToL1Message, L2ToL1MessageStatus } from '../../../src'
 
 dotenv.config()
 
@@ -127,6 +134,125 @@ describe('EthBridger (with custom fee token)', async () => {
       // balance in the depositor account after the deposit should equal to the initial balance in th depositor account + the amount deposited
       initialBalanceDepositor.add(amount).toString(),
       'incorrect balance in depositor account after deposit'
+    )
+  })
+
+  it('withdraws custom fee token', async () => {
+    const {
+      l1Signer,
+      l1Provider,
+      l2Signer,
+      l2Provider,
+      ethBridger,
+      nativeTokenContract,
+    } = await testSetup()
+    const bridge = ethBridger.l2Network.ethBridge.bridge
+    const amount = parseEther('0.2')
+
+    await fundL1Ether(l1Signer)
+    await fundL2CustomFeeToken(l2Signer)
+
+    const from = await l2Signer.getAddress()
+    const destinationAddress = await l1Signer.getAddress()
+
+    const initialBalanceBridge = await nativeTokenContract.balanceOf(bridge)
+    const initialBalanceDestination = await nativeTokenContract.balanceOf(
+      destinationAddress
+    )
+
+    const withdrawalTxRequest = await ethBridger.getWithdrawalRequest({
+      amount,
+      destinationAddress,
+      from,
+    })
+
+    const l1GasEstimate = await withdrawalTxRequest.estimateL1GasLimit(
+      l1Provider
+    )
+
+    const withdrawalTx = await ethBridger.withdraw({
+      amount,
+      l2Signer: l2Signer,
+      destinationAddress,
+      from,
+    })
+    const withdrawalTxReceipt = await withdrawalTx.wait()
+
+    expect(withdrawalTxReceipt.status).to.equal(
+      1,
+      'initiate withdrawal tx failed'
+    )
+
+    const messages = await withdrawalTxReceipt.getL2ToL1Messages(l1Signer)
+    expect(messages.length).to.equal(
+      1,
+      'custom fee token withdraw getWithdrawalsInL2Transaction query came back empty'
+    )
+
+    const withdrawalEvents = await L2ToL1Message.getL2ToL1Events(
+      l2Provider,
+      { fromBlock: withdrawalTxReceipt.blockNumber, toBlock: 'latest' },
+      undefined,
+      destinationAddress
+    )
+
+    expect(withdrawalEvents.length).to.equal(
+      1,
+      'custom fee token withdraw getL2ToL1EventData failed'
+    )
+
+    const [message] = messages
+    const messageStatus = await message.status(l2Provider)
+    expect(
+      messageStatus,
+      `custom fee token withdraw status returned ${messageStatus}`
+    ).to.be.eq(L2ToL1MessageStatus.UNCONFIRMED)
+
+    // run a miner whilst withdrawing
+    const miner1 = Wallet.createRandom().connect(l1Provider)
+    const miner2 = Wallet.createRandom().connect(l2Provider)
+    await fundL1Ether(miner1, parseEther('1'))
+    await fundL2CustomFeeToken(miner2)
+    const state = { mining: true }
+    await Promise.race([
+      mineUntilStop(miner1, state),
+      mineUntilStop(miner2, state),
+      message.waitUntilReadyToExecute(l2Provider),
+    ])
+    state.mining = false
+
+    expect(await message.status(l2Provider), 'confirmed status')
+      //
+      .to.eq(L2ToL1MessageStatus.CONFIRMED)
+
+    const execTx = await message.execute(l2Provider)
+    const execTxReceipt = await execTx.wait()
+
+    expect(
+      execTxReceipt.gasUsed.toNumber(),
+      'gas used greater than estimate'
+    ).to.be.lessThan(l1GasEstimate.toNumber())
+
+    expect(await message.status(l2Provider), 'executed status')
+      //
+      .to.eq(L2ToL1MessageStatus.EXECUTED)
+
+    expect(
+      // balance in the bridge after the withdrawal
+      (await nativeTokenContract.balanceOf(bridge)).toString()
+    ).to.equal(
+      // balance in the bridge after the withdrawal should equal to the initial balance in the bridge - the amount withdrawn
+      initialBalanceBridge.sub(amount).toString(),
+      'incorrect balance in bridge after withdrawal'
+    )
+
+    expect(
+      // balance in the destination after the withdrawal
+      (await nativeTokenContract.balanceOf(destinationAddress)).toString()
+    ).to.equal(
+      // balance in the destination after the withdrawal should equal to the initial balance in the destination + the amount withdrawn
+      initialBalanceDestination.add(amount).toString(),
+      'incorrect balance in destination after withdrawal'
     )
   })
 })

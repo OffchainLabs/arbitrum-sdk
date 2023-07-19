@@ -64,3 +64,16 @@ export async function approveL1CustomFeeToken(l1Signer: Signer) {
   const tx = await ethBridger.approve({ l1Signer })
   await tx.wait()
 }
+
+export async function fundL2CustomFeeToken(l2Signer: Signer) {
+  const deployerWallet = new Wallet(
+    utils.sha256(utils.toUtf8Bytes('user_l1user')),
+    arbProvider
+  )
+
+  const tx = await deployerWallet.sendTransaction({
+    to: await l2Signer.getAddress(),
+    value: utils.parseEther('1'),
+  })
+  await tx.wait()
+}
