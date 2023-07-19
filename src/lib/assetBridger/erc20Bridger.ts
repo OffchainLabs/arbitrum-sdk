@@ -560,7 +560,7 @@ export class Erc20Bridger extends AssetBridger<
    * @param depositParams
    * @returns
    */
-  private getDepositRequestValue(
+  private getDepositRequestCallValue(
     depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
   ) {
     // the call value should be zero when paying with a custom fee token,
@@ -579,7 +579,7 @@ export class Erc20Bridger extends AssetBridger<
   }
 
   // todo(spsjvc): jsdoc
-  private getDepositRequestOutboundTransferData(
+  private getDepositRequestOutboundTransferDataParam(
     depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
   ) {
     if (!this.isNativeTokenEth) {
@@ -649,11 +649,11 @@ export class Erc20Bridger extends AssetBridger<
           amount,
           depositParams.gasLimit,
           depositParams.maxFeePerGas,
-          this.getDepositRequestOutboundTransferData(depositParams),
+          this.getDepositRequestOutboundTransferDataParam(depositParams),
         ]),
         to: this.l2Network.tokenBridge.l1GatewayRouter,
         from: defaultedParams.from,
-        value: this.getDepositRequestValue(depositParams),
+        value: this.getDepositRequestCallValue(depositParams),
       }
     }
 
