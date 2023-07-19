@@ -20,68 +20,38 @@ import { expect } from 'chai'
 import { ethers, constants } from 'ethers'
 import dotenv from 'dotenv'
 
-import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
 
 import {
-  testSetup as _testSetup,
-  fundL1WithCustomFeeToken,
+  testSetup,
+  fundL1CustomFeeToken,
+  approveL1CustomFeeToken,
 } from './testHelpers.native-erc20'
-import {
-  fundL1 as fundL1WithEth,
-  prettyLog,
-  skipIfMainnet,
-  wait,
-} from '../testHelpers'
+import { fundL1 as fundL1Ether, skipIfMainnet, wait } from '../testHelpers'
 
 dotenv.config()
 
-// random wallet for the test
-const wallet = Wallet.createRandom()
-
-async function testSetup() {
-  const result = await _testSetup()
-
-  const l1Signer = wallet.connect(result.l1Provider)
-  const l2Signer = wallet.connect(result.l2Provider)
-
-  return { ...result, l1Signer, l2Signer }
-}
-
-describe('EthBridger (with erc-20 as native token)', async () => {
-  before(async function () {
-    const { l1Signer } = await testSetup()
-    const address = await l1Signer.getAddress()
-    prettyLog(`testing with account: ${address}`)
-    await fundL1WithEth(l1Signer)
-    await fundL1WithCustomFeeToken(l1Signer)
-  })
-
+describe('EthBridger (with custom fee token)', async () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
 
-  it('approves the erc-20 token on the parent chain for an arbitrary amount', async function () {
-    const { ethBridger, nativeTokenContract, l1Provider } = await testSetup()
-
-    // using a random wallet for non-max amount approval
-    // the rest of the test suite will use the account with the max approval
-    const randomL1Signer = Wallet.createRandom().connect(l1Provider)
-    await fundL1WithEth(randomL1Signer)
-    await fundL1WithCustomFeeToken(randomL1Signer)
-
-    const inbox = ethBridger.l2Network.ethBridge.inbox
+  it('approves the custom fee token on the parent chain for an arbitrary amount', async function () {
+    const { ethBridger, nativeTokenContract, l1Signer } = await testSetup()
     const amount = ethers.utils.parseEther('1')
+
+    await fundL1Ether(l1Signer)
+    await fundL1CustomFeeToken(l1Signer)
 
     const approvalTx = await ethBridger.approve({
       amount,
-      l1Signer: randomL1Signer,
+      l1Signer,
     })
     await approvalTx.wait()
 
     const allowance = await nativeTokenContract.allowance(
-      await randomL1Signer.getAddress(),
-      inbox
+      await l1Signer.getAddress(),
+      ethBridger.l2Network.ethBridge.inbox
     )
 
     expect(allowance.toString()).to.equal(
@@ -90,16 +60,18 @@ describe('EthBridger (with erc-20 as native token)', async () => {
     )
   })
 
-  it('approves the erc-20 token on the parent chain for the max amount', async function () {
+  it('approves the custom fee token on the parent chain for the max amount', async function () {
     const { ethBridger, nativeTokenContract, l1Signer } = await testSetup()
-    const inbox = ethBridger.l2Network.ethBridge.inbox
+
+    await fundL1Ether(l1Signer)
+    await fundL1CustomFeeToken(l1Signer)
 
     const approvalTx = await ethBridger.approve({ l1Signer })
     await approvalTx.wait()
 
     const allowance = await nativeTokenContract.allowance(
       await l1Signer.getAddress(),
-      inbox
+      ethBridger.l2Network.ethBridge.inbox
     )
 
     expect(allowance.toString()).to.equal(
@@ -108,13 +80,15 @@ describe('EthBridger (with erc-20 as native token)', async () => {
     )
   })
 
-  it('deposits erc-20 token via params', async function () {
-    const result = await testSetup()
+  it('deposits custom fee token via params', async function () {
     const { ethBridger, nativeTokenContract, l1Signer, l2Signer, l2Provider } =
-      result
+      await testSetup()
     const bridge = ethBridger.l2Network.ethBridge.bridge
-
     const amount = parseEther('2')
+
+    await fundL1Ether(l1Signer)
+    await fundL1CustomFeeToken(l1Signer)
+    await approveL1CustomFeeToken(l1Signer)
 
     const initialBalanceBridge = await nativeTokenContract.balanceOf(bridge)
     const initialBalanceDepositor = await l2Signer.getBalance()

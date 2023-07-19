@@ -7,6 +7,9 @@ import { testSetup as _testSetup, config } from '../../../scripts/testSetup'
 import { ERC20__factory } from '../../../src/lib/abi/factories/ERC20__factory'
 import { EthBridger, L1Network, L2Network } from '../../../src'
 
+const ethProvider = new StaticJsonRpcProvider(config.ethUrl)
+const arbProvider = new StaticJsonRpcProvider(config.arbUrl)
+
 function getLocalNetworks(): {
   l1Network: L1Network
   l2Network: L2Network
@@ -34,18 +37,18 @@ export async function testSetup() {
   return { ...result, nativeTokenContract }
 }
 
-export async function fundL1WithCustomFeeToken(l1Signer: Signer) {
+export async function fundL1CustomFeeToken(l1Signer: Signer) {
   const nativeToken = getLocalNetworks().l2Network.nativeToken
 
   if (typeof nativeToken === 'undefined') {
     throw new Error(
-      `can't call "fundL1WithCustomFeeToken" for network that uses eth as native token`
+      `can't call "fundL1CustomFeeToken" for network that uses eth as native token`
     )
   }
 
   const deployerWallet = new Wallet(
     utils.sha256(utils.toUtf8Bytes('user_l1user')),
-    new StaticJsonRpcProvider(config.ethUrl)
+    ethProvider
   )
 
   const address = await l1Signer.getAddress()
@@ -56,9 +59,7 @@ export async function fundL1WithCustomFeeToken(l1Signer: Signer) {
 }
 
 export async function approveL1CustomFeeToken(l1Signer: Signer) {
-  const ethBridger = await EthBridger.fromProvider(
-    new StaticJsonRpcProvider(config.arbUrl)
-  )
+  const ethBridger = await EthBridger.fromProvider(arbProvider)
 
   const tx = await ethBridger.approve({ l1Signer })
   await tx.wait()
