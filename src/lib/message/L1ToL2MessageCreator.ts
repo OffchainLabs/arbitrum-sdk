@@ -9,7 +9,7 @@ import {
 import { L1ContractTransaction, L1TransactionReceipt } from './L1Transaction'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { ERC20Inbox__factory } from '../abi/factories/ERC20Inbox__factory'
-import { getL2Network } from '../dataEntities/networks'
+import { L2Network, getL2Network } from '../dataEntities/networks'
 import { PayableOverrides } from '@ethersproject/contracts'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
@@ -68,6 +68,46 @@ export class L1ToL2MessageCreator {
     )
   }
 
+  // todo(spsjvc): jsdoc
+  protected static getTicketCreationRequestData(
+    params: L1ToL2MessageParams,
+    estimates: Pick<RetryableData, L1ToL2GasKeys>,
+    excessFeeRefundAddress: string,
+    callValueRefundAddress: string,
+    isNativeTokenEth: boolean
+  ) {
+    if (isNativeTokenEth) {
+      return Inbox__factory.createInterface().encodeFunctionData(
+        'createRetryableTicket',
+        [
+          params.to,
+          params.l2CallValue,
+          estimates.maxSubmissionCost,
+          excessFeeRefundAddress,
+          callValueRefundAddress,
+          estimates.gasLimit,
+          estimates.maxFeePerGas,
+          params.data,
+        ]
+      )
+    }
+
+    return ERC20Inbox__factory.createInterface().encodeFunctionData(
+      'createRetryableTicket',
+      [
+        params.to,
+        params.l2CallValue,
+        estimates.maxSubmissionCost,
+        excessFeeRefundAddress,
+        callValueRefundAddress,
+        estimates.gasLimit,
+        estimates.maxFeePerGas,
+        estimates.deposit, // tokenTotalFeeAmount
+        params.data,
+      ]
+    )
+  }
+
   /**
    * Generate a transaction request for creating a retryable ticket
    * @param params
@@ -99,49 +139,21 @@ export class L1ToL2MessageCreator {
     )
 
     const l2Network = await getL2Network(l2Provider)
+    const isNativeTokenEth = typeof l2Network.nativeToken === 'undefined'
 
-    let value: BigNumber
-    let tokenTotalFeeAmount: BigNumber | undefined
-    let data: string
-
-    if (typeof l2Network.nativeToken === 'undefined') {
-      const inboxInterface = Inbox__factory.createInterface()
-
-      value = estimates.deposit
-      tokenTotalFeeAmount = undefined
-      data = inboxInterface.encodeFunctionData('createRetryableTicket', [
-        params.to,
-        params.l2CallValue,
-        estimates.maxSubmissionCost,
-        excessFeeRefundAddress,
-        callValueRefundAddress,
-        estimates.gasLimit,
-        estimates.maxFeePerGas,
-        params.data,
-      ])
-    } else {
-      const inboxInterface = ERC20Inbox__factory.createInterface()
-
-      value = constants.Zero
-      tokenTotalFeeAmount = estimates.deposit
-      data = inboxInterface.encodeFunctionData('createRetryableTicket', [
-        params.to,
-        params.l2CallValue,
-        estimates.maxSubmissionCost,
-        excessFeeRefundAddress,
-        callValueRefundAddress,
-        estimates.gasLimit,
-        estimates.maxFeePerGas,
-        estimates.deposit,
-        params.data,
-      ])
-    }
+    const data = L1ToL2MessageCreator.getTicketCreationRequestData(
+      params,
+      estimates,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
+      isNativeTokenEth
+    )
 
     return {
       txRequest: {
         to: l2Network.ethBridge.inbox,
         data,
-        value,
+        value: isNativeTokenEth ? estimates.deposit : constants.Zero,
         from: params.from,
       },
       retryableData: {
