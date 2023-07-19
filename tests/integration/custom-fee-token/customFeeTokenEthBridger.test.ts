@@ -43,14 +43,14 @@ describe('EthBridger (with custom fee token)', async () => {
     await skipIfMainnet(this)
   })
 
-  it('approves the custom fee token on the parent chain for an arbitrary amount', async function () {
+  it('approves the custom fee token to be spent by the Inbox on the parent chain (arbitrary amount, using params)', async function () {
     const { ethBridger, nativeTokenContract, l1Signer } = await testSetup()
     const amount = ethers.utils.parseEther('1')
 
     await fundL1Ether(l1Signer)
     await fundL1CustomFeeToken(l1Signer)
 
-    const approvalTx = await ethBridger.approve({
+    const approvalTx = await ethBridger.approveFeeToken({
       amount,
       l1Signer,
     })
@@ -67,13 +67,16 @@ describe('EthBridger (with custom fee token)', async () => {
     )
   })
 
-  it('approves the custom fee token on the parent chain for the max amount', async function () {
+  it('approves the custom fee token to be spent by the Inbox on the parent chain (max amount, using tx request)', async function () {
     const { ethBridger, nativeTokenContract, l1Signer } = await testSetup()
 
     await fundL1Ether(l1Signer)
     await fundL1CustomFeeToken(l1Signer)
 
-    const approvalTx = await ethBridger.approve({ l1Signer })
+    const approvalTx = await ethBridger.approveFeeToken({
+      txRequest: await ethBridger.getApproveFeeTokenTxRequest(),
+      l1Signer,
+    })
     await approvalTx.wait()
 
     const allowance = await nativeTokenContract.allowance(
@@ -87,7 +90,7 @@ describe('EthBridger (with custom fee token)', async () => {
     )
   })
 
-  it('deposits custom fee token via params', async function () {
+  it('deposits custom fee token (using params)', async function () {
     const { ethBridger, nativeTokenContract, l1Signer, l2Signer, l2Provider } =
       await testSetup()
     const bridge = ethBridger.l2Network.ethBridge.bridge

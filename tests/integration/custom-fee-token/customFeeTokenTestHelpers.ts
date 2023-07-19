@@ -65,7 +65,7 @@ export async function fundL1CustomFeeToken(l1Signer: Signer) {
 export async function approveL1CustomFeeToken(l1Signer: Signer) {
   const ethBridger = await EthBridger.fromProvider(arbProvider)
 
-  const tx = await ethBridger.approve({ l1Signer })
+  const tx = await ethBridger.approveFeeToken({ l1Signer })
   await tx.wait()
 }
 

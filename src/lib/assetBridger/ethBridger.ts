@@ -17,7 +17,7 @@
 'use strict'
 
 import { Signer } from '@ethersproject/abstract-signer'
-import { Provider } from '@ethersproject/abstract-provider'
+import { Provider, TransactionRequest } from '@ethersproject/abstract-provider'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
 import { BigNumber, BigNumberish, BytesLike, constants } from 'ethers'
 
@@ -48,6 +48,36 @@ import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { L2Network, getL2Network } from '../dataEntities/networks'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
+
+export type ApproveFeeTokenParams = {
+  /**
+   * Amount to approve. Defaults to max int.
+   */
+  amount?: BigNumber
+  /**
+   * Transaction overrides
+   */
+  overrides?: PayableOverrides
+}
+
+export type ApproveFeeTokenTxRequest = {
+  /**
+   * Transaction request
+   */
+  txRequest: Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
+  /**
+   * Transaction overrides
+   */
+  overrides?: Overrides
+}
+
+export type ApproveFeeTokenParamsOrTxRequest =
+  | ApproveFeeTokenParams
+  | ApproveFeeTokenTxRequest
+
+type WithL1Signer<T extends ApproveFeeTokenParamsOrTxRequest> = T & {
+  l1Signer: Signer
+}
 
 export interface EthWithdrawParams {
   /**
@@ -155,20 +185,59 @@ export class EthBridger extends AssetBridger<
     return new EthBridger(await getL2Network(l2Provider))
   }
 
-  // TODO(spsjvc): clean up, support tx request and add jsdoc
-  public async approve(params: { amount?: BigNumber; l1Signer: Signer }) {
+  /**
+   * Asserts that the provided argument is of type `ApproveFeeTokenParams` and not `ApproveFeeTokenTxRequest`.
+   * @param params
+   */
+  private isApproveFeeTokenParams(
+    params: ApproveFeeTokenParamsOrTxRequest
+  ): params is WithL1Signer<ApproveFeeTokenParams> {
+    return typeof (params as ApproveFeeTokenTxRequest).txRequest === 'undefined'
+  }
+
+  /**
+   * Creates a transaction request for approving the custom fee token to be spent by the Inbox on the parent chain.
+   * @param params
+   */
+  public async getApproveFeeTokenTxRequest(
+    params?: ApproveFeeTokenParams
+  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
     if (typeof this.nativeToken === 'undefined') {
-      throw new Error(
-        `can't call "EthBridger.approve" for network that uses eth as native token`
-      )
+      throw new Error('chain uses ETH as its native/fee token')
     }
 
-    const token = ERC20__factory.connect(this.nativeToken, params.l1Signer)
-
-    return token.approve(
+    const erc20Interface = ERC20__factory.createInterface()
+    const data = erc20Interface.encodeFunctionData('approve', [
       this.l2Network.ethBridge.inbox,
-      params.amount ?? constants.MaxUint256
-    )
+      params?.amount ?? constants.MaxUint256,
+    ])
+
+    return {
+      to: this.nativeToken,
+      data,
+      value: BigNumber.from(0),
+    }
+  }
+
+  /**
+   * Approves the custom fee token to be spent by the Inbox on the parent chain.
+   * @param params
+   */
+  public async approveFeeToken(
+    params: WithL1Signer<ApproveFeeTokenParamsOrTxRequest>
+  ) {
+    if (typeof this.nativeToken === 'undefined') {
+      throw new Error('chain uses ETH as its native/fee token')
+    }
+
+    const approveFeeTokenRequest = this.isApproveFeeTokenParams(params)
+      ? await this.getApproveFeeTokenTxRequest(params)
+      : params.txRequest
+
+    return params.l1Signer.sendTransaction({
+      ...approveFeeTokenRequest,
+      ...params.overrides,
+    })
   }
 
   /**

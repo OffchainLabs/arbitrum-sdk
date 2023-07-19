@@ -78,16 +78,14 @@ describe('Ether', async () => {
     )
   })
 
-  it('"EthBridger.approve" throws when eth is native token', async () => {
+  it('"EthBridger.approveFeeToken" throws when eth is used as native/fee token', async () => {
     const { ethBridger, l1Signer } = await testSetup()
 
     try {
-      await ethBridger.approve({ l1Signer })
-      expect.fail(`"EthBridger.approve" should have thrown`)
+      await ethBridger.approveFeeToken({ l1Signer })
+      expect.fail(`"EthBridger.approveFeeToken" should have thrown`)
     } catch (error: any) {
-      expect(error.message).to.equal(
-        `can't call "EthBridger.approve" for network that uses eth as native token`
-      )
+      expect(error.message).to.equal('chain uses ETH as its native/fee token')
     }
   })
 
