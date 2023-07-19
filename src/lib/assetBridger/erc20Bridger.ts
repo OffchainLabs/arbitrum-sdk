@@ -25,7 +25,7 @@ import {
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
 import { MaxUint256 } from '@ethersproject/constants'
 import { ErrorCode, Logger } from '@ethersproject/logger'
-import { BigNumber, BigNumberish, ethers, BytesLike } from 'ethers'
+import { BigNumber, BigNumberish, ethers, BytesLike, constants } from 'ethers'
 
 import { L1GatewayRouter__factory } from '../abi/factories/L1GatewayRouter__factory'
 import { L2GatewayRouter__factory } from '../abi/factories/L2GatewayRouter__factory'
@@ -556,6 +556,52 @@ export class Erc20Bridger extends AssetBridger<
   }
 
   /**
+   * Get the call value for the deposit transaction request
+   * @param depositParams
+   * @returns
+   */
+  private getDepositRequestValue(
+    depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
+  ) {
+    // the call value should be zero when paying with a custom fee token,
+    // as the fee amount is packed inside the last parameter (`data`) of the call to `outboundTransfer`
+    if (!this.isNativeTokenEth) {
+      return constants.Zero
+    }
+
+    // we dont include the l2 call value for token deposits because
+    // they either have 0 call value, or their call value is withdrawn from
+    // a contract by the gateway (weth). So in both of these cases the l2 call value
+    // is not actually deposited in the value field
+    return depositParams.gasLimit
+      .mul(depositParams.maxFeePerGas)
+      .add(depositParams.maxSubmissionCost)
+  }
+
+  // todo(spsjvc): jsdoc
+  private getDepositRequestOutboundTransferData(
+    depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
+  ) {
+    if (!this.isNativeTokenEth) {
+      return defaultAbiCoder.encode(
+        ['uint256', 'bytes', 'uint256'],
+        [
+          constants.Zero,
+          '0x',
+          depositParams.gasLimit
+            .mul(depositParams.maxFeePerGas)
+            .add(depositParams.maxSubmissionCost),
+        ]
+      )
+    }
+
+    return defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [depositParams.maxSubmissionCost, '0x']
+    )
+  }
+
+  /**
    * Get the arguments for calling the deposit function
    * @param params
    * @returns
@@ -594,10 +640,6 @@ export class Erc20Bridger extends AssetBridger<
     const depositFunc = (
       depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
     ) => {
-      const innerData = defaultAbiCoder.encode(
-        ['uint256', 'bytes'],
-        [depositParams.maxSubmissionCost, '0x']
-      )
       const iGatewayRouter = L1GatewayRouter__factory.createInterface()
 
       return {
@@ -607,17 +649,11 @@ export class Erc20Bridger extends AssetBridger<
           amount,
           depositParams.gasLimit,
           depositParams.maxFeePerGas,
-          innerData,
+          this.getDepositRequestOutboundTransferData(depositParams),
         ]),
         to: this.l2Network.tokenBridge.l1GatewayRouter,
         from: defaultedParams.from,
-        value: depositParams.gasLimit
-          .mul(depositParams.maxFeePerGas)
-          .add(depositParams.maxSubmissionCost),
-        // we dont include the l2 call value for token deposits because
-        // they either have 0 call value, or their call value is withdrawn from
-        // a contract by the gateway (weth). So in both of these cases the l2 call value
-        // is not actually deposited in the value field
+        value: this.getDepositRequestValue(depositParams),
       }
     }
 
