@@ -27,7 +27,7 @@ import {
   fundL1CustomFeeToken,
   fundL2CustomFeeToken,
   approveL1CustomFeeToken,
-} from './testHelpers.native-erc20'
+} from './customFeeTokenTestHelpers'
 import {
   fundL1 as fundL1Ether,
   mineUntilStop,
