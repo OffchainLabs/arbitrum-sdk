@@ -154,7 +154,6 @@ export class L1ToL2MessageCreator {
         maxSubmissionCost: estimates.maxSubmissionCost,
         maxFeePerGas: estimates.maxFeePerGas,
         gasLimit: estimates.gasLimit,
-        tokenTotalFeeAmount,
         deposit: estimates.deposit,
       },
       isValid: async () => {
