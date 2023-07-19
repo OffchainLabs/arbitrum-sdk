@@ -10,6 +10,10 @@ import { EthBridger, L1Network, L2Network } from '../../../src'
 const ethProvider = new StaticJsonRpcProvider(config.ethUrl)
 const arbProvider = new StaticJsonRpcProvider(config.arbUrl)
 
+export function isL2NetworkWithCustomFeeToken(): boolean {
+  return typeof getLocalNetworks().l2Network.nativeToken !== 'undefined'
+}
+
 function getLocalNetworks(): {
   l1Network: L1Network
   l2Network: L2Network

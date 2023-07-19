@@ -23,6 +23,14 @@ import { testSetup } from '../../scripts/testSetup'
 import { L1ToL2MessageCreator } from '../../src/lib/message/L1ToL2MessageCreator'
 import { L1ToL2MessageStatus } from '../../src'
 
+import {
+  fundL1CustomFeeToken,
+  approveL1CustomFeeToken,
+  isL2NetworkWithCustomFeeToken,
+} from './custom-fee-token/customFeeTokenTestHelpers'
+
+const isCustomFeeToken = isL2NetworkWithCustomFeeToken()
+
 describe('L1ToL2MessageCreator', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
@@ -38,6 +46,11 @@ describe('L1ToL2MessageCreator', () => {
 
     // Funding L1 wallet
     await fundL1(l1Signer)
+
+    if (isCustomFeeToken) {
+      await fundL1CustomFeeToken(l1Signer)
+      await approveL1CustomFeeToken(l1Signer)
+    }
 
     // Instantiate the object
     const l1ToL2MessageCreator = new L1ToL2MessageCreator(l1Signer)
@@ -91,6 +104,11 @@ describe('L1ToL2MessageCreator', () => {
 
     // Funding L1 wallet
     await fundL1(l1Signer)
+
+    if (isCustomFeeToken) {
+      await fundL1CustomFeeToken(l1Signer)
+      await approveL1CustomFeeToken(l1Signer)
+    }
 
     // Instantiate the object
     const l1ToL2MessageCreator = new L1ToL2MessageCreator(l1Signer)
