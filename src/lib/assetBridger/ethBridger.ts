@@ -177,6 +177,14 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
+   * Whether the chain uses ETH as its native/fee token.
+   * @returns
+   */
+  private get isNativeTokenEth() {
+    return typeof this.nativeToken === 'undefined'
+  }
+
+  /**
    * Instantiates a new EthBridger from an L2 Provider
    * @param l2Provider
    * @returns
@@ -202,7 +210,7 @@ export class EthBridger extends AssetBridger<
   public getApproveFeeTokenTxRequest(
     params?: ApproveFeeTokenParams
   ): Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>> {
-    if (typeof this.nativeToken === 'undefined') {
+    if (this.isNativeTokenEth) {
       throw new Error('chain uses ETH as its native/fee token')
     }
 
@@ -213,7 +221,7 @@ export class EthBridger extends AssetBridger<
     ])
 
     return {
-      to: this.nativeToken,
+      to: this.nativeToken!,
       data,
       value: BigNumber.from(0),
     }
@@ -226,7 +234,7 @@ export class EthBridger extends AssetBridger<
   public async approveFeeToken(
     params: WithL1Signer<ApproveFeeTokenParamsOrTxRequest>
   ) {
-    if (typeof this.nativeToken === 'undefined') {
+    if (this.isNativeTokenEth) {
       throw new Error('chain uses ETH as its native/fee token')
     }
 
@@ -241,12 +249,12 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Gets the transaction data for a tx request necessary for depositing ETH or other native/fee token
+   * Gets the transaction data for a tx request necessary for depositing ETH or other native/fee token.
    * @param params
    * @returns
    */
   private getDepositRequestData(params: EthDepositRequestParams) {
-    if (typeof this.nativeToken === 'undefined') {
+    if (this.isNativeTokenEth) {
       return (
         Inbox__factory.createInterface() as unknown as {
           encodeFunctionData(
@@ -278,7 +286,7 @@ export class EthBridger extends AssetBridger<
     return {
       txRequest: {
         to: this.l2Network.ethBridge.inbox,
-        value: typeof this.nativeToken === 'undefined' ? params.amount : 0,
+        value: this.isNativeTokenEth ? params.amount : 0,
         data: this.getDepositRequestData(params),
         from: params.from,
       },
