@@ -23,8 +23,16 @@ import dotenv from 'dotenv'
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
 
-import { testSetup as _testSetup, fundL1 } from './testHelpers.native-erc20'
-import { prettyLog, skipIfMainnet, wait } from '../testHelpers'
+import {
+  testSetup as _testSetup,
+  fundL1WithCustomFeeToken,
+} from './testHelpers.native-erc20'
+import {
+  fundL1 as fundL1WithEth,
+  prettyLog,
+  skipIfMainnet,
+  wait,
+} from '../testHelpers'
 
 dotenv.config()
 
@@ -45,7 +53,8 @@ describe('EthBridger (with erc-20 as native token)', async () => {
     const { l1Signer } = await testSetup()
     const address = await l1Signer.getAddress()
     prettyLog(`testing with account: ${address}`)
-    await fundL1(address)
+    await fundL1WithEth(l1Signer)
+    await fundL1WithCustomFeeToken(l1Signer)
   })
 
   beforeEach('skipIfMainnet', async function () {
@@ -58,7 +67,8 @@ describe('EthBridger (with erc-20 as native token)', async () => {
     // using a random wallet for non-max amount approval
     // the rest of the test suite will use the account with the max approval
     const randomL1Signer = Wallet.createRandom().connect(l1Provider)
-    await fundL1(await randomL1Signer.getAddress())
+    await fundL1WithEth(randomL1Signer)
+    await fundL1WithCustomFeeToken(randomL1Signer)
 
     const inbox = ethBridger.l2Network.ethBridge.inbox
     const amount = ethers.utils.parseEther('1')
