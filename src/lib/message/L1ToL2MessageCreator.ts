@@ -76,8 +76,8 @@ export class L1ToL2MessageCreator {
     callValueRefundAddress: string,
     isNativeTokenEth: boolean
   ) {
-    if (isNativeTokenEth) {
-      return Inbox__factory.createInterface().encodeFunctionData(
+    if (!isNativeTokenEth) {
+      return ERC20Inbox__factory.createInterface().encodeFunctionData(
         'createRetryableTicket',
         [
           params.to,
@@ -87,12 +87,13 @@ export class L1ToL2MessageCreator {
           callValueRefundAddress,
           estimates.gasLimit,
           estimates.maxFeePerGas,
+          estimates.deposit, // tokenTotalFeeAmount
           params.data,
         ]
       )
     }
 
-    return ERC20Inbox__factory.createInterface().encodeFunctionData(
+    return Inbox__factory.createInterface().encodeFunctionData(
       'createRetryableTicket',
       [
         params.to,
@@ -102,7 +103,6 @@ export class L1ToL2MessageCreator {
         callValueRefundAddress,
         estimates.gasLimit,
         estimates.maxFeePerGas,
-        estimates.deposit, // tokenTotalFeeAmount
         params.data,
       ]
     )
