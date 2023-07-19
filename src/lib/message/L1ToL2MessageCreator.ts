@@ -1,4 +1,4 @@
-import { BigNumber, constants } from 'ethers'
+import { constants } from 'ethers'
 import { Signer } from '@ethersproject/abstract-signer'
 import { Provider } from '@ethersproject/abstract-provider'
 
@@ -9,7 +9,7 @@ import {
 import { L1ContractTransaction, L1TransactionReceipt } from './L1Transaction'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { ERC20Inbox__factory } from '../abi/factories/ERC20Inbox__factory'
-import { L2Network, getL2Network } from '../dataEntities/networks'
+import { getL2Network } from '../dataEntities/networks'
 import { PayableOverrides } from '@ethersproject/contracts'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
