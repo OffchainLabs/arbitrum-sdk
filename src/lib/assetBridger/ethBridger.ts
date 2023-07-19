@@ -241,6 +241,33 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
+   * Gets the transaction data for a tx request necessary for depositing ETH or other native/fee token
+   * @param params
+   * @returns
+   */
+  private getDepositRequestData(params: EthDepositRequestParams) {
+    if (typeof this.nativeToken === 'undefined') {
+      return (
+        Inbox__factory.createInterface() as unknown as {
+          encodeFunctionData(
+            functionFragment: 'depositEth()',
+            values?: undefined
+          ): string
+        }
+      ).encodeFunctionData('depositEth()')
+    }
+
+    return (
+      ERC20Inbox__factory.createInterface() as unknown as {
+        encodeFunctionData(
+          functionFragment: 'depositERC20(uint256)',
+          values: [BigNumber]
+        ): string
+      }
+    ).encodeFunctionData('depositERC20(uint256)', [params.amount])
+  }
+
+  /**
    * Get a transaction request for an eth deposit
    * @param params
    * @returns
@@ -248,40 +275,11 @@ export class EthBridger extends AssetBridger<
   public async getDepositRequest(
     params: EthDepositRequestParams
   ): Promise<OmitTyped<L1ToL2TransactionRequest, 'retryableData'>> {
-    let data: BytesLike
-    let value: BigNumberish
-
-    if (typeof this.nativeToken === 'undefined') {
-      const inboxInterface = Inbox__factory.createInterface()
-
-      value = params.amount
-      data = (
-        inboxInterface as unknown as {
-          encodeFunctionData(
-            functionFragment: 'depositEth()',
-            values?: undefined
-          ): string
-        }
-      ).encodeFunctionData('depositEth()')
-    } else {
-      const inboxInterface = ERC20Inbox__factory.createInterface()
-
-      value = 0
-      data = (
-        inboxInterface as unknown as {
-          encodeFunctionData(
-            functionFragment: 'depositERC20(uint256)',
-            values: [BigNumber]
-          ): string
-        }
-      ).encodeFunctionData('depositERC20(uint256)', [params.amount])
-    }
-
     return {
       txRequest: {
         to: this.l2Network.ethBridge.inbox,
-        value,
-        data,
+        value: typeof this.nativeToken === 'undefined' ? params.amount : 0,
+        data: this.getDepositRequestData(params),
         from: params.from,
       },
       isValid: async () => true,
