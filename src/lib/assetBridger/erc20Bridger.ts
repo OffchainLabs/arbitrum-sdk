@@ -176,10 +176,26 @@ export class Erc20Bridger extends AssetBridger<
   public static MIN_CUSTOM_DEPOSIT_GAS_LIMIT = BigNumber.from(275000)
 
   /**
+   * In case of a chain that uses ETH as its native/fee token, this is undefined.
+   * In case of a chain that uses an ERC-20 token from the parent chain as its native/fee token, this is the address of said token on the parent chain.
+   */
+  public readonly nativeToken?: string
+
+  /**
    * Bridger for moving ERC20 tokens back and forth between L1 to L2
    */
   public constructor(l2Network: L2Network) {
     super(l2Network)
+
+    this.nativeToken = l2Network.nativeToken
+  }
+
+  /**
+   * Whether the chain uses ETH as its native/fee token.
+   * @returns
+   */
+  private get isNativeTokenEth() {
+    return typeof this.nativeToken === 'undefined'
   }
 
   /**
@@ -225,6 +241,47 @@ export class Erc20Bridger extends AssetBridger<
       this.l2Network.tokenBridge.l2GatewayRouter,
       l2Provider
     ).getGateway(erc20L1Address)
+  }
+
+  /**
+   * Creates a transaction request for approving the custom fee token to be spent by the relevant Gateway on the parent chain.
+   * @param params
+   */
+  public async getApproveFeeTokenRequest(
+    params: ProviderTokenApproveParams
+  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
+    if (this.isNativeTokenEth) {
+      throw new Error('chain uses ETH as its native/fee token')
+    }
+
+    const txRequest = await this.getApproveTokenRequest(params)
+    // just reuse the approve token request but direct it towards the native token contract
+    return { ...txRequest, to: this.nativeToken! }
+  }
+
+  /**
+   * Approves the custom fee token to be spent by the relevant Gateway on the parent chain.
+   * @param params
+   */
+  public async approveFeeToken(
+    params: ApproveParamsOrTxRequest
+  ): Promise<ethers.ContractTransaction> {
+    if (this.isNativeTokenEth) {
+      throw new Error('chain uses ETH as its native/fee token')
+    }
+
+    await this.checkL1Network(params.l1Signer)
+
+    const approveRequest = this.isApproveParams(params)
+      ? await this.getApproveFeeTokenRequest({
+          ...params,
+          l1Provider: SignerProviderUtils.getProviderOrThrow(params.l1Signer),
+        })
+      : params.txRequest
+    return await params.l1Signer.sendTransaction({
+      ...approveRequest,
+      ...params.overrides,
+    })
   }
 
   /**
