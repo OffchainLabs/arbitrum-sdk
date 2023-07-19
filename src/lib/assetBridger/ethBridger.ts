@@ -199,9 +199,9 @@ export class EthBridger extends AssetBridger<
    * Creates a transaction request for approving the custom fee token to be spent by the Inbox on the parent chain.
    * @param params
    */
-  public async getApproveFeeTokenTxRequest(
+  public getApproveFeeTokenTxRequest(
     params?: ApproveFeeTokenParams
-  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
+  ): Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>> {
     if (typeof this.nativeToken === 'undefined') {
       throw new Error('chain uses ETH as its native/fee token')
     }
@@ -231,7 +231,7 @@ export class EthBridger extends AssetBridger<
     }
 
     const approveFeeTokenRequest = this.isApproveFeeTokenParams(params)
-      ? await this.getApproveFeeTokenTxRequest(params)
+      ? this.getApproveFeeTokenTxRequest(params)
       : params.txRequest
 
     return params.l1Signer.sendTransaction({
