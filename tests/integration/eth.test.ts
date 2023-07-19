@@ -80,10 +80,9 @@ describe('Ether', async () => {
 
   it('"EthBridger.approve" throws when eth is native token', async () => {
     const { ethBridger, l1Signer } = await testSetup()
-    const randomL1Signer = Wallet.createRandom().connect(l1Signer.provider!)
 
     try {
-      await ethBridger.approve({ l1Signer: randomL1Signer })
+      await ethBridger.approve({ l1Signer })
       expect.fail(`"EthBridger.approve" should have thrown`)
     } catch (error: any) {
       expect(error.message).to.equal(
