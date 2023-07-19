@@ -254,25 +254,25 @@ export class EthBridger extends AssetBridger<
    * @returns
    */
   private getDepositRequestData(params: EthDepositRequestParams) {
-    if (this.isNativeTokenEth) {
+    if (!this.isNativeTokenEth) {
       return (
-        Inbox__factory.createInterface() as unknown as {
+        ERC20Inbox__factory.createInterface() as unknown as {
           encodeFunctionData(
-            functionFragment: 'depositEth()',
-            values?: undefined
+            functionFragment: 'depositERC20(uint256)',
+            values: [BigNumber]
           ): string
         }
-      ).encodeFunctionData('depositEth()')
+      ).encodeFunctionData('depositERC20(uint256)', [params.amount])
     }
 
     return (
-      ERC20Inbox__factory.createInterface() as unknown as {
+      Inbox__factory.createInterface() as unknown as {
         encodeFunctionData(
-          functionFragment: 'depositERC20(uint256)',
-          values: [BigNumber]
+          functionFragment: 'depositEth()',
+          values?: undefined
         ): string
       }
-    ).encodeFunctionData('depositERC20(uint256)', [params.amount])
+    ).encodeFunctionData('depositEth()')
   }
 
   /**
