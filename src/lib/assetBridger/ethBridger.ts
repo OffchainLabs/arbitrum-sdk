@@ -19,7 +19,7 @@
 import { Signer } from '@ethersproject/abstract-signer'
 import { Provider, TransactionRequest } from '@ethersproject/abstract-provider'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
-import { BigNumber, BigNumberish, BytesLike, constants } from 'ethers'
+import { BigNumber, constants } from 'ethers'
 
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { ERC20Inbox__factory } from '../abi/factories/ERC20Inbox__factory'
