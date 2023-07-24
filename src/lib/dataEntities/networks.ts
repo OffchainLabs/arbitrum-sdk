@@ -330,8 +330,6 @@ export const addCustomNetwork = ({
       throw new ArbSdkError(
         `Custom network ${customL1Network.chainID} must have isCustom flag set to true`
       )
-    } else {
-      l1Networks[customL1Network.chainID] = customL1Network
     }
   }
 
@@ -343,9 +341,13 @@ export const addCustomNetwork = ({
     )
   }
 
-  l2Networks[customL2Network.chainID] = customL2Network
+  let l1PartnerChain = l1Networks[customL2Network.partnerChainID]
 
-  const l1PartnerChain = l1Networks[customL2Network.partnerChainID]
+  // Case where the added L1 network is a partner of the added L2 network.
+  if (customL2Network.partnerChainID === customL1Network?.chainID) {
+    l1PartnerChain = customL1Network
+  }
+
   if (!l1PartnerChain)
     throw new ArbSdkError(
       `Network ${customL2Network.chainID}'s partner network, ${customL2Network.partnerChainID}, not recognized`
@@ -354,6 +356,11 @@ export const addCustomNetwork = ({
   if (!l1PartnerChain.partnerChainIDs.includes(customL2Network.chainID)) {
     l1PartnerChain.partnerChainIDs.push(customL2Network.chainID)
   }
+
+  if (customL1Network) {
+    l1Networks[customL1Network.chainID] = customL1Network
+  }
+  l2Networks[customL2Network.chainID] = customL2Network
 }
 
 /**
