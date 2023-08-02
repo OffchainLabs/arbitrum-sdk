@@ -36,7 +36,7 @@ const deployBehindProxy = async <
   await proxy.deployed()
   console.log(factory['contractName'], proxy.address)
 
-  return instance.attach(proxy.address)
+  return instance.attach(proxy.address) as ReturnType<T['deploy']>
 }
 
 export const deployErc20L1 = async (deployer: Signer) => {
