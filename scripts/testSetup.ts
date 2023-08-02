@@ -110,6 +110,7 @@ export const getCustomNetworks = async (
 
   const l2Network: Omit<L2Network, 'tokenBridge'> = {
     chainID: l2NetworkInfo.chainId,
+    partnerChainIDs: [],
     confirmPeriodBlocks: confirmPeriodBlocks.toNumber(),
     ethBridge: {
       bridge: parsedDeploymentData.bridge,
