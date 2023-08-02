@@ -30,7 +30,7 @@ import {
  * Base for bridging assets from l1 to l2 and back
  */
 export abstract class AssetBridger<DepositParams, WithdrawParams> {
-  public readonly l1Network: L1Network
+  public readonly l1Network: L1Network | L2Network
 
   public constructor(public readonly l2Network: L2Network) {
     this.l1Network = l1Networks[l2Network.partnerChainID]

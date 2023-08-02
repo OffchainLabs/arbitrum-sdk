@@ -28,14 +28,16 @@ export interface L1Network extends Network {
 }
 
 export interface L2Network extends Network {
+  partnerChainIDs: number[]
   tokenBridge: TokenBridge
   ethBridge: EthBridge
   partnerChainID: number
-  isArbitrum: true
+  isArbitrum: boolean
   confirmPeriodBlocks: number
   retryableLifetimeSeconds: number
   nitroGenesisBlock: number
   nitroGenesisL1Block: number
+  isL3?: boolean
   /**
    * How long to wait (ms) for a deposit to arrive on l2 before timing out a request
    */
@@ -78,7 +80,7 @@ export interface EthBridge {
 }
 
 export interface L1Networks {
-  [id: string]: L1Network
+  [id: string]: L1Network | L2Network
 }
 
 export interface L2Networks {
@@ -114,6 +116,21 @@ const mainnetETHBridge: EthBridge = {
   },
 }
 
+// L2 networks that are a parent chain to L3s.
+function getParentL2Networks() {
+  const parentL2Networks: { [id: string]: L2Network } = {}
+
+  for (const chainId in l2Networks) {
+    const network = l2Networks[chainId]
+
+    if (network.partnerChainIDs.length > 0) {
+      parentL2Networks[chainId] = network
+    }
+  }
+
+  return parentL2Networks
+}
+
 export const l1Networks: L1Networks = {
   1: {
     chainID: 1,
@@ -142,6 +159,8 @@ export const l1Networks: L1Networks = {
     partnerChainIDs: [421613],
     isArbitrum: false,
   },
+  // If L2 network is a parent chain to L3 network, it's part of the L1 list.
+  ...getParentL2Networks(),
 }
 
 export const l2Networks: L2Networks = {
@@ -150,6 +169,7 @@ export const l2Networks: L2Networks = {
     name: 'Arbitrum One',
     explorerUrl: 'https://arbiscan.io',
     partnerChainID: 1,
+    partnerChainIDs: [],
     isArbitrum: true,
     tokenBridge: mainnetTokenBridge,
     ethBridge: mainnetETHBridge,
@@ -167,6 +187,9 @@ export const l2Networks: L2Networks = {
   },
   421613: {
     chainID: 421613,
+    partnerChainIDs: [
+      // Xai Goerli goes here
+    ],
     confirmPeriodBlocks: 20,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     ethBridge: {
@@ -207,6 +230,7 @@ export const l2Networks: L2Networks = {
   },
   42170: {
     chainID: 42170,
+    partnerChainIDs: [],
     confirmPeriodBlocks: 45818,
     ethBridge: {
       bridge: '0xc1ebd02f738644983b6c4b2d440b8e77dde276bd',
@@ -265,11 +289,19 @@ const getNetwork = async (
   })()
 
   const networks = layer === 1 ? l1Networks : l2Networks
-  if (networks[chainID]) {
-    return networks[chainID]
-  } else {
-    throw new ArbSdkError(`Unrecognized network ${chainID}.`)
+  const network = networks[chainID]
+
+  if (network) {
+    if (layer === 2) {
+      return network
+    }
+    // Any network that's a parent chain is a valid L1 network
+    if (network.partnerChainIDs.length > 0) {
+      return network
+    }
   }
+
+  throw new ArbSdkError(`Unrecognized network ${chainID}.`)
 }
 
 export const getL1Network = (
@@ -377,6 +409,7 @@ export const addDefaultLocalNetwork = (): {
 
   const defaultLocalL2Network: L2Network = {
     chainID: 412346,
+    partnerChainIDs: [],
     confirmPeriodBlocks: 20,
     ethBridge: {
       bridge: '0x2b360a9881f21c3d7aa0ea6ca0de2a3341d4ef3c',
@@ -426,6 +459,5 @@ export const addDefaultLocalNetwork = (): {
 export const isL1Network = (
   network: L1Network | L2Network
 ): network is L1Network => {
-  if ((network as L1Network).partnerChainIDs) return true
-  else return false
+  return (network as L1Network).partnerChainIDs.length > 0
 }

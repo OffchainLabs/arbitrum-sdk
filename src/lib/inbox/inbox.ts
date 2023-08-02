@@ -28,7 +28,7 @@ import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factor
 import { IInbox__factory } from '../abi/factories/IInbox__factory'
 import { RequiredPick } from '../utils/types'
 import { MessageDeliveredEvent } from '../abi/Bridge'
-import { l1Networks, L2Network } from '../dataEntities/networks'
+import { L1Network, l1Networks, L2Network } from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
 import { MultiCaller, CallInput } from '../utils/multicall'
@@ -90,7 +90,13 @@ export class InboxTools {
 
     // we take a long average block time of 14s
     // and always move at least 10 blocks
-    const diffBlocks = Math.max(Math.ceil(diff / this.l1Network.blockTime), 10)
+    let diffBlocks = 10
+    if ((this.l1Network as L1Network).blockTime) {
+      diffBlocks = Math.max(
+        Math.ceil(diff / (this.l1Network as L1Network).blockTime),
+        10
+      )
+    }
 
     return await this.findFirstBlockBelow(
       blockNumber - diffBlocks,
