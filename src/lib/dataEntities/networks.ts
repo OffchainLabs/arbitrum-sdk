@@ -295,10 +295,15 @@ const getNetwork = async (
     if (layer === 2) {
       return network
     }
+
     // Any network that's a parent chain is a valid L1 network
     if (network.partnerChainIDs.length > 0) {
       return network
     }
+
+    throw new ArbSdkError(
+      `Expected 'partnerChainIDs' to include at least one L2 network. Got empty for network ${chainID}.`
+    )
   }
 
   throw new ArbSdkError(`Unrecognized network ${chainID}.`)
