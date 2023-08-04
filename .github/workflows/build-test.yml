@@ -61,7 +61,7 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           fail_ci_if_error: false
-          verbose: false
+          verbose: true
 
   audit:
     name: Audit
@@ -112,7 +112,7 @@ jobs:
 
       - uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
-          no-token-bridge: true
+          no-token-bridge: false
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
