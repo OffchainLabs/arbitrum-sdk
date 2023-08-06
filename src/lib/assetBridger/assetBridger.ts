@@ -28,10 +28,23 @@ import {
 
 /**
  * Base for bridging assets from l1 to l2 and back
+ * 
+ * @typeParam DepositParams - Object with information to execute a deposit. For an example, see Erc20Bridger.Erc20DepositParams
+ * @typeParam WithdrawParams - Object with information to execute a withdraw. For an example, see Erc20Bridger.Erc20WithdrawParams
  */
 export abstract class AssetBridger<DepositParams, WithdrawParams> {
+  /**
+   * L1 network this bridger will operate with
+   */
   public readonly l1Network: L1Network
 
+  /**
+   * @param l2Network - L2 network this bridger will operate with
+   * @typeParam DepositParams - Object with information to execute a deposit. For an example, see Erc20Bridger.Erc20DepositParams
+   * @typeParam WithdrawParams - Object with information to execute a withdraw. For an example, see Erc20Bridger.Erc20WithdrawParams
+   * 
+   * @throws {@link ArbSdkError} if `l2Network` does not have a correspondant L1 network in {@link l1Networks}
+   */
   public constructor(public readonly l2Network: L2Network) {
     this.l1Network = l1Networks[l2Network.partnerChainID]
     if (!this.l1Network) {
@@ -42,16 +55,24 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   }
 
   /**
-   * Check the signer/provider matches the l1Network, throws if not
-   * @param sop
+   * Check the signer/provider matches the l1Network
+   * 
+   * @remarks
+   * Only {@link https://docs.ethers.org/ | ethers} is allowed for the signer or provider object
+   * 
+   * @param sop - Signer or Provider from ethers
    */
   protected async checkL1Network(sop: SignerOrProvider): Promise<void> {
     await SignerProviderUtils.checkNetworkMatches(sop, this.l1Network.chainID)
   }
 
   /**
-   * Check the signer/provider matches the l2Network, throws if not
-   * @param sop
+   * Check the signer/provider matches the l2Network
+   * 
+   * @remarks
+   * Only {@link https://docs.ethers.org/ | ethers} is allowed for the signer or provider object
+   * 
+   * @param sop - Signer or Provider from ethers
    */
   protected async checkL2Network(sop: SignerOrProvider): Promise<void> {
     await SignerProviderUtils.checkNetworkMatches(sop, this.l2Network.chainID)
@@ -59,13 +80,27 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
 
   /**
    * Transfer assets from L1 to L2
-   * @param params
+   * 
+   * @remarks
+   * The actual content of the DepositParams object will depend on the child class used. For example, the parameters needed
+   * in Erc20Bridger are different than in EthBridger as the processes to transfer ERC20 assets is different than the process
+   * to transfer ETH.
+   * 
+   * @param params - Parameters needed to execute a deposit
+   * @returns Response object for a transaction sent to an L1 contract
    */
   public abstract deposit(params: DepositParams): Promise<L1ContractTransaction>
 
   /**
    * Transfer assets from L2 to L1
-   * @param params
+   * 
+   * @remarks
+   * The actual content of the WithdrawParams object will depend on the child class used. For example, the parameters needed
+   * in Erc20Bridger are different than in EthBridger as the processes to transfer ERC20 assets is different than the process
+   * to transfer ETH.
+   * 
+   * @param params - Parameters needed to execute a withdraw
+   * @returns Response object for a transaction sent to an L2 contract
    */
   public abstract withdraw(
     params: WithdrawParams

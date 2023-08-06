@@ -40,6 +40,9 @@ import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { EventArgs, parseTypedLogs } from '../dataEntities/event'
 import { ArbitrumProvider } from '../utils/arbProvider'
 
+/**
+ * L2 contract transaction
+ */
 export interface L2ContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<L2TransactionReceipt>
 }

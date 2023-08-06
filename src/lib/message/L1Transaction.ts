@@ -48,6 +48,9 @@ import { isDefined } from '../utils/lib'
 import { SubmitRetryableMessageDataParser } from './messageDataParser'
 import { getL2Network } from '../dataEntities/networks'
 
+/**
+ * L1 contract transaction
+ */
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
 > extends ContractTransaction {

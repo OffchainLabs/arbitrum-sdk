@@ -47,13 +47,16 @@ import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getL2Network } from '../dataEntities/networks'
 
+/**
+ * Parameters to transfer Ether from L2 to L1 (withdraw)
+ */
 export interface EthWithdrawParams {
   /**
    * The amount of ETH or tokens to be withdrawn
    */
   amount: BigNumber
   /**
-   * The L1 address to receive the value.
+   * The L1 address to receive the value
    */
   destinationAddress: string
   /**
@@ -66,13 +69,16 @@ export interface EthWithdrawParams {
   overrides?: PayableOverrides
 }
 
+/**
+ * Parameters to transfer Ether from L1 to L2 (deposit)
+ */
 export type EthDepositParams = {
   /**
-   * The L1 provider or signer
+   * The L1 signer
    */
   l1Signer: Signer
   /**
-   * The amount of ETH or tokens to be deposited
+   * The amount of ETH to be deposited
    */
   amount: BigNumber
   /**
@@ -81,13 +87,16 @@ export type EthDepositParams = {
   overrides?: PayableOverrides
 }
 
+/**
+ * Parameters to transfer Ether from L1 to L2 (deposit) to a different address. Extends {@link EthDepositParams}
+ */
 export type EthDepositToParams = EthDepositParams & {
   /**
    * An L2 provider
    */
   l2Provider: Provider
   /**
-   * L2 address of the entity receiving the funds
+   * L2 address of the account receiving the funds
    */
   destinationAddress: string
   /**
@@ -96,21 +105,52 @@ export type EthDepositToParams = EthDepositParams & {
   retryableGasOverrides?: GasOverrides
 }
 
+/**
+ * Transaction request object for an L1 to L2 message, including an L1 signer. Extends {@link L1ToL2TransactionRequest}
+ */
 export type L1ToL2TxReqAndSigner = L1ToL2TransactionRequest & {
+  /**
+   * An L1 signer
+   */
   l1Signer: Signer
+  /**
+   * Transaction overrides
+   */
   overrides?: Overrides
 }
 
+/**
+ * Transaction request object for an L2 to L1 message, including an L2 signer. Extends {@link L2ToL1TransactionRequest}
+ */
 export type L2ToL1TxReqAndSigner = L2ToL1TransactionRequest & {
+  /**
+   * An L2 signer
+   */
   l2Signer: Signer
+  /**
+   * Transaction overrides
+   */
   overrides?: Overrides
 }
 
+/**
+ * Parameters to create a transaction to transfer Ether from L1 to L2 (deposit).
+ * Removes `overrides` and `l1Signer` from {@link EthDepositParams}, and adds the following.
+ */
 type EthDepositRequestParams = OmitTyped<
   EthDepositParams,
   'overrides' | 'l1Signer'
-> & { from: string }
+> & {
+  /**
+   * Address that is depositing the ETH
+   */
+  from: string
+}
 
+/**
+ * Parameters to create a transaction to transfer Ether from L1 to L2 (deposit) to a different address.
+ * Removes `overrides` and `l1Signer` from {@link EthDepositToParams}, and adds the following.
+ */
 type EthDepositToRequestParams = OmitTyped<
   EthDepositToParams,
   'overrides' | 'l1Signer'
@@ -133,8 +173,10 @@ export class EthBridger extends AssetBridger<
   EthWithdrawParams | L2ToL1TxReqAndSigner
 > {
   /**
-   * Instantiates a new EthBridger from an L2 Provider
-   * @param l2Provider
+   * Instantiates a new EthBridger from an L2 provider
+   * 
+   * @param l2Provider - L2 provider
+   * 
    * @returns
    */
   public static async fromProvider(l2Provider: Provider) {
@@ -142,9 +184,22 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Get a transaction request for an eth deposit
-   * @param params
-   * @returns
+   * Get a transaction request for an ETH deposit
+   * 
+   * @param params Parameters to create a transaction to transfer Ether from L1 to L2 (deposit)
+   * 
+   * @returns Transaction request object (i.e., an object prepared to be sent to the blockchain as a transaction)
+   * 
+   * @example
+   * This function can be called to create a transaction for an L1 to L2 message to deposit ETH.
+   * ```
+   * const depositParams = {
+   *  ...
+   * };
+   * const ethBridger = EthBridger.fromProvider(l2Provider);
+   * const depositRequestObject = ethBridger.getDepositRequest(depositParams);
+   * ...
+   * ```
    */
   public async getDepositRequest(
     params: EthDepositRequestParams
@@ -173,8 +228,21 @@ export class EthBridger extends AssetBridger<
 
   /**
    * Deposit ETH from L1 onto L2
-   * @param params
-   * @returns
+   * 
+   * @param params - Parameters or a Transaction request object to transfer Ether from L1 to L2 (deposit)
+   * 
+   * @returns Response object for a transaction sent to an L1 contract
+   * 
+   * @example
+   * This function can be called to create a transaction for an L1 to L2 message to deposit ETH.
+   * ```
+   * const depositParams = {
+   *  ...
+   * };
+   * const ethBridger = EthBridger.fromProvider(l2Provider);
+   * const depositTransaction = ethBridger.deposit(depositParams);
+   * ...
+   * ```
    */
   public async deposit(
     params: EthDepositParams | L1ToL2TxReqAndSigner
@@ -198,8 +266,21 @@ export class EthBridger extends AssetBridger<
 
   /**
    * Get a transaction request for an ETH deposit to a different L2 address using Retryables
-   * @param params
-   * @returns
+   * 
+   * @param params Parameters to create a transaction to transfer Ether from L1 to a different L2 address using Retryables
+   * 
+   * @returns Transaction request object (i.e., an object prepared to be sent to the blockchain as a transaction)
+   * 
+   * @example
+   * This function can be called to create a transaction for an L1 to L2 message to deposit ETH to a different address
+   * ```
+   * const depositParams = {
+   *  ...
+   * };
+   * const ethBridger = EthBridger.fromProvider(l2Provider);
+   * const depositRequestObject = ethBridger.getDepositToRequest(depositParams);
+   * ...
+   * ```
    */
   public async getDepositToRequest(
     params: EthDepositToRequestParams
@@ -225,8 +306,21 @@ export class EthBridger extends AssetBridger<
 
   /**
    * Deposit ETH from L1 onto a different L2 address
-   * @param params
-   * @returns
+   * 
+   * @param params - Parameters or a Transaction request object to transfer Ether from L1 to a different L2 address (deposit)
+   * 
+   * @returns Response object for a transaction sent to an L1 contract
+   * 
+   * @example
+   * This function can be called to create a transaction for an L1 to L2 message to deposit ETH to a different address.
+   * ```
+   * const depositParams = {
+   *  ...
+   * };
+   * const ethBridger = EthBridger.fromProvider(l2Provider);
+   * const depositTransaction = ethBridger.depositTo(depositParams);
+   * ...
+   * ```
    */
   public async depositTo(
     params:
