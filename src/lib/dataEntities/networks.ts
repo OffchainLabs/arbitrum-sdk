@@ -118,53 +118,6 @@ const mainnetETHBridge: EthBridge = {
   },
 }
 
-// L2 networks that are a parent chain to L3s.
-function getParentL2Networks() {
-  const parentL2Networks: { [id: string]: L2Network } = {}
-
-  for (const chainId in l2Networks) {
-    const network = l2Networks[chainId]
-
-    if (network.partnerChainIDs && network.partnerChainIDs.length > 0) {
-      parentL2Networks[chainId] = network
-    }
-  }
-
-  return parentL2Networks
-}
-
-export const l1Networks: L1Networks = {
-  1: {
-    chainID: 1,
-    name: 'Mainnet',
-    explorerUrl: 'https://etherscan.io',
-    partnerChainIDs: [42161, 42170],
-    blockTime: 14,
-    isCustom: false,
-    isArbitrum: false,
-  },
-  1338: {
-    chainID: 1338,
-    name: 'Hardhat_Mainnet_Fork',
-    explorerUrl: 'https://etherscan.io',
-    partnerChainIDs: [42161],
-    blockTime: 1,
-    isCustom: false,
-    isArbitrum: false,
-  },
-  5: {
-    blockTime: 15,
-    chainID: 5,
-    explorerUrl: 'https://goerli.etherscan.io',
-    isCustom: false,
-    name: 'Goerli',
-    partnerChainIDs: [421613],
-    isArbitrum: false,
-  },
-  // If L2 network is a parent chain to L3 network, it's part of the L1 list.
-  ...getParentL2Networks(),
-}
-
 export const l2Networks: L2Networks = {
   42161: {
     chainID: 42161,
@@ -272,6 +225,53 @@ export const l2Networks: L2Networks = {
   },
 }
 
+// L2 networks that are a parent chain to L3s.
+function getParentL2Networks(networks: L2Networks) {
+  const parentL2Networks: { [id: string]: L2Network } = {}
+
+  Object.keys(networks).map(chainId => {
+    const network = l2Networks[Number(chainId)]
+
+    if (network.partnerChainIDs && network.partnerChainIDs.length > 0) {
+      parentL2Networks[chainId] = network
+    }
+  })
+
+  return parentL2Networks
+}
+
+export const l1Networks: L1Networks = {
+  1: {
+    chainID: 1,
+    name: 'Mainnet',
+    explorerUrl: 'https://etherscan.io',
+    partnerChainIDs: [42161, 42170],
+    blockTime: 14,
+    isCustom: false,
+    isArbitrum: false,
+  },
+  1338: {
+    chainID: 1338,
+    name: 'Hardhat_Mainnet_Fork',
+    explorerUrl: 'https://etherscan.io',
+    partnerChainIDs: [42161],
+    blockTime: 1,
+    isCustom: false,
+    isArbitrum: false,
+  },
+  5: {
+    blockTime: 15,
+    chainID: 5,
+    explorerUrl: 'https://goerli.etherscan.io',
+    isCustom: false,
+    name: 'Goerli',
+    partnerChainIDs: [421613],
+    isArbitrum: false,
+  },
+  // If L2 network is a parent chain to L3 network, it's part of the L1 list.
+  ...getParentL2Networks(l2Networks),
+}
+
 const getNetwork = async (
   signerOrProviderOrChainID: SignerOrProvider | number,
   layer: 1 | 2
@@ -306,7 +306,11 @@ const getNetwork = async (
     )
   }
 
-  throw new ArbSdkError(`Unrecognized network ${chainID}.`)
+  throw new ArbSdkError(
+    `Unrecognized L${layer} network ${chainID}. L1 Networks: ${Object.keys(
+      l1Networks
+    )}`
+  )
 }
 
 export const getL1Network = (
