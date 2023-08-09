@@ -1,6 +1,6 @@
 # Arbitrum SDK
 
-Typescript library for client-side interactions with Arbitrum. Arbitrum SDK provides common helper functionaliy as well access to the underlying smart contract interfaces.
+Typescript library for client-side interactions with Arbitrum. Arbitrum SDK provides common helper functionality as well as access to the underlying smart contract interfaces.
 
 Below is an overview of the Arbitrum SDK functionality. See the [tutorials](https://github.com/OffchainLabs/arbitrum-tutorials) for further examples of how to use these classes.
 
@@ -71,7 +71,7 @@ const dataIsOnL1 = await l2TxnReceipt.isDataAvailable(l2Provider, l1Provider)
 
 ### Bridging assets
 
-Arbitrum SDK can be used to bridge assets to/from the rollup chain.The following asset bridgers are currently available:
+Arbitrum SDK can be used to bridge assets to/from the rollup chain. The following asset bridgers are currently available:
 
 - EthBridger
 - Erc20Bridger
@@ -106,7 +106,7 @@ As part of normal operation the Arbitrum sequencer will messages into the rollup
 
 1. First, make sure you have a Nitro node running. Check out the nitro repo, and run the following command `./test-node.bash --init --no-blockscout`
 
-2. After the node has started up (that could take upto 20-30 mins), run `yarn gen:network`.
+2. After the node has started up (that could take up to 20-30 mins), run `yarn gen:network`.
 
 3. Once done, finally run `yarn test:integration` to run the integration tests.
 
