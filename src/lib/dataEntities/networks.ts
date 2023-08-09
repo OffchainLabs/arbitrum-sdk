@@ -28,7 +28,7 @@ export interface L1Network extends Network {
 }
 
 export interface L2Network extends Network {
-  partnerChainIDs: number[]
+  partnerChainIDs?: number[]
   tokenBridge: TokenBridge
   ethBridge: EthBridge
   partnerChainID: number
@@ -37,7 +37,6 @@ export interface L2Network extends Network {
   retryableLifetimeSeconds: number
   nitroGenesisBlock: number
   nitroGenesisL1Block: number
-  isL3?: boolean
   /**
    * How long to wait (ms) for a deposit to arrive on l2 before timing out a request
    */
@@ -123,7 +122,7 @@ function getParentL2Networks() {
   for (const chainId in l2Networks) {
     const network = l2Networks[chainId]
 
-    if (network.partnerChainIDs.length > 0) {
+    if (network.partnerChainIDs && network.partnerChainIDs.length > 0) {
       parentL2Networks[chainId] = network
     }
   }
@@ -169,7 +168,6 @@ export const l2Networks: L2Networks = {
     name: 'Arbitrum One',
     explorerUrl: 'https://arbiscan.io',
     partnerChainID: 1,
-    partnerChainIDs: [],
     isArbitrum: true,
     tokenBridge: mainnetTokenBridge,
     ethBridge: mainnetETHBridge,
@@ -230,7 +228,6 @@ export const l2Networks: L2Networks = {
   },
   42170: {
     chainID: 42170,
-    partnerChainIDs: [],
     confirmPeriodBlocks: 45818,
     ethBridge: {
       bridge: '0xc1ebd02f738644983b6c4b2d440b8e77dde276bd',
@@ -296,8 +293,8 @@ const getNetwork = async (
       return network
     }
 
-    // Any network that's a parent chain is a valid L1 network
-    if (network.partnerChainIDs.length > 0) {
+    // Any network that's a parent chain is valid
+    if (network.partnerChainIDs && network.partnerChainIDs.length > 0) {
       return network
     }
 
@@ -388,7 +385,10 @@ export const addCustomNetwork = ({
       `Network ${customL2Network.chainID}'s partner network, ${customL2Network.partnerChainID}, not recognized`
     )
 
-  if (!l1PartnerChain.partnerChainIDs.includes(customL2Network.chainID)) {
+  if (
+    l1PartnerChain.partnerChainIDs &&
+    !l1PartnerChain.partnerChainIDs.includes(customL2Network.chainID)
+  ) {
     l1PartnerChain.partnerChainIDs.push(customL2Network.chainID)
   }
 }
@@ -414,7 +414,6 @@ export const addDefaultLocalNetwork = (): {
 
   const defaultLocalL2Network: L2Network = {
     chainID: 412346,
-    partnerChainIDs: [],
     confirmPeriodBlocks: 20,
     ethBridge: {
       bridge: '0x2b360a9881f21c3d7aa0ea6ca0de2a3341d4ef3c',
