@@ -28,6 +28,9 @@ export interface L1Network extends Network {
 }
 
 export interface L2Network extends Network {
+  /**
+   * An array of chain IDs representing child chains that are associated with this L2Network.
+   */
   partnerChainIDs?: number[]
   tokenBridge: TokenBridge
   ethBridge: EthBridge
