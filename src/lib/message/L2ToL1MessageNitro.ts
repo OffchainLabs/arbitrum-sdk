@@ -240,7 +240,13 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
         }
       }
 
-      return result
+      if (typeof result === 'undefined') {
+        throw new Error(
+          `No L2 range found for L1 block: ${targetL1BlockNumber}`
+        )
+      }
+
+      return BigNumber.from(result)
     }
 
     // Binary search to find the ending Arbitrum block that corresponds to the L1 block number.
@@ -269,7 +275,13 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
         }
       }
 
-      return result
+      if (typeof result === 'undefined') {
+        throw new Error(
+          `No L2 range found for L1 block: ${targetL1BlockNumber}`
+        )
+      }
+
+      return BigNumber.from(result)
     }
 
     // Adjust the range to ensure it encompasses the target L1 block number.
@@ -298,7 +310,26 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     nodeNum: BigNumber,
     l2Provider: Provider
   ): Promise<ArbBlock> {
-    const node = await rollup.getNode(nodeNum)
+    let createdFromBlock, createdToBlock: BigNumber
+    const { createdAtBlock } = await rollup.getNode(nodeNum)
+
+    if ([42161, 421613].includes((await l2Provider.getNetwork()).chainId)) {
+      // save some rpc calls as we know these network does not support the new method yet
+      createdFromBlock = createdAtBlock
+      createdToBlock = createdAtBlock
+    } else {
+      try {
+        const l2BlockRange = await this.getBlockRangesForL1Block(
+          createdAtBlock.toNumber()
+        )
+        createdFromBlock = l2BlockRange[0]
+        createdToBlock = l2BlockRange[1]
+      } catch (e) {
+        // fallback to old method if the new method fails
+        createdFromBlock = createdAtBlock
+        createdToBlock = createdAtBlock
+      }
+    }
 
     // now get the block hash and sendroot for that node
     const eventFetcher = new EventFetcher(rollup.provider)
@@ -306,8 +337,8 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
       RollupUserLogic__factory,
       t => t.filters.NodeCreated(nodeNum),
       {
-        fromBlock: node.createdAtBlock.toNumber(),
-        toBlock: node.createdAtBlock.toNumber(),
+        fromBlock: createdFromBlock.toNumber(),
+        toBlock: createdToBlock.toNumber(),
         address: rollup.address,
       }
     )
