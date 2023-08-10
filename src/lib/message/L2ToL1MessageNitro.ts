@@ -216,7 +216,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
 
     // Binary search to find the starting Arbitrum block that corresponds to the L1 block number.
     async function getL2StartBlock() {
-      let res
+      let result
       let start = startArbBlock
       let end = endArbBlock
 
@@ -229,7 +229,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
         // If the midpoint matches the target, we've found a match.
         // Adjust the range to search for the first occurrence.
         if (l1Block === targetL1BlockNumber) {
-          res = mid
+          result = mid
           end = mid - 1
         } else if (l1Block < targetL1BlockNumber) {
           // If the L1 block number is less than the target, adjust the range to the upper half.
@@ -240,12 +240,12 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
         }
       }
 
-      return res
+      return result
     }
 
     // Binary search to find the ending Arbitrum block that corresponds to the L1 block number.
     async function getL2EndBlock() {
-      let res
+      let result
       let start = startArbBlock
       let end = endArbBlock
 
@@ -258,7 +258,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
         // If the midpoint matches the target, we've found a match.
         // Adjust the range to search for the last occurrence.
         if (l1Block === targetL1BlockNumber) {
-          res = mid
+          result = mid
           start = mid + 1
         } else if (l1Block < targetL1BlockNumber) {
           // If the L1 block number is less than the target, adjust the range to the upper half.
@@ -269,7 +269,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
         }
       }
 
-      return res
+      return result
     }
 
     // Adjust the range to ensure it encompasses the target L1 block number.
