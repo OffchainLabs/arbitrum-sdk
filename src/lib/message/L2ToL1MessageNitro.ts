@@ -272,7 +272,8 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
         Math.floor(startArbBlock - currentArbBlock * 0.05)
       )
       endArbBlock = Math.max(
-        1,
+        // Keep some room to work with in the range.
+        endArbBlock - startArbBlock,
         Math.floor(endArbBlock - currentArbBlock * 0.05)
       )
     }
