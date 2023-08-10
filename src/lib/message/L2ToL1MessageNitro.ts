@@ -269,9 +269,12 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
       // Lowering the range.
       startArbBlock = Math.max(
         1,
-        Math.floor(startArbBlock - startArbBlock * 0.95)
+        Math.floor(startArbBlock - currentArbBlock * 0.05)
       )
-      endArbBlock = Math.max(1, Math.floor(endArbBlock - endArbBlock * 0.95))
+      endArbBlock = Math.max(
+        1,
+        Math.floor(endArbBlock - currentArbBlock * 0.05)
+      )
     }
 
     return await Promise.all([getL2StartBlock(), getL2EndBlock()])
