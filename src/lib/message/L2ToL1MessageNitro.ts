@@ -199,6 +199,81 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     return l2Block
   }
 
+  private async getBlockRangesForL1Block(targetL1BlockNumber: number) {
+    const arbitrumProvider = new ArbitrumProvider(
+      this.l1Provider as JsonRpcProvider
+    )
+    const currentArbBlock = await arbitrumProvider.getBlockNumber()
+
+    // Starts checking near the current block.
+    // Makes the entire look up faster the closer we are to the current block.
+    let startArbBlock = Math.floor(currentArbBlock * 0.95)
+    let endArbBlock = currentArbBlock
+
+    async function getL1Block(forL2Block: number) {
+      const { l1BlockNumber } = await arbitrumProvider.getBlock(forL2Block)
+      return l1BlockNumber
+    }
+
+    async function getL2StartBlock() {
+      // Binary search for the start Arbitrum block.
+      let res
+      let start = startArbBlock
+      let end = endArbBlock
+
+      while (start <= end) {
+        const mid = start + Math.floor((end - start) / 2)
+        const l1Block = await getL1Block(mid)
+
+        if (l1Block === targetL1BlockNumber) {
+          res = mid
+          end = mid - 1
+        } else if (l1Block < targetL1BlockNumber) {
+          start = mid + 1
+        } else {
+          end = mid - 1
+        }
+      }
+
+      return res
+    }
+
+    async function getL2EndBlock() {
+      // Binary search for the end Arbitrum block.
+      let res
+      let start = startArbBlock
+      let end = endArbBlock
+
+      while (start <= end) {
+        const mid = start + Math.floor((end - start) / 2)
+        const l1Block = await getL1Block(mid)
+
+        if (l1Block === targetL1BlockNumber) {
+          res = mid
+          start = mid + 1
+        } else if (l1Block < targetL1BlockNumber) {
+          start = mid + 1
+        } else {
+          end = mid - 1
+        }
+      }
+
+      return res
+    }
+
+    while (
+      // Check if we've started with too high L2 block.
+      (await getL1Block(startArbBlock)) > targetL1BlockNumber &&
+      startArbBlock >= 1
+    ) {
+      // Lowering the range.
+      startArbBlock = Math.floor(startArbBlock * 0.95)
+      endArbBlock = Math.floor(endArbBlock * 0.95)
+    }
+
+    return await Promise.all([getL2StartBlock(), getL2EndBlock()])
+  }
+
   private async getBlockFromNodeNum(
     rollup: RollupUserLogic,
     nodeNum: BigNumber,
