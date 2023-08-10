@@ -310,14 +310,13 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     nodeNum: BigNumber,
     l2Provider: Provider
   ): Promise<ArbBlock> {
-    let createdFromBlock, createdToBlock: BigNumber
     const { createdAtBlock } = await rollup.getNode(nodeNum)
 
-    if ([42161, 421613].includes((await l2Provider.getNetwork()).chainId)) {
-      // save some rpc calls as we know these network does not support the new method yet
-      createdFromBlock = createdAtBlock
-      createdToBlock = createdAtBlock
-    } else {
+    let createdFromBlock = createdAtBlock
+    let createdToBlock = createdAtBlock
+
+    // if L2 network is an Orbit chain
+    if (![42161, 421613].includes((await l2Provider.getNetwork()).chainId)) {
       try {
         const l2BlockRange = await this.getBlockRangesForL1Block(
           createdAtBlock.toNumber()
@@ -326,8 +325,6 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
         createdToBlock = l2BlockRange[1]
       } catch (e) {
         // fallback to old method if the new method fails
-        createdFromBlock = createdAtBlock
-        createdToBlock = createdAtBlock
       }
     }
 
