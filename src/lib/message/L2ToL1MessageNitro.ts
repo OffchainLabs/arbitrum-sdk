@@ -205,8 +205,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     )
     const currentArbBlock = await arbitrumProvider.getBlockNumber()
 
-    // Starts checking near the current block.
-    // Makes the entire look up faster the closer we are to the current block.
+    // Define the starting point to be closer to the current block for efficiency.
     let startArbBlock = Math.floor(currentArbBlock * 0.95)
     let endArbBlock = currentArbBlock
 
@@ -215,22 +214,28 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
       return l1BlockNumber
     }
 
+    // Binary search to find the starting Arbitrum block that corresponds to the L1 block number.
     async function getL2StartBlock() {
-      // Binary search for the start Arbitrum block.
       let res
       let start = startArbBlock
       let end = endArbBlock
 
       while (start <= end) {
+        // Calculate the midpoint of the current range.
         const mid = start + Math.floor((end - start) / 2)
+
         const l1Block = await getL1Block(mid)
 
+        // If the midpoint matches the target, we've found a match.
+        // Adjust the range to search for the first occurrence.
         if (l1Block === targetL1BlockNumber) {
           res = mid
           end = mid - 1
         } else if (l1Block < targetL1BlockNumber) {
+          // If the L1 block number is less than the target, adjust the range to the upper half.
           start = mid + 1
         } else {
+          // If the L1 block number is greater than the target, adjust the range to the lower half.
           end = mid - 1
         }
       }
@@ -238,22 +243,28 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
       return res
     }
 
+    // Binary search to find the ending Arbitrum block that corresponds to the L1 block number.
     async function getL2EndBlock() {
-      // Binary search for the end Arbitrum block.
       let res
       let start = startArbBlock
       let end = endArbBlock
 
-      while (start <= end) {
+      while (start < end) {
+        // Calculate the midpoint of the current range.
         const mid = start + Math.floor((end - start) / 2)
+
         const l1Block = await getL1Block(mid)
 
+        // If the midpoint matches the target, we've found a match.
+        // Adjust the range to search for the last occurrence.
         if (l1Block === targetL1BlockNumber) {
           res = mid
           start = mid + 1
         } else if (l1Block < targetL1BlockNumber) {
+          // If the L1 block number is less than the target, adjust the range to the upper half.
           start = mid + 1
         } else {
+          // If the L1 block number is greater than the target, adjust the range to the lower half.
           end = mid - 1
         }
       }
@@ -261,8 +272,9 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
       return res
     }
 
+    // Adjust the range to ensure it encompasses the target L1 block number.
+    // We lower the range in increments if the start of the range exceeds the L1 block number.
     while (
-      // Check if we've started with too high L2 block.
       (await getL1Block(startArbBlock)) > targetL1BlockNumber &&
       startArbBlock >= 1
     ) {
