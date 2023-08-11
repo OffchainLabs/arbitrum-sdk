@@ -291,7 +291,7 @@ function getChains(_l2Networks: L2Networks) {
 
     if (network.partnerChainIDs && network.partnerChainIDs.length === 0) {
       // If we get an empty array, it means it's a valid Chain.
-      // We don't store it to keep it consistent with the Chain type.
+      // We remove the property to make it consistent with the Chain type.
       delete network.partnerChainIDs
     }
 
