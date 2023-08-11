@@ -325,6 +325,8 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
         createdToBlock = l2BlockRange[1]
       } catch (e) {
         // fallback to old method if the new method fails
+        createdFromBlock = createdAtBlock
+        createdToBlock = createdAtBlock
       }
     }
 
