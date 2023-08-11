@@ -45,9 +45,7 @@ export interface L2Network extends Network {
 
 export type ParentChain =
   | L1Network
-  | (L2Network & {
-      partnerChainIDs: number[]
-    })
+  | (L2Network & Required<Pick<L2Network, 'partnerChainIDs'>>)
 
 export type Chain = Omit<L2Network, 'partnerChainIDs'>
 
