@@ -504,7 +504,12 @@ export const addCustomNetwork = ({
     }
   }
 
-  l2Networks[customL2Network.chainID] = customL2Network
+  if (!isAddedToL2Networks) {
+    l2Networks[customL2Network.chainID] = customL2Network
+  }
+  if (!isAddedToChains) {
+    chains[customL2Network.chainID] = customL2Network
+  }
 }
 
 /**
