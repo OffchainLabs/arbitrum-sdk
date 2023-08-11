@@ -132,6 +132,36 @@ const mainnetETHBridge: EthBridge = {
   },
 }
 
+export const l1Networks: L1Networks = {
+  1: {
+    chainID: 1,
+    name: 'Mainnet',
+    explorerUrl: 'https://etherscan.io',
+    partnerChainIDs: [42161, 42170],
+    blockTime: 14,
+    isCustom: false,
+    isArbitrum: false,
+  },
+  1338: {
+    chainID: 1338,
+    name: 'Hardhat_Mainnet_Fork',
+    explorerUrl: 'https://etherscan.io',
+    partnerChainIDs: [42161],
+    blockTime: 1,
+    isCustom: false,
+    isArbitrum: false,
+  },
+  5: {
+    blockTime: 15,
+    chainID: 5,
+    explorerUrl: 'https://goerli.etherscan.io',
+    isCustom: false,
+    name: 'Goerli',
+    partnerChainIDs: [421613],
+    isArbitrum: false,
+  },
+}
+
 export const l2Networks: L2Networks = {
   42161: {
     chainID: 42161,
@@ -273,36 +303,6 @@ function getChains(_l2Networks: L2Networks) {
   })
 
   return _chains
-}
-
-export const l1Networks: L1Networks = {
-  1: {
-    chainID: 1,
-    name: 'Mainnet',
-    explorerUrl: 'https://etherscan.io',
-    partnerChainIDs: [42161, 42170],
-    blockTime: 14,
-    isCustom: false,
-    isArbitrum: false,
-  },
-  1338: {
-    chainID: 1338,
-    name: 'Hardhat_Mainnet_Fork',
-    explorerUrl: 'https://etherscan.io',
-    partnerChainIDs: [42161],
-    blockTime: 1,
-    isCustom: false,
-    isArbitrum: false,
-  },
-  5: {
-    blockTime: 15,
-    chainID: 5,
-    explorerUrl: 'https://goerli.etherscan.io',
-    isCustom: false,
-    name: 'Goerli',
-    partnerChainIDs: [421613],
-    isArbitrum: false,
-  },
 }
 
 export const parentChains: ParentChains = {
