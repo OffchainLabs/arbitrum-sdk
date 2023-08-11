@@ -47,7 +47,7 @@ export type ParentChain =
   | L1Network
   | (L2Network & Required<Pick<L2Network, 'partnerChainIDs'>>)
 
-export type Chain = Omit<L2Network, 'partnerChainIDs'>
+export type Chain = L2Network
 
 export interface Network {
   chainID: number
@@ -183,9 +183,6 @@ export const l2Networks: L2Networks = {
   },
   421613: {
     chainID: 421613,
-    partnerChainIDs: [
-      // Xai Goerli goes here
-    ],
     confirmPeriodBlocks: 20,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     ethBridge: {
@@ -282,33 +279,12 @@ function getL2ParentChains(_l2Networks: L2Networks) {
   return _parentChains
 }
 
-// L2 or Orbit chains that are not a parent chain to other Orbit chains.
-function getChains(_l2Networks: L2Networks) {
-  const _chains: Chains = {}
-
-  Object.keys(_l2Networks).map(chainId => {
-    const network = l2Networks[Number(chainId)]
-
-    if (network.partnerChainIDs && network.partnerChainIDs.length === 0) {
-      // If we get an empty array, it means it's a valid Chain.
-      // We remove the property to make it consistent with the Chain type.
-      delete network.partnerChainIDs
-    }
-
-    if (!network.partnerChainIDs) {
-      _chains[chainId] = network
-    }
-  })
-
-  return _chains
-}
-
 export const parentChains: ParentChains = {
   ...l1Networks,
   ...getL2ParentChains(l2Networks),
 }
 
-export const chains: Chains = getChains(l2Networks)
+export const chains: Chains = l2Networks
 
 const getNetwork = async (
   signerOrProviderOrChainID: SignerOrProvider | number,
