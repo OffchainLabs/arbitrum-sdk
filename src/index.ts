@@ -47,8 +47,12 @@ export {
   L2Networks,
   L1Network,
   L2Network,
+  Chain,
+  ParentChain,
   getL1Network,
   getL2Network,
+  getChain,
+  getParentChain,
   addCustomNetwork,
   addDefaultLocalNetwork,
 } from './lib/dataEntities/networks'
