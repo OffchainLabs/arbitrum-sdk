@@ -462,11 +462,12 @@ export const addCustomNetwork = ({
     throw new ArbSdkError(`Network ${customL2Network.chainID} already included`)
   }
 
-  const l1PartnerChain = parentChains[customL2Network.partnerChainID]
+  const hasParentChain =
+    typeof parentChains[customL2Network.partnerChainID] !== 'undefined'
   const isCustomL1ParentToCustomL2 =
     customL2Network.partnerChainID === customL1Network?.chainID
 
-  if (typeof l1PartnerChain === 'undefined' && !isCustomL1ParentToCustomL2) {
+  if (!hasParentChain && !isCustomL1ParentToCustomL2) {
     throw new ArbSdkError(
       `Network ${customL2Network.chainID}'s partner network, ${customL2Network.partnerChainID}, not recognized.`
     )
