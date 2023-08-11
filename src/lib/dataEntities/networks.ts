@@ -437,9 +437,9 @@ export const getEthBridgeInformation = async (
 /**
  * Adds custom L1 and L2 networks.
  * @param customL1Network Custom L1 network that can also be an Arbitrum chain.
- * If `isArbitrum` is set to `true`, this will be added to `l1Networks` and can be fetched with `getL1Network`.
- * If `isArbitrum` is set to `false`, this will be added to `parentChains` and can be fetched with `getParentChain`.
- * @param customL2Network Custom L2 network, Arbitrum chain.
+ * If `isArbitrum` is set to `false`, this will be added to both `l1Networks` and `parentChains`, and can be fetched with either `getL1Network` or `getParentChain`.
+ * If `isArbitrum` is set to `true`, this will be only added to `parentChains`, and can be fetched with `getParentChain`.
+ * @param customL2Network Custom L2 network, an Arbitrum chain.
  */
 export const addCustomNetwork = ({
   customL1Network,
@@ -486,12 +486,19 @@ export const addCustomNetwork = ({
       }
       parentChains[customL1Network.chainID] = customL1Network
     } else {
-      if (isAddedToL1Networks) {
+      if (isAddedToL1Networks && isAddedToParentChains) {
         throw new ArbSdkError(
-          `Network ${customL1Network.chainID} is already registered as an L1Network. If you intended to add it as a ParentChain, please set 'isArbitrum' to true.`
+          `Network ${customL1Network.chainID} is already registered as an L1Network and a ParentChain.`
         )
       }
-      l1Networks[customL1Network.chainID] = customL1Network
+      // Make sure not to do any 'return' and 'throw' statements after adding an L1 network.
+      // Otherwise it could lead to an edge case where L1 is added but L2 throws.
+      if (!isAddedToL1Networks) {
+        l1Networks[customL1Network.chainID] = customL1Network
+      }
+      if (!isAddedToParentChains) {
+        parentChains[customL1Network.chainID] = customL1Network
+      }
     }
   }
 
