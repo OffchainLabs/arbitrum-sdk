@@ -28,14 +28,11 @@ export interface L1Network extends Network {
 }
 
 export interface L2Network extends Network {
-  /**
-   * An array of chain IDs representing child chains that are associated with this L2Network.
-   */
   partnerChainIDs?: number[]
   tokenBridge: TokenBridge
   ethBridge: EthBridge
   partnerChainID: number
-  isArbitrum: boolean
+  isArbitrum: true
   confirmPeriodBlocks: number
   retryableLifetimeSeconds: number
   nitroGenesisBlock: number
@@ -45,6 +42,15 @@ export interface L2Network extends Network {
    */
   depositTimeout: number
 }
+
+export type ParentChain =
+  | L1Network
+  | (L2Network & {
+      partnerChainIDs: number[]
+    })
+
+export type Chain = Omit<L2Network, 'partnerChainIDs'>
+
 export interface Network {
   chainID: number
   name: string
@@ -82,11 +88,19 @@ export interface EthBridge {
 }
 
 export interface L1Networks {
-  [id: string]: L1Network | L2Network
+  [id: string]: L1Network
 }
 
 export interface L2Networks {
   [id: string]: L2Network
+}
+
+export interface ParentChains {
+  [id: string]: ParentChain
+}
+
+export interface Chains {
+  [id: string]: Chain
 }
 
 const mainnetTokenBridge: TokenBridge = {
@@ -225,19 +239,40 @@ export const l2Networks: L2Networks = {
   },
 }
 
-// L2 networks that are a parent chain to L3s.
-function getParentL2Networks(networks: L2Networks) {
-  const parentL2Networks: { [id: string]: L2Network } = {}
+// L2 networks that are a parent chain to Orbit chains.
+function getL2ParentChains(_l2Networks: L2Networks) {
+  const _parentChains: ParentChains = {}
 
-  Object.keys(networks).map(chainId => {
+  Object.keys(_l2Networks).map(chainId => {
     const network = l2Networks[Number(chainId)]
 
     if (network.partnerChainIDs && network.partnerChainIDs.length > 0) {
-      parentL2Networks[chainId] = network
+      _parentChains[chainId] = network as ParentChain
     }
   })
 
-  return parentL2Networks
+  return _parentChains
+}
+
+// L2 or Orbit chains that are not a parent chain to other Orbit chains.
+function getChains(_l2Networks: L2Networks) {
+  const _chains: Chains = {}
+
+  Object.keys(_l2Networks).map(chainId => {
+    const network = l2Networks[Number(chainId)]
+
+    if (network.partnerChainIDs && network.partnerChainIDs.length === 0) {
+      // If we get an empty array, it means it's a valid Chain.
+      // We don't store it to keep it consistent with the Chain type.
+      delete network.partnerChainIDs
+    }
+
+    if (!network.partnerChainIDs) {
+      _chains[chainId] = network
+    }
+  })
+
+  return _chains
 }
 
 export const l1Networks: L1Networks = {
@@ -268,9 +303,14 @@ export const l1Networks: L1Networks = {
     partnerChainIDs: [421613],
     isArbitrum: false,
   },
-  // If L2 network is a parent chain to L3 network, it's part of the L1 list.
-  ...getParentL2Networks(l2Networks),
 }
+
+export const parentChains: ParentChains = {
+  ...l1Networks,
+  ...getL2ParentChains(l2Networks),
+}
+
+export const chains: Chains = getChains(l2Networks)
 
 const getNetwork = async (
   signerOrProviderOrChainID: SignerOrProvider | number,
@@ -292,25 +332,10 @@ const getNetwork = async (
   const network = networks[chainID]
 
   if (network) {
-    if (layer === 2) {
-      return network
-    }
-
-    // Any network that's a parent chain is valid
-    if (network.partnerChainIDs && network.partnerChainIDs.length > 0) {
-      return network
-    }
-
-    throw new ArbSdkError(
-      `Expected 'partnerChainIDs' to include at least one L2 network. Got empty for network ${chainID}.`
-    )
+    return network
   }
 
-  throw new ArbSdkError(
-    `Unrecognized L${layer} network ${chainID}. L1 Networks: ${Object.keys(
-      l1Networks
-    )}`
-  )
+  throw new ArbSdkError(`Unrecognized network ${chainID}`)
 }
 
 export const getL1Network = (
@@ -322,6 +347,64 @@ export const getL2Network = (
   signerOrProviderOrChainID: SignerOrProvider | number
 ): Promise<L2Network> => {
   return getNetwork(signerOrProviderOrChainID, 2) as Promise<L2Network>
+}
+
+/**
+ * Returns a chain that is associated with at least one child chain
+ * @param signerOrProviderOrChainID
+ * @returns Chain that is associated with at least one child chain
+ */
+export const getParentChain = async (
+  signerOrProviderOrChainID: SignerOrProvider | number
+): Promise<ParentChain> => {
+  const chainID = await (async () => {
+    if (typeof signerOrProviderOrChainID === 'number') {
+      return signerOrProviderOrChainID
+    }
+    const provider = SignerProviderUtils.getProviderOrThrow(
+      signerOrProviderOrChainID
+    )
+
+    const { chainId } = await provider.getNetwork()
+    return chainId
+  })()
+
+  const chain = parentChains[chainID]
+
+  if (chain) {
+    return chain
+  }
+
+  throw new ArbSdkError(`Unrecognized parent chain ${chainID}`)
+}
+
+/**
+ * Returns a chain that is associated with a parent chain
+ * @param signerOrProviderOrChainID
+ * @returns Chain that is associated with a parent chain
+ */
+export const getChain = async (
+  signerOrProviderOrChainID: SignerOrProvider | number
+): Promise<Chain> => {
+  const chainID = await (async () => {
+    if (typeof signerOrProviderOrChainID === 'number') {
+      return signerOrProviderOrChainID
+    }
+    const provider = SignerProviderUtils.getProviderOrThrow(
+      signerOrProviderOrChainID
+    )
+
+    const { chainId } = await provider.getNetwork()
+    return chainId
+  })()
+
+  const chain = chains[chainID]
+
+  if (chain) {
+    return chain
+  }
+
+  throw new ArbSdkError(`Unrecognized chain ${chainID}`)
 }
 
 /**
