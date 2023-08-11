@@ -434,49 +434,68 @@ export const getEthBridgeInformation = async (
   }
 }
 
+/**
+ * Adds custom L1 and L2 networks.
+ * @param customL1Network Custom L1 network that can also be an Arbitrum chain.
+ * If `isArbitrum` is set to `true`, this will be added to `l1Networks` and can be fetched with `getL1Network`.
+ * If `isArbitrum` is set to `false`, this will be added to `parentChains` and can be fetched with `getParentChain`.
+ * @param customL2Network Custom L2 network, Arbitrum chain.
+ */
 export const addCustomNetwork = ({
   customL1Network,
   customL2Network,
 }: {
-  customL1Network?: L1Network
-  customL2Network: L2Network
+  customL1Network?: ParentChain
+  customL2Network: Chain
 }): void => {
+  if (!customL2Network.isCustom) {
+    throw new ArbSdkError(
+      `Custom network ${customL2Network.chainID} must have isCustom flag set to true.`
+    )
+  }
+
+  const isAddedToL2Networks = Boolean(l2Networks[customL2Network.chainID])
+  const isAddedToChains = Boolean(chains[customL2Network.chainID])
+
+  if (isAddedToL2Networks && isAddedToChains) {
+    throw new ArbSdkError(`Network ${customL2Network.chainID} already included`)
+  }
+
+  const l1PartnerChain = parentChains[customL2Network.partnerChainID]
+  const isCustomL1ParentToCustomL2 =
+    customL2Network.partnerChainID === customL1Network?.chainID
+
+  if (typeof l1PartnerChain === 'undefined' && !isCustomL1ParentToCustomL2) {
+    throw new ArbSdkError(
+      `Network ${customL2Network.chainID}'s partner network, ${customL2Network.partnerChainID}, not recognized.`
+    )
+  }
+
   if (customL1Network) {
-    if (l1Networks[customL1Network.chainID]) {
-      throw new ArbSdkError(
-        `Network ${customL1Network.chainID} already included`
-      )
-    } else if (!customL1Network.isCustom) {
-      throw new ArbSdkError(
-        `Custom network ${customL1Network.chainID} must have isCustom flag set to true`
-      )
+    const isAddedToL1Networks =
+      typeof l1Networks[customL1Network.chainID] !== 'undefined'
+    const isAddedToParentChains =
+      typeof parentChains[customL1Network.chainID] !== 'undefined'
+    const { isArbitrum } = customL1Network
+
+    if (isArbitrum) {
+      if (isAddedToParentChains) {
+        throw new ArbSdkError(
+          `Network ${customL1Network.chainID} is already registered as a ParentChain. If you intended to add it as an L1Network, please set 'isArbitrum' to false.`
+        )
+      }
+      parentChains[customL1Network.chainID] = customL1Network
     } else {
+      if (isAddedToL1Networks) {
+        throw new ArbSdkError(
+          `Network ${customL1Network.chainID} is already registered as an L1Network. If you intended to add it as a ParentChain, please set 'isArbitrum' to true.`
+        )
+      }
       l1Networks[customL1Network.chainID] = customL1Network
     }
   }
 
-  if (l2Networks[customL2Network.chainID])
-    throw new ArbSdkError(`Network ${customL2Network.chainID} already included`)
-  else if (!customL2Network.isCustom) {
-    throw new ArbSdkError(
-      `Custom network ${customL2Network.chainID} must have isCustom flag set to true`
-    )
-  }
-
   l2Networks[customL2Network.chainID] = customL2Network
-
-  const l1PartnerChain = l1Networks[customL2Network.partnerChainID]
-  if (!l1PartnerChain)
-    throw new ArbSdkError(
-      `Network ${customL2Network.chainID}'s partner network, ${customL2Network.partnerChainID}, not recognized`
-    )
-
-  if (
-    l1PartnerChain.partnerChainIDs &&
-    !l1PartnerChain.partnerChainIDs.includes(customL2Network.chainID)
-  ) {
-    l1PartnerChain.partnerChainIDs.push(customL2Network.chainID)
-  }
 }
 
 /**
