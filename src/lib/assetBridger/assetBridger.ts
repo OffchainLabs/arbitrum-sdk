@@ -20,7 +20,7 @@ import { ArbSdkError } from '../dataEntities/errors'
 import { L1ContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'
 
-import { l1Networks, L1Network, L2Network } from '../dataEntities/networks'
+import { l1Networks, L2Network, ParentChain } from '../dataEntities/networks'
 import {
   SignerOrProvider,
   SignerProviderUtils,
@@ -30,7 +30,7 @@ import {
  * Base for bridging assets from l1 to l2 and back
  */
 export abstract class AssetBridger<DepositParams, WithdrawParams> {
-  public readonly l1Network: L1Network | L2Network
+  public readonly l1Network: ParentChain
 
   public constructor(public readonly l2Network: L2Network) {
     this.l1Network = l1Networks[l2Network.partnerChainID]

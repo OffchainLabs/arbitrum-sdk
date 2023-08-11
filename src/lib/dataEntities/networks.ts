@@ -551,5 +551,8 @@ export const addDefaultLocalNetwork = (): {
 export const isL1Network = (
   network: L1Network | L2Network
 ): network is L1Network => {
-  return (network as L1Network).partnerChainIDs.length > 0
+  if (!network.partnerChainIDs) {
+    return false
+  }
+  return network.partnerChainIDs.length > 0
 }
