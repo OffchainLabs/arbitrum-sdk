@@ -454,8 +454,9 @@ export const addCustomNetwork = ({
     )
   }
 
-  const isAddedToL2Networks = Boolean(l2Networks[customL2Network.chainID])
-  const isAddedToChains = Boolean(chains[customL2Network.chainID])
+  const isAddedToL2Networks =
+    typeof l2Networks[customL2Network.chainID] !== 'undefined'
+  const isAddedToChains = typeof chains[customL2Network.chainID] !== 'undefined'
 
   if (isAddedToL2Networks && isAddedToChains) {
     throw new ArbSdkError(`Network ${customL2Network.chainID} already included`)
