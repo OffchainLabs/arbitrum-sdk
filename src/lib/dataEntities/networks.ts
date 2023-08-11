@@ -329,13 +329,11 @@ const getNetwork = async (
   })()
 
   const networks = layer === 1 ? l1Networks : l2Networks
-  const network = networks[chainID]
-
-  if (network) {
-    return network
+  if (networks[chainID]) {
+    return networks[chainID]
+  } else {
+    throw new ArbSdkError(`Unrecognized network ${chainID}.`)
   }
-
-  throw new ArbSdkError(`Unrecognized network ${chainID}`)
 }
 
 export const getL1Network = (
