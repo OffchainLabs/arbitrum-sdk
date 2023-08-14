@@ -38,7 +38,7 @@ import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
-import { wait } from '../utils/lib'
+import { getBlockRangesForL1Block, wait } from '../utils/lib'
 import { getL2Network } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
 import { ArbitrumProvider } from '../utils/arbProvider'
@@ -199,112 +199,6 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     return l2Block
   }
 
-  private async getBlockRangesForL1Block(targetL1BlockNumber: number) {
-    const arbitrumProvider = new ArbitrumProvider(
-      this.l1Provider as JsonRpcProvider
-    )
-    const currentArbBlock = await arbitrumProvider.getBlockNumber()
-
-    // Define the starting point to be closer to the current block for efficiency.
-    let startArbBlock = Math.floor(currentArbBlock * 0.95)
-    let endArbBlock = currentArbBlock
-
-    async function getL1Block(forL2Block: number) {
-      const { l1BlockNumber } = await arbitrumProvider.getBlock(forL2Block)
-      return l1BlockNumber
-    }
-
-    // Binary search to find the starting Arbitrum block that corresponds to the L1 block number.
-    async function getL2StartBlock() {
-      let result
-      let start = startArbBlock
-      let end = endArbBlock
-
-      while (start <= end) {
-        // Calculate the midpoint of the current range.
-        const mid = start + Math.floor((end - start) / 2)
-
-        const l1Block = await getL1Block(mid)
-
-        // If the midpoint matches the target, we've found a match.
-        // Adjust the range to search for the first occurrence.
-        if (l1Block === targetL1BlockNumber) {
-          result = mid
-          end = mid - 1
-        } else if (l1Block < targetL1BlockNumber) {
-          // If the L1 block number is less than the target, adjust the range to the upper half.
-          start = mid + 1
-        } else {
-          // If the L1 block number is greater than the target, adjust the range to the lower half.
-          end = mid - 1
-        }
-      }
-
-      if (typeof result === 'undefined') {
-        throw new Error(
-          `No L2 range found for L1 block: ${targetL1BlockNumber}`
-        )
-      }
-
-      return BigNumber.from(result)
-    }
-
-    // Binary search to find the ending Arbitrum block that corresponds to the L1 block number.
-    async function getL2EndBlock() {
-      let result
-      let start = startArbBlock
-      let end = endArbBlock
-
-      while (start < end) {
-        // Calculate the midpoint of the current range.
-        const mid = start + Math.floor((end - start) / 2)
-
-        const l1Block = await getL1Block(mid)
-
-        // If the midpoint matches the target, we've found a match.
-        // Adjust the range to search for the last occurrence.
-        if (l1Block === targetL1BlockNumber) {
-          result = mid
-          start = mid + 1
-        } else if (l1Block < targetL1BlockNumber) {
-          // If the L1 block number is less than the target, adjust the range to the upper half.
-          start = mid + 1
-        } else {
-          // If the L1 block number is greater than the target, adjust the range to the lower half.
-          end = mid - 1
-        }
-      }
-
-      if (typeof result === 'undefined') {
-        throw new Error(
-          `No L2 range found for L1 block: ${targetL1BlockNumber}`
-        )
-      }
-
-      return BigNumber.from(result)
-    }
-
-    // Adjust the range to ensure it encompasses the target L1 block number.
-    // We lower the range in increments if the start of the range exceeds the L1 block number.
-    while (
-      (await getL1Block(startArbBlock)) > targetL1BlockNumber &&
-      startArbBlock >= 1
-    ) {
-      // Lowering the range.
-      startArbBlock = Math.max(
-        1,
-        Math.floor(startArbBlock - currentArbBlock * 0.05)
-      )
-      endArbBlock = Math.max(
-        // Keep some room to work with in the range.
-        endArbBlock - startArbBlock,
-        Math.floor(endArbBlock - currentArbBlock * 0.05)
-      )
-    }
-
-    return await Promise.all([getL2StartBlock(), getL2EndBlock()])
-  }
-
   private async getBlockFromNodeNum(
     rollup: RollupUserLogic,
     nodeNum: BigNumber,
@@ -322,9 +216,10 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     // if L2 network is an Orbit chain
     if (!isL2Arbitrum) {
       try {
-        const l2BlockRange = await this.getBlockRangesForL1Block(
-          createdAtBlock.toNumber()
-        )
+        const l2BlockRange = await getBlockRangesForL1Block({
+          targetL1BlockNumber: createdAtBlock.toNumber(),
+          provider: this.l1Provider as JsonRpcProvider,
+        })
         createdFromBlock = l2BlockRange[0]
         createdToBlock = l2BlockRange[1]
       } catch (e) {
