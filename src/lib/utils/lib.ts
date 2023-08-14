@@ -118,7 +118,7 @@ export const getBlockRangesForL1Block = async ({
     let start = startArbBlock
     let end = endArbBlock
 
-    while (start < end) {
+    while (start <= end) {
       // Calculate the midpoint of the current range.
       const mid = start + Math.floor((end - start) / 2)
 
