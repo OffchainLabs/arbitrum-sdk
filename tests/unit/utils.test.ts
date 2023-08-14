@@ -11,11 +11,13 @@ describe('Utils functions', () => {
 
     async function validateL2Blocks(blocks: BigNumber[]) {
       if (blocks.length !== 2) {
-        throw new Error()
+        throw new Error(
+          `Expected L2 block range to have the array length of 2, got ${blocks.length}.`
+        )
       }
 
       if (!blocks[0]._isBigNumber || !blocks[1]._isBigNumber) {
-        throw new Error()
+        throw new Error('Expected L2 block range values to be BigNumbers.')
       }
 
       const [startBlock, blockBeforeStartBlock, endBlock, blockAfterEndBlock] =
@@ -34,13 +36,13 @@ describe('Utils functions', () => {
       // Check if Arbitrum start block is the first block for this L1 block.
       expect(
         startBlockCondition,
-        `L2 block is not the first block in range for L1 block`
+        `L2 block is not the first block in range for L1 block.`
       ).to.be.true
 
       // Check if Arbitrum end block is the last block for this L1 block.
       expect(
         endBlockCondition,
-        `L2 block is not the last block in range for L1 block`
+        `L2 block is not the last block in range for L1 block.`
       ).to.be.true
     }
 
