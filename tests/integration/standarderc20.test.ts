@@ -21,7 +21,6 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import {
   fundL1,
-  fundL2,
   skipIfMainnet,
   depositToken,
   GatewayType,
