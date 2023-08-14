@@ -42,7 +42,7 @@ async function main() {
   })
 
   console.log('building @arbitrum/token-bridge-contracts')
-  const x = execSync(`${npmExec} run build --config hardhat-abigen.ts`, {
+  execSync(`${npmExec} run build --config hardhat-abigen.ts`, {
     cwd: tokenBridgePath,
   })
 
