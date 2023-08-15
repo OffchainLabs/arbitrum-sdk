@@ -38,7 +38,7 @@ import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
-import { wait } from '../utils/lib'
+import { getBlockRangesForL1Block, wait } from '../utils/lib'
 import { getL2Network } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
 import { ArbitrumProvider } from '../utils/arbProvider'
@@ -204,7 +204,30 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     nodeNum: BigNumber,
     l2Provider: Provider
   ): Promise<ArbBlock> {
-    const node = await rollup.getNode(nodeNum)
+    const { createdAtBlock } = await rollup.getNode(nodeNum)
+
+    let createdFromBlock = createdAtBlock
+    let createdToBlock = createdAtBlock
+
+    const isL2Arbitrum = [42161, 421613, 42170].includes(
+      (await l2Provider.getNetwork()).chainId
+    )
+
+    // if L2 network is an Orbit chain
+    if (!isL2Arbitrum) {
+      try {
+        const l2BlockRange = await getBlockRangesForL1Block({
+          targetL1BlockNumber: createdAtBlock.toNumber(),
+          provider: this.l1Provider as JsonRpcProvider,
+        })
+        createdFromBlock = l2BlockRange[0]
+        createdToBlock = l2BlockRange[1]
+      } catch (e) {
+        // fallback to old method if the new method fails
+        createdFromBlock = createdAtBlock
+        createdToBlock = createdAtBlock
+      }
+    }
 
     // now get the block hash and sendroot for that node
     const eventFetcher = new EventFetcher(rollup.provider)
@@ -212,8 +235,8 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
       RollupUserLogic__factory,
       t => t.filters.NodeCreated(nodeNum),
       {
-        fromBlock: node.createdAtBlock.toNumber(),
-        toBlock: node.createdAtBlock.toNumber(),
+        fromBlock: createdFromBlock.toNumber(),
+        toBlock: createdToBlock.toNumber(),
         address: rollup.address,
       }
     )
