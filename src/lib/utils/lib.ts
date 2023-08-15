@@ -4,6 +4,8 @@ import { TransactionReceipt, JsonRpcProvider } from '@ethersproject/providers'
 import { ArbSdkError } from '../dataEntities/errors'
 import { ArbitrumProvider } from './arbProvider'
 import { l2Networks } from '../dataEntities/networks'
+import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
+import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 
 export const wait = (ms: number): Promise<void> =>
   new Promise(res => setTimeout(res, ms))
@@ -56,6 +58,15 @@ export const getTransactionReceipt = async (
 export const isDefined = <T>(val: T | null | undefined): val is T =>
   typeof val !== 'undefined' && val !== null
 
+export const isArbitrumChain = async (provider: Provider): Promise<boolean> => {
+  try {
+    await ArbSys__factory.connect(ARB_SYS_ADDRESS, provider).arbOSVersion()
+  } catch (error) {
+    return false
+  }
+  return true
+}
+
 export const getBlockRangesForL1Block = async ({
   targetL1BlockNumber,
   provider,
@@ -63,6 +74,13 @@ export const getBlockRangesForL1Block = async ({
   targetL1BlockNumber: number
   provider: JsonRpcProvider
 }) => {
+  if (!isArbitrumChain(provider)) {
+    return [
+      BigNumber.from(targetL1BlockNumber),
+      BigNumber.from(targetL1BlockNumber),
+    ]
+  }
+
   const arbitrumProvider = new ArbitrumProvider(provider)
   const currentArbBlock = await arbitrumProvider.getBlockNumber()
 
