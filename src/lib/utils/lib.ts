@@ -63,7 +63,7 @@ export const getBlockRangesForL1Block = async ({
   targetL1BlockNumber: number
   provider: JsonRpcProvider
 }) => {
-  const arbitrumProvider = new ArbitrumProvider(provider as JsonRpcProvider)
+  const arbitrumProvider = new ArbitrumProvider(provider)
   const currentArbBlock = await arbitrumProvider.getBlockNumber()
 
   const arbitrumChainId = (await arbitrumProvider.getNetwork()).chainId
