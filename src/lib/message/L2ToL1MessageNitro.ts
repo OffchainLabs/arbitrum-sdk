@@ -38,7 +38,7 @@ import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
-import { getBlockRangesForL1Block, wait } from '../utils/lib'
+import { getBlockRangesForL1Block, isArbitrumChain, wait } from '../utils/lib'
 import { getL2Network } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
 import { ArbitrumProvider } from '../utils/arbProvider'
@@ -209,19 +209,20 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     let createdFromBlock = createdAtBlock
     let createdToBlock = createdAtBlock
 
-    const isL2Arbitrum = [42161, 421613, 42170].includes(
-      (await l2Provider.getNetwork()).chainId
-    )
-
     // if L2 network is an Orbit chain
-    if (!isL2Arbitrum) {
+    if (!isArbitrumChain(l2Provider)) {
       try {
         const l2BlockRange = await getBlockRangesForL1Block({
-          targetL1BlockNumber: createdAtBlock.toNumber(),
+          forL1Block: createdAtBlock.toNumber(),
           provider: this.l1Provider as JsonRpcProvider,
         })
-        createdFromBlock = l2BlockRange[0]
-        createdToBlock = l2BlockRange[1]
+        const startBlock = l2BlockRange[0].l2Block
+        const endBlock = l2BlockRange[1].l2Block
+        if (!startBlock || !endBlock) {
+          throw new Error()
+        }
+        createdFromBlock = BigNumber.from(startBlock)
+        createdToBlock = BigNumber.from(endBlock)
       } catch (e) {
         // fallback to old method if the new method fails
         createdFromBlock = createdAtBlock

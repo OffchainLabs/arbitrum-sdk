@@ -1,9 +1,10 @@
-import { BigNumber } from 'ethers'
 import { Provider } from '@ethersproject/abstract-provider'
 import { TransactionReceipt, JsonRpcProvider } from '@ethersproject/providers'
 import { ArbSdkError } from '../dataEntities/errors'
 import { ArbitrumProvider } from './arbProvider'
 import { l2Networks } from '../dataEntities/networks'
+import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
+import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 
 export const wait = (ms: number): Promise<void> =>
   new Promise(res => setTimeout(res, ms))
@@ -56,108 +57,118 @@ export const getTransactionReceipt = async (
 export const isDefined = <T>(val: T | null | undefined): val is T =>
   typeof val !== 'undefined' && val !== null
 
-export const getBlockRangesForL1Block = async ({
-  targetL1BlockNumber,
+export const isArbitrumChain = async (provider: Provider): Promise<boolean> => {
+  try {
+    await ArbSys__factory.connect(ARB_SYS_ADDRESS, provider).arbOSVersion()
+  } catch (error) {
+    return false
+  }
+  return true
+}
+
+/**
+ * This function performs a binary search to find the first L2 block that corresponds to a given L1 block number.
+ * The function returns a Promise that resolves to an object containing the L2 block number and the corresponding L1 block number.
+ *
+ * @param {JsonRpcProvider} provider - The L2 provider to use for the search.
+ * @param {number} forL1Block - The L1 block number to search for.
+ * @param {boolean} [allowGreater=false] - Whether to allow the search to go past the specified `forL1Block`.
+ * @param {number|string} [minL2Block='latest'] - The minimum L2 block number to start the search from. Can be a number or `'latest'`. `'latest'` means it will be close to the current block, but not exactly the current block.
+ * @param {number|string} [maxL2Block='latest'] - The maximum L2 block number to end the search at. Can be a `number` or `'latest'`. `'latest'` is the current block.
+ * @returns {Promise<{ l2Block: number | undefined; forL1Block: number | undefined }>} - A Promise that resolves to an object containing the L2 block number and the corresponding L1 block number.
+ */
+export async function getFirstBlockForL1Block({
   provider,
+  forL1Block,
+  allowGreater = false,
+  minL2Block = 'latest',
+  maxL2Block = 'latest',
 }: {
-  targetL1BlockNumber: number
   provider: JsonRpcProvider
-}) => {
-  const arbitrumProvider = new ArbitrumProvider(provider)
-  const currentArbBlock = await arbitrumProvider.getBlockNumber()
+  forL1Block: number
+  allowGreater?: boolean
+  minL2Block?: number | 'latest'
+  maxL2Block?: number | 'latest'
+}): Promise<{ l2Block: number | undefined; forL1Block: number | undefined }> {
+  if (!isArbitrumChain(provider)) {
+    throw new Error('Arbitrum provider is required.')
+  }
 
-  const arbitrumChainId = (await arbitrumProvider.getNetwork()).chainId
+  const arbProvider = new ArbitrumProvider(provider)
+  const currentArbBlock = await arbProvider.getBlockNumber()
+  const arbitrumChainId = (await arbProvider.getNetwork()).chainId
   const { nitroGenesisBlock } = l2Networks[arbitrumChainId]
-
-  // Define the starting point to be closer to the current block for efficiency.
-  let startArbBlock = Math.floor(currentArbBlock * 0.95)
-  let endArbBlock = currentArbBlock
 
   async function getL1Block(forL2Block: number) {
     const l2Block = Math.max(nitroGenesisBlock, forL2Block)
-    const { l1BlockNumber } = await arbitrumProvider.getBlock(l2Block)
+    const { l1BlockNumber } = await arbProvider.getBlock(l2Block)
     return l1BlockNumber
   }
 
-  // Binary search to find the starting Arbitrum block that corresponds to the L1 block number.
-  async function getL2StartBlock() {
-    let result
-    let start = startArbBlock
-    let end = endArbBlock
-
-    while (start <= end) {
-      // Calculate the midpoint of the current range.
-      const mid = start + Math.floor((end - start) / 2)
-
-      const l1Block = await getL1Block(mid)
-
-      // If the midpoint matches the target, we've found a match.
-      // Adjust the range to search for the first occurrence.
-      if (l1Block === targetL1BlockNumber) {
-        result = mid
-        end = mid - 1
-      } else if (l1Block < targetL1BlockNumber) {
-        // If the L1 block number is less than the target, adjust the range to the upper half.
-        start = mid + 1
-      } else {
-        // If the L1 block number is greater than the target, adjust the range to the lower half.
-        end = mid - 1
-      }
-    }
-
-    if (typeof result === 'undefined') {
-      throw new Error(`No L2 range found for L1 block: ${targetL1BlockNumber}`)
-    }
-
-    return BigNumber.from(result)
+  if (minL2Block === 'latest') {
+    minL2Block = Math.floor(currentArbBlock * 0.95)
   }
 
-  // Binary search to find the ending Arbitrum block that corresponds to the L1 block number.
-  async function getL2EndBlock() {
-    let result
-    let start = startArbBlock
-    let end = endArbBlock
-
-    while (start <= end) {
-      // Calculate the midpoint of the current range.
-      const mid = start + Math.floor((end - start) / 2)
-
-      const l1Block = await getL1Block(mid)
-
-      // If the midpoint matches the target, we've found a match.
-      // Adjust the range to search for the last occurrence.
-      if (l1Block === targetL1BlockNumber) {
-        result = mid
-        start = mid + 1
-      } else if (l1Block < targetL1BlockNumber) {
-        // If the L1 block number is less than the target, adjust the range to the upper half.
-        start = mid + 1
-      } else {
-        // If the L1 block number is greater than the target, adjust the range to the lower half.
-        end = mid - 1
-      }
-    }
-
-    if (typeof result === 'undefined') {
-      throw new Error(`No L2 range found for L1 block: ${targetL1BlockNumber}`)
-    }
-
-    return BigNumber.from(result)
+  if (maxL2Block === 'latest') {
+    maxL2Block = currentArbBlock
   }
+
+  let start = minL2Block
+  let end = maxL2Block
+
+  let lastValidL2Block
+  let resultForL1Block
 
   // Adjust the range to ensure it encompasses the target L1 block number.
   // We lower the range in increments if the start of the range exceeds the L1 block number.
-  while (
-    (await getL1Block(startArbBlock)) > targetL1BlockNumber &&
-    startArbBlock >= 1
-  ) {
+  while ((await getL1Block(start)) > forL1Block && start >= 1) {
     // Lowering the range.
-    endArbBlock = startArbBlock
-    startArbBlock = Math.max(
-      1,
-      Math.floor(startArbBlock - currentArbBlock * 0.2)
-    )
+    end = start
+    start = Math.max(1, Math.floor(start - currentArbBlock * 0.2))
   }
 
-  return await Promise.all([getL2StartBlock(), getL2EndBlock()])
+  while (start <= end) {
+    // Calculate the midpoint of the current range.
+    const mid = start + Math.floor((end - start) / 2)
+
+    const l1Block = await getL1Block(mid)
+
+    // If the midpoint matches the target, we've found a match.
+    // Adjust the range to search for the first or last occurrence.
+    if (l1Block === forL1Block) {
+      if (allowGreater) {
+        start = mid + 1
+      } else {
+        end = mid - 1
+      }
+    } else if (l1Block < forL1Block) {
+      start = mid + 1
+    } else {
+      end = mid - 1
+    }
+    // Stores last valid L2 block correlating to the current L1 block.
+    // We store the L1 block too and return them as a pair.
+    if (l1Block) {
+      if (
+        (allowGreater && l1Block >= forL1Block && !lastValidL2Block) ||
+        l1Block === forL1Block ||
+        (!allowGreater && l1Block === forL1Block)
+      ) {
+        lastValidL2Block = mid
+        resultForL1Block = l1Block
+      }
+    }
+  }
+
+  return { l2Block: lastValidL2Block, forL1Block: resultForL1Block }
+}
+
+export const getBlockRangesForL1Block = async (props: {
+  forL1Block: number
+  provider: JsonRpcProvider
+}) => {
+  return await Promise.all([
+    getFirstBlockForL1Block({ ...props, allowGreater: false }),
+    getFirstBlockForL1Block({ ...props, allowGreater: true }),
+  ])
 }
