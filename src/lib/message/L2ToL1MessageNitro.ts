@@ -209,7 +209,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     let createdFromBlock = createdAtBlock
     let createdToBlock = createdAtBlock
 
-    const isL2Arbitrum = [42161, 421613].includes(
+    const isL2Arbitrum = [42161, 421613, 42170].includes(
       (await l2Provider.getNetwork()).chainId
     )
 
