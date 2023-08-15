@@ -96,7 +96,7 @@ export const getBlockRangesForL1Block = async ({
       if (l1Block === targetL1BlockNumber) {
         result = mid
         end = mid - 1
-      } else if (!l1Block || l1Block < targetL1BlockNumber) {
+      } else if (l1Block < targetL1BlockNumber) {
         // If the L1 block number is less than the target, adjust the range to the upper half.
         start = mid + 1
       } else {
@@ -129,7 +129,7 @@ export const getBlockRangesForL1Block = async ({
       if (l1Block === targetL1BlockNumber) {
         result = mid
         start = mid + 1
-      } else if (!l1Block || l1Block < targetL1BlockNumber) {
+      } else if (l1Block < targetL1BlockNumber) {
         // If the L1 block number is less than the target, adjust the range to the upper half.
         start = mid + 1
       } else {
