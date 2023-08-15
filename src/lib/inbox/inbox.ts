@@ -36,7 +36,7 @@ import { ArbSdkError } from '../dataEntities/errors'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { InboxMessageKind } from '../dataEntities/message'
-import { isDefined } from '../utils/lib'
+import { getBlockRangesForL1Block, isDefined } from '../utils/lib'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
@@ -80,26 +80,31 @@ export class InboxTools {
    * @param blockTimestamp
    * @returns
    */
-  private async findFirstBlockBelow(
-    blockNumber: number,
+  private async findFirstL1BlockBelow(
+    targetL1BlockNumber: number,
     blockTimestamp: number
   ): Promise<Block> {
-    const block = await this.l1Provider.getBlock(blockNumber)
+    // TODO: getBlockRangesForL1Block require a JsonRPCProvider specifically
+    const [blockNumber] = await getBlockRangesForL1Block({
+      targetL1BlockNumber,
+      provider: this.l1Provider as any,
+    })
+    const block = await this.l1Provider.getBlock(blockNumber.toNumber())
     const diff = block.timestamp - blockTimestamp
     if (diff < 0) return block
 
     // we take a long average block time of 14s
     // and always move at least 10 blocks
     let diffBlocks = 10
-    if ((this.l1Network as L1Network).blockTime) {
-      diffBlocks = Math.max(
-        Math.ceil(diff / (this.l1Network as L1Network).blockTime),
-        10
-      )
+    // TODO: we want the L1 blocktime here, regardless of we are working on L2 or L3
+    //       until we populate this value (maybe as l1BlockTime) we default it to 12 seconds
+    const l1BlockTime = (this.l1Network as L1Network).blockTime ?? 12
+    if (l1BlockTime) {
+      diffBlocks = Math.max(Math.ceil(diff / l1BlockTime), 10)
     }
 
-    return await this.findFirstBlockBelow(
-      blockNumber - diffBlocks,
+    return await this.findFirstL1BlockBelow(
+      targetL1BlockNumber - diffBlocks,
       blockTimestamp
     )
   }
@@ -183,23 +188,23 @@ export class InboxTools {
       multicall.getCurrentBlockTimestampInput(),
     ]
 
-    const [maxTimeVariation, currentBlockNumber, currentBlockTimestamp] =
+    const [maxTimeVariation, currentL1BlockNumber, currentBlockTimestamp] =
       await multicall.multiCall(multicallInput, true)
 
-    const firstEligibleBlockNumber =
-      currentBlockNumber.toNumber() - maxTimeVariation.delayBlocks.toNumber()
+    const firstEligibleL1BlockNumber =
+      currentL1BlockNumber.toNumber() - maxTimeVariation.delayBlocks.toNumber()
     const firstEligibleTimestamp =
       currentBlockTimestamp.toNumber() -
       maxTimeVariation.delaySeconds.toNumber()
 
-    const firstEligibleBlock = await this.findFirstBlockBelow(
-      firstEligibleBlockNumber,
+    const firstEligibleL1Block = await this.findFirstL1BlockBelow(
+      firstEligibleL1BlockNumber,
       firstEligibleTimestamp
     )
 
     return {
-      endBlock: firstEligibleBlock.number,
-      startBlock: firstEligibleBlock.number - blockNumberRangeSize,
+      endBlock: firstEligibleL1Block.number,
+      startBlock: firstEligibleL1Block.number - blockNumberRangeSize,
     }
   }
 

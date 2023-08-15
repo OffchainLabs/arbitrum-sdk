@@ -73,7 +73,7 @@ export const getBlockRangesForL1Block = async ({
   provider,
 }: {
   targetL1BlockNumber: number
-  provider: Provider
+  provider: JsonRpcProvider
 }) => {
   if (!isArbitrumChain(provider)) {
     return [
