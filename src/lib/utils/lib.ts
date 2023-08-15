@@ -113,6 +113,10 @@ export async function getFirstBlockForL1Block({
     maxL2Block = currentArbBlock
   }
 
+  if (minL2Block >= maxL2Block) {
+    throw new Error(`'minL2Block' must be lower than 'maxL2Block'.`)
+  }
+
   let start = minL2Block
   let end = maxL2Block
 
