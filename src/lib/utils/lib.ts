@@ -123,8 +123,7 @@ export async function getFirstBlockForL1Block({
   // We lower the range in increments if the start of the range exceeds the L1 block number.
   while ((await getL1Block(start)) > forL1Block && start >= 1) {
     // Lowering the range.
-    end = start
-    start = Math.max(1, Math.floor(start - currentArbBlock * 0.2))
+    start = Math.max(1, Math.floor(start - currentArbBlock * 0.1))
   }
 
   while (start <= end) {
@@ -150,9 +149,11 @@ export async function getFirstBlockForL1Block({
     // We store the L1 block too and return them as a pair.
     if (l1Block) {
       if (
-        (allowGreater && l1Block >= forL1Block && !lastValidL2Block) ||
-        l1Block === forL1Block ||
-        (!allowGreater && l1Block === forL1Block)
+        // Fetch beyond the specified L1 block, but only if there have been no results for it.
+        (allowGreater &&
+          l1Block >= forL1Block &&
+          resultForL1Block !== forL1Block) ||
+        l1Block === forL1Block
       ) {
         lastValidL2Block = mid
         resultForL1Block = l1Block
