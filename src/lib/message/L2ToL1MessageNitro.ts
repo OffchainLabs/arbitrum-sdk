@@ -209,24 +209,18 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     let createdFromBlock = createdAtBlock
     let createdToBlock = createdAtBlock
 
-    const isL2Arbitrum = [42161, 421613, 42170].includes(
-      (await l2Provider.getNetwork()).chainId
-    )
-
     // if L2 network is an Orbit chain
-    if (!isL2Arbitrum) {
-      try {
-        const l2BlockRange = await getBlockRangesForL1Block({
-          targetL1BlockNumber: createdAtBlock.toNumber(),
-          provider: this.l1Provider as JsonRpcProvider,
-        })
-        createdFromBlock = l2BlockRange[0]
-        createdToBlock = l2BlockRange[1]
-      } catch (e) {
-        // fallback to old method if the new method fails
-        createdFromBlock = createdAtBlock
-        createdToBlock = createdAtBlock
-      }
+    try {
+      const blockRange = await getBlockRangesForL1Block({
+        targetL1BlockNumber: createdAtBlock.toNumber(),
+        provider: this.l1Provider as JsonRpcProvider,
+      })
+      createdFromBlock = blockRange[0]
+      createdToBlock = blockRange[1]
+    } catch (e) {
+      // fallback to old method if the new method fails
+      createdFromBlock = createdAtBlock
+      createdToBlock = createdAtBlock
     }
 
     // now get the block hash and sendroot for that node
