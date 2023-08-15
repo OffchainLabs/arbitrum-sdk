@@ -15,10 +15,10 @@
     "@jridgewell/gen-mapping" "^0.1.0"
     "@jridgewell/trace-mapping" "^0.3.9"
 
-"@arbitrum/nitro-contracts@1.1.0-alpha.4":
-  version "1.1.0-alpha.4"
-  resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.1.0-alpha.4.tgz#4edc59ac9b8d6e57c73e80d21a702fa8ed6c43f7"
-  integrity sha512-gmMA0rAwCJx4bdDj4gqoDOq8uDyG3TnJrbwHktdPZzye0Q0e0xr1kTc6JtDEhxgEZiOoXYYVx0JnN3TU5aSwZQ==
+"@arbitrum/nitro-contracts@1.1.0-alpha.7":
+  version "1.1.0-alpha.7"
+  resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.1.0-alpha.7.tgz#5d215540bd2c820b79c9e3afd701238bb2adc9dd"
+  integrity sha512-H/wnkxg6ZVuc8wyiPSsL9T3vKE5iDhlB3TaBlAhtBFZPyyuBJBIlmDdk3PtgrzNqHrCrQloTT1kT5b9DXC21Aw==
   dependencies:
     "@openzeppelin/contracts" "4.5.0"
     "@openzeppelin/contracts-upgradeable" "4.5.2"
