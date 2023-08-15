@@ -142,6 +142,15 @@ export const l1Networks: L1Networks = {
     partnerChainIDs: [421613],
     isArbitrum: false,
   },
+  11155111: {
+    chainID: 11155111,
+    name: 'Sepolia',
+    explorerUrl: 'https://sepolia.etherscan.io',
+    partnerChainIDs: [421416],
+    blockTime: 15,
+    isCustom: false,
+    isArbitrum: false,
+  },
 }
 
 export const l2Networks: L2Networks = {
@@ -245,6 +254,42 @@ export const l2Networks: L2Networks = {
      * (Total timeout: 30 minutes)
      */
     depositTimeout: 1800000,
+  },
+  421416: {
+    chainID: 421416,
+    confirmPeriodBlocks: 20,
+    ethBridge: {
+      bridge: '0x3f24803B4a16b61d3Fc122E4728aEF2Ef93DeBd8',
+      inbox: '0xA92Ed990585e4F8656E2aC0E33cA8FDe5473CB92',
+      outbox: '0x9AABB8145880dFf3071C1A62681E19E2D2E1141B',
+      rollup: '0x13C75Ec6EEBd45837C53D3A91561D88C296fC5A5',
+      sequencerInbox: '0xf763BdeAbA8aDD268A0A88F74231118e05b4A872',
+    },
+    explorerUrl: 'https://sepolia-explorer.arbitrum.io',
+    isArbitrum: true,
+    isCustom: false,
+    name: 'Arbitrum Sepolia',
+    partnerChainID: 11155111,
+    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
+    tokenBridge: {
+      l1CustomGateway: '0x2063a7def7614347896c880C0F04788De18A8dEb',
+      l1ERC20Gateway: '0x185ff5e33c4df31C715B386916A49fc2f80fFe4c',
+      l1GatewayRouter: '0xB64c7f1A186a785fcfF594498f29Ea295853aF05',
+      l1MultiCall: '0xe39Ab88f8A4777030A534146A9Ca3B52bd5D43A3',
+      l1ProxyAdmin: '0x14b5426db177CE59864a90F70635a1a7945e396E',
+      l1Weth: '0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9',
+      l1WethGateway: '0xe8aCdc820107210d76F55fcBc5Ad0149EedbD61D',
+      l2CustomGateway: '0x8b6990830cF135318f75182487A4D7698549C717',
+      l2ERC20Gateway: '0x2eC7Bc552CE8E51f098325D2FcF0d3b9d3d2A9a2',
+      l2GatewayRouter: '0xE5B9d8d42d656d1DcB8065A6c012FE3780246041',
+      l2Multicall: '0x108B25170319f38DbED14cA9716C54E5D1FF4623',
+      l2ProxyAdmin: '0xeC377B42712608B0356CC54Da81B2be1A4982bAb',
+      l2Weth: '0xe39Ab88f8A4777030A534146A9Ca3B52bd5D43A3',
+      l2WethGateway: '0xf9F2e89c8347BD96742Cc07095dee490e64301d6',
+    },
+    nitroGenesisBlock: 0,
+    nitroGenesisL1Block: 0,
+    depositTimeout: 3960000,
   },
 }
 
