@@ -175,6 +175,10 @@ export class InboxTools {
             returnData
           )[0],
       },
+      // getBlockNumberInput return block.number if its a Multicall2, or arbBlockNumber if its ArbMulticall2
+      // we expect l1multicall is set to a Multicall2 contract on the parent chain even if its an Arbiturm chain
+      // so we always get block.number from here, which is the L1 block number
+      // TODO: validate by checking if multicall.getL1BlockNumber() is callable
       multicall.getBlockNumberInput(),
       multicall.getCurrentBlockTimestampInput(),
     ]

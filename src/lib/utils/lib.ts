@@ -59,6 +59,7 @@ export const isDefined = <T>(val: T | null | undefined): val is T =>
   typeof val !== 'undefined' && val !== null
 
 export const isArbitrumChain = async (provider: Provider): Promise<boolean> => {
+  // TODO: cache the result?
   try {
     await ArbSys__factory.connect(ARB_SYS_ADDRESS, provider).arbOSVersion()
   } catch (error) {
@@ -72,7 +73,7 @@ export const getBlockRangesForL1Block = async ({
   provider,
 }: {
   targetL1BlockNumber: number
-  provider: JsonRpcProvider
+  provider: Provider
 }) => {
   if (!isArbitrumChain(provider)) {
     return [
