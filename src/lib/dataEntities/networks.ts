@@ -248,12 +248,12 @@ export const l2Networks: L2Networks = {
     },
     nitroGenesisBlock: 0,
     nitroGenesisL1Block: 0,
-    depositTimeout: 1800000,
     /**
      * Finalisation on mainnet can be up to 2 epochs = 64 blocks on mainnet
      * We add 10 minutes for the system to create and redeem the ticket, plus some extra buffer of time
      * (Total timeout: 30 minutes)
      */
+    depositTimeout: 1800000,
   },
   421614: {
     chainID: 421614,
