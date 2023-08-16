@@ -180,22 +180,15 @@ export const getBlockRangesForL1Block = async (props: {
     }),
   ])
 
-  // No end range found.
-  if (!result[1]) {
-    return result
+  if (!result[0]) {
+    // If there's no start of the range, there won't be the end either.
+    return [undefined, undefined]
   }
 
-  const arbProvider = new ArbitrumProvider(props.provider)
-  // Subtract 1 to get the possible end block number for the range.
-  // We still need to check its validity.
-  const maybeEndBlockNumber = result[1] - 1
-  const maybeEndBlock = await arbProvider.getBlock(maybeEndBlockNumber)
-
-  // No end range found.
-  if (maybeEndBlock.l1BlockNumber !== props.forL1Block) {
-    return [result[0], undefined]
+  if (result[0] && result[1]) {
+    // If both results are defined, we can assume that the previous L2 block for the end of the range will be for 'forL1Block'.
+    return [result[0], result[1] - 1]
   }
 
-  // Valid end block.
-  return [result[0], maybeEndBlockNumber]
+  return result
 }
