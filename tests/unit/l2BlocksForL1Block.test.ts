@@ -113,7 +113,6 @@ describe('L2 blocks lookup for an L1 block', () => {
         provider: arbProvider,
         forL1Block: 17926533,
         allowGreater: false,
-        // Expected result: 121907680. Narrows down the range to speed up the search.
         minL2Block: 121800000,
         maxL2Block: 122000000,
       }),
