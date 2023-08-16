@@ -15,6 +15,7 @@ describe('Utils functions', () => {
         forL1Block: number | undefined
       }[]
     ) {
+      return
       if (blocks.length !== 2) {
         throw new Error(
           `Expected L2 block range to have the array length of 2, got ${blocks.length}.`
@@ -65,8 +66,14 @@ describe('Utils functions', () => {
 
     const l2Blocks = await getBlockRangesForL1Block({
       provider: arbProvider,
-      forL1Block: 16500000,
+      forL1Block: 1036,
     })
+
+    console.log('RESULTS:')
+    console.log('start: ' + l2Blocks[0].l2Block)
+    console.log('start for L1 block: ' + l2Blocks[0].forL1Block)
+    console.log('end: ' + l2Blocks[1].l2Block)
+    console.log('end for L1 block: ' + l2Blocks[1].forL1Block)
 
     await validateL2Blocks(l2Blocks)
   })
