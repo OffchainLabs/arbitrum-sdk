@@ -153,8 +153,7 @@ export async function getFirstBlockForL1Block({
       end = mid - 1
     }
 
-    // Stores last valid L2 block correlating to the current L1 block.
-    // We store the L1 block too and return them as a pair.
+    // Stores last valid L2 block corresponding to the current, or greater, L1 block.
     if (l1Block) {
       if (l1Block === forL1Block) {
         resultForTargetBlock = mid
