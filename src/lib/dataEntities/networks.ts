@@ -212,7 +212,7 @@ export const l2Networks: L2Networks = {
      * Low validator participation on goerli means that it can take a long time to finalise
      * Wait 10 epochs there on goerli = 320 blocks. Each block is 12 seconds.
      */
-    depositTimeout: 1800000,
+    depositTimeout: 3960000,
   },
   42170: {
     chainID: 42170,
@@ -248,12 +248,12 @@ export const l2Networks: L2Networks = {
     },
     nitroGenesisBlock: 0,
     nitroGenesisL1Block: 0,
+    depositTimeout: 1800000,
     /**
      * Finalisation on mainnet can be up to 2 epochs = 64 blocks on mainnet
      * We add 10 minutes for the system to create and redeem the ticket, plus some extra buffer of time
      * (Total timeout: 30 minutes)
      */
-    depositTimeout: 3960000,
   },
   421614: {
     chainID: 421614,
