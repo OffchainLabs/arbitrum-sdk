@@ -90,8 +90,9 @@ export async function getFirstBlockForL1Block({
   minL2Block?: number
   maxL2Block?: number | 'latest'
 }): Promise<number | undefined> {
-  if (!isArbitrumChain(provider)) {
-    throw new Error('Arbitrum provider is required.')
+  if (!(await isArbitrumChain(provider))) {
+    // Provider is L1.
+    return forL1Block
   }
 
   const arbProvider = new ArbitrumProvider(provider)

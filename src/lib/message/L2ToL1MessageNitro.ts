@@ -209,8 +209,8 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     let createdFromBlock = createdAtBlock
     let createdToBlock = createdAtBlock
 
-    // if L2 network is an Orbit chain
-    if (!isArbitrumChain(l2Provider)) {
+    // If L1 is Arbitrum, then L2 is an Orbit chain.
+    if (await isArbitrumChain(this.l1Provider)) {
       try {
         const l2BlockRange = await getBlockRangesForL1Block({
           forL1Block: createdAtBlock.toNumber(),
