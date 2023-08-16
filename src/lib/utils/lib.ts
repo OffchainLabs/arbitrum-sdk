@@ -137,7 +137,7 @@ export async function getFirstBlockForL1Block({
     const l1Block = await getL1Block(mid)
 
     // If the midpoint matches the target, we've found a match.
-    // Adjust the range to search for the first or last occurrence.
+    // Adjust the range to search for the first.
     if (l1Block === forL1Block) {
       end = mid - 1
     } else if (l1Block < forL1Block) {
