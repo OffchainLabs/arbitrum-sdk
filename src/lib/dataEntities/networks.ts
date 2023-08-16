@@ -146,8 +146,8 @@ export const l1Networks: L1Networks = {
     chainID: 11155111,
     name: 'Sepolia',
     explorerUrl: 'https://sepolia.etherscan.io',
-    partnerChainIDs: [421416],
-    blockTime: 15,
+    partnerChainIDs: [421614],
+    blockTime: 12,
     isCustom: false,
     isArbitrum: false,
   },
@@ -212,7 +212,7 @@ export const l2Networks: L2Networks = {
      * Low validator participation on goerli means that it can take a long time to finalise
      * Wait 10 epochs there on goerli = 320 blocks. Each block is 12 seconds.
      */
-    depositTimeout: 3960000,
+    depositTimeout: 1800000,
   },
   42170: {
     chainID: 42170,
@@ -255,8 +255,8 @@ export const l2Networks: L2Networks = {
      */
     depositTimeout: 1800000,
   },
-  421416: {
-    chainID: 421416,
+  421614: {
+    chainID: 421614,
     confirmPeriodBlocks: 20,
     ethBridge: {
       bridge: '0x3f24803B4a16b61d3Fc122E4728aEF2Ef93DeBd8',
