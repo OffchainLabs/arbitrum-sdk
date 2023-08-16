@@ -68,14 +68,14 @@ export const isArbitrumChain = async (provider: Provider): Promise<boolean> => {
 
 /**
  * This function performs a binary search to find the first L2 block that corresponds to a given L1 block number.
- * The function returns a Promise that resolves to an object containing the L2 block number and the corresponding L1 block number.
+ * The function returns a Promise that resolves to a number if a block is found, or undefined otherwise.
  *
  * @param {JsonRpcProvider} provider - The L2 provider to use for the search.
  * @param {number} forL1Block - The L1 block number to search for.
  * @param {boolean} [allowGreater=false] - Whether to allow the search to go past the specified `forL1Block`.
  * @param {number|string} minL2Block - The minimum L2 block number to start the search from. Cannot be below the network's `nitroGenesisBlock`.
  * @param {number|string} [maxL2Block='latest'] - The maximum L2 block number to end the search at. Can be a `number` or `'latest'`. `'latest'` is the current block.
- * @returns {Promise<{ l2Block: number | undefined; forL1Block: number | undefined }>} - A Promise that resolves to an object containing the L2 block number and the corresponding L1 block number.
+ * @returns {Promise<number | undefined>} - A Promise that resolves to a number if a block is found, or undefined otherwise.
  */
 export async function getFirstBlockForL1Block({
   provider,
