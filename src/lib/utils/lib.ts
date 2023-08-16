@@ -149,16 +149,17 @@ export async function getFirstBlockForL1Block({
     } else {
       end = mid - 1
     }
+
     // Stores last valid L2 block correlating to the current L1 block.
     // We store the L1 block too and return them as a pair.
     if (l1Block) {
-      if (
-        // Fetch beyond the specified L1 block, but only if there have been no results for it.
-        (allowGreater &&
-          l1Block >= forL1Block &&
-          resultForL1Block !== forL1Block) ||
-        l1Block === forL1Block
-      ) {
+      const shouldStoreLesser =
+        !allowGreater && l1Block < forL1Block && resultForL1Block !== forL1Block
+
+      const shouldStoreGreater =
+        allowGreater && l1Block > forL1Block && resultForL1Block !== forL1Block
+
+      if (l1Block === forL1Block || shouldStoreLesser || shouldStoreGreater) {
         lastValidL2Block = mid
         resultForL1Block = l1Block
       }
