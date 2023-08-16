@@ -9,40 +9,23 @@ describe('Utils functions', () => {
     const provider = new JsonRpcProvider('https://arb1.arbitrum.io/rpc')
     const arbProvider = new ArbitrumProvider(provider)
 
-    async function validateL2Blocks(
-      blocks: {
-        l2Block: number | undefined
-        forL1Block: number | undefined
-      }[]
-    ) {
+    async function validateL2Blocks(blocks: (number | undefined)[]) {
       if (blocks.length !== 2) {
         throw new Error(
           `Expected L2 block range to have the array length of 2, got ${blocks.length}.`
         )
       }
 
-      if (
-        blocks.some(
-          block =>
-            typeof block.l2Block !== 'number' ||
-            typeof block.forL1Block !== 'number'
-        )
-      ) {
-        throw new Error('Expected all L2 block range values to be numbers.')
-      }
-
-      if (blocks[0].forL1Block !== blocks[1].forL1Block) {
-        throw new Error(
-          `Expected the range to be for the same L1 block, got: ${blocks[0].forL1Block} and ${blocks[1].forL1Block}.`
-        )
+      if (typeof blocks[0] !== 'number' || typeof blocks[1] !== 'number') {
+        throw new Error('Expected both blocks to be numbers.')
       }
 
       const [startBlock, blockBeforeStartBlock, endBlock, blockAfterEndBlock] =
         await Promise.all([
-          arbProvider.getBlock(Number(blocks[0].l2Block)),
-          arbProvider.getBlock(Number(blocks[0].l2Block) - 1),
-          arbProvider.getBlock(Number(blocks[1].l2Block)),
-          arbProvider.getBlock(Number(blocks[1].l2Block) + 1),
+          arbProvider.getBlock(blocks[0]),
+          arbProvider.getBlock(blocks[0] - 1),
+          arbProvider.getBlock(blocks[1]),
+          arbProvider.getBlock(blocks[1] + 1),
         ]).then(result =>
           result.map(block => BigNumber.from(block.l1BlockNumber))
         )

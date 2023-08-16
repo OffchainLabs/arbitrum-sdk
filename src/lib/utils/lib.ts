@@ -73,7 +73,7 @@ export const isArbitrumChain = async (provider: Provider): Promise<boolean> => {
  * @param {JsonRpcProvider} provider - The L2 provider to use for the search.
  * @param {number} forL1Block - The L1 block number to search for.
  * @param {boolean} [allowGreater=false] - Whether to allow the search to go past the specified `forL1Block`.
- * @param {number|string} [minL2Block='latest'] - The minimum L2 block number to start the search from. Can be a number or `'latest'`. `'latest'` means it will be close to the current block, but not exactly the current block.
+ * @param {number|string} minL2Block - The minimum L2 block number to start the search from. Cannot be below the network's `nitroGenesisBlock`.
  * @param {number|string} [maxL2Block='latest'] - The maximum L2 block number to end the search at. Can be a `number` or `'latest'`. `'latest'` is the current block.
  * @returns {Promise<{ l2Block: number | undefined; forL1Block: number | undefined }>} - A Promise that resolves to an object containing the L2 block number and the corresponding L1 block number.
  */
@@ -81,15 +81,15 @@ export async function getFirstBlockForL1Block({
   provider,
   forL1Block,
   allowGreater = false,
-  minL2Block = 'latest',
+  minL2Block,
   maxL2Block = 'latest',
 }: {
   provider: JsonRpcProvider
   forL1Block: number
   allowGreater?: boolean
-  minL2Block?: number | 'latest'
+  minL2Block?: number
   maxL2Block?: number | 'latest'
-}): Promise<{ l2Block: number | undefined; forL1Block: number | undefined }> {
+}): Promise<number | undefined> {
   if (!isArbitrumChain(provider)) {
     throw new Error('Arbitrum provider is required.')
   }
@@ -100,13 +100,12 @@ export async function getFirstBlockForL1Block({
   const { nitroGenesisBlock } = l2Networks[arbitrumChainId]
 
   async function getL1Block(forL2Block: number) {
-    const l2Block = Math.max(nitroGenesisBlock, forL2Block)
-    const { l1BlockNumber } = await arbProvider.getBlock(l2Block)
+    const { l1BlockNumber } = await arbProvider.getBlock(forL2Block)
     return l1BlockNumber
   }
 
-  if (minL2Block === 'latest') {
-    minL2Block = Math.floor(currentArbBlock * 0.95)
+  if (!minL2Block) {
+    minL2Block = nitroGenesisBlock
   }
 
   if (maxL2Block === 'latest') {
@@ -114,14 +113,22 @@ export async function getFirstBlockForL1Block({
   }
 
   if (minL2Block >= maxL2Block) {
-    throw new Error(`'minL2Block' must be lower than 'maxL2Block'.`)
+    throw new Error(
+      `'minL2Block' (${minL2Block}) must be lower than 'maxL2Block' (${maxL2Block}).`
+    )
+  }
+
+  if (minL2Block < nitroGenesisBlock) {
+    throw new Error(
+      `'minL2Block' (${minL2Block}) cannot be below 'nitroGenesisBlock', which is ${nitroGenesisBlock} for the current network.`
+    )
   }
 
   let start = minL2Block
   let end = maxL2Block
 
-  let lastValidL2Block
-  let resultForL1Block
+  let resultForTargetBlock
+  let resultForGreaterBlock
 
   // Adjust the range to ensure it encompasses the target L1 block number.
   // We lower the range in increments if the start of the range exceeds the L1 block number.
@@ -139,11 +146,7 @@ export async function getFirstBlockForL1Block({
     // If the midpoint matches the target, we've found a match.
     // Adjust the range to search for the first or last occurrence.
     if (l1Block === forL1Block) {
-      if (allowGreater) {
-        start = mid + 1
-      } else {
-        end = mid - 1
-      }
+      end = mid - 1
     } else if (l1Block < forL1Block) {
       start = mid + 1
     } else {
@@ -153,29 +156,47 @@ export async function getFirstBlockForL1Block({
     // Stores last valid L2 block correlating to the current L1 block.
     // We store the L1 block too and return them as a pair.
     if (l1Block) {
-      // Store lesser or greater blocks only if there is no result for the block of interest.
-      const shouldStoreLesser =
-        !allowGreater && l1Block < forL1Block && resultForL1Block !== forL1Block
-
-      const shouldStoreGreater =
-        allowGreater && l1Block > forL1Block && resultForL1Block !== forL1Block
-
-      if (l1Block === forL1Block || shouldStoreLesser || shouldStoreGreater) {
-        lastValidL2Block = mid
-        resultForL1Block = l1Block
+      if (l1Block === forL1Block) {
+        resultForTargetBlock = mid
+      }
+      if (allowGreater && l1Block > forL1Block) {
+        resultForGreaterBlock = mid
       }
     }
   }
 
-  return { l2Block: lastValidL2Block, forL1Block: resultForL1Block }
+  return resultForTargetBlock ?? resultForGreaterBlock
 }
 
 export const getBlockRangesForL1Block = async (props: {
   forL1Block: number
   provider: JsonRpcProvider
 }) => {
-  return await Promise.all([
+  const result = await Promise.all([
     getFirstBlockForL1Block({ ...props, allowGreater: false }),
-    getFirstBlockForL1Block({ ...props, allowGreater: true }),
+    getFirstBlockForL1Block({
+      ...props,
+      forL1Block: props.forL1Block + 1,
+      allowGreater: true,
+    }),
   ])
+
+  // No end range found.
+  if (!result[1]) {
+    return result
+  }
+
+  const arbProvider = new ArbitrumProvider(props.provider)
+  // Subtract 1 to get the possible end block number for the range.
+  // We still need to check its validity.
+  const maybeEndBlockNumber = result[1] - 1
+  const maybeEndBlock = await arbProvider.getBlock(maybeEndBlockNumber)
+
+  // No end range found.
+  if (maybeEndBlock.l1BlockNumber !== props.forL1Block) {
+    return [result[0], undefined]
+  }
+
+  // Valid end block.
+  return [result[0], maybeEndBlockNumber]
 }

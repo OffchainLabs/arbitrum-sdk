@@ -216,8 +216,8 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
           forL1Block: createdAtBlock.toNumber(),
           provider: this.l1Provider as JsonRpcProvider,
         })
-        const startBlock = l2BlockRange[0].l2Block
-        const endBlock = l2BlockRange[1].l2Block
+        const startBlock = l2BlockRange[0]
+        const endBlock = l2BlockRange[1]
         if (!startBlock || !endBlock) {
           throw new Error()
         }
