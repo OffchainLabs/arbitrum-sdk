@@ -130,13 +130,6 @@ export async function getFirstBlockForL1Block({
   let resultForTargetBlock
   let resultForGreaterBlock
 
-  // Adjust the range to ensure it encompasses the target L1 block number.
-  // We lower the range in increments if the start of the range exceeds the L1 block number.
-  while ((await getL1Block(start)) > forL1Block && start >= 1) {
-    // Lowering the range.
-    start = Math.max(1, Math.floor(start - currentArbBlock * 0.1))
-  }
-
   while (start <= end) {
     // Calculate the midpoint of the current range.
     const mid = start + Math.floor((end - start) / 2)
