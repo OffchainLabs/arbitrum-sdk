@@ -153,6 +153,7 @@ export async function getFirstBlockForL1Block({
     // Stores last valid L2 block correlating to the current L1 block.
     // We store the L1 block too and return them as a pair.
     if (l1Block) {
+      // Store lesser or greater blocks only if there is no result for the block of interest.
       const shouldStoreLesser =
         !allowGreater && l1Block < forL1Block && resultForL1Block !== forL1Block
 
