@@ -66,6 +66,14 @@ export const isArbitrumChain = async (provider: Provider): Promise<boolean> => {
   return true
 }
 
+type GetFirstBlockForL1BlockProps = {
+  forL1Block: number
+  provider: JsonRpcProvider
+  allowGreater?: boolean
+  minL2Block?: number
+  maxL2Block?: number | 'latest'
+}
+
 /**
  * This function performs a binary search to find the first L2 block that corresponds to a given L1 block number.
  * The function returns a Promise that resolves to a number if a block is found, or undefined otherwise.
@@ -83,13 +91,7 @@ export async function getFirstBlockForL1Block({
   allowGreater = false,
   minL2Block,
   maxL2Block = 'latest',
-}: {
-  provider: JsonRpcProvider
-  forL1Block: number
-  allowGreater?: boolean
-  minL2Block?: number
-  maxL2Block?: number | 'latest'
-}): Promise<number | undefined> {
+}: GetFirstBlockForL1BlockProps): Promise<number | undefined> {
   if (!(await isArbitrumChain(provider))) {
     // Provider is L1.
     return forL1Block
@@ -161,10 +163,16 @@ export async function getFirstBlockForL1Block({
   return resultForTargetBlock ?? resultForGreaterBlock
 }
 
-export const getBlockRangesForL1Block = async (props: {
-  forL1Block: number
-  provider: JsonRpcProvider
-}) => {
+export const getBlockRangesForL1Block = async (
+  props: GetFirstBlockForL1BlockProps
+) => {
+  const arbProvider = new ArbitrumProvider(props.provider)
+  const currentL2Block = await arbProvider.getBlockNumber()
+
+  if (!props.maxL2Block || props.maxL2Block === 'latest') {
+    props.maxL2Block = currentL2Block
+  }
+
   const result = await Promise.all([
     getFirstBlockForL1Block({ ...props, allowGreater: false }),
     getFirstBlockForL1Block({
@@ -184,5 +192,5 @@ export const getBlockRangesForL1Block = async (props: {
     return [result[0], result[1] - 1]
   }
 
-  return result
+  return [result[0], props.maxL2Block]
 }
