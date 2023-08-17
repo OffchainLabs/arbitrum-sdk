@@ -33,9 +33,8 @@
     // Used only in hardhat, so only in dev. Even then we dont use remote requests.
     "GHSA-5r9g-qh6m-jxff",
     // https://github.com/advisories/GHSA-j8xg-fqg3-53r7
-    // vulnerable to Regular Expression Denial of Service
-    // from: eslint>optionator>word-wrap
-    // word-wrap in eslint, we are on the latest major version, safe to ignore
+    // word-wrap vulnerable to Regular Expression Denial of Service 
+    // Used only in eslint, so only in dev.
     "GHSA-j8xg-fqg3-53r7",
 
     // Open Zepplin
