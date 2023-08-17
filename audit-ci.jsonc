@@ -32,6 +32,11 @@
     // Nodejs ‘undici’ Vulnerable to CRLF
     // Used only in hardhat, so only in dev. Even then we dont use remote requests.
     "GHSA-5r9g-qh6m-jxff",
+    // https://github.com/advisories/GHSA-j8xg-fqg3-53r7
+    // vulnerable to Regular Expression Denial of Service
+    // from: eslint>optionator>word-wrap
+    // word-wrap in eslint, we are on the latest major version, safe to ignore
+    "GHSA-j8xg-fqg3-53r7",
 
     // Open Zepplin
     ////////////
@@ -102,6 +107,13 @@
     // from: @arbitrum/nitro-contracts>hardhat>semver
     // from: arb-bridge-peripherals>arb-bridge-eth>hardhat>semver
     // Used only in dev.
-    "GHSA-c2qf-rxjj-qqgw"
+    "GHSA-c2qf-rxjj-qqgw",
+    // https://github.com/advisories/GHSA-g4vp-m682-qqmp
+    // contracts using ERC2771Context along with a custom trusted forwarder may see
+    // _msgSender return address(0) in calls that originate from the forwarder with calldata shorter than 20 bytes
+    // from: @arbitrum/nitro-contracts>@openzeppelin/contracts-upgradeable
+    // from @arbitrum/nitro-contracts>@openzeppelin/contracts
+    //
+    "GHSA-g4vp-m682-qqmp"
   ]
 }
