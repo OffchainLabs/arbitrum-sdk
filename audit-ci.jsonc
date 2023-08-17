@@ -33,7 +33,7 @@
     // Used only in hardhat, so only in dev. Even then we dont use remote requests.
     "GHSA-5r9g-qh6m-jxff",
     // https://github.com/advisories/GHSA-j8xg-fqg3-53r7
-    // word-wrap vulnerable to Regular Expression Denial of Service 
+    // word-wrap vulnerable to Regular Expression Denial of Service
     // Used only in eslint, so only in dev.
     "GHSA-j8xg-fqg3-53r7",
 
@@ -108,11 +108,10 @@
     // Used only in dev.
     "GHSA-c2qf-rxjj-qqgw",
     // https://github.com/advisories/GHSA-g4vp-m682-qqmp
-    // contracts using ERC2771Context along with a custom trusted forwarder may see
-    // _msgSender return address(0) in calls that originate from the forwarder with calldata shorter than 20 bytes
+    // OpenZeppelin Contracts vulnerable to Improper Escaping of Output
     // from: @arbitrum/nitro-contracts>@openzeppelin/contracts-upgradeable
     // from @arbitrum/nitro-contracts>@openzeppelin/contracts
-    //
+    // We don't use ERC2771Context
     "GHSA-g4vp-m682-qqmp"
   ]
 }
