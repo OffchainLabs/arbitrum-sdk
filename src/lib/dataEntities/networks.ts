@@ -268,7 +268,7 @@ export const l2Networks: L2Networks = {
     explorerUrl: 'https://sepolia-explorer.arbitrum.io',
     isArbitrum: true,
     isCustom: false,
-    name: 'Arbitrum Sepolia',
+    name: 'Arbitrum Rollup Sepolia Testnet',
     partnerChainID: 11155111,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     tokenBridge: {
