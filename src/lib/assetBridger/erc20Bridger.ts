@@ -297,7 +297,8 @@ export class Erc20Bridger extends AssetBridger<
     gatewayAddress: string,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     l1TokenAddress?: string,
-    fromAddress?: string
+    fromAddress?: string,
+    toAddress?: string
   ): Promise<(EventArgs<WithdrawalInitiatedEvent> & { txHash: string })[]> {
     await this.checkL2Network(l2Provider)
 
@@ -306,7 +307,11 @@ export class Erc20Bridger extends AssetBridger<
       await eventFetcher.getEvents(
         L2ArbitrumGateway__factory,
         contract =>
-          contract.filters.WithdrawalInitiated(null, fromAddress || null),
+          contract.filters.WithdrawalInitiated(
+            null, // l1Token
+            fromAddress || null, // _from
+            toAddress || null // _to
+          ),
         { ...filter, address: gatewayAddress }
       )
     ).map(a => ({ txHash: a.transactionHash, ...a.event }))
