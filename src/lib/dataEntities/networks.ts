@@ -366,14 +366,10 @@ export const getL2Network = (
   return getNetwork(signerOrProviderOrChainID, 2) as Promise<L2Network>
 }
 
-/**
- * Returns a chain that is associated with at least one child chain
- * @param signerOrProviderOrChainID
- * @returns Chain that is associated with at least one child chain
- */
-export const getParentChain = async (
-  signerOrProviderOrChainID: SignerOrProvider | number
-): Promise<ParentChain> => {
+const getParentChainOrChain = async (
+  signerOrProviderOrChainID: SignerOrProvider | number,
+  type: 'ParentChain' | 'Chain'
+) => {
   const chainID = await (async () => {
     if (typeof signerOrProviderOrChainID === 'number') {
       return signerOrProviderOrChainID
@@ -386,13 +382,28 @@ export const getParentChain = async (
     return chainId
   })()
 
-  const chain = parentChains[chainID]
+  const _chains = type === 'ParentChain' ? parentChains : chains
+  const chain = _chains[chainID]
 
   if (chain) {
     return chain
   }
 
-  throw new ArbSdkError(`Unrecognized parent chain ${chainID}`)
+  throw new ArbSdkError(`Unrecognized ${type} ${chainID}.`)
+}
+
+/**
+ * Returns a chain that is associated with at least one child chain
+ * @param signerOrProviderOrChainID
+ * @returns Chain that is associated with at least one child chain
+ */
+export const getParentChain = async (
+  signerOrProviderOrChainID: SignerOrProvider | number
+): Promise<ParentChain> => {
+  return getParentChainOrChain(
+    signerOrProviderOrChainID,
+    'ParentChain'
+  ) as Promise<ParentChain>
 }
 
 /**
@@ -403,25 +414,10 @@ export const getParentChain = async (
 export const getChain = async (
   signerOrProviderOrChainID: SignerOrProvider | number
 ): Promise<Chain> => {
-  const chainID = await (async () => {
-    if (typeof signerOrProviderOrChainID === 'number') {
-      return signerOrProviderOrChainID
-    }
-    const provider = SignerProviderUtils.getProviderOrThrow(
-      signerOrProviderOrChainID
-    )
-
-    const { chainId } = await provider.getNetwork()
-    return chainId
-  })()
-
-  const chain = chains[chainID]
-
-  if (chain) {
-    return chain
-  }
-
-  throw new ArbSdkError(`Unrecognized chain ${chainID}`)
+  return getParentChainOrChain(
+    signerOrProviderOrChainID,
+    'Chain'
+  ) as Promise<Chain>
 }
 
 /**
