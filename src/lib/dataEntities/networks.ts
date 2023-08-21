@@ -466,18 +466,18 @@ export const addCustomChain = ({
   if (customParentChain) {
     if (parentChains[customParentChain.chainID]) {
       throw new ArbSdkError(
-        `Parent chain ${customParentChain.chainID} already included`
+        `Parent chain ${customParentChain.chainID} already included.`
       )
     }
     if (!customParentChain.isCustom) {
       throw new ArbSdkError(
-        `Custom parent chain ${customParentChain.chainID} must have isCustom flag set to true`
+        `Custom parent chain ${customParentChain.chainID} must have isCustom flag set to true.`
       )
     }
   }
 
   if (chains[customChain.chainID]) {
-    throw new ArbSdkError(`Network ${customChain.chainID} already included`)
+    throw new ArbSdkError(`Network ${customChain.chainID} already included.`)
   }
   if (!customChain.isCustom) {
     throw new ArbSdkError(
