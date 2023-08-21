@@ -477,7 +477,7 @@ export const addCustomChain = ({
   }
 
   if (chains[customChain.chainID]) {
-    throw new ArbSdkError(`Network ${customChain.chainID} already included.`)
+    throw new ArbSdkError(`Chain ${customChain.chainID} already included.`)
   }
   if (!customChain.isCustom) {
     throw new ArbSdkError(
