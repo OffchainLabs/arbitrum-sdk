@@ -93,7 +93,7 @@ export class InboxTools {
     let diffBlocks = 10
     if ((this.l1Network as L1Network).blockTime) {
       diffBlocks = Math.max(
-        Math.ceil(diff / (this.l1Network as L1Network).blockTime),
+        Math.ceil(diff / (this.l1Network as L1Network).blockTime) ?? 12,
         10
       )
     }
