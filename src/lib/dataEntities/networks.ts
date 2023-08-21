@@ -329,7 +329,7 @@ export const parentChains: ParentChains = {
   ...getL2ParentChains(l2Networks),
 }
 
-export const chains: Chains = l2Networks
+export const chains: Chains = { ...l2Networks }
 
 const getNetwork = async (
   signerOrProviderOrChainID: SignerOrProvider | number,
