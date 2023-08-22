@@ -347,9 +347,14 @@ const getNetwork = async (
     return chainId
   })()
 
-  const networks = layer === 1 ? l1Networks : l2Networks
-  if (networks[chainID]) {
-    return networks[chainID]
+  let network
+  if (layer === 1) {
+    network = l1Networks[chainID]
+  } else {
+    network = l2Networks[chainID] || chains[chainID]
+  }
+  if (network) {
+    return network
   } else {
     throw new ArbSdkError(`Unrecognized network ${chainID}.`)
   }
@@ -363,7 +368,13 @@ export const getL1Network = (
 export const getL2Network = (
   signerOrProviderOrChainID: SignerOrProvider | number
 ): Promise<L2Network> => {
-  return getNetwork(signerOrProviderOrChainID, 2) as Promise<L2Network>
+  let l2Network
+  try {
+    l2Network = getNetwork(signerOrProviderOrChainID, 2) as Promise<L2Network>
+  } catch {
+    l2Network = getChain(signerOrProviderOrChainID) as Promise<Chain>
+  }
+  return l2Network
 }
 
 const getParentChainOrChain = async (
@@ -485,10 +496,12 @@ export const addCustomChain = ({
     )
   }
 
-  let parentPartnerChain = parentChains[customChain.partnerChainID]
+  let parentPartnerChain: ParentChain | undefined = {
+    ...parentChains[customChain.partnerChainID],
+  }
   if (
     !parentPartnerChain &&
-    customParentChain?.chainID === customChain.partnerChainID
+    Number(customParentChain?.chainID) === Number(customChain.partnerChainID)
   ) {
     // No existing ParentChain found as a partner to our customChain.
     // And the newly added ParentChain is a partner to our customChain.
@@ -505,6 +518,25 @@ export const addCustomChain = ({
     parentChains[customParentChain?.chainID] = customParentChain
   }
   chains[customChain.chainID] = customChain
+
+  // if parent chain doesn't exist, we need to add it from L2 Networks
+  if (!parentChains[customChain.partnerChainID]) {
+    parentChains[customChain.partnerChainID] = {
+      ...l2Networks[customChain.partnerChainID],
+      partnerChainIDs: [],
+    }
+  }
+
+  // add partner chain ID to the parent network if it doesn't exist
+  if (
+    !parentChains[customChain.partnerChainID].partnerChainIDs.includes(
+      customChain.chainID
+    )
+  ) {
+    parentChains[customChain.partnerChainID].partnerChainIDs.push(
+      customChain.chainID
+    )
+  }
 }
 
 /**
