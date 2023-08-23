@@ -188,13 +188,7 @@ export class Erc20Bridger extends AssetBridger<
    * @returns
    */
   public static async fromProvider(l2Provider: Provider) {
-    let l2Network
-    try {
-      l2Network = await getL2Network(l2Provider)
-    } catch (e) {
-      l2Network = await getChain(l2Provider)
-    }
-    return new Erc20Bridger(l2Network)
+    return new Erc20Bridger(await getL2Network(l2Provider))
   }
 
   /**

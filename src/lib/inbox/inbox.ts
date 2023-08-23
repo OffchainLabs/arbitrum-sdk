@@ -90,13 +90,7 @@ export class InboxTools {
 
     // we take a long average block time of 14s
     // and always move at least 10 blocks
-    let diffBlocks = 10
-    if ((this.l1Network as L1Network).blockTime) {
-      diffBlocks = Math.max(
-        Math.ceil(diff / (this.l1Network as L1Network).blockTime) ?? 12,
-        10
-      )
-    }
+    const diffBlocks = Math.max(Math.ceil(diff / this.l1Network.blockTime), 10)
 
     return await this.findFirstBlockBelow(
       blockNumber - diffBlocks,
