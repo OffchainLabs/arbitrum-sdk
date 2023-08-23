@@ -11,7 +11,7 @@ async function main() {
   const cwd = process.cwd()
 
   const nitroPath = getPackagePath('@arbitrum/nitro-contracts')
-  const peripheralsPath = getPackagePath('arb-bridge-peripherals')
+  const peripheralsPath = getPackagePath('@arbitrum/token-bridge-contracts')
 
   console.log('Compiling paths.')
 
@@ -27,13 +27,17 @@ async function main() {
   // https://yarnpkg.com/advanced/rulebook#packages-should-never-write-inside-their-own-folder-outside-of-postinstall
   // instead of writing in postinstall in each of those packages, we should target a local folder in sdk's postinstall
 
+  // copy the hardhat config to packages
+  execSync(`cp ${cwd}/hardhat-abigen.ts ${nitroPath}/hardhat-abigen.ts`)
+  execSync(`cp ${cwd}/hardhat-abigen.ts ${peripheralsPath}/hardhat-abigen.ts`)
+
   console.log('building nitro')
-  execSync(`${npmExec} run hardhat:prod compile`, {
+  execSync(`${npmExec} run build --config hardhat-abigen.ts`, {
     cwd: nitroPath,
   })
 
   console.log('building peripherals')
-  execSync(`${npmExec} run hardhat:prod compile`, {
+  execSync(`${npmExec} run build --config hardhat-abigen.ts`, {
     cwd: peripheralsPath,
   })
 
