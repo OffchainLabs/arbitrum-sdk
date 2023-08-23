@@ -27,7 +27,7 @@ module.exports = {
   },
   paths: {
     sources: './contracts',
-    artifacts: './build/contracts',
+    artifacts: './abigen-build/contracts',
   },
   spdxLicenseIdentifier: {
     overwrite: false,

@@ -27,6 +27,6 @@ module.exports = {
   },
   paths: {
     sources: './src',
-    artifacts: './build/contracts',
+    artifacts: './abigen-build/contracts',
   },
 }

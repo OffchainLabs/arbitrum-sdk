@@ -46,8 +46,8 @@ async function main() {
   console.log('Done compiling')
 
   const nitroFiles = glob(cwd, [
-    `${peripheralsPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
-    `${nitroPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
+    `${peripheralsPath}/abigen-build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
+    `${nitroPath}/abigen-build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
   ])
 
   // TODO: generate files into different subfolders (ie `/nitro/*`) to avoid overwrite of contracts with the same name
