@@ -48,22 +48,25 @@ export const config = {
 }
 
 function getDeploymentData(): string {
-  const dockerNames = [
-    'nitro_sequencer_1',
-    'nitro-sequencer-1',
-    'nitro-testnode-sequencer-1',
-    'nitro-testnode_sequencer_1',
-  ]
-  for (const dockerName of dockerNames) {
-    try {
-      return execSync(
-        'docker exec ' + dockerName + ' cat /config/deployment.json'
-      ).toString()
-    } catch {
-      // empty on purpose
-    }
-  }
-  throw new Error('nitro-testnode sequencer not found')
+  // const dockerNames = [
+  //   'nitro_sequencer_1',
+  //   'nitro-sequencer-1',
+  //   'nitro-testnode-sequencer-1',
+  //   'nitro-testnode_sequencer_1',
+  // ]
+  // for (const dockerName of dockerNames) {
+  //   try {
+  //     return execSync(
+  //       'docker exec ' + dockerName + ' cat /config/deployment.json'
+  //     ).toString()
+  //   } catch {
+  //     // empty on purpose
+  //   }
+  // }
+  // throw new Error('nitro-testnode sequencer not found')
+
+  // ArbSepolia Rollup Deployment
+  return '{"bridge":"0x38f918D0E9F1b721EDaA41302E399fa1B79333a9","inbox":"0xaAe29B0366299461418F5324a79Afc425BE5ae21","sequencer-inbox":"0x6c97864CE4bEf387dE0b3310A44230f7E3F1be0D","rollup":"0xd80810638dbDF9081b72C1B33c65375e807281C8","validator-utils":"0x1f6860C3cac255fFFa72B7410b1183c3a0D261e0","validator-wallet-creator":"0x894fC71fA0A666352824EC954B401573C861D664","deployed-at":4139226}'
 }
 
 export const getCustomNetworks = async (

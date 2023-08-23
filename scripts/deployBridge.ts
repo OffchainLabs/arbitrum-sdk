@@ -156,13 +156,9 @@ export const deployErc20L1 = async (deployer: Signer) => {
   )
   await wethGateway.deployed()
 
-  const weth = await NamedFactory(
-    TestWETH9__abi,
-    TestWETH9__bytecode,
-    'TestWETH9'
-  )
+  const weth = NamedFactory(TestWETH9__abi, TestWETH9__bytecode, 'TestWETH9')
+    .attach('0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9')
     .connect(deployer)
-    .deploy('WETH', 'WETH')
   await weth.deployed()
   console.log('weth', weth.address)
 
