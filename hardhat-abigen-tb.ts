@@ -14,7 +14,7 @@ module.exports = {
         },
       },
       {
-        version: '0.8.9',
+        version: '0.8.7',
         settings: {
           optimizer: {
             enabled: true,
@@ -26,7 +26,11 @@ module.exports = {
     overrides: {},
   },
   paths: {
-    sources: './src',
+    sources: './contracts',
     artifacts: './build/contracts',
+  },
+  spdxLicenseIdentifier: {
+    overwrite: false,
+    runOnCompile: true,
   },
 }

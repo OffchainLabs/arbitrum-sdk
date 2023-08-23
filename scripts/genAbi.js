@@ -29,7 +29,9 @@ async function main() {
 
   // copy the hardhat config to packages
   execSync(`cp ${cwd}/hardhat-abigen.ts ${nitroPath}/hardhat-abigen.ts`)
-  execSync(`cp ${cwd}/hardhat-abigen.ts ${peripheralsPath}/hardhat-abigen.ts`)
+  execSync(
+    `cp ${cwd}/hardhat-abigen-tb.ts ${peripheralsPath}/hardhat-abigen.ts`
+  )
 
   console.log('building nitro')
   execSync(`${npmExec} run build --config hardhat-abigen.ts`, {
