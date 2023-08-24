@@ -396,11 +396,11 @@ const getParentChainOrChain = async (
   const _chains = type === 'ParentChain' ? parentChains : chains
   const chain = _chains[chainID]
 
-  if (chain) {
-    return chain
+  if (!chain) {
+    throw new ArbSdkError(`Unrecognized ${type} ${chainID}.`)
   }
 
-  throw new ArbSdkError(`Unrecognized ${type} ${chainID}.`)
+  return chain
 }
 
 /**
