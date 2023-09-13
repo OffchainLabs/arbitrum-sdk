@@ -368,11 +368,6 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
         } else {
           latestCreatedAssertionId = await rollup.callStatic.latestNodeCreated()
         }
-        if (latestCreatedAssertionId === latestConfirmedAssertionId) {
-          console.log(
-            'latestCreatedAssertionId equals latestConfirmedAssertionId'
-          )
-        }
 
         const latestEquals =
           typeof latestCreatedAssertionId === 'string'
