@@ -27,6 +27,7 @@ import { BlockTag } from '@ethersproject/abstract-provider'
 
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { RollupUserLogic__factory } from '../abi/factories/RollupUserLogic__factory'
+import { RollupUserLogic__factory as BoldRollupUserLogic__factory } from '../boldAbi/factories/RollupUserLogic__factory'
 import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
@@ -39,13 +40,19 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { getBlockRangesForL1Block, isArbitrumChain, wait } from '../utils/lib'
-import { getL2Network } from '../dataEntities/networks'
+import { L2Network, getL2Network } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
+import {
+  AssertionCreatedEvent,
+  AssertionCreatedEventObject,
+  RollupUserLogic as BoldRollupUserLogic,
+} from '../boldAbi/RollupUserLogic'
 import { ArbitrumProvider } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { EventArgs } from '../dataEntities/event'
 import { L2ToL1MessageStatus } from '../dataEntities/message'
+import { Bridge__factory } from '../abi/factories/Bridge__factory'
 
 /**
  * Conditional type for Signer or Provider. If T is of type Provider
@@ -58,7 +65,7 @@ export type L2ToL1MessageReaderOrWriterNitro<T extends SignerOrProvider> =
 
 // expected number of L1 blocks that it takes for an L2 tx to be included in a L1 assertion
 const ASSERTION_CREATED_PADDING = 50
-// expected number of L1 blocks that it takes for a validator to confirm an L1 block after the node deadline is passed
+// expected number of L1 blocks that it takes for a validator to confirm an L1 block after the assertion deadline is passed
 const ASSERTION_CONFIRMED_PADDING = 20
 
 /**
@@ -127,7 +134,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
   public async getOutboxProof(l2Provider: Provider) {
     const { sendRootSize } = await this.getSendProps(l2Provider)
     if (!sendRootSize)
-      throw new ArbSdkError('Node not yet created, cannot get proof.')
+      throw new ArbSdkError('Assertion not yet created, cannot get proof.')
     const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
       l2Provider
@@ -177,11 +184,33 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     }
   }
 
-  private async getBlockFromNodeLog(
+  private parseAssertionCreatedEvent(e: FetchedEvent<AssertionCreatedEvent>) {
+    return {
+      afterState: {
+        blockHash: (e.event as AssertionCreatedEventObject).assertion.afterState
+          .globalState.bytes32Vals[0],
+        sendRoot: (e.event as AssertionCreatedEventObject).assertion.afterState
+          .globalState.bytes32Vals[1],
+      },
+    }
+  }
+
+  private isAssertionCreatedLog(
+    log: FetchedEvent<NodeCreatedEvent> | FetchedEvent<AssertionCreatedEvent>
+  ): log is FetchedEvent<AssertionCreatedEvent> {
+    return (
+      (log.event as AssertionCreatedEventObject).challengeManager != undefined
+    )
+  }
+
+  private async getBlockFromAssertionLog(
     l2Provider: JsonRpcProvider,
-    log: FetchedEvent<NodeCreatedEvent>
+    log: FetchedEvent<NodeCreatedEvent> | FetchedEvent<AssertionCreatedEvent>
   ) {
-    const parsedLog = this.parseNodeCreatedAssertion(log)
+    const parsedLog = this.isAssertionCreatedLog(log)
+      ? this.parseAssertionCreatedEvent(log)
+      : this.parseNodeCreatedAssertion(log)
+
     const arbitrumProvider = new ArbitrumProvider(l2Provider)
     const l2Block = await arbitrumProvider.getBlock(
       parsedLog.afterState.blockHash
@@ -199,13 +228,24 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     return l2Block
   }
 
-  private async getBlockFromNodeNum(
-    rollup: RollupUserLogic,
-    nodeNum: BigNumber,
+  private isBoldRollupUserLogic(
+    rollup: RollupUserLogic | BoldRollupUserLogic
+  ): rollup is BoldRollupUserLogic {
+    return (rollup as BoldRollupUserLogic).getAssertion !== undefined
+  }
+
+  private async getBlockFromAssertionId(
+    rollup: RollupUserLogic | BoldRollupUserLogic,
+    assertionId: BigNumber | string,
     l2Provider: Provider
   ): Promise<ArbBlock> {
-    const { createdAtBlock } = await rollup.getNode(nodeNum)
-
+    const createdAtBlock: BigNumber = this.isBoldRollupUserLogic(rollup)
+      ? (
+          await (rollup as BoldRollupUserLogic).getAssertion(
+            assertionId as string
+          )
+        ).createdAtBlock
+      : (await (rollup as RollupUserLogic).getNode(assertionId)).createdAtBlock
     let createdFromBlock = createdAtBlock
     let createdToBlock = createdAtBlock
 
@@ -232,18 +272,34 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
 
     // now get the block hash and sendroot for that node
     const eventFetcher = new EventFetcher(rollup.provider)
-    const logs = await eventFetcher.getEvents(
-      RollupUserLogic__factory,
-      t => t.filters.NodeCreated(nodeNum),
-      {
-        fromBlock: createdFromBlock.toNumber(),
-        toBlock: createdToBlock.toNumber(),
-        address: rollup.address,
-      }
-    )
 
-    if (logs.length !== 1) throw new ArbSdkError('No NodeCreated events found')
-    return await this.getBlockFromNodeLog(
+    const logs:
+      | FetchedEvent<NodeCreatedEvent>[]
+      | FetchedEvent<AssertionCreatedEvent>[] = this.isBoldRollupUserLogic(
+      rollup
+    )
+      ? await eventFetcher.getEvents(
+          BoldRollupUserLogic__factory,
+          t => t.filters.AssertionCreated(assertionId as string),
+          {
+            fromBlock: createdFromBlock.toNumber(),
+            toBlock: createdToBlock.toNumber(),
+            address: rollup.address,
+          }
+        )
+      : await eventFetcher.getEvents(
+          RollupUserLogic__factory,
+          t => t.filters.NodeCreated(assertionId),
+          {
+            fromBlock: createdFromBlock.toNumber(),
+            toBlock: createdToBlock.toNumber(),
+            address: rollup.address,
+          }
+        )
+
+    if (logs.length !== 1)
+      throw new ArbSdkError('No AssertionCreated events found')
+    return await this.getBlockFromAssertionLog(
       l2Provider as JsonRpcProvider,
       logs[0]
     )
@@ -272,16 +328,13 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
   protected async getSendProps(l2Provider: Provider) {
     if (!this.sendRootConfirmed) {
       const l2Network = await getL2Network(l2Provider)
+      const rollup = await this.getRollupAndUpdateNetwork(l2Network)
 
-      const rollup = RollupUserLogic__factory.connect(
-        l2Network.ethBridge.rollup,
-        this.l1Provider
-      )
-
-      const latestConfirmedNodeNum = await rollup.callStatic.latestConfirmed()
-      const l2BlockConfirmed = await this.getBlockFromNodeNum(
+      const latestConfirmedAssertionId =
+        await rollup.callStatic.latestConfirmed()
+      const l2BlockConfirmed = await this.getBlockFromAssertionId(
         rollup,
-        latestConfirmedNodeNum,
+        latestConfirmedAssertionId,
         l2Provider
       )
 
@@ -291,14 +344,48 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
         this.sendRootHash = l2BlockConfirmed.sendRoot
         this.sendRootConfirmed = true
       } else {
+        let latestCreatedAssertionId: BigNumber | string
+        if (this.isBoldRollupUserLogic(rollup)) {
+          const latestConfirmed = await rollup.latestConfirmed()
+          const latestConfirmedAssertion = await rollup.getAssertion(
+            latestConfirmed
+          )
+          const eventFetcher = new EventFetcher(rollup.provider)
+
+          const assertionCreatedEvents = await eventFetcher.getEvents(
+            BoldRollupUserLogic__factory,
+            t => t.filters.AssertionCreated(),
+            {
+              fromBlock: latestConfirmedAssertion.createdAtBlock.toNumber(),
+              toBlock: 'latest',
+              address: rollup.address,
+            }
+          )
+          latestCreatedAssertionId = (
+            assertionCreatedEvents[assertionCreatedEvents.length - 1]
+              .event as AssertionCreatedEventObject
+          ).assertionHash
+        } else {
+          latestCreatedAssertionId = await rollup.callStatic.latestNodeCreated()
+        }
+        if (latestCreatedAssertionId === latestConfirmedAssertionId) {
+          console.log(
+            'latestCreatedAssertionId equals latestConfirmedAssertionId'
+          )
+        }
+
+        const latestEquals =
+          typeof latestCreatedAssertionId === 'string'
+            ? latestCreatedAssertionId === latestConfirmedAssertionId
+            : latestCreatedAssertionId.eq(latestConfirmedAssertionId)
+
         // if the node has yet to be confirmed we'll still try to find proof info from unconfirmed nodes
-        const latestNodeNum = await rollup.callStatic.latestNodeCreated()
-        if (latestNodeNum.gt(latestConfirmedNodeNum)) {
+        if (!latestEquals) {
           // In rare case latestNodeNum can be equal to latestConfirmedNodeNum
           // eg immediately after an upgrade, or at genesis, or on a chain where confirmation time = 0 like AnyTrust may have
-          const l2Block = await this.getBlockFromNodeNum(
+          const l2Block = await this.getBlockFromAssertionId(
             rollup,
-            latestNodeNum,
+            latestCreatedAssertionId,
             l2Provider
           )
 
@@ -341,6 +428,61 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
   }
 
   /**
+   * Check whether the provided network has a BoLD rollup
+   * @param l2Network
+   * @param l1Provider
+   * @returns
+   */
+  private async isBold(
+    l2Network: L2Network,
+    l1Provider: Provider
+  ): Promise<string | undefined> {
+    const bridge = Bridge__factory.connect(
+      l2Network.ethBridge.bridge,
+      l1Provider
+    )
+    const remoteRollupAddr = await bridge.rollup()
+
+    const rollup = RollupUserLogic__factory.connect(
+      remoteRollupAddr,
+      l1Provider
+    )
+    try {
+      // bold rollup does not have an extraChallengeTimeBlocks function
+      await rollup.extraChallengeTimeBlocks()
+      return undefined
+    } catch (err) {
+      return remoteRollupAddr
+    }
+  }
+
+  /**
+   * If the local network is not currently bold, checks if the remote network is bold
+   * and if so updates the local network with a new rollup address
+   * @param l2Network
+   * @returns The rollup contract, bold or legacy
+   */
+  private async getRollupAndUpdateNetwork(l2Network: L2Network) {
+    if (!l2Network.isBold) {
+      const boldRollupAddr = await this.isBold(l2Network, this.l1Provider)
+      if (boldRollupAddr) {
+        l2Network.isBold = true
+        l2Network.ethBridge.rollup = boldRollupAddr
+      }
+    }
+
+    return l2Network.isBold
+      ? BoldRollupUserLogic__factory.connect(
+          l2Network.ethBridge.rollup,
+          this.l1Provider
+        )
+      : RollupUserLogic__factory.connect(
+          l2Network.ethBridge.rollup,
+          this.l1Provider
+        )
+  }
+
+  /**
    * Estimates the L1 block number in which this L2 to L1 tx will be available for execution.
    * If the message can or already has been executed, this returns null
    * @param l2Provider
@@ -350,11 +492,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     l2Provider: Provider
   ): Promise<BigNumber | null> {
     const l2Network = await getL2Network(l2Provider)
-
-    const rollup = RollupUserLogic__factory.connect(
-      l2Network.ethBridge.rollup,
-      this.l1Provider
-    )
+    const rollup = await this.getRollupAndUpdateNetwork(l2Network)
 
     const status = await this.status(l2Provider)
     if (status === L2ToL1MessageStatus.EXECUTED) return null
@@ -366,28 +504,51 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
 
     const latestBlock = await this.l1Provider.getBlockNumber()
     const eventFetcher = new EventFetcher(this.l1Provider)
-    const logs = (
-      await eventFetcher.getEvents(
-        RollupUserLogic__factory,
-        t => t.filters.NodeCreated(),
-        {
-          fromBlock: Math.max(
-            latestBlock -
-              BigNumber.from(l2Network.confirmPeriodBlocks)
-                .add(ASSERTION_CONFIRMED_PADDING)
-                .toNumber(),
-            0
-          ),
-          toBlock: 'latest',
-          address: rollup.address,
-        }
-      )
-    ).sort((a, b) => a.event.nodeNum.toNumber() - b.event.nodeNum.toNumber())
+    let logs:
+      | FetchedEvent<NodeCreatedEvent>[]
+      | FetchedEvent<AssertionCreatedEvent>[]
+    if (l2Network.isBold) {
+      logs = (
+        await eventFetcher.getEvents(
+          RollupUserLogic__factory,
+          t => t.filters.NodeCreated(),
+          {
+            fromBlock: Math.max(
+              latestBlock -
+                BigNumber.from(l2Network.confirmPeriodBlocks)
+                  .add(ASSERTION_CONFIRMED_PADDING)
+                  .toNumber(),
+              0
+            ),
+            toBlock: 'latest',
+            address: rollup.address,
+          }
+        )
+      ).sort((a, b) => a.event.nodeNum.toNumber() - b.event.nodeNum.toNumber())
+    } else {
+      logs = (
+        await eventFetcher.getEvents(
+          BoldRollupUserLogic__factory,
+          t => t.filters.AssertionCreated(),
+          {
+            fromBlock: Math.max(
+              latestBlock -
+                BigNumber.from(l2Network.confirmPeriodBlocks)
+                  .add(ASSERTION_CONFIRMED_PADDING)
+                  .toNumber(),
+              0
+            ),
+            toBlock: 'latest',
+            address: rollup.address,
+          }
+        )
+      ).sort((a, b) => a.blockNumber - b.blockNumber)
+    }
 
     const lastL2Block =
       logs.length === 0
         ? undefined
-        : await this.getBlockFromNodeLog(
+        : await this.getBlockFromAssertionLog(
             l2Provider as JsonRpcProvider,
             logs[logs.length - 1]
           )
@@ -396,22 +557,22 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
       : BigNumber.from(0)
 
     // here we assume the L2 to L1 tx is actually valid, so the user needs to wait the max time
-    // since there isn't a pending node that includes this message yet
+    // since there isn't a pending asssertion that includes this message yet
     if (lastSendCount.lte(this.event.position))
       return BigNumber.from(l2Network.confirmPeriodBlocks)
         .add(ASSERTION_CREATED_PADDING)
         .add(ASSERTION_CONFIRMED_PADDING)
         .add(latestBlock)
 
-    // use binary search to find the first node with sendCount > this.event.position
-    // default to the last node since we already checked above
-    let foundLog: FetchedEvent<NodeCreatedEvent> = logs[logs.length - 1]
+    // use binary search to find the first assertion with sendCount > this.event.position
+    // default to the last assertion since we already checked above
+    let foundLog = logs[logs.length - 1]
     let left = 0
     let right = logs.length - 1
     while (left <= right) {
       const mid = Math.floor((left + right) / 2)
       const log = logs[mid]
-      const l2Block = await this.getBlockFromNodeLog(
+      const l2Block = await this.getBlockFromAssertionLog(
         l2Provider as JsonRpcProvider,
         log
       )
@@ -424,9 +585,23 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
       }
     }
 
-    const earliestNodeWithExit = foundLog.event.nodeNum
-    const node = await rollup.getNode(earliestNodeWithExit)
-    return node.deadlineBlock.add(ASSERTION_CONFIRMED_PADDING)
+    if (l2Network.isBold) {
+      const assertionHash = (foundLog.event as AssertionCreatedEventObject)
+        .assertionHash
+      const assertion = await (rollup as BoldRollupUserLogic).getAssertion(
+        assertionHash
+      )
+      return assertion.createdAtBlock
+        .add(l2Network.confirmPeriodBlocks)
+        .add(ASSERTION_CONFIRMED_PADDING)
+    } else {
+      const earliestNodeWithExit = (foundLog as FetchedEvent<NodeCreatedEvent>)
+        .event.nodeNum
+      const node = await (rollup as RollupUserLogic).getNode(
+        earliestNodeWithExit
+      )
+      return node.deadlineBlock.add(ASSERTION_CONFIRMED_PADDING)
+    }
   }
 }
 
