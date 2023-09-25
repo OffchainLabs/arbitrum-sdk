@@ -3,7 +3,7 @@ import { expect } from 'chai'
 import {
   EthBridge,
   getEthBridgeInformation,
-  getL2Network,
+  getChainNetwork as getL2Network,
 } from '../../src/lib/dataEntities/networks'
 import dotenv from 'dotenv'
 dotenv.config()

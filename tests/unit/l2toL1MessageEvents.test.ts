@@ -19,7 +19,7 @@
 import { Logger, LogLevel } from '@ethersproject/logger'
 Logger.setLogLevel(LogLevel.ERROR)
 import { L2ToL1Message } from '../../src'
-import { getL2Network } from '../../src/lib/dataEntities/networks'
+import { getChainNetwork as getL2Network } from '../../src/lib/dataEntities/networks'
 import { providers } from 'ethers'
 import { anything, deepEqual, instance, mock, verify, when } from 'ts-mockito'
 

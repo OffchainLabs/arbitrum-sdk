@@ -30,7 +30,10 @@ import { InboxTools } from '../../src'
 
 import { ethers, network } from 'hardhat'
 import { hexZeroPad } from '@ethersproject/bytes'
-import { L2Network, getL2Network } from '../../src/lib/dataEntities/networks'
+import {
+  ChainNetwork as L2Network,
+  getChainNetwork as getL2Network,
+} from '../../src/lib/dataEntities/networks'
 import { solidityKeccak256 } from 'ethers/lib/utils'
 import { ContractTransaction, Signer } from 'ethers'
 

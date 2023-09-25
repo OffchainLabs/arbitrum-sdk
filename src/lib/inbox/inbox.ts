@@ -29,8 +29,8 @@ import { IInbox__factory } from '../abi/factories/IInbox__factory'
 import { RequiredPick } from '../utils/types'
 import { MessageDeliveredEvent } from '../abi/Bridge'
 import {
-  l1Networks as parentChains,
-  L2Network as ChildChain,
+  parentChainNetworks as parentChains,
+  ChainNetwork as ChildChain,
 } from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'

@@ -46,7 +46,7 @@ import { MessageDeliveredEvent } from '../abi/Bridge'
 import { EventArgs, parseTypedLogs } from '../dataEntities/event'
 import { isDefined } from '../utils/lib'
 import { SubmitRetryableMessageDataParser } from './messageDataParser'
-import { getL2Network } from '../dataEntities/networks'
+import { getChainNetwork } from '../dataEntities/networks'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -106,7 +106,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     l2SignerOrProvider: T
   ): Promise<boolean> {
     const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
-    const network = await getL2Network(provider)
+    const network = await getChainNetwork(provider)
     return this.blockNumber < network.nitroGenesisL1Block
   }
 
@@ -207,7 +207,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
   public async getL1ToL2MessagesClassic(
     l2Provider: Provider
   ): Promise<L1ToL2MessageReaderClassic[]> {
-    const network = await getL2Network(l2Provider)
+    const network = await getChainNetwork(l2Provider)
     const chainID = network.chainID.toString()
     const isClassic = await this.isClassic(l2Provider)
 
@@ -243,7 +243,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     l2SignerOrProvider: T
   ): Promise<L1ToL2MessageReader[] | L1ToL2MessageWriter[]> {
     const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
-    const network = await getL2Network(provider)
+    const network = await getChainNetwork(provider)
     const chainID = network.chainID.toString()
     const isClassic = await this.isClassic(provider)
 

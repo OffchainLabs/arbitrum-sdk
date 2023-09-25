@@ -21,13 +21,13 @@ import { ArbSdkError } from '../dataEntities/errors'
 import { SEVEN_DAYS_IN_SECONDS } from './constants'
 import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__factory'
 
-export interface L1Network extends Network {
+export interface ParentChainNetwork extends Network {
   partnerChainIDs: number[]
   blockTime: number //seconds
   isArbitrum: false
 }
 
-export interface L2Network extends Network {
+export interface ChainNetwork extends Network {
   tokenBridge: TokenBridge
   ethBridge: EthBridge
   partnerChainID: number
@@ -77,12 +77,12 @@ export interface EthBridge {
   }
 }
 
-export interface L1Networks {
-  [id: string]: L1Network
+export interface ParentChainNetworks {
+  [id: string]: ParentChainNetwork
 }
 
-export interface L2Networks {
-  [id: string]: L2Network
+export interface ChainNetworks {
+  [id: string]: ChainNetwork
 }
 
 const mainnetTokenBridge: TokenBridge = {
@@ -114,7 +114,7 @@ const mainnetETHBridge: EthBridge = {
   },
 }
 
-export const l1Networks: L1Networks = {
+export const parentChainNetworks: ParentChainNetworks = {
   1: {
     chainID: 1,
     name: 'Mainnet',
@@ -153,7 +153,7 @@ export const l1Networks: L1Networks = {
   },
 }
 
-export const l2Networks: L2Networks = {
+export const chainNetworks: ChainNetworks = {
   42161: {
     chainID: 42161,
     name: 'Arbitrum One',
@@ -345,7 +345,7 @@ const getNetwork = async (
     return chainId
   })()
 
-  const networks = layer === 1 ? l1Networks : l2Networks
+  const networks = layer === 1 ? parentChainNetworks : chainNetworks
   if (networks[chainID]) {
     return networks[chainID]
   } else {
@@ -353,15 +353,15 @@ const getNetwork = async (
   }
 }
 
-export const getL1Network = (
+export const getParentChainNetwork = (
   signerOrProviderOrChainID: SignerOrProvider | number
-): Promise<L1Network> => {
-  return getNetwork(signerOrProviderOrChainID, 1) as Promise<L1Network>
+): Promise<ParentChainNetwork> => {
+  return getNetwork(signerOrProviderOrChainID, 1) as Promise<ParentChainNetwork>
 }
-export const getL2Network = (
+export const getChainNetwork = (
   signerOrProviderOrChainID: SignerOrProvider | number
-): Promise<L2Network> => {
-  return getNetwork(signerOrProviderOrChainID, 2) as Promise<L2Network>
+): Promise<ChainNetwork> => {
+  return getNetwork(signerOrProviderOrChainID, 2) as Promise<ChainNetwork>
 }
 
 /**
@@ -396,44 +396,52 @@ export const getEthBridgeInformation = async (
 }
 
 export const addCustomNetwork = ({
-  customL1Network,
-  customL2Network,
+  customParentChainNetwork,
+  customChainNetwork,
 }: {
-  customL1Network?: L1Network
-  customL2Network: L2Network
+  customParentChainNetwork?: ParentChainNetwork
+  customChainNetwork: ChainNetwork
 }): void => {
-  if (customL1Network) {
-    if (l1Networks[customL1Network.chainID]) {
+  if (customParentChainNetwork) {
+    if (parentChainNetworks[customParentChainNetwork.chainID]) {
       throw new ArbSdkError(
-        `Network ${customL1Network.chainID} already included`
+        `Network ${customParentChainNetwork.chainID} already included`
       )
-    } else if (!customL1Network.isCustom) {
+    } else if (!customParentChainNetwork.isCustom) {
       throw new ArbSdkError(
-        `Custom network ${customL1Network.chainID} must have isCustom flag set to true`
+        `Custom network ${customParentChainNetwork.chainID} must have isCustom flag set to true`
       )
     } else {
-      l1Networks[customL1Network.chainID] = customL1Network
+      parentChainNetworks[customParentChainNetwork.chainID] =
+        customParentChainNetwork
     }
   }
 
-  if (l2Networks[customL2Network.chainID])
-    throw new ArbSdkError(`Network ${customL2Network.chainID} already included`)
-  else if (!customL2Network.isCustom) {
+  if (chainNetworks[customChainNetwork.chainID])
     throw new ArbSdkError(
-      `Custom network ${customL2Network.chainID} must have isCustom flag set to true`
+      `Network ${customChainNetwork.chainID} already included`
+    )
+  else if (!customChainNetwork.isCustom) {
+    throw new ArbSdkError(
+      `Custom network ${customChainNetwork.chainID} must have isCustom flag set to true`
     )
   }
 
-  l2Networks[customL2Network.chainID] = customL2Network
+  chainNetworks[customChainNetwork.chainID] = customChainNetwork
 
-  const l1PartnerChain = l1Networks[customL2Network.partnerChainID]
-  if (!l1PartnerChain)
+  const parentChainPartnerChain =
+    parentChainNetworks[customChainNetwork.partnerChainID]
+  if (!parentChainPartnerChain)
     throw new ArbSdkError(
-      `Network ${customL2Network.chainID}'s partner network, ${customL2Network.partnerChainID}, not recognized`
+      `Network ${customChainNetwork.chainID}'s partner network, ${customChainNetwork.partnerChainID}, not recognized`
     )
 
-  if (!l1PartnerChain.partnerChainIDs.includes(customL2Network.chainID)) {
-    l1PartnerChain.partnerChainIDs.push(customL2Network.chainID)
+  if (
+    !parentChainPartnerChain.partnerChainIDs.includes(
+      customChainNetwork.chainID
+    )
+  ) {
+    parentChainPartnerChain.partnerChainIDs.push(customChainNetwork.chainID)
   }
 }
 
@@ -443,10 +451,10 @@ export const addCustomNetwork = ({
  * @see {@link https://github.com/OffchainLabs/nitro}
  */
 export const addDefaultLocalNetwork = (): {
-  l1Network: L1Network
-  l2Network: L2Network
+  parentChainNetwork: ParentChainNetwork
+  chainNetwork: ChainNetwork
 } => {
-  const defaultLocalL1Network: L1Network = {
+  const defaultLocalParentChainNetwork: ParentChainNetwork = {
     blockTime: 10,
     chainID: 1337,
     explorerUrl: '',
@@ -456,7 +464,7 @@ export const addDefaultLocalNetwork = (): {
     isArbitrum: false,
   }
 
-  const defaultLocalL2Network: L2Network = {
+  const defaultLocalChainNetwork: ChainNetwork = {
     chainID: 412346,
     confirmPeriodBlocks: 20,
     ethBridge: {
@@ -494,19 +502,19 @@ export const addDefaultLocalNetwork = (): {
   }
 
   addCustomNetwork({
-    customL1Network: defaultLocalL1Network,
-    customL2Network: defaultLocalL2Network,
+    customParentChainNetwork: defaultLocalParentChainNetwork,
+    customChainNetwork: defaultLocalChainNetwork,
   })
 
   return {
-    l1Network: defaultLocalL1Network,
-    l2Network: defaultLocalL2Network,
+    parentChainNetwork: defaultLocalParentChainNetwork,
+    chainNetwork: defaultLocalChainNetwork,
   }
 }
 
-export const isL1Network = (
-  network: L1Network | L2Network
-): network is L1Network => {
-  if ((network as L1Network).partnerChainIDs) return true
+export const isParentChainNetwork = (
+  network: ParentChainNetwork | ChainNetwork
+): network is ParentChainNetwork => {
+  if ((network as ParentChainNetwork).partnerChainIDs) return true
   else return false
 }
