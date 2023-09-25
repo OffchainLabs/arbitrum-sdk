@@ -31,7 +31,7 @@ import {
   L1ToL2MessageStatus,
   L2ToL1MessageStatus,
 } from '../../src'
-import { L2Network } from '../../src/lib/dataEntities/networks'
+import { ChainNetwork as L2Network } from '../../src/lib/dataEntities/networks'
 import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
 import { ArbSdkError } from '../../src/lib/dataEntities/errors'
 import { ERC20 } from '../../src/lib/abi/ERC20'

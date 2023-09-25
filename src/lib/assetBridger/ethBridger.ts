@@ -45,7 +45,7 @@ import {
 import { OmitTyped } from '../utils/types'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
-import { getL2Network } from '../dataEntities/networks'
+import { getChainNetwork } from '../dataEntities/networks'
 
 export interface EthWithdrawParams {
   /**
@@ -138,7 +138,7 @@ export class EthBridger extends AssetBridger<
    * @returns
    */
   public static async fromProvider(l2Provider: Provider) {
-    return new EthBridger(await getL2Network(l2Provider))
+    return new EthBridger(await getChainNetwork(l2Provider))
   }
 
   /**
