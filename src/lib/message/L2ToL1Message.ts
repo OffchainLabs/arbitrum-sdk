@@ -193,7 +193,6 @@ export class L2ToL1Message {
 export class L2ToL1MessageReader extends L2ToL1Message {
   private readonly classicReader?: classic.L2ToL1MessageReaderClassic
   private readonly nitroReader?: nitro.L2ToL1MessageReaderNitro
-  public l2BlockRangeCache?: { [key in number]: number[] }
 
   constructor(
     protected readonly l1Provider: Provider,
@@ -207,11 +206,7 @@ export class L2ToL1MessageReader extends L2ToL1Message {
         event.indexInBatch
       )
     } else {
-      this.nitroReader = new nitro.L2ToL1MessageReaderNitro(
-        l1Provider,
-        event,
-        this.l2BlockRangeCache
-      )
+      this.nitroReader = new nitro.L2ToL1MessageReaderNitro(l1Provider, event)
     }
   }
 

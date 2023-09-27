@@ -116,11 +116,11 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
   protected sendRootConfirmed?: boolean
   protected outboxAddress?: string
   protected l1BatchNumber?: number
+  private l2BlockRangeCache?: { [key in number]: number[] }
 
   constructor(
     protected readonly l1Provider: Provider,
-    event: EventArgs<L2ToL1TxEvent>,
-    public l2BlockRangeCache?: { [key in number]: number[] }
+    event: EventArgs<L2ToL1TxEvent>
   ) {
     super(event)
   }
