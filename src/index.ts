@@ -23,9 +23,9 @@ export {
   L2ContractTransaction,
 } from './lib/message/L2Transaction'
 export {
-  L2ToL1Message,
-  L2ToL1MessageWriter,
-  L2ToL1MessageReader,
+  ChainToParentChainMessage as L2ToL1Message,
+  ChainToParentChainMessageWriter as L2ToL1MessageWriter,
+  ChainToParentChainMessageReader as L2ToL1MessageReader,
 } from './lib/message/L2ToL1Message'
 export {
   L1ContractTransaction,
