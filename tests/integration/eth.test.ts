@@ -29,7 +29,7 @@ import {
   prettyLog,
   skipIfMainnet,
 } from './testHelpers'
-import { L2ToL1Message } from '../../src/lib/message/L2ToL1Message'
+import { ChainToParentChainMessage as L2ToL1Message } from '../../src/lib/message/L2ToL1Message'
 import { L2ToL1MessageStatus } from '../../src/lib/dataEntities/message'
 import { L2TransactionReceipt } from '../../src/lib/message/L2Transaction'
 import { ParentChainToChainMessageStatus as L1ToL2MessageStatus } from '../../src/lib/message/L1ToL2Message'
@@ -231,7 +231,7 @@ describe('Ether', async () => {
       'eth withdraw getWithdrawalsInL2Transaction query came back empty'
     ).to.exist
 
-    const withdrawEvents = await L2ToL1Message.getL2ToL1Events(
+    const withdrawEvents = await L2ToL1Message.getChainToParentChainEvents(
       l2Signer.provider!,
       { fromBlock: withdrawEthRec.blockNumber, toBlock: 'latest' },
       undefined,
