@@ -21,13 +21,13 @@ import { Log, Provider } from '@ethersproject/abstract-provider'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
 import {
-  L1ToL2Message,
-  L1ToL2MessageReaderOrWriter,
-  L1ToL2MessageReader,
-  L1ToL2MessageReaderClassic,
-  L1ToL2MessageWriter,
-  L1ToL2MessageStatus,
-  L1ToL2MessageWaitResult,
+  ParentChainToChainMessage as L1ToL2Message,
+  ParentChainToChainMessageReaderOrWriter as L1ToL2MessageReaderOrWriter,
+  ParentChainToChainMessageReader as L1ToL2MessageReader,
+  ParentChainToChainMessageReaderClassic as L1ToL2MessageReaderClassic,
+  ParentChainToChainMessageWriter as L1ToL2MessageWriter,
+  ParentChainToChainMessageStatus as L1ToL2MessageStatus,
+  ParentChainToChainMessageWaitResult as L1ToL2MessageWaitResult,
   EthDepositMessage,
   EthDepositMessageWaitResult,
 } from './L1ToL2Message'
@@ -372,7 +372,7 @@ export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
 
     return {
       complete: isDefined(res),
-      l2TxReceipt: res,
+      chainTxReceipt: res,
       message,
     }
   }
