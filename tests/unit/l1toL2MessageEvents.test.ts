@@ -184,7 +184,7 @@ describe('L1toL2Message events', () => {
       'incorrect message number'
     ).to.be.true
     expect(
-      msg.l1BaseFee.eq(BigNumber.from('0x05e0fc4c58')),
+      msg.parentChainBaseFee.eq(BigNumber.from('0x05e0fc4c58')),
       'incorrect l1 base fee'
     ).to.be.true
     expect(
@@ -322,7 +322,7 @@ describe('L1toL2Message events', () => {
     expect(msg.autoRedeemId, 'incorrect auto redeem id').to.be.eq(
       '0x38c5c31151344c7a1433a849bbc80472786ebe911630255a6e25d6a2efd39526'
     )
-    expect(msg.l2TxHash, 'incorrect l2 tx hash').to.be.eq(
+    expect(msg.chainTxHash, 'incorrect l2 tx hash').to.be.eq(
       '0xf91e7d2e7526927e915a2357360a3f1108dce0f9c7fa88a7492669adf5c1e53b'
     )
   })
