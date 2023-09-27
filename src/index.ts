@@ -61,5 +61,6 @@ export {
   RetryableData,
   RetryableDataTools,
 } from './lib/dataEntities/retryableData'
+export { getLatestConfirmedL2BlockRange } from './lib/utils/lib'
 
 export { Address } from './lib/dataEntities/address'

@@ -119,7 +119,8 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
 
   constructor(
     protected readonly l1Provider: Provider,
-    event: EventArgs<L2ToL1TxEvent>
+    event: EventArgs<L2ToL1TxEvent>,
+    public l2BlockRangeCache?: { [key in number]: number[] }
   ) {
     super(event)
   }
@@ -153,6 +154,13 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     )
 
     return outbox.callStatic.isSpent(this.event.position)
+  }
+
+  public setL2BlockRangeCache(l1Block: number, l2BlockRange: number[]) {
+    this.l2BlockRangeCache = {
+      ...this.l2BlockRangeCache,
+      [l1Block]: l2BlockRange,
+    }
   }
 
   /**
@@ -212,10 +220,15 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     // If L1 is Arbitrum, then L2 is an Orbit chain.
     if (await isArbitrumChain(this.l1Provider)) {
       try {
-        const l2BlockRange = await getBlockRangesForL1Block({
-          forL1Block: createdAtBlock.toNumber(),
-          provider: this.l1Provider as JsonRpcProvider,
-        })
+        const l2BlockRangeCache =
+          this.l2BlockRangeCache?.[createdAtBlock.toNumber()]
+
+        const l2BlockRange =
+          l2BlockRangeCache ||
+          (await getBlockRangesForL1Block({
+            forL1Block: createdAtBlock.toNumber(),
+            provider: this.l1Provider as JsonRpcProvider,
+          }))
         const startBlock = l2BlockRange[0]
         const endBlock = l2BlockRange[1]
         if (!startBlock || !endBlock) {
@@ -223,6 +236,11 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
         }
         createdFromBlock = BigNumber.from(startBlock)
         createdToBlock = BigNumber.from(endBlock)
+
+        this.setL2BlockRangeCache(createdAtBlock.toNumber(), [
+          startBlock,
+          endBlock,
+        ])
       } catch (e) {
         // fallback to old method if the new method fails
         createdFromBlock = createdAtBlock
