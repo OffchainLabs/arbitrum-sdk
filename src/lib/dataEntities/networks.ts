@@ -28,6 +28,7 @@ export interface L1Network extends Network {
 }
 
 export interface L2Network extends Network {
+  partnerChainIDs?: number[]
   tokenBridge: TokenBridge
   ethBridge: EthBridge
   partnerChainID: number
@@ -46,6 +47,12 @@ export interface L2Network extends Network {
    */
   nativeToken?: string
 }
+
+export type ParentChain =
+  | L1Network
+  | (L2Network & Required<Pick<L2Network, 'partnerChainIDs'>>)
+
+export type Chain = L2Network
 
 export interface Network {
   chainID: number
@@ -89,6 +96,14 @@ export interface L1Networks {
 
 export interface L2Networks {
   [id: string]: L2Network
+}
+
+export interface ParentChains {
+  [id: string]: ParentChain
+}
+
+export interface Chains {
+  [id: string]: Chain
 }
 
 const mainnetTokenBridge: TokenBridge = {
@@ -146,6 +161,15 @@ export const l1Networks: L1Networks = {
     isCustom: false,
     name: 'Goerli',
     partnerChainIDs: [421613],
+    isArbitrum: false,
+  },
+  11155111: {
+    chainID: 11155111,
+    name: 'Sepolia',
+    explorerUrl: 'https://sepolia.etherscan.io',
+    partnerChainIDs: [421614],
+    blockTime: 12,
+    isCustom: false,
     isArbitrum: false,
   },
 }
@@ -252,7 +276,65 @@ export const l2Networks: L2Networks = {
      */
     depositTimeout: 1800000,
   },
+  421614: {
+    chainID: 421614,
+    confirmPeriodBlocks: 20,
+    ethBridge: {
+      bridge: '0x38f918D0E9F1b721EDaA41302E399fa1B79333a9',
+      inbox: '0xaAe29B0366299461418F5324a79Afc425BE5ae21',
+      outbox: '0x65f07C7D521164a4d5DaC6eB8Fac8DA067A3B78F',
+      rollup: '0xd80810638dbDF9081b72C1B33c65375e807281C8',
+      sequencerInbox: '0x6c97864CE4bEf387dE0b3310A44230f7E3F1be0D',
+    },
+    explorerUrl: 'https://sepolia-explorer.arbitrum.io',
+    isArbitrum: true,
+    isCustom: false,
+    name: 'Arbitrum Rollup Sepolia Testnet',
+    partnerChainID: 11155111,
+    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
+    tokenBridge: {
+      l1CustomGateway: '0xba2F7B6eAe1F9d174199C5E4867b563E0eaC40F3',
+      l1ERC20Gateway: '0x902b3E5f8F19571859F4AB1003B960a5dF693aFF',
+      l1GatewayRouter: '0xcE18836b233C83325Cc8848CA4487e94C6288264',
+      l1MultiCall: '0xded9AD2E65F3c4315745dD915Dbe0A4Df61b2320',
+      l1ProxyAdmin: '0xDBFC2FfB44A5D841aB42b0882711ed6e5A9244b0',
+      l1Weth: '0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9',
+      l1WethGateway: '0xA8aD8d7e13cbf556eE75CB0324c13535d8100e1E',
+      l2CustomGateway: '0x8Ca1e1AC0f260BC4dA7Dd60aCA6CA66208E642C5',
+      l2ERC20Gateway: '0x6e244cD02BBB8a6dbd7F626f05B2ef82151Ab502',
+      l2GatewayRouter: '0x9fDD1C4E4AA24EEc1d913FABea925594a20d43C7',
+      l2Multicall: '0xA115146782b7143fAdB3065D86eACB54c169d092',
+      l2ProxyAdmin: '0x715D99480b77A8d9D603638e593a539E21345FdF',
+      l2Weth: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73',
+      l2WethGateway: '0xCFB1f08A4852699a979909e22c30263ca249556D',
+    },
+    nitroGenesisBlock: 0,
+    nitroGenesisL1Block: 0,
+    depositTimeout: 1800000,
+  },
 }
+
+// L2 networks that are a parent chain to Orbit chains.
+function getL2ParentChains(_l2Networks: L2Networks) {
+  const _parentChains: ParentChains = {}
+
+  Object.keys(_l2Networks).map(chainId => {
+    const network = l2Networks[Number(chainId)]
+
+    if (network.partnerChainIDs && network.partnerChainIDs.length > 0) {
+      _parentChains[chainId] = network as ParentChain
+    }
+  })
+
+  return _parentChains
+}
+
+export const parentChains: ParentChains = {
+  ...l1Networks,
+  ...getL2ParentChains(l2Networks),
+}
+
+export const chains: Chains = { ...l2Networks }
 
 const getNetwork = async (
   signerOrProviderOrChainID: SignerOrProvider | number,
@@ -270,9 +352,14 @@ const getNetwork = async (
     return chainId
   })()
 
-  const networks = layer === 1 ? l1Networks : l2Networks
-  if (networks[chainID]) {
-    return networks[chainID]
+  let network
+  if (layer === 1) {
+    network = l1Networks[chainID]
+  } else {
+    network = l2Networks[chainID] || chains[chainID]
+  }
+  if (network) {
+    return network
   } else {
     throw new ArbSdkError(`Unrecognized network ${chainID}.`)
   }
@@ -286,7 +373,67 @@ export const getL1Network = (
 export const getL2Network = (
   signerOrProviderOrChainID: SignerOrProvider | number
 ): Promise<L2Network> => {
-  return getNetwork(signerOrProviderOrChainID, 2) as Promise<L2Network>
+  let l2Network
+  try {
+    l2Network = getNetwork(signerOrProviderOrChainID, 2) as Promise<L2Network>
+  } catch {
+    l2Network = getChain(signerOrProviderOrChainID) as Promise<Chain>
+  }
+  return l2Network
+}
+
+const getParentChainOrChain = async (
+  signerOrProviderOrChainID: SignerOrProvider | number,
+  type: 'ParentChain' | 'Chain'
+) => {
+  const chainID = await (async () => {
+    if (typeof signerOrProviderOrChainID === 'number') {
+      return signerOrProviderOrChainID
+    }
+    const provider = SignerProviderUtils.getProviderOrThrow(
+      signerOrProviderOrChainID
+    )
+
+    const { chainId } = await provider.getNetwork()
+    return chainId
+  })()
+
+  const _chains = type === 'ParentChain' ? parentChains : chains
+  const chain = _chains[chainID]
+
+  if (!chain) {
+    throw new ArbSdkError(`Unrecognized ${type} ${chainID}.`)
+  }
+
+  return chain
+}
+
+/**
+ * Returns a chain that is associated with at least one child chain
+ * @param signerOrProviderOrChainID
+ * @returns Chain that is associated with at least one child chain
+ */
+export const getParentChain = async (
+  signerOrProviderOrChainID: SignerOrProvider | number
+): Promise<ParentChain> => {
+  return getParentChainOrChain(
+    signerOrProviderOrChainID,
+    'ParentChain'
+  ) as Promise<ParentChain>
+}
+
+/**
+ * Returns a chain that is associated with a parent chain
+ * @param signerOrProviderOrChainID
+ * @returns Chain that is associated with a parent chain
+ */
+export const getChain = async (
+  signerOrProviderOrChainID: SignerOrProvider | number
+): Promise<Chain> => {
+  return getParentChainOrChain(
+    signerOrProviderOrChainID,
+    'Chain'
+  ) as Promise<Chain>
 }
 
 /**
@@ -320,6 +467,88 @@ export const getEthBridgeInformation = async (
   }
 }
 
+/**
+ * Adds custom Parent Chain and custom Chain. These chains will be returned in `getParentChain` and `getChain`.
+ * @param customParentChain Custom Parent Chain. This can be either an L1 or an Arbitrum network.
+ * @param customChain Custom Chain. This is an Arbitrum network.
+ */
+export const addCustomChain = ({
+  customParentChain,
+  customChain,
+}: {
+  customParentChain?: ParentChain
+  customChain: Chain
+}): void => {
+  if (customParentChain) {
+    if (parentChains[customParentChain.chainID]) {
+      throw new ArbSdkError(
+        `Parent chain ${customParentChain.chainID} already included.`
+      )
+    }
+    if (!customParentChain.isCustom) {
+      throw new ArbSdkError(
+        `Custom parent chain ${customParentChain.chainID} must have isCustom flag set to true.`
+      )
+    }
+  }
+
+  if (chains[customChain.chainID]) {
+    throw new ArbSdkError(`Chain ${customChain.chainID} already included.`)
+  }
+  if (!customChain.isCustom) {
+    throw new ArbSdkError(
+      `Custom chain ${customChain.chainID} must have isCustom flag set to true.`
+    )
+  }
+
+  let parentPartnerChain: ParentChain | undefined = {
+    ...parentChains[customChain.partnerChainID],
+  }
+  if (
+    !parentPartnerChain &&
+    Number(customParentChain?.chainID) === Number(customChain.partnerChainID)
+  ) {
+    // No existing ParentChain found as a partner to our customChain.
+    // And the newly added ParentChain is a partner to our customChain.
+    parentPartnerChain = customParentChain
+  }
+
+  if (!parentPartnerChain) {
+    throw new ArbSdkError(
+      `Chain ${customChain.chainID}'s partner parent chain, ${parentChains.partnerChainID}, not recognized.`
+    )
+  }
+
+  if (customParentChain) {
+    parentChains[customParentChain?.chainID] = customParentChain
+  }
+  chains[customChain.chainID] = customChain
+
+  // if parent chain doesn't exist, we need to add it from L2 Networks
+  if (!parentChains[customChain.partnerChainID]) {
+    parentChains[customChain.partnerChainID] = {
+      ...l2Networks[customChain.partnerChainID],
+      partnerChainIDs: [],
+    }
+  }
+
+  // add partner chain ID to the parent network if it doesn't exist
+  if (
+    !parentChains[customChain.partnerChainID].partnerChainIDs.includes(
+      customChain.chainID
+    )
+  ) {
+    parentChains[customChain.partnerChainID].partnerChainIDs.push(
+      customChain.chainID
+    )
+  }
+}
+
+/**
+ * Adds custom L1 and L2 networks. These networks will be returned in `getL1Network` and `getL2Network`.
+ * @param customL1Network
+ * @param customL2Network
+ */
 export const addCustomNetwork = ({
   customL1Network,
   customL2Network,
@@ -432,6 +661,8 @@ export const addDefaultLocalNetwork = (): {
 export const isL1Network = (
   network: L1Network | L2Network
 ): network is L1Network => {
-  if ((network as L1Network).partnerChainIDs) return true
-  else return false
+  if (!network.partnerChainIDs) {
+    return false
+  }
+  return network.partnerChainIDs.length > 0
 }

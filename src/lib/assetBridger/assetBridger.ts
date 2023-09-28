@@ -20,7 +20,14 @@ import { ArbSdkError } from '../dataEntities/errors'
 import { L1ContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'
 
-import { l1Networks, L1Network, L2Network } from '../dataEntities/networks'
+import {
+  l1Networks,
+  L1Network,
+  L2Network,
+  Chain,
+  ParentChain,
+  parentChains,
+} from '../dataEntities/networks'
 import {
   SignerOrProvider,
   SignerProviderUtils,
@@ -31,22 +38,30 @@ import {
  */
 export abstract class AssetBridger<DepositParams, WithdrawParams> {
   public readonly l1Network: L1Network
+  public readonly parentChain: ParentChain
+  private readonly l1NetworkOrParentChain: L1Network | ParentChain
 
-  public constructor(public readonly l2Network: L2Network) {
+  public constructor(public readonly l2Network: L2Network | Chain) {
     this.l1Network = l1Networks[l2Network.partnerChainID]
-    if (!this.l1Network) {
+    this.parentChain = parentChains[l2Network.partnerChainID]
+    this.l1NetworkOrParentChain = this.l1Network || this.parentChain
+
+    if (!this.l1NetworkOrParentChain) {
       throw new ArbSdkError(
-        `Unknown l1 network chain id: ${l2Network.partnerChainID}`
+        `Unknown parent network chain id: ${l2Network.partnerChainID}`
       )
     }
   }
 
   /**
-   * Check the signer/provider matches the l1Network, throws if not
+   * Check the signer/provider matches the L1 network or the Parent Chain, throws if not
    * @param sop
    */
   protected async checkL1Network(sop: SignerOrProvider): Promise<void> {
-    await SignerProviderUtils.checkNetworkMatches(sop, this.l1Network.chainID)
+    await SignerProviderUtils.checkNetworkMatches(
+      sop,
+      this.l1NetworkOrParentChain.chainID
+    )
   }
 
   /**
