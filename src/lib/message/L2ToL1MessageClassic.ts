@@ -29,7 +29,7 @@ import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { Outbox__factory } from '../abi/classic/factories/Outbox__factory'
 
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
-import { L2ToL1TransactionEvent } from '../abi/ArbSys'
+import { L2ToL1TransactionEvent as ChainToParentChainTransactionEvent } from '../abi/ArbSys'
 import { ContractTransaction, Overrides } from 'ethers'
 import { EventFetcher } from '../utils/eventFetcher'
 import {
@@ -39,7 +39,7 @@ import {
 import { isDefined, wait } from '../utils/lib'
 import { ArbSdkError } from '../dataEntities/errors'
 import { EventArgs } from '../dataEntities/event'
-import { L2ToL1MessageStatus } from '../dataEntities/message'
+import { L2ToL1MessageStatus as ChainToParentChainMessageStatus } from '../dataEntities/message'
 import { getChainNetwork } from '../dataEntities/networks'
 
 export interface MessageBatchProofInfo {
@@ -91,14 +91,17 @@ export interface MessageBatchProofInfo {
 
 /**
  * Conditional type for Signer or Provider. If T is of type Provider
- * then L2ToL1MessageReaderOrWriter<T> will be of type L2ToL1MessageReader.
- * If T is of type Signer then L2ToL1MessageReaderOrWriter<T> will be of
- * type L2ToL1MessageWriter.
+ * then ChainToParentChainMessageReaderOrWriter<T> will be of type ChainToParentChainMessageReader.
+ * If T is of type Signer then ChainToParentChainMessageReaderOrWriter<T> will be of
+ * type ChainToParentChainMessageWriter.
  */
-export type L2ToL1MessageReaderOrWriterClassic<T extends SignerOrProvider> =
-  T extends Provider ? L2ToL1MessageReaderClassic : L2ToL1MessageWriterClassic
+export type ChainToParentChainMessageReaderOrWriterClassic<
+  T extends SignerOrProvider
+> = T extends Provider
+  ? ChainToParentChainMessageReaderClassic
+  : ChainToParentChainMessageWriterClassic
 
-export class L2ToL1MessageClassic {
+export class ChainToParentChainMessageClassic {
   /**
    * The number of the batch this message is part of
    */
@@ -115,7 +118,7 @@ export class L2ToL1MessageClassic {
   }
 
   /**
-   * Instantiates a new `L2ToL1MessageWriterClassic` or `L2ToL1MessageReaderClassic` object.
+   * Instantiates a new `ChainToParentChainMessageWriterClassic` or `ChainToParentChainMessageReaderClassic` object.
    *
    * @param {SignerOrProvider} l1SignerOrProvider Signer or provider to be used for executing or reading the L2-to-L1 message.
    * @param {BigNumber} batchNumber The number of the batch containing the L2-to-L1 message.
@@ -127,28 +130,30 @@ export class L2ToL1MessageClassic {
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
     l1Provider?: Provider
-  ): L2ToL1MessageReaderOrWriterClassic<T>
+  ): ChainToParentChainMessageReaderOrWriterClassic<T>
   public static fromBatchNumber<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
     l1Provider?: Provider
-  ): L2ToL1MessageReaderClassic | L2ToL1MessageWriterClassic {
+  ):
+    | ChainToParentChainMessageReaderClassic
+    | ChainToParentChainMessageWriterClassic {
     return SignerProviderUtils.isSigner(l1SignerOrProvider)
-      ? new L2ToL1MessageWriterClassic(
+      ? new ChainToParentChainMessageWriterClassic(
           l1SignerOrProvider,
           batchNumber,
           indexInBatch,
           l1Provider
         )
-      : new L2ToL1MessageReaderClassic(
+      : new ChainToParentChainMessageReaderClassic(
           l1SignerOrProvider,
           batchNumber,
           indexInBatch
         )
   }
 
-  public static async getL2ToL1Events(
+  public static async getChainToParentChainEvents(
     l2Provider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     batchNumber?: BigNumber,
@@ -156,7 +161,9 @@ export class L2ToL1MessageClassic {
     uniqueId?: BigNumber,
     indexInBatch?: BigNumber
   ): Promise<
-    (EventArgs<L2ToL1TransactionEvent> & { transactionHash: string })[]
+    (EventArgs<ChainToParentChainTransactionEvent> & {
+      transactionHash: string
+    })[]
   > {
     const eventFetcher = new EventFetcher(l2Provider)
     const events = (
@@ -182,7 +189,7 @@ export class L2ToL1MessageClassic {
 /**
  * Provides read-only access for classic l2-to-l1-messages
  */
-export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
+export class ChainToParentChainMessageReaderClassic extends ChainToParentChainMessageClassic {
   constructor(
     protected readonly l1Provider: Provider,
     batchNumber: BigNumber,
@@ -278,7 +285,7 @@ export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
     l2Provider: Provider
   ): Promise<MessageBatchProofInfo | null> {
     if (!isDefined(this.proof)) {
-      this.proof = await L2ToL1MessageReaderClassic.tryGetProof(
+      this.proof = await ChainToParentChainMessageReaderClassic.tryGetProof(
         l2Provider,
         this.batchNumber,
         this.indexInBatch
@@ -328,19 +335,21 @@ export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
    * @param proofInfo
    * @returns
    */
-  public async status(l2Provider: Provider): Promise<L2ToL1MessageStatus> {
+  public async status(
+    l2Provider: Provider
+  ): Promise<ChainToParentChainMessageStatus> {
     try {
       const messageExecuted = await this.hasExecuted(l2Provider)
       if (messageExecuted) {
-        return L2ToL1MessageStatus.EXECUTED
+        return ChainToParentChainMessageStatus.EXECUTED
       }
 
       const outboxEntryExists = await this.outboxEntryExists(l2Provider)
       return outboxEntryExists
-        ? L2ToL1MessageStatus.CONFIRMED
-        : L2ToL1MessageStatus.UNCONFIRMED
+        ? ChainToParentChainMessageStatus.CONFIRMED
+        : ChainToParentChainMessageStatus.UNCONFIRMED
     } catch (e) {
-      return L2ToL1MessageStatus.UNCONFIRMED
+      return ChainToParentChainMessageStatus.UNCONFIRMED
     }
   }
 
@@ -367,7 +376,7 @@ export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
   /**
    * Estimates the L1 block number in which this L2 to L1 tx will be available for execution
    * @param l2Provider
-   * @returns Always returns null for classic l2toL1 messages since they can be executed in any block now.
+   * @returns Always returns null for classic chainToParentChain messages since they can be executed in any block now.
    */
   public async getFirstExecutableBlock(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -380,9 +389,9 @@ export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
 /**
  * Provides read and write access for classic l2-to-l1-messages
  */
-export class L2ToL1MessageWriterClassic extends L2ToL1MessageReaderClassic {
+export class ChainToParentChainMessageWriterClassic extends ChainToParentChainMessageReaderClassic {
   /**
-   * Instantiates a new `L2ToL1MessageWriterClassic` object.
+   * Instantiates a new `ChainToParentChainMessageWriterClassic` object.
    *
    * @param {Signer} l1Signer The signer to be used for executing the L2-to-L1 message.
    * @param {BigNumber} batchNumber The number of the batch containing the L2-to-L1 message.
@@ -399,7 +408,7 @@ export class L2ToL1MessageWriterClassic extends L2ToL1MessageReaderClassic {
   }
 
   /**
-   * Executes the L2ToL1Message on L1.
+   * Executes the ChainToParentChainMessage on L1.
    * Will throw an error if the outbox entry has not been created, which happens when the
    * corresponding assertion is confirmed.
    * @returns
@@ -409,9 +418,9 @@ export class L2ToL1MessageWriterClassic extends L2ToL1MessageReaderClassic {
     overrides?: Overrides
   ): Promise<ContractTransaction> {
     const status = await this.status(l2Provider)
-    if (status !== L2ToL1MessageStatus.CONFIRMED) {
+    if (status !== ChainToParentChainMessageStatus.CONFIRMED) {
       throw new ArbSdkError(
-        `Cannot execute message. Status is: ${status} but must be ${L2ToL1MessageStatus.CONFIRMED}.`
+        `Cannot execute message. Status is: ${status} but must be ${ChainToParentChainMessageStatus.CONFIRMED}.`
       )
     }
 

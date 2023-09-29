@@ -168,7 +168,7 @@ export class ChainToParentChainMessage {
     const logQueries = []
     if (classicFilter.fromBlock !== classicFilter.toBlock) {
       logQueries.push(
-        classic.L2ToL1MessageClassic.getL2ToL1Events(
+        classic.ChainToParentChainMessageClassic.getChainToParentChainEvents(
           ChainProvider,
           classicFilter,
           position,
@@ -203,7 +203,7 @@ export class ChainToParentChainMessage {
  * Provides read-only access for Chain-to-ParentChain-messages
  */
 export class ChainToParentChainMessageReader extends ChainToParentChainMessage {
-  private readonly classicReader?: classic.L2ToL1MessageReaderClassic
+  private readonly classicReader?: classic.ChainToParentChainMessageReaderClassic
   private readonly nitroReader?: nitro.ChainToParentChainMessageReaderNitro
 
   constructor(
@@ -212,7 +212,7 @@ export class ChainToParentChainMessageReader extends ChainToParentChainMessage {
   ) {
     super()
     if (this.isClassic(event)) {
-      this.classicReader = new classic.L2ToL1MessageReaderClassic(
+      this.classicReader = new classic.ChainToParentChainMessageReaderClassic(
         ParentChainProvider,
         event.batchNumber,
         event.indexInBatch
@@ -285,7 +285,7 @@ export class ChainToParentChainMessageReader extends ChainToParentChainMessage {
  * Provides read and write access for Chain-to-ParentChain-messages
  */
 export class ChainToParentChainMessageWriter extends ChainToParentChainMessageReader {
-  private readonly classicWriter?: classic.L2ToL1MessageWriterClassic
+  private readonly classicWriter?: classic.ChainToParentChainMessageWriterClassic
   private readonly nitroWriter?: nitro.ChainToParentChainMessageWriterNitro
 
   /**
@@ -303,7 +303,7 @@ export class ChainToParentChainMessageWriter extends ChainToParentChainMessageRe
     super(ParentChainProvider ?? ParentChainSigner.provider!, event)
 
     if (this.isClassic(event)) {
-      this.classicWriter = new classic.L2ToL1MessageWriterClassic(
+      this.classicWriter = new classic.ChainToParentChainMessageWriterClassic(
         ParentChainSigner,
         event.batchNumber,
         event.indexInBatch,
