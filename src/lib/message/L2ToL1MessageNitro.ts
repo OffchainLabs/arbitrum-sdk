@@ -61,6 +61,8 @@ const ASSERTION_CREATED_PADDING = 50
 // expected number of L1 blocks that it takes for a validator to confirm an L1 block after the node deadline is passed
 const ASSERTION_CONFIRMED_PADDING = 20
 
+const l2BlockRangeCache: { [key in number]: number[] } = {}
+
 /**
  * Base functionality for nitro L2->L1 messages
  */
@@ -116,7 +118,6 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
   protected sendRootConfirmed?: boolean
   protected outboxAddress?: string
   protected l1BatchNumber?: number
-  private l2BlockRangeCache?: { [key in number]: number[] }
 
   constructor(
     protected readonly l1Provider: Provider,
@@ -157,10 +158,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
   }
 
   public setL2BlockRangeCache(l1Block: number, l2BlockRange: number[]) {
-    this.l2BlockRangeCache = {
-      ...this.l2BlockRangeCache,
-      [l1Block]: l2BlockRange,
-    }
+    l2BlockRangeCache[l1Block] = l2BlockRange
   }
 
   /**
@@ -220,11 +218,8 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     // If L1 is Arbitrum, then L2 is an Orbit chain.
     if (await isArbitrumChain(this.l1Provider)) {
       try {
-        const l2BlockRangeCache =
-          this.l2BlockRangeCache?.[createdAtBlock.toNumber()]
-
         const l2BlockRange =
-          l2BlockRangeCache ||
+          l2BlockRangeCache?.[createdAtBlock.toNumber()] ||
           (await getBlockRangesForL1Block({
             forL1Block: createdAtBlock.toNumber(),
             provider: this.l1Provider as JsonRpcProvider,
