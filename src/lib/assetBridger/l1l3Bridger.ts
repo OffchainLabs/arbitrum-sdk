@@ -18,7 +18,7 @@ import { L2GatewayToken__factory } from '../abi/factories/L2GatewayToken__factor
 import { ERC20 } from '../abi/ERC20'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { DISABLED_GATEWAY } from '../dataEntities/constants'
-import { TokenApproveParams } from './erc20Bridger'
+import { Erc20Bridger, TokenApproveParams } from './erc20Bridger'
 import {
   BigNumber,
   BigNumberish,
@@ -34,6 +34,7 @@ import {
   L1TransactionReceipt,
 } from '../message/L1Transaction'
 import { L1ToL2MessageStatus } from '../message/L1ToL2Message'
+import { L2ForwarderPredictor } from '../abi/L2ForwarderPredictor'
 
 /*
 API:
@@ -101,6 +102,9 @@ export class L1L3Bridger {
   } as const
 
   public readonly defaultGasPricePercentIncrease: BigNumber =
+    BigNumber.from(130) // 30% increase
+
+  public readonly defaultRelayerPaymentPercentIncrease: BigNumber =
     BigNumber.from(130) // 30% increase
 
   public constructor(public readonly l3Network: L2Network) {
@@ -394,6 +398,54 @@ export class L1L3Bridger {
     return l1Signer.sendTransaction(approveRequest)
   }
 
+  private async _populateGasParams(
+    params: DepositRequestParams,
+    l1Provider: Provider,
+    l2Provider: Provider,
+    l3Provider: Provider,
+    gasPricePercentIncrease: BigNumber
+  ) {
+    if (!params.gasParams) {
+      // make sure both gateways are default
+      if (!(await this.isL1L2GatewayDefault(params.l1Token, l1Provider))) {
+        throw new ArbSdkError(
+          `Cannot estimate gas for custom l1l2 gateway, please provide gas params`
+        )
+      }
+
+      if (
+        !(await this.isL2L3GatewayDefault(
+          params.l1Token,
+          l1Provider,
+          l2Provider
+        ))
+      ) {
+        throw new ArbSdkError(
+          `Cannot estimate gas for custom l2l3 gateway, please provide gas params`
+        )
+      }
+
+      params.gasParams = this.defaultRetryableGasParams
+    }
+
+    // populate gasParams gas prices
+    return {
+      ...params.gasParams,
+      l2GasPrice:
+        params.gasParams.l2GasPrice ||
+        this.percentIncrease(
+          await l2Provider.getGasPrice(),
+          gasPricePercentIncrease
+        ),
+      l3GasPrice:
+        params.gasParams.l3GasPrice ||
+        this.percentIncrease(
+          await l3Provider.getGasPrice(),
+          gasPricePercentIncrease
+        ),
+    }
+  }
+
   public async getDepositRequest(
     params: DepositRequestParams,
     l1Signer: Signer,
@@ -410,47 +462,13 @@ export class L1L3Bridger {
     gasPricePercentIncrease =
       gasPricePercentIncrease || this.defaultGasPricePercentIncrease
 
-    if (!params.gasParams) {
-      // make sure both gateways are default
-      if (
-        !(await this.isL1L2GatewayDefault(params.l1Token, l1Signer.provider!))
-      ) {
-        throw new ArbSdkError(
-          `Cannot estimate gas for custom l1l2 gateway, please provide gas params`
-        )
-      }
-
-      if (
-        !(await this.isL2L3GatewayDefault(
-          params.l1Token,
-          l1Signer.provider!,
-          l2Provider
-        ))
-      ) {
-        throw new ArbSdkError(
-          `Cannot estimate gas for custom l2l3 gateway, please provide gas params`
-        )
-      }
-
-      params.gasParams = this.defaultRetryableGasParams
-    }
-
-    // populate gasParams gas prices
-    const gasParams = {
-      ...params.gasParams,
-      l2GasPrice:
-        params.gasParams.l2GasPrice ||
-        this.percentIncrease(
-          await l2Provider.getGasPrice(),
-          gasPricePercentIncrease
-        ),
-      l3GasPrice:
-        params.gasParams.l3GasPrice ||
-        this.percentIncrease(
-          await l3Provider.getGasPrice(),
-          gasPricePercentIncrease
-        ),
-    }
+    const gasParams = await this._populateGasParams(
+      params,
+      l1Signer.provider!,
+      l2Provider,
+      l3Provider,
+      gasPricePercentIncrease
+    )
 
     const teleporter = Teleporter__factory.connect(
       this.teleporterAddresses.l1Teleporter,
@@ -555,8 +573,80 @@ export class L1L3Bridger {
     }
   }
 
-  public async getDepositRequestUsingRelayer() {
+  public async getApproveTokenRequestUsingRelayer() {
     throw new Error('Not implemented')
+  }
+
+  public async getDepositRequestUsingRelayer(
+    params: DepositRequestParams,
+    l1Signer: Signer,
+    l2Provider: Provider,
+    l3Provider: Provider,
+    overrides: {gasPricePercentIncrease?: BigNumber, relayerPaymentPercentIncrease?: BigNumber} = {}
+  ) {
+    await this.checkL1Network(l1Signer)
+    await this.checkL2Network(l2Provider)
+    await this.checkL3Network(l3Provider)
+
+    const gasPricePercentIncrease =
+      overrides.gasPricePercentIncrease || this.defaultGasPricePercentIncrease
+    const relayerPaymentPercentIncrease =
+      overrides.relayerPaymentPercentIncrease || this.defaultRelayerPaymentPercentIncrease
+
+    const gasParams = await this._populateGasParams(
+      params,
+      l1Signer.provider!,
+      l2Provider,
+      l3Provider,
+      gasPricePercentIncrease
+    )
+
+    const teleporter = Teleporter__factory.connect(
+      this.teleporterAddresses.l1Teleporter,
+      l1Signer
+    )
+
+    // calculate l2 forwarder address
+    const l2ForwarderParams: L2ForwarderPredictor.L2ForwarderParamsStruct = {
+      owner: await l1Signer.getAddress(),
+      token: params.l1Token,
+      router: this.l3Network.tokenBridge.l1GatewayRouter,
+      to: params.to,
+      amount: params.amount,
+      gasLimit: gasParams.l2l3TokenBridgeGasLimit,
+      gasPrice: gasParams.l3GasPrice,
+      // todo: custom relayer payment parameter. default percent increase.
+      relayerPayment: gasParams.l2ForwarderFactoryGasLimit.mul(
+        gasParams.l2GasPrice
+      ),
+    }
+
+    const l2ForwarderAddress = await teleporter.l2ForwarderAddress(
+      l2ForwarderParams
+    )
+
+    const erc20Bridger = new Erc20Bridger(this.l2Network)
+
+    const tokenBridgeRequest = await erc20Bridger.getDepositRequest({
+      amount: BigNumber.from(params.amount),
+      l1Provider: l1Signer.provider!,
+      l2Provider: l2Provider,
+      erc20L1Address: params.l1Token,
+      from: await l1Signer.getAddress(),
+    })
+
+    // add relayer payment and l3 retryable costs to value
+    const calculatedGasCosts = await teleporter.calculateRetryableGasCosts(
+      this.l2Network.ethBridge.inbox,
+      '0', // we don't care about L1 gas price, this will just set it to current gas price
+      gasParams
+    )
+    const extraValue = calculatedGasCosts.l2l3TokenBridgeGasCost
+      .add(calculatedGasCosts.l2l3TokenBridgeSubmissionCost)
+      .add(relayerPaymentPercentIncrease.mul(l2ForwarderParams.relayerPayment).div(100))
+    tokenBridgeRequest.txRequest.value = extraValue.add(tokenBridgeRequest.txRequest.value)
+
+    return tokenBridgeRequest
   }
 
   public async depositUsingRelayer() {
