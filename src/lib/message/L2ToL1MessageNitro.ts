@@ -30,7 +30,7 @@ import { RollupUserLogic__factory } from '../abi/factories/RollupUserLogic__fact
 import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
-import { L2ToL1TxEvent as ChainToParentChainTxEvent } from '../abi/ArbSys'
+import { L2ToL1TxEvent as ChildToParentChainTxEvent } from '../abi/ArbSys'
 import { ContractTransaction, Overrides } from 'ethers'
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { ArbSdkError } from '../dataEntities/errors'
@@ -45,19 +45,19 @@ import { ArbitrumProvider } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { EventArgs } from '../dataEntities/event'
-import { L2ToL1MessageStatus as ChainToParentChainMessageStatus } from '../dataEntities/message'
+import { L2ToL1MessageStatus as ChildToParentChainMessageStatus } from '../dataEntities/message'
 
 /**
  * Conditional type for Signer or Provider. If T is of type Provider
- * then ChainToParentChainMessageReaderOrWriter<T> will be of type ChainToParentChainMessageReader.
- * If T is of type Signer then ChainToParentChainMessageReaderOrWriter<T> will be of
- * type ChainToParentChainMessageWriter.
+ * then ChildToParentChainMessageReaderOrWriter<T> will be of type ChildToParentChainMessageReader.
+ * If T is of type Signer then ChildToParentChainMessageReaderOrWriter<T> will be of
+ * type ChildToParentChainMessageWriter.
  */
-export type ChainToParentChainMessageReaderOrWriterNitro<
+export type ChildToParentChainMessageReaderOrWriterNitro<
   T extends SignerOrProvider
 > = T extends Provider
-  ? ChainToParentChainMessageReaderNitro
-  : ChainToParentChainMessageWriterNitro
+  ? ChildToParentChainMessageReaderNitro
+  : ChildToParentChainMessageWriterNitro
 
 // expected number of L1 blocks that it takes for an L2 tx to be included in a L1 assertion
 const ASSERTION_CREATED_PADDING = 50
@@ -67,47 +67,47 @@ const ASSERTION_CONFIRMED_PADDING = 20
 /**
  * Base functionality for nitro L2->L1 messages
  */
-export class ChainToParentChainMessageNitro {
+export class ChildToParentChainMessageNitro {
   protected constructor(
-    public readonly event: EventArgs<ChainToParentChainTxEvent>
+    public readonly event: EventArgs<ChildToParentChainTxEvent>
   ) {}
 
   /**
-   * Instantiates a new `ChainToParentChainMessageWriterNitro` or `ChainToParentChainMessageReaderNitro` object.
+   * Instantiates a new `ChildToParentChainMessageWriterNitro` or `ChildToParentChainMessageReaderNitro` object.
    *
    * @param {SignerOrProvider} l1SignerOrProvider Signer or provider to be used for executing or reading the L2-to-L1 message.
-   * @param {EventArgs<ChainToParentChainTxEvent>} event The event containing the data of the L2-to-L1 message.
+   * @param {EventArgs<ChildToParentChainTxEvent>} event The event containing the data of the L2-to-L1 message.
    * @param {Provider} [l1Provider] Optional. Used to override the Provider which is attached to `l1SignerOrProvider` in case you need more control. This will be a required parameter in a future major version update.
    */
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event: EventArgs<ChainToParentChainTxEvent>,
+    event: EventArgs<ChildToParentChainTxEvent>,
     l1Provider?: Provider
-  ): ChainToParentChainMessageReaderOrWriterNitro<T>
+  ): ChildToParentChainMessageReaderOrWriterNitro<T>
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event: EventArgs<ChainToParentChainTxEvent>,
+    event: EventArgs<ChildToParentChainTxEvent>,
     l1Provider?: Provider
   ):
-    | ChainToParentChainMessageReaderNitro
-    | ChainToParentChainMessageWriterNitro {
+    | ChildToParentChainMessageReaderNitro
+    | ChildToParentChainMessageWriterNitro {
     return SignerProviderUtils.isSigner(l1SignerOrProvider)
-      ? new ChainToParentChainMessageWriterNitro(
+      ? new ChildToParentChainMessageWriterNitro(
           l1SignerOrProvider,
           event,
           l1Provider
         )
-      : new ChainToParentChainMessageReaderNitro(l1SignerOrProvider, event)
+      : new ChildToParentChainMessageReaderNitro(l1SignerOrProvider, event)
   }
 
-  public static async getChainToParentChainEvents(
+  public static async getChildToParentChainEvents(
     l2Provider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     position?: BigNumber,
     destination?: string,
     hash?: BigNumber
   ): Promise<
-    (EventArgs<ChainToParentChainTxEvent> & { transactionHash: string })[]
+    (EventArgs<ChildToParentChainTxEvent> & { transactionHash: string })[]
   > {
     const eventFetcher = new EventFetcher(l2Provider)
     return (
@@ -123,7 +123,7 @@ export class ChainToParentChainMessageNitro {
 /**
  * Provides read-only access nitro for l2-to-l1-messages
  */
-export class ChainToParentChainMessageReaderNitro extends ChainToParentChainMessageNitro {
+export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMessageNitro {
   protected sendRootHash?: string
   protected sendRootSize?: BigNumber
   protected sendRootConfirmed?: boolean
@@ -132,7 +132,7 @@ export class ChainToParentChainMessageReaderNitro extends ChainToParentChainMess
 
   constructor(
     protected readonly l1Provider: Provider,
-    event: EventArgs<ChainToParentChainTxEvent>
+    event: EventArgs<ChildToParentChainTxEvent>
   ) {
     super(event)
   }
@@ -175,12 +175,12 @@ export class ChainToParentChainMessageReaderNitro extends ChainToParentChainMess
    */
   public async status(
     l2Provider: Provider
-  ): Promise<ChainToParentChainMessageStatus> {
+  ): Promise<ChildToParentChainMessageStatus> {
     const { sendRootConfirmed } = await this.getSendProps(l2Provider)
-    if (!sendRootConfirmed) return ChainToParentChainMessageStatus.UNCONFIRMED
+    if (!sendRootConfirmed) return ChildToParentChainMessageStatus.UNCONFIRMED
     return (await this.hasExecuted(l2Provider))
-      ? ChainToParentChainMessageStatus.EXECUTED
-      : ChainToParentChainMessageStatus.CONFIRMED
+      ? ChildToParentChainMessageStatus.EXECUTED
+      : ChildToParentChainMessageStatus.CONFIRMED
   }
 
   private parseNodeCreatedAssertion(event: FetchedEvent<NodeCreatedEvent>) {
@@ -345,8 +345,8 @@ export class ChainToParentChainMessageReaderNitro extends ChainToParentChainMess
   ): Promise<void> {
     const status = await this.status(l2Provider)
     if (
-      status === ChainToParentChainMessageStatus.CONFIRMED ||
-      status === ChainToParentChainMessageStatus.EXECUTED
+      status === ChildToParentChainMessageStatus.CONFIRMED ||
+      status === ChildToParentChainMessageStatus.EXECUTED
     ) {
       return
     } else {
@@ -372,12 +372,12 @@ export class ChainToParentChainMessageReaderNitro extends ChainToParentChainMess
     )
 
     const status = await this.status(l2Provider)
-    if (status === ChainToParentChainMessageStatus.EXECUTED) return null
-    if (status === ChainToParentChainMessageStatus.CONFIRMED) return null
+    if (status === ChildToParentChainMessageStatus.EXECUTED) return null
+    if (status === ChildToParentChainMessageStatus.CONFIRMED) return null
 
     // consistency check in case we change the enum in the future
-    if (status !== ChainToParentChainMessageStatus.UNCONFIRMED)
-      throw new ArbSdkError('ChainToParentChainMsg expected to be unconfirmed')
+    if (status !== ChildToParentChainMessageStatus.UNCONFIRMED)
+      throw new ArbSdkError('ChildToParentChainMsg expected to be unconfirmed')
 
     const latestBlock = await this.l1Provider.getBlockNumber()
     const eventFetcher = new EventFetcher(this.l1Provider)
@@ -448,24 +448,24 @@ export class ChainToParentChainMessageReaderNitro extends ChainToParentChainMess
 /**
  * Provides read and write access for nitro l2-to-l1-messages
  */
-export class ChainToParentChainMessageWriterNitro extends ChainToParentChainMessageReaderNitro {
+export class ChildToParentChainMessageWriterNitro extends ChildToParentChainMessageReaderNitro {
   /**
-   * Instantiates a new `ChainToParentChainMessageWriterNitro` object.
+   * Instantiates a new `ChildToParentChainMessageWriterNitro` object.
    *
    * @param {Signer} l1Signer The signer to be used for executing the L2-to-L1 message.
-   * @param {EventArgs<ChainToParentChainTxEvent>} event The event containing the data of the L2-to-L1 message.
+   * @param {EventArgs<ChildToParentChainTxEvent>} event The event containing the data of the L2-to-L1 message.
    * @param {Provider} [l1Provider] Optional. Used to override the Provider which is attached to `l1Signer` in case you need more control. This will be a required parameter in a future major version update.
    */
   constructor(
     private readonly l1Signer: Signer,
-    event: EventArgs<ChainToParentChainTxEvent>,
+    event: EventArgs<ChildToParentChainTxEvent>,
     l1Provider?: Provider
   ) {
     super(l1Provider ?? l1Signer.provider!, event)
   }
 
   /**
-   * Executes the ChainToParentChainMessage on L1.
+   * Executes the ChildToParentChainMessage on L1.
    * Will throw an error if the outbox entry has not been created, which happens when the
    * corresponding assertion is confirmed.
    * @returns
@@ -475,9 +475,9 @@ export class ChainToParentChainMessageWriterNitro extends ChainToParentChainMess
     overrides?: Overrides
   ): Promise<ContractTransaction> {
     const status = await this.status(l2Provider)
-    if (status !== ChainToParentChainMessageStatus.CONFIRMED) {
+    if (status !== ChildToParentChainMessageStatus.CONFIRMED) {
       throw new ArbSdkError(
-        `Cannot execute message. Status is: ${status} but must be ${ChainToParentChainMessageStatus.CONFIRMED}.`
+        `Cannot execute message. Status is: ${status} but must be ${ChildToParentChainMessageStatus.CONFIRMED}.`
       )
     }
     const proof = await this.getOutboxProof(l2Provider)
