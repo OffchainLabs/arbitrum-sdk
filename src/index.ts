@@ -32,12 +32,12 @@ export {
   L1TransactionReceipt,
 } from './lib/message/L1Transaction'
 export {
-  ParentChainToChainMessageStatus as L1ToL2MessageStatus,
+  ParentToChildMessageStatus as L1ToL2MessageStatus,
   EthDepositStatus,
-  ParentChainToChainMessage as L1ToL2Message,
-  ParentChainToChainMessageReader as L1ToL2MessageReader,
-  ParentChainToChainMessageReaderClassic as L1ToL2MessageReaderClassic,
-  ParentChainToChainMessageWriter as L1ToL2MessageWriter,
+  ParentToChildMessage as L1ToL2Message,
+  ParentToChildMessageReader as L1ToL2MessageReader,
+  ParentToChildMessageReaderClassic as L1ToL2MessageReaderClassic,
+  ParentToChildMessageWriter as L1ToL2MessageWriter,
 } from './lib/message/L1ToL2Message'
 export { L1ToL2MessageGasEstimator } from './lib/message/L1ToL2MessageGasEstimator'
 export { argSerializerConstructor } from './lib/utils/byte_serialize_params'
