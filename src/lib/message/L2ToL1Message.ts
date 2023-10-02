@@ -229,12 +229,6 @@ export class L2ToL1MessageReader extends L2ToL1Message {
     else return await this.classicReader!.status(l2Provider)
   }
 
-  public setL2BlockRangeCache(l1Block: number, l2BlockRange: number[]) {
-    if (this.nitroReader) {
-      return this.nitroReader.setL2BlockRangeCache(l1Block, l2BlockRange)
-    }
-  }
-
   /**
    * Waits until the outbox entry has been created, and will not return until it has been.
    * WARNING: Outbox entries are only created when the corresponding node is confirmed. Which

@@ -61,7 +61,27 @@ const ASSERTION_CREATED_PADDING = 50
 // expected number of L1 blocks that it takes for a validator to confirm an L1 block after the node deadline is passed
 const ASSERTION_CONFIRMED_PADDING = 20
 
-const l2BlockRangeCache: { [key in number]: number[] } = {}
+const l2BlockRangeCache: { [key in string]: number[] } = {}
+
+export function getL2BlockRangeCacheKey({
+  parentChainId,
+  chainId,
+  l1BlockNumber,
+}: {
+  parentChainId: number
+  chainId: number
+  l1BlockNumber: number
+}) {
+  return `${parentChainId}-${chainId}-${l1BlockNumber}`
+}
+
+export function getL2BlockRangeCache(key: string) {
+  return l2BlockRangeCache[key]
+}
+
+export function setL2BlockRangeCache(key: string, value: number[]) {
+  l2BlockRangeCache[key] = value
+}
 
 /**
  * Base functionality for nitro L2->L1 messages
@@ -157,10 +177,6 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     return outbox.callStatic.isSpent(this.event.position)
   }
 
-  public setL2BlockRangeCache(l1Block: number, l2BlockRange: number[]) {
-    l2BlockRangeCache[l1Block] = l2BlockRange
-  }
-
   /**
    * Get the status of this message
    * In order to check if the message has been executed proof info must be provided.
@@ -217,9 +233,19 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
 
     // If L1 is Arbitrum, then L2 is an Orbit chain.
     if (await isArbitrumChain(this.l1Provider)) {
+      let l2BlockRange
+      const parentChainId = (await this.l1Provider.getNetwork()).chainId
+      const chainId = (await l2Provider.getNetwork()).chainId
+      const l2BlockRangeCacheKey = getL2BlockRangeCacheKey({
+        parentChainId,
+        chainId,
+        l1BlockNumber: createdAtBlock.toNumber(),
+      })
+
       try {
-        const l2BlockRange =
-          l2BlockRangeCache?.[createdAtBlock.toNumber()] ||
+        const cachedL2BlockRange = getL2BlockRangeCache(l2BlockRangeCacheKey)
+        l2BlockRange =
+          cachedL2BlockRange ||
           (await getBlockRangesForL1Block({
             forL1Block: createdAtBlock.toNumber(),
             provider: this.l1Provider as JsonRpcProvider,
@@ -231,15 +257,14 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
         }
         createdFromBlock = BigNumber.from(startBlock)
         createdToBlock = BigNumber.from(endBlock)
-
-        this.setL2BlockRangeCache(createdAtBlock.toNumber(), [
-          startBlock,
-          endBlock,
-        ])
       } catch (e) {
         // fallback to old method if the new method fails
         createdFromBlock = createdAtBlock
         createdToBlock = createdAtBlock
+      }
+
+      if (l2BlockRange) {
+        setL2BlockRangeCache(l2BlockRangeCacheKey, l2BlockRange)
       }
     }
 

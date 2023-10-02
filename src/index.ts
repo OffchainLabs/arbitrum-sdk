@@ -39,6 +39,11 @@ export {
   L1ToL2MessageReaderClassic,
   L1ToL2MessageWriter,
 } from './lib/message/L1ToL2Message'
+export {
+  getL2BlockRangeCacheKey,
+  getL2BlockRangeCache,
+  setL2BlockRangeCache,
+} from './lib/message/L2ToL1MessageNitro'
 export { L1ToL2MessageGasEstimator } from './lib/message/L1ToL2MessageGasEstimator'
 export { argSerializerConstructor } from './lib/utils/byte_serialize_params'
 export { CallInput, MultiCaller } from './lib/utils/multicall'
