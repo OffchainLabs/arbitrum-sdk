@@ -11,7 +11,7 @@ async function main() {
   const cwd = process.cwd()
 
   const nitroPath = getPackagePath('@arbitrum/nitro-contracts')
-  const peripheralsPath = getPackagePath('arb-bridge-peripherals')
+  const peripheralsPath = getPackagePath('@arbitrum/token-bridge-contracts')
 
   console.log('Compiling paths.')
 
@@ -33,7 +33,7 @@ async function main() {
   })
 
   console.log('building peripherals')
-  execSync(`${npmExec} run hardhat:prod compile`, {
+  execSync(`${npmExec} && ${npmExec} run hardhat compile`, {
     cwd: peripheralsPath,
   })
 

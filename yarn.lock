@@ -27,6 +27,28 @@
   optionalDependencies:
     sol2uml "2.2.0"
 
+"@arbitrum/nitro-contracts@^1.0.0-beta.8":
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.0.2.tgz#c73dce72b8f969a5909d5aaef6da80681c667475"
+  integrity sha512-Y+cXIQNsy9UNANnFrDGKhHzNmOWttxpXP0/uJFTRmS+rgS4ozlr81/UmBo3tX6uWjziDtquhYRuG3wx17talOQ==
+  dependencies:
+    "@openzeppelin/contracts" "4.5.0"
+    "@openzeppelin/contracts-upgradeable" "4.5.2"
+    patch-package "^6.4.7"
+  optionalDependencies:
+    sol2uml "2.2.0"
+
+"@arbitrum/token-bridge-contracts@1.0.0-beta.0":
+  version "1.0.0-beta.0"
+  resolved "https://registry.yarnpkg.com/@arbitrum/token-bridge-contracts/-/token-bridge-contracts-1.0.0-beta.0.tgz#df67fe9c1044873afea5f3ea7874dbca84c31dda"
+  integrity sha512-70V42hrH+2OU/RIxWngM5Zgj9DgD655N085kJo9EFCXxHSh4r2+9JzsBdFuwz0D+5OGqBS33Jw5x60OGVGzBPQ==
+  dependencies:
+    "@arbitrum/nitro-contracts" "^1.0.0-beta.8"
+    "@openzeppelin/contracts" "3.4.2"
+    "@openzeppelin/contracts-upgradeable" "3.4.2"
+  optionalDependencies:
+    "@openzeppelin/upgrades-core" "^1.7.6"
+
 "@babel/code-frame@7.12.11":
   version "7.12.11"
   resolved "https://registry.yarnpkg.com/@babel/code-frame/-/code-frame-7.12.11.tgz#f4ad435aa263db935b8f10f2c552d23fb716a63f"
@@ -1085,11 +1107,6 @@
   resolved "https://registry.yarnpkg.com/@nomiclabs/hardhat-ethers/-/hardhat-ethers-2.0.5.tgz#131b0da1b71680d5a01569f916ae878229d326d3"
   integrity sha512-A2gZAGB6kUvLx+kzM92HKuUF33F1FSe90L0TmkXkT2Hh0OKRpvWZURUSU2nghD2yC4DzfEZ3DftfeHGvZ2JTUw==
 
-"@openzeppelin/contracts-0.8@npm:@openzeppelin/contracts@^4.3.2":
-  version "4.6.0"
-  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.6.0.tgz#c91cf64bc27f573836dba4122758b4743418c1b3"
-  integrity sha512-8vi4d50NNya/bQqCmaVzvHNmwHvS0OBKb7HNtuNwEE3scXWrP31fKQoGxNMT+KbzmrNZzatE3QK5p2gFONI/hg==
-
 "@openzeppelin/contracts-upgradeable@3.4.2":
   version "3.4.2"
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-3.4.2.tgz#2c2a1b0fa748235a1f495b6489349776365c51b3"
@@ -1638,36 +1655,6 @@ append-transform@^2.0.0:
   integrity sha512-7yeyCEurROLQJFv5Xj4lEGTy0borxepjFv1g22oAdqFu//SrAlDl1O1Nxx15SH1RoliUml6p8dwJW9jvZughhg==
   dependencies:
     default-require-extensions "^3.0.0"
-
-arb-bridge-eth@0.7.7:
-  version "0.7.7"
-  resolved "https://registry.yarnpkg.com/arb-bridge-eth/-/arb-bridge-eth-0.7.7.tgz#9a6251c3000701b94770f97a33d5074bd8587536"
-  integrity sha512-2acKHyMF40G668Tz3Akqw2ERiur5BDbUxQ8ZG31can/HA0cMpU14wCP7vSPIO3BkD0x9wPhqG1kxTrSrkRYqzA==
-  dependencies:
-    "@openzeppelin/contracts" "3.4.2"
-    "@openzeppelin/contracts-0.8" "npm:@openzeppelin/contracts@^4.3.2"
-    "@openzeppelin/contracts-upgradeable" "3.4.2"
-    hardhat "^2.6.1"
-
-arb-bridge-peripherals@1.0.10:
-  version "1.0.10"
-  resolved "https://registry.yarnpkg.com/arb-bridge-peripherals/-/arb-bridge-peripherals-1.0.10.tgz#9b400331352b626d4fdec074d46a9e1cef5c5fcf"
-  integrity sha512-iNhpbwN22Bco3DM5y8NJDMiDAqoGJ0VgUD7GSPvGk6ox8otp1aYX92ZEbbIm414qS5+dhi9kv5tZrvVO6tpfZQ==
-  dependencies:
-    "@openzeppelin/contracts" "3.4.2"
-    "@openzeppelin/contracts-upgradeable" "3.4.2"
-    arb-bridge-eth "0.7.7"
-    arbos-precompiles "^1.0.2"
-    hardhat "^2.6.1"
-  optionalDependencies:
-    "@openzeppelin/upgrades-core" "^1.7.6"
-
-arbos-precompiles@^1.0.2:
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/arbos-precompiles/-/arbos-precompiles-1.0.2.tgz#7bebd5963aef972cd259eb41f3116ea065013ea6"
-  integrity sha512-1dOFYFJUN0kKoofh6buZJ8qCqTs+oLGSsGzHI0trA/Pka/TCERflCRsNVxez2lihOvK7MT/a2RA8AepKtBXdPQ==
-  dependencies:
-    hardhat "^2.6.4"
 
 archy@^1.0.0:
   version "1.0.0"
@@ -3209,7 +3196,7 @@ handlebars@^4.7.7:
   optionalDependencies:
     uglify-js "^3.1.4"
 
-hardhat@^2.6.1, hardhat@^2.6.4, hardhat@^2.6.6, hardhat@^2.8.3:
+hardhat@^2.6.6, hardhat@^2.8.3:
   version "2.9.3"
   resolved "https://registry.yarnpkg.com/hardhat/-/hardhat-2.9.3.tgz#4759dc3c468c7d15f34334ca1be7d59b04e47b1e"
   integrity sha512-7Vw99RbYbMZ15UzegOR/nqIYIqddZXvLwJGaX5sX4G5bydILnbjmDU6g3jMKJSiArEixS3vHAEaOs5CW1JQ3hg==

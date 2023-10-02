@@ -39,7 +39,7 @@ const deployBehindProxy = async <
   return instance.attach(proxy.address)
 }
 
-export const deployErc20L1 = async (deployer: Signer) => {
+export const deployErc20Parent = async (deployer: Signer) => {
   const proxyAdmin = await new ProxyAdmin__factory().connect(deployer).deploy()
   await proxyAdmin.deployed()
   console.log('proxyAdmin', proxyAdmin.address)
@@ -93,7 +93,7 @@ export const deployErc20L1 = async (deployer: Signer) => {
   }
 }
 
-export const deployErc20L2 = async (deployer: Signer) => {
+export const deployErc20Child = async (deployer: Signer) => {
   const proxyAdmin = await new ProxyAdmin__factory().connect(deployer).deploy()
   await proxyAdmin.deployed()
   console.log('proxyAdmin', proxyAdmin.address)
@@ -170,85 +170,115 @@ export const deployErc20L2 = async (deployer: Signer) => {
 export const deployErc20AndInit = async (
   l1Signer: Signer,
   l2Signer: Signer,
-  inboxAddress: string
+  l3Signer: Signer,
+  l1InboxAddress: string, // inbox for L2 on L1
+  l2InboxAddress: string // inbox for L3 on L2
 ) => {
-  console.log('deploying l1')
-  const l1 = await deployErc20L1(l1Signer)
+  console.log('deploying l1 parent')
+  const l1Parent = await deployErc20Parent(l1Signer)
 
-  console.log('deploying l2')
-  const l2 = await deployErc20L2(l2Signer)
+  console.log('deploying l2 child')
+  const l2Child = await deployErc20Child(l2Signer)
 
-  console.log('initialising L2')
-  await l2.router.initialize(l1.router.address, l2.standardGateway.address)
-  await l2.beaconProxyFactory.initialize(l2.beacon.address)
-  await (
-    await l2.standardGateway.initialize(
-      l1.standardGateway.address,
-      l2.router.address,
-      l2.beaconProxyFactory.address
-    )
-  ).wait()
-  await (
-    await l2.customGateway.initialize(
-      l1.customGateway.address,
-      l2.router.address
-    )
-  ).wait()
-  await (
-    await l2.weth.initialize(
-      'WETH',
-      'WETH',
-      18,
-      l2.wethGateway.address,
-      l1.weth.address
-    )
-  ).wait()
-  await (
-    await l2.wethGateway.initialize(
-      l1.wethGateway.address,
-      l2.router.address,
-      l1.weth.address,
-      l2.weth.address
-    )
-  ).wait()
+  console.log('deploying l2 parent')
+  const l2Parent = await deployErc20Parent(l2Signer)
 
-  console.log('initialising L1')
-  await (
-    await l1.router.initialize(
-      await l1Signer.getAddress(),
-      l1.standardGateway.address,
-      constants.AddressZero,
-      l2.router.address,
-      inboxAddress
-    )
-  ).wait()
+  console.log('deploying l3 child')
+  const l3Child = await deployErc20Child(l3Signer)
 
-  await (
-    await l1.standardGateway.initialize(
-      l2.standardGateway.address,
-      l1.router.address,
-      inboxAddress,
-      await l2.beaconProxyFactory.cloneableProxyHash(),
-      l2.beaconProxyFactory.address
+  type Unwrap<T> = T extends Promise<infer U> ? U : T
+  const initializeParentChild = async (
+    parent: Unwrap<ReturnType<typeof deployErc20Parent>>,
+    child: Unwrap<ReturnType<typeof deployErc20Child>>,
+    inboxAddress: string,
+    parentSigner: Signer
+  ) => {
+    // initialize child
+    await child.router.initialize(
+      parent.router.address,
+      child.standardGateway.address
     )
-  ).wait()
-  await (
-    await l1.customGateway.initialize(
-      l2.customGateway.address,
-      l1.router.address,
-      inboxAddress,
-      await l1Signer.getAddress()
-    )
-  ).wait()
-  await (
-    await l1.wethGateway.initialize(
-      l2.wethGateway.address,
-      l1.router.address,
-      inboxAddress,
-      l1.weth.address,
-      l2.weth.address
-    )
-  ).wait()
+    await child.beaconProxyFactory.initialize(child.beacon.address)
+    await (
+      await child.standardGateway.initialize(
+        parent.standardGateway.address,
+        child.router.address,
+        child.beaconProxyFactory.address
+      )
+    ).wait()
+    await (
+      await child.customGateway.initialize(
+        parent.customGateway.address,
+        child.router.address
+      )
+    ).wait()
+    await (
+      await child.weth.initialize(
+        'WETH',
+        'WETH',
+        18,
+        child.wethGateway.address,
+        parent.weth.address
+      )
+    ).wait()
+    await (
+      await child.wethGateway.initialize(
+        parent.wethGateway.address,
+        child.router.address,
+        parent.weth.address,
+        child.weth.address
+      )
+    ).wait()
 
-  return { l1, l2 }
+    // initialize parent
+    await (
+      await parent.router.initialize(
+        await parentSigner.getAddress(),
+        parent.standardGateway.address,
+        constants.AddressZero,
+        child.router.address,
+        inboxAddress
+      )
+    ).wait()
+
+    await (
+      await parent.standardGateway.initialize(
+        child.standardGateway.address,
+        parent.router.address,
+        inboxAddress,
+        await child.beaconProxyFactory.cloneableProxyHash(),
+        child.beaconProxyFactory.address
+      )
+    ).wait()
+    await (
+      await parent.customGateway.initialize(
+        child.customGateway.address,
+        parent.router.address,
+        inboxAddress,
+        await parentSigner.getAddress()
+      )
+    ).wait()
+    await (
+      await parent.wethGateway.initialize(
+        child.wethGateway.address,
+        parent.router.address,
+        inboxAddress,
+        parent.weth.address,
+        child.weth.address
+      )
+    ).wait()
+  }
+
+  console.log('initialising L1 <-> L2')
+  await initializeParentChild(l1Parent, l2Child, l1InboxAddress, l1Signer)
+
+  console.log('initialising L2 <-> L3')
+  await initializeParentChild(l2Parent, l3Child, l2InboxAddress, l2Signer)
+
+  return {
+    l1Parent,
+    l2Child,
+    l2Parent,
+    l3Child,
+  }
 }
