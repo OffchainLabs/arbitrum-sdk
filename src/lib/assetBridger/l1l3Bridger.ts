@@ -1,10 +1,16 @@
+import { Provider, TransactionRequest } from '@ethersproject/abstract-provider'
+import { ArbSdkError } from '../dataEntities/errors'
 import {
-  Provider,
-  TransactionRequest,
-} from '@ethersproject/abstract-provider'
-import { ArbSdkError } from "../dataEntities/errors"
-import { L1Network, L2Network, TeleporterAddresses, l1Networks, l2Networks } from "../dataEntities/networks"
-import { SignerOrProvider, SignerProviderUtils } from '../dataEntities/signerOrProvider'
+  L1Network,
+  L2Network,
+  TeleporterAddresses,
+  l1Networks,
+  l2Networks,
+} from '../dataEntities/networks'
+import {
+  SignerOrProvider,
+  SignerProviderUtils,
+} from '../dataEntities/signerOrProvider'
 import { L2GatewayRouter__factory } from '../abi/factories/L2GatewayRouter__factory'
 import { L1GatewayRouter__factory } from '../abi/factories/L1GatewayRouter__factory'
 import { L2GatewayToken } from '../abi/L2GatewayToken'
@@ -13,7 +19,14 @@ import { ERC20 } from '../abi/ERC20'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { DISABLED_GATEWAY } from '../dataEntities/constants'
 import { TokenApproveParams } from './erc20Bridger'
-import { BigNumber, BigNumberish, ContractFactory, Signer, Wallet, ethers } from 'ethers'
+import {
+  BigNumber,
+  BigNumberish,
+  ContractFactory,
+  Signer,
+  Wallet,
+  ethers,
+} from 'ethers'
 import { Teleporter__factory } from '../abi/factories/Teleporter__factory'
 import { AbiCoder } from 'ethers/lib/utils'
 import { L1TransactionReceipt } from '../message/L1Transaction'
@@ -77,7 +90,8 @@ export class L1L3Bridger {
     l2l3TokenBridgeRetryableSize: BigNumber.from(1000),
   } as const
 
-  public readonly defaultGasPricePercentIncrease: BigNumber = BigNumber.from(130) // 30% increase
+  public readonly defaultGasPricePercentIncrease: BigNumber =
+    BigNumber.from(130) // 30% increase
 
   public constructor(public readonly l3Network: L2Network) {
     this.l2Network = l2Networks[l3Network.partnerChainID]
@@ -93,7 +107,7 @@ export class L1L3Bridger {
       )
     }
 
-    this.teleporterAddresses = this.l2Network.teleporterAddresses;
+    this.teleporterAddresses = this.l2Network.teleporterAddresses
 
     this.l1Network = l1Networks[this.l2Network.partnerChainID]
     if (!this.l1Network) {
@@ -138,7 +152,11 @@ export class L1L3Bridger {
     l1Provider: Provider
   ): Promise<string> {
     await this.checkL1Network(l1Provider)
-    return this._getChildErc20Address(erc20L1Address, l1Provider, this.l2Network)
+    return this._getChildErc20Address(
+      erc20L1Address,
+      l1Provider,
+      this.l2Network
+    )
   }
 
   /**
@@ -207,7 +225,7 @@ export class L1L3Bridger {
     await this.checkL1Network(l1Provider)
     await this.checkL2Network(l2Provider)
 
-    const l2Token = await this.getL2ERC20Address(erc20L1Address, l1Provider);
+    const l2Token = await this.getL2ERC20Address(erc20L1Address, l1Provider)
 
     return await L1GatewayRouter__factory.connect(
       this.l3Network.tokenBridge.l1GatewayRouter,
@@ -217,7 +235,7 @@ export class L1L3Bridger {
 
   public async isL1L2GatewayDefault(
     erc20L1Address: string,
-    l1Provider: Provider,
+    l1Provider: Provider
   ): Promise<boolean> {
     const gateway = await this.getL1L2GatewayAddress(erc20L1Address, l1Provider)
     return gateway === this.l2Network.tokenBridge.l1ERC20Gateway
@@ -228,7 +246,11 @@ export class L1L3Bridger {
     l1Provider: Provider,
     l2Provider: Provider
   ): Promise<boolean> {
-    const gateway = await this.getL2L3GatewayAddress(erc20L1Address, l1Provider, l2Provider)
+    const gateway = await this.getL2L3GatewayAddress(
+      erc20L1Address,
+      l1Provider,
+      l2Provider
+    )
     return gateway === this.l3Network.tokenBridge.l1ERC20Gateway
   }
 
@@ -293,7 +315,7 @@ export class L1L3Bridger {
       l1TokenAddress,
       this.l2Network.tokenBridge.l1GatewayRouter,
       l1Provider
-    );
+    )
   }
 
   /**
@@ -312,7 +334,7 @@ export class L1L3Bridger {
       l2TokenAddress,
       this.l3Network.tokenBridge.l1GatewayRouter,
       l2Provider
-    );
+    )
   }
 
   private async _tokenIsDisabled(
@@ -326,7 +348,9 @@ export class L1L3Bridger {
       provider
     )
 
-    return (await gatewayRouter.l1TokenToGateway(tokenAddress)) === DISABLED_GATEWAY;
+    return (
+      (await gatewayRouter.l1TokenToGateway(tokenAddress)) === DISABLED_GATEWAY
+    )
   }
 
   /**
@@ -351,10 +375,7 @@ export class L1L3Bridger {
     }
   }
 
-  public async approveToken(
-    params: TokenApproveParams,
-    l1Signer: Signer
-  ) {
+  public async approveToken(params: TokenApproveParams, l1Signer: Signer) {
     await this.checkL1Network(l1Signer)
 
     const approveRequest = await this.getApproveTokenRequest(params)
@@ -368,53 +389,77 @@ export class L1L3Bridger {
     l2Provider: Provider,
     l3Provider: Provider,
     gasPricePercentIncrease?: BigNumber
-  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value' | 'from'>>> {
+  ): Promise<
+    Required<Pick<TransactionRequest, 'to' | 'data' | 'value' | 'from'>>
+  > {
     await this.checkL1Network(l1Signer)
     await this.checkL2Network(l2Provider)
     await this.checkL3Network(l3Provider)
 
-    gasPricePercentIncrease = gasPricePercentIncrease || this.defaultGasPricePercentIncrease
+    gasPricePercentIncrease =
+      gasPricePercentIncrease || this.defaultGasPricePercentIncrease
 
     if (!params.gasParams) {
       // make sure both gateways are default
-      if (!(await this.isL1L2GatewayDefault(params.l1Token, l1Signer.provider!))) {
+      if (
+        !(await this.isL1L2GatewayDefault(params.l1Token, l1Signer.provider!))
+      ) {
         throw new ArbSdkError(
           `Cannot estimate gas for custom l1l2 gateway, please provide gas params`
         )
       }
 
-      if (!(await this.isL2L3GatewayDefault(params.l1Token, l1Signer.provider!, l2Provider))) {
+      if (
+        !(await this.isL2L3GatewayDefault(
+          params.l1Token,
+          l1Signer.provider!,
+          l2Provider
+        ))
+      ) {
         throw new ArbSdkError(
           `Cannot estimate gas for custom l2l3 gateway, please provide gas params`
         )
       }
 
-      params.gasParams = this.defaultRetryableGasParams;
+      params.gasParams = this.defaultRetryableGasParams
     }
 
     // populate gasParams gas prices
     const gasParams = {
       ...params.gasParams,
-      l2GasPrice: params.gasParams.l2GasPrice || this.percentIncrease(await l2Provider.getGasPrice(), gasPricePercentIncrease),
-      l3GasPrice: params.gasParams.l3GasPrice || this.percentIncrease(await l3Provider.getGasPrice(), gasPricePercentIncrease)
+      l2GasPrice:
+        params.gasParams.l2GasPrice ||
+        this.percentIncrease(
+          await l2Provider.getGasPrice(),
+          gasPricePercentIncrease
+        ),
+      l3GasPrice:
+        params.gasParams.l3GasPrice ||
+        this.percentIncrease(
+          await l3Provider.getGasPrice(),
+          gasPricePercentIncrease
+        ),
     }
 
-    const teleporter = Teleporter__factory.connect(this.teleporterAddresses.l1Teleporter, l1Signer)
+    const teleporter = Teleporter__factory.connect(
+      this.teleporterAddresses.l1Teleporter,
+      l1Signer
+    )
 
-    const calldata = teleporter.interface.encodeFunctionData("teleport", [
+    const calldata = teleporter.interface.encodeFunctionData('teleport', [
       params.l1Token,
       this.l2Network.tokenBridge.l1GatewayRouter,
       this.l3Network.tokenBridge.l1GatewayRouter,
       params.to,
       params.amount,
-      gasParams
+      gasParams,
     ])
 
     const l1GasPrice = await l1Signer.provider!.getGasPrice()
 
     const calculatedGasCosts = await teleporter.calculateRetryableGasCosts(
-      this.l2Network.ethBridge.inbox, 
-      this.percentIncrease(l1GasPrice, this.defaultGasPricePercentIncrease), 
+      this.l2Network.ethBridge.inbox,
+      this.percentIncrease(l1GasPrice, this.defaultGasPricePercentIncrease),
       gasParams
     )
 
@@ -422,7 +467,7 @@ export class L1L3Bridger {
       to: this.teleporterAddresses.l1Teleporter,
       data: calldata,
       value: calculatedGasCosts.total,
-      from: await l1Signer.getAddress()
+      from: await l1Signer.getAddress(),
     }
   }
 
@@ -441,7 +486,9 @@ export class L1L3Bridger {
       gasPricePercentIncrease
     )
 
-    return L1TransactionReceipt.monkeyPatchContractCallWait(await l1Signer.sendTransaction(txRequest))
+    return L1TransactionReceipt.monkeyPatchContractCallWait(
+      await l1Signer.sendTransaction(txRequest)
+    )
   }
 
   private percentIncrease(base: BigNumber, percent: BigNumber) {

@@ -144,17 +144,17 @@
 //     expect(teleporter.l2Network.chainID).to.equal(l2ChainId)
 //     expect(teleporter.l1Network.chainID).to.equal(l1ChainId)
 //   })
-  
+
 //   it('should return correct L2 token address', async () => {
 //     const l2TokenAddress = await teleporter.getL2ERC20Address(l1WETH, l1Provider)
 //     expect(l2TokenAddress).to.equal(l2WETH)
 //   })
-    
+
 //   it('should return correct L3 token address', async () => {
 //     const l3TokenAddress = await teleporter.getL3ERC20Address(l1WETH, l1Provider, l2Provider)
 //     expect(l3TokenAddress).to.equal(l3WETH)
 //   })
-      
+
 //   it('should return correct L1 -> L2 gateway', async () => {
 //     const l1l2Gateway = await teleporter.getL1L2GatewayAddress(l1WETH, l1Provider)
 //     expect(l1l2Gateway).to.equal(l2Network.tokenBridge.l1WethGateway)
