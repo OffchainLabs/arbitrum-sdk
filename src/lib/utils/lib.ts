@@ -2,10 +2,9 @@ import { Provider } from '@ethersproject/abstract-provider'
 import { TransactionReceipt, JsonRpcProvider } from '@ethersproject/providers'
 import { ArbSdkError } from '../dataEntities/errors'
 import { ArbitrumProvider } from './arbProvider'
-import { getL2Network, l2Networks } from '../dataEntities/networks'
+import { l2Networks } from '../dataEntities/networks'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
-import { RollupUserLogic__factory } from '../abi/factories/RollupUserLogic__factory'
 
 export const wait = (ms: number): Promise<void> =>
   new Promise(res => setTimeout(res, ms))
