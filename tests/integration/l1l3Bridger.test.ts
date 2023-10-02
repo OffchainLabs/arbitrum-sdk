@@ -1,7 +1,5 @@
 import { testSetup } from '../../scripts/testSetup'
-import {
-  L1L3Bridger
-} from '../../src'
+import { L1L3Bridger } from '../../src'
 import { L2ForwarderContractsDeployer__factory } from '../../src/lib/abi/factories/L2ForwarderContractsDeployer__factory'
 import { MockToken__factory } from '../../src/lib/abi/factories/MockToken__factory'
 import { MockToken } from '../../src/lib/abi/MockToken'
@@ -87,9 +85,17 @@ describe('Teleporter', () => {
     const depositReceipt = await depositTx.wait()
 
     // wait for l1 l2 messages to redeem
-    const depositWaitResult = await l1l3Bridger.waitForDeposit(depositReceipt, setup.l2Signer.provider!, setup.l3Signer.provider!)
+    const depositWaitResult = await l1l3Bridger.waitForDeposit(
+      depositReceipt,
+      setup.l2Signer.provider!,
+      setup.l3Signer.provider!
+    )
 
-    if (depositWaitResult.success !== true || depositWaitResult.failedLeg !== undefined || depositWaitResult.failedLegStatus !== undefined) {
+    if (
+      depositWaitResult.success !== true ||
+      depositWaitResult.failedLeg !== undefined ||
+      depositWaitResult.failedLegStatus !== undefined
+    ) {
       throw new Error('Deposit failed')
     }
 

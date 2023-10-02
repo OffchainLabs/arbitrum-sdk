@@ -182,11 +182,14 @@ export class L1L3Bridger {
     l2Provider: Provider
   ): Promise<string> {
     await this.checkL2Network(l2Provider)
-    const l2Token = await this.getL2ERC20Address(erc20L1Address, l1Provider)
-    return this._getChildErc20Address(l2Token, l2Provider, this.l3Network)
+    return this._getChildErc20Address(
+      await this.getL2ERC20Address(erc20L1Address, l1Provider),
+      l2Provider,
+      this.l3Network
+    )
   }
 
-  private async _getChildErc20Address(
+  private _getChildErc20Address(
     erc20ParentAddress: string,
     parentProvider: Provider,
     childNetwork: L2Network
@@ -197,9 +200,7 @@ export class L1L3Bridger {
       parentProvider
     )
 
-    return await parentGatewayRouter.functions
-      .calculateL2TokenAddress(erc20ParentAddress)
-      .then(([res]) => res)
+    return parentGatewayRouter.calculateL2TokenAddress(erc20ParentAddress)
   }
 
   /**
@@ -552,6 +553,23 @@ export class L1L3Bridger {
     return {
       success: true,
     }
+  }
+
+  public async getDepositRequestUsingRelayer() {
+    throw new Error('Not implemented')
+  }
+
+  public async depositUsingRelayer() {
+    throw new Error('Not implemented')
+  }
+
+  public async waitForDepositUsingRelayer() {
+    throw new Error('Not implemented')
+  }
+
+  // takes: deposit tx hash, l2 forwarder params, l2 signer
+  public async relayDeposit() {
+    throw new Error('Not implemented')
   }
 
   private percentIncrease(base: BigNumber, percent: BigNumber) {
