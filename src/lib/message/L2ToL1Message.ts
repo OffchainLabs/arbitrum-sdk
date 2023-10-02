@@ -168,7 +168,7 @@ export class ChildToParentChainMessage {
     const logQueries = []
     if (classicFilter.fromBlock !== classicFilter.toBlock) {
       logQueries.push(
-        classic.ChainToParentChainMessageClassic.getChainToParentChainEvents(
+        classic.ChildToParentChainMessageClassic.getChildToParentChainEvents(
           ChainProvider,
           classicFilter,
           position,
@@ -203,7 +203,7 @@ export class ChildToParentChainMessage {
  * Provides read-only access for Chain-to-ParentChain-messages
  */
 export class ChildToParentChainMessageReader extends ChildToParentChainMessage {
-  private readonly classicReader?: classic.ChainToParentChainMessageReaderClassic
+  private readonly classicReader?: classic.ChildToParentChainMessageReaderClassic
   private readonly nitroReader?: nitro.ChildToParentChainMessageReaderNitro
 
   constructor(
@@ -212,7 +212,7 @@ export class ChildToParentChainMessageReader extends ChildToParentChainMessage {
   ) {
     super()
     if (this.isClassic(event)) {
-      this.classicReader = new classic.ChainToParentChainMessageReaderClassic(
+      this.classicReader = new classic.ChildToParentChainMessageReaderClassic(
         ParentChainProvider,
         event.batchNumber,
         event.indexInBatch
@@ -285,7 +285,7 @@ export class ChildToParentChainMessageReader extends ChildToParentChainMessage {
  * Provides read and write access for Chain-to-ParentChain-messages
  */
 export class ChildToParentChainMessageWriter extends ChildToParentChainMessageReader {
-  private readonly classicWriter?: classic.ChainToParentChainMessageWriterClassic
+  private readonly classicWriter?: classic.ChildToParentChainMessageWriterClassic
   private readonly nitroWriter?: nitro.ChildToParentChainMessageWriterNitro
 
   /**
@@ -303,7 +303,7 @@ export class ChildToParentChainMessageWriter extends ChildToParentChainMessageRe
     super(ParentChainProvider ?? ParentChainSigner.provider!, event)
 
     if (this.isClassic(event)) {
-      this.classicWriter = new classic.ChainToParentChainMessageWriterClassic(
+      this.classicWriter = new classic.ChildToParentChainMessageWriterClassic(
         ParentChainSigner,
         event.batchNumber,
         event.indexInBatch,
