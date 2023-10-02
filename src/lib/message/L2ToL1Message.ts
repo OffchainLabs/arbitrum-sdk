@@ -29,84 +29,84 @@ import {
 import * as classic from './L2ToL1MessageClassic'
 import * as nitro from './L2ToL1MessageNitro'
 import {
-  L2ToL1TransactionEvent as ClassicChainToParentChainTransactionEvent,
-  L2ToL1TxEvent as NitroChainToParentChainTransactionEvent,
+  L2ToL1TransactionEvent as ClassicChildToParentChainTransactionEvent,
+  L2ToL1TxEvent as NitroChildToParentChainTransactionEvent,
 } from '../abi/ArbSys'
 import { isDefined } from '../utils/lib'
 import { EventArgs } from '../dataEntities/event'
-import { L2ToL1MessageStatus as ChainToParentChainMessageStatus } from '../dataEntities/message'
+import { L2ToL1MessageStatus as ChildToParentChainMessageStatus } from '../dataEntities/message'
 import { getChainNetwork } from '../dataEntities/networks'
 import { ArbSdkError } from '../dataEntities/errors'
 
-export type ChainToParentChainTransactionEvent =
-  | EventArgs<ClassicChainToParentChainTransactionEvent>
-  | EventArgs<NitroChainToParentChainTransactionEvent>
+export type ChildToParentChainTransactionEvent =
+  | EventArgs<ClassicChildToParentChainTransactionEvent>
+  | EventArgs<NitroChildToParentChainTransactionEvent>
 
 /**
  * Conditional type for Signer or Provider. If T is of type Provider
- * then ChainToParentChainMessageReaderOrWriter<T> will be of type ChainToParentChainMessageReader.
- * If T is of type Signer then ChainToParentChainMessageReaderOrWriter<T> will be of
- * type ChainToParentChainMessageWriter.
+ * then ChildToParentChainMessageReaderOrWriter<T> will be of type ChildToParentChainMessageReader.
+ * If T is of type Signer then ChildToParentChainMessageReaderOrWriter<T> will be of
+ * type ChildToParentChainMessageWriter.
  */
-export type ChainToParentChainMessageReaderOrWriter<
+export type ChildToParentChainMessageReaderOrWriter<
   T extends SignerOrProvider
 > = T extends Provider
-  ? ChainToParentChainMessageReader
-  : ChainToParentChainMessageWriter
+  ? ChildToParentChainMessageReader
+  : ChildToParentChainMessageWriter
 
 /**
  * Base functionality for Chain->ParentChain messages
  */
-export class ChainToParentChainMessage {
+export class ChildToParentChainMessage {
   protected isClassic(
-    e: ChainToParentChainTransactionEvent
-  ): e is EventArgs<ClassicChainToParentChainTransactionEvent> {
+    e: ChildToParentChainTransactionEvent
+  ): e is EventArgs<ClassicChildToParentChainTransactionEvent> {
     return isDefined(
-      (e as EventArgs<ClassicChainToParentChainTransactionEvent>).indexInBatch
+      (e as EventArgs<ClassicChildToParentChainTransactionEvent>).indexInBatch
     )
   }
 
   /**
-   * Instantiates a new `ChainToParentChainMessageWriter` or `ChainToParentChainMessageReader` object.
+   * Instantiates a new `ChildToParentChainMessageWriter` or `ChildToParentChainMessageReader` object.
    *
    * @param {SignerOrProvider} ParentChainSignerOrProvider Signer or provider to be used for executing or reading the Chain-to-ParentChain message.
-   * @param {ChainToParentChainTransactionEvent} event The event containing the data of the Chain-to-ParentChain message.
+   * @param {ChildToParentChainTransactionEvent} event The event containing the data of the Chain-to-ParentChain message.
    * @param {Provider} [ParentChainProvider] Optional. Used to override the Provider which is attached to `ParentChainSignerOrProvider` in case you need more control. This will be a required parameter in a future major version update.
    */
   public static fromEvent<T extends SignerOrProvider>(
     ParentChainSignerOrProvider: T,
-    event: ChainToParentChainTransactionEvent,
+    event: ChildToParentChainTransactionEvent,
     ParentChainProvider?: Provider
-  ): ChainToParentChainMessageReaderOrWriter<T>
+  ): ChildToParentChainMessageReaderOrWriter<T>
   static fromEvent<T extends SignerOrProvider>(
     ParentChainSignerOrProvider: T,
-    event: ChainToParentChainTransactionEvent,
+    event: ChildToParentChainTransactionEvent,
     ParentChainProvider?: Provider
-  ): ChainToParentChainMessageReader | ChainToParentChainMessageWriter {
+  ): ChildToParentChainMessageReader | ChildToParentChainMessageWriter {
     return SignerProviderUtils.isSigner(ParentChainSignerOrProvider)
-      ? new ChainToParentChainMessageWriter(
+      ? new ChildToParentChainMessageWriter(
           ParentChainSignerOrProvider,
           event,
           ParentChainProvider
         )
-      : new ChainToParentChainMessageReader(ParentChainSignerOrProvider, event)
+      : new ChildToParentChainMessageReader(ParentChainSignerOrProvider, event)
   }
 
   /**
-   * Get event logs for ChainToParentChain transactions.
+   * Get event logs for ChildToParentChain transactions.
    * @param ChainProvider
    * @param filter Block range filter
    * @param position The batchnumber indexed field was removed in nitro and a position indexed field was added.
    * For pre-nitro events the value passed in here will be used to find events with the same batchnumber.
    * For post nitro events it will be used to find events with the same position.
-   * @param destination The ParentChain destination of the ChainToParentChain message
+   * @param destination The ParentChain destination of the ChildToParentChain message
    * @param hash The uniqueId indexed field was removed in nitro and a hash indexed field was added.
    * For pre-nitro events the value passed in here will be used to find events with the same uniqueId.
    * For post nitro events it will be used to find events with the same hash.
    * @param indexInBatch The index in the batch, only valid for pre-nitro events. This parameter is ignored post-nitro
    * @returns Any classic and nitro events that match the provided filters.
    */
-  public static async getChainToParentChainEvents(
+  public static async getChildToParentChainEvents(
     ChainProvider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     position?: BigNumber,
@@ -114,7 +114,7 @@ export class ChainToParentChainMessage {
     hash?: BigNumber,
     indexInBatch?: BigNumber
   ): Promise<
-    (ChainToParentChainTransactionEvent & { transactionHash: string })[]
+    (ChildToParentChainTransactionEvent & { transactionHash: string })[]
   > {
     const ChainNetwork = await getChainNetwork(ChainProvider)
 
@@ -202,13 +202,13 @@ export class ChainToParentChainMessage {
 /**
  * Provides read-only access for Chain-to-ParentChain-messages
  */
-export class ChainToParentChainMessageReader extends ChainToParentChainMessage {
+export class ChildToParentChainMessageReader extends ChildToParentChainMessage {
   private readonly classicReader?: classic.L2ToL1MessageReaderClassic
   private readonly nitroReader?: nitro.L2ToL1MessageReaderNitro
 
   constructor(
     protected readonly ParentChainProvider: Provider,
-    event: ChainToParentChainTransactionEvent
+    event: ChildToParentChainTransactionEvent
   ) {
     super()
     if (this.isClassic(event)) {
@@ -240,8 +240,8 @@ export class ChainToParentChainMessageReader extends ChainToParentChainMessage {
    */
   public async status(
     ChainProvider: Provider
-  ): Promise<ChainToParentChainMessageStatus> {
-    // can we create an ChainToParentChainmessage here, we need to - the constructor is what we need
+  ): Promise<ChildToParentChainMessageStatus> {
+    // can we create an ChildToParentChainmessage here, we need to - the constructor is what we need
     if (this.nitroReader) return await this.nitroReader.status(ChainProvider)
     else return await this.classicReader!.status(ChainProvider)
   }
@@ -284,20 +284,20 @@ export class ChainToParentChainMessageReader extends ChainToParentChainMessage {
 /**
  * Provides read and write access for Chain-to-ParentChain-messages
  */
-export class ChainToParentChainMessageWriter extends ChainToParentChainMessageReader {
+export class ChildToParentChainMessageWriter extends ChildToParentChainMessageReader {
   private readonly classicWriter?: classic.L2ToL1MessageWriterClassic
   private readonly nitroWriter?: nitro.L2ToL1MessageWriterNitro
 
   /**
-   * Instantiates a new `ChainToParentChainMessageWriter` object.
+   * Instantiates a new `ChildToParentChainMessageWriter` object.
    *
    * @param {Signer} ParentChainSigner The signer to be used for executing the Chain-to-ParentChain message.
-   * @param {ChainToParentChainTransactionEvent} event The event containing the data of the Chain-to-ParentChain message.
+   * @param {ChildToParentChainTransactionEvent} event The event containing the data of the Chain-to-ParentChain message.
    * @param {Provider} [ParentChainProvider] Optional. Used to override the Provider which is attached to `ParentChainSigner` in case you need more control. This will be a required parameter in a future major version update.
    */
   constructor(
     ParentChainSigner: Signer,
-    event: ChainToParentChainTransactionEvent,
+    event: ChildToParentChainTransactionEvent,
     ParentChainProvider?: Provider
   ) {
     super(ParentChainProvider ?? ParentChainSigner.provider!, event)
@@ -319,7 +319,7 @@ export class ChainToParentChainMessageWriter extends ChainToParentChainMessageRe
   }
 
   /**
-   * Executes the ChainToParentChainMessage on ParentChain.
+   * Executes the ChildToParentChainMessage on ParentChain.
    * Will throw an error if the outbox entry has not been created, which happens when the
    * corresponding assertion is confirmed.
    * @returns

@@ -25,11 +25,11 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import {
-  ChainToParentChainMessageReader as L2ToL1MessageReader,
-  ChainToParentChainMessageReaderOrWriter as L2ToL1MessageReaderOrWriter,
-  ChainToParentChainMessage as L2ToL1Message,
-  ChainToParentChainMessageWriter as L2ToL1MessageWriter,
-  ChainToParentChainTransactionEvent as L2ToL1TransactionEvent,
+  ChildToParentChainMessageReader as L2ToL1MessageReader,
+  ChildToParentChainMessageReaderOrWriter as L2ToL1MessageReaderOrWriter,
+  ChildToParentChainMessage as L2ToL1Message,
+  ChildToParentChainMessageWriter as L2ToL1MessageWriter,
+  ChildToParentChainTransactionEvent as L2ToL1TransactionEvent,
 } from './L2ToL1Message'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
