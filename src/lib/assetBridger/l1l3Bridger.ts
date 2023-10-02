@@ -29,7 +29,11 @@ import {
 } from 'ethers'
 import { Teleporter__factory } from '../abi/factories/Teleporter__factory'
 import { AbiCoder } from 'ethers/lib/utils'
-import { L1TransactionReceipt } from '../message/L1Transaction'
+import {
+  L1ContractCallTransactionReceipt,
+  L1TransactionReceipt,
+} from '../message/L1Transaction'
+import { L1ToL2MessageStatus } from '../message/L1ToL2Message'
 
 /*
 API:
@@ -74,6 +78,12 @@ export interface DepositRequestParams {
   to: string
   amount: BigNumberish
   gasParams?: RetryableGasParams
+}
+
+export interface WaitForDepositResult {
+  success: boolean
+  failedLeg?: 0 | 1 | 2 // 0 is token bridge to l2, 1 is call to l2 forwarder factory, 2 is token bridge to l3
+  failedLegStatus?: Exclude<L1ToL2MessageStatus, L1ToL2MessageStatus.REDEEMED>
 }
 
 export class L1L3Bridger {
@@ -489,6 +499,59 @@ export class L1L3Bridger {
     return L1TransactionReceipt.monkeyPatchContractCallWait(
       await l1Signer.sendTransaction(txRequest)
     )
+  }
+
+  public async waitForDeposit(
+    depositTxReceipt: L1TransactionReceipt,
+    l2Provider: Provider,
+    l3Provider: Provider
+  ): Promise<WaitForDepositResult> {
+    if (depositTxReceipt.to !== this.teleporterAddresses.l1Teleporter) {
+      throw new ArbSdkError(
+        `Transaction receipt is not for the teleporter: ${depositTxReceipt.to}`
+      )
+    }
+
+    await this.checkL2Network(l2Provider)
+    await this.checkL3Network(l3Provider)
+
+    const l1l2Messages = await depositTxReceipt.getL1ToL2Messages(l2Provider)
+    const firstLegStatus = (await l1l2Messages[0].waitForStatus()).status
+    const secondLegStatus = (await l1l2Messages[1].waitForStatus()).status
+
+    if (firstLegStatus != L1ToL2MessageStatus.REDEEMED) {
+      return {
+        success: false,
+        failedLeg: 0,
+        failedLegStatus: firstLegStatus,
+      }
+    } else if (secondLegStatus != L1ToL2MessageStatus.REDEEMED) {
+      return {
+        success: false,
+        failedLeg: 1,
+        failedLegStatus: secondLegStatus,
+      }
+    }
+
+    const thirdLegMessage = (
+      await new L1ContractCallTransactionReceipt(
+        (await l1l2Messages[1].getAutoRedeemAttempt())!
+      ).getL1ToL2Messages(l3Provider)
+    )[0]
+
+    const thirdLegStatus = (await thirdLegMessage.waitForStatus()).status
+
+    if (thirdLegStatus != L1ToL2MessageStatus.REDEEMED) {
+      return {
+        success: false,
+        failedLeg: 2,
+        failedLegStatus: thirdLegStatus,
+      }
+    }
+
+    return {
+      success: true,
+    }
   }
 
   private percentIncrease(base: BigNumber, percent: BigNumber) {

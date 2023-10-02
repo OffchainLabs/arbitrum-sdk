@@ -1,10 +1,6 @@
 import { testSetup } from '../../scripts/testSetup'
 import {
-  Erc20Bridger,
-  L1ToL2Message,
-  L1ToL2MessageStatus,
-  L1TransactionReceipt,
-  L1L3Bridger,
+  L1L3Bridger
 } from '../../src'
 import { L2ForwarderContractsDeployer__factory } from '../../src/lib/abi/factories/L2ForwarderContractsDeployer__factory'
 import { MockToken__factory } from '../../src/lib/abi/factories/MockToken__factory'
@@ -12,7 +8,6 @@ import { MockToken } from '../../src/lib/abi/MockToken'
 import { Teleporter__factory } from '../../src/lib/abi/factories/Teleporter__factory'
 import { fundL1, fundL2, skipIfMainnet } from './testHelpers'
 import { ethers } from 'ethers'
-import { L1ContractCallTransactionReceipt } from '../../src/lib/message/L1Transaction'
 
 type Unwrap<T> = T extends Promise<infer U> ? U : T
 
@@ -92,39 +87,10 @@ describe('Teleporter', () => {
     const depositReceipt = await depositTx.wait()
 
     // wait for l1 l2 messages to redeem
-    console.log('waiting for l1 l2 messages to redeem')
-    const l1l2Messages = await depositReceipt.getL1ToL2Messages(
-      setup.l2Signer.provider!
-    )
+    const depositWaitResult = await l1l3Bridger.waitForDeposit(depositReceipt, setup.l2Signer.provider!, setup.l3Signer.provider!)
 
-    if (
-      (await l1l2Messages[0].waitForStatus()).status !==
-      L1ToL2MessageStatus.REDEEMED
-    ) {
-      throw new Error('first L1 to L2 message not redeemed')
-    }
-    if (
-      (await l1l2Messages[1].waitForStatus()).status !==
-      L1ToL2MessageStatus.REDEEMED
-    ) {
-      throw new Error('second L1 to L2 message not redeemed')
-    }
-
-    // get l2 l3 message
-    const secondRedeemReceipt = new L1ContractCallTransactionReceipt(
-      (await l1l2Messages[1].getAutoRedeemAttempt())!
-    )
-    const l2l3Message = (
-      await secondRedeemReceipt.getL1ToL2Messages(setup.l3Signer.provider!)
-    )[0]
-
-    // wait for l2 l3 message to be redeemed
-    console.log('waiting for l2 l3 message to be redeemed')
-    if (
-      (await l2l3Message.waitForStatus()).status !==
-      L1ToL2MessageStatus.REDEEMED
-    ) {
-      throw new Error('L2 to L3 message not redeemed')
+    if (depositWaitResult.success !== true || depositWaitResult.failedLeg !== undefined || depositWaitResult.failedLegStatus !== undefined) {
+      throw new Error('Deposit failed')
     }
 
     // make sure the tokens have landed in the right place
