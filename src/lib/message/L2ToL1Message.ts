@@ -185,7 +185,7 @@ export class ChildToParentChainMessage {
     }
     if (nitroFilter.fromBlock !== nitroFilter.toBlock) {
       logQueries.push(
-        nitro.ChainToParentChainMessageNitro.getChainToParentChainEvents(
+        nitro.ChildToParentChainMessageNitro.getChildToParentChainEvents(
           ChainProvider,
           nitroFilter,
           position,
@@ -204,7 +204,7 @@ export class ChildToParentChainMessage {
  */
 export class ChildToParentChainMessageReader extends ChildToParentChainMessage {
   private readonly classicReader?: classic.L2ToL1MessageReaderClassic
-  private readonly nitroReader?: nitro.ChainToParentChainMessageReaderNitro
+  private readonly nitroReader?: nitro.ChildToParentChainMessageReaderNitro
 
   constructor(
     protected readonly ParentChainProvider: Provider,
@@ -218,7 +218,7 @@ export class ChildToParentChainMessageReader extends ChildToParentChainMessage {
         event.indexInBatch
       )
     } else {
-      this.nitroReader = new nitro.ChainToParentChainMessageReaderNitro(
+      this.nitroReader = new nitro.ChildToParentChainMessageReaderNitro(
         ParentChainProvider,
         event
       )
@@ -286,7 +286,7 @@ export class ChildToParentChainMessageReader extends ChildToParentChainMessage {
  */
 export class ChildToParentChainMessageWriter extends ChildToParentChainMessageReader {
   private readonly classicWriter?: classic.L2ToL1MessageWriterClassic
-  private readonly nitroWriter?: nitro.ChainToParentChainMessageWriterNitro
+  private readonly nitroWriter?: nitro.ChildToParentChainMessageWriterNitro
 
   /**
    * Instantiates a new `ChildToParentChainMessageWriter` object.
@@ -310,7 +310,7 @@ export class ChildToParentChainMessageWriter extends ChildToParentChainMessageRe
         ParentChainProvider
       )
     } else {
-      this.nitroWriter = new nitro.ChainToParentChainMessageWriterNitro(
+      this.nitroWriter = new nitro.ChildToParentChainMessageWriterNitro(
         ParentChainSigner,
         event,
         ParentChainProvider
