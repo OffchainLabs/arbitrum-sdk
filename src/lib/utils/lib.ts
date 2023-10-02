@@ -195,38 +195,3 @@ export const getBlockRangesForL1Block = async (
 
   return [result[0], props.maxL2Block]
 }
-
-export const getLatestConfirmedL2BlockRange = async ({
-  l1Provider,
-  l2Provider,
-}: {
-  l1Provider: Provider
-  l2Provider: Provider
-}): Promise<{
-  l1Block: number | undefined
-  l2BlockRange: (number | undefined)[]
-}> => {
-  if (!(await isArbitrumChain(l1Provider))) {
-    return {
-      l1Block: undefined,
-      l2BlockRange: [],
-    }
-  }
-
-  const l2Network = await getL2Network(l2Provider)
-  const rollup = RollupUserLogic__factory.connect(
-    l2Network.ethBridge.rollup,
-    l1Provider
-  )
-
-  const latestConfirmedNodeNum = await rollup.callStatic.latestConfirmed()
-  const { createdAtBlock } = await rollup.getNode(latestConfirmedNodeNum)
-
-  return {
-    l1Block: createdAtBlock.toNumber(),
-    l2BlockRange: await getBlockRangesForL1Block({
-      forL1Block: createdAtBlock.toNumber(),
-      provider: l1Provider as JsonRpcProvider,
-    }),
-  }
-}

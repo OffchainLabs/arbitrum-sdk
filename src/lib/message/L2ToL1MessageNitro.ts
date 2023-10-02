@@ -32,6 +32,7 @@ import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { L2ToL1TxEvent } from '../abi/ArbSys'
 import { ContractTransaction, Overrides } from 'ethers'
+import { Mutex } from 'async-mutex'
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
@@ -61,7 +62,8 @@ const ASSERTION_CREATED_PADDING = 50
 // expected number of L1 blocks that it takes for a validator to confirm an L1 block after the node deadline is passed
 const ASSERTION_CONFIRMED_PADDING = 20
 
-const l2BlockRangeCache: { [key in string]: number[] } = {}
+const l2BlockRangeCache: { [key in string]: (number | undefined)[] } = {}
+const mutex = new Mutex()
 
 export function getL2BlockRangeCacheKey({
   chainId,
@@ -73,12 +75,49 @@ export function getL2BlockRangeCacheKey({
   return `${chainId}-${l1BlockNumber}`
 }
 
-export function getL2BlockRangeCache(key: string) {
-  return l2BlockRangeCache[key]
+function setL2BlockRangeCache(key: string, value: (number | undefined)[]) {
+  l2BlockRangeCache[key] = value
 }
 
-export function setL2BlockRangeCache(key: string, value: number[]) {
-  l2BlockRangeCache[key] = value
+async function getL2BlockRangeCache({
+  l1Provider,
+  l2Provider,
+  l1BlockNumber,
+}: {
+  l1Provider: JsonRpcProvider
+  l2Provider: JsonRpcProvider
+  l1BlockNumber: number
+}) {
+  const { chainId } = await l2Provider.getNetwork()
+  const key = getL2BlockRangeCacheKey({
+    chainId,
+    l1BlockNumber,
+  })
+
+  if (l2BlockRangeCache[key]) {
+    return l2BlockRangeCache[key]
+  }
+
+  // implements a lock that only fetches cache once
+  const release = await mutex.acquire()
+
+  // if cache has been acquired while awaiting the lock
+  if (l2BlockRangeCache[key]) {
+    release()
+    return l2BlockRangeCache[key]
+  }
+
+  try {
+    const l2BlockRange = await getBlockRangesForL1Block({
+      forL1Block: l1BlockNumber,
+      provider: l1Provider,
+    })
+    setL2BlockRangeCache(key, l2BlockRange)
+  } finally {
+    release()
+  }
+
+  return l2BlockRangeCache[key]
 }
 
 /**
@@ -231,21 +270,12 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
 
     // If L1 is Arbitrum, then L2 is an Orbit chain.
     if (await isArbitrumChain(this.l1Provider)) {
-      let l2BlockRange
-      const chainId = (await l2Provider.getNetwork()).chainId
-      const l2BlockRangeCacheKey = getL2BlockRangeCacheKey({
-        chainId,
-        l1BlockNumber: createdAtBlock.toNumber(),
-      })
-
       try {
-        const cachedL2BlockRange = getL2BlockRangeCache(l2BlockRangeCacheKey)
-        l2BlockRange =
-          cachedL2BlockRange ||
-          (await getBlockRangesForL1Block({
-            forL1Block: createdAtBlock.toNumber(),
-            provider: this.l1Provider as JsonRpcProvider,
-          }))
+        const l2BlockRange = await getL2BlockRangeCache({
+          l1Provider: this.l1Provider as JsonRpcProvider,
+          l2Provider: l2Provider as JsonRpcProvider,
+          l1BlockNumber: createdAtBlock.toNumber(),
+        })
         const startBlock = l2BlockRange[0]
         const endBlock = l2BlockRange[1]
         if (!startBlock || !endBlock) {
@@ -257,10 +287,6 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
         // fallback to old method if the new method fails
         createdFromBlock = createdAtBlock
         createdToBlock = createdAtBlock
-      }
-
-      if (l2BlockRange) {
-        setL2BlockRangeCache(l2BlockRangeCacheKey, l2BlockRange)
       }
     }
 
