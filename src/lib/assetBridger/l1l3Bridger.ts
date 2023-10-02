@@ -46,9 +46,6 @@ for gas estimation:
   do the same for the l2l3 gateway
 */
 
-// https://github.com/Arachnid/deterministic-deployment-proxy
-const CREATE2_FACTORY = "0x4e59b44847b379578588920cA78FbF26c0B4956C";
-
 export interface RetryableGasParams {
   l2GasPrice?: BigNumber
   l3GasPrice?: BigNumber
@@ -66,7 +63,7 @@ export interface DepositRequestParams {
   gasParams?: RetryableGasParams
 }
 
-export class TeleporterUtils {
+export class L1L3Bridger {
   public readonly l1Network: L1Network
   public readonly l2Network: L2Network
   public readonly teleporterAddresses: TeleporterAddresses

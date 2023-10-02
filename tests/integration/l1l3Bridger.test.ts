@@ -4,7 +4,7 @@ import {
   L1ToL2Message,
   L1ToL2MessageStatus,
   L1TransactionReceipt,
-  TeleporterUtils,
+  L1L3Bridger,
 } from '../../src'
 import { L2ForwarderContractsDeployer__factory } from '../../src/lib/abi/factories/L2ForwarderContractsDeployer__factory'
 import { MockToken__factory } from '../../src/lib/abi/factories/MockToken__factory'
@@ -18,7 +18,7 @@ type Unwrap<T> = T extends Promise<infer U> ? U : T
 
 describe('Teleporter', () => {
   let setup: Unwrap<ReturnType<typeof testSetup>>
-  let teleporterUtils: TeleporterUtils
+  let l1l3Bridger: L1L3Bridger
   let l1Token: MockToken
 
   before(async function () {
@@ -52,7 +52,7 @@ describe('Teleporter', () => {
       l2ForwarderFactory,
     }
 
-    teleporterUtils = new TeleporterUtils(setup.l3Network)
+    l1l3Bridger = new L1L3Bridger(setup.l3Network)
 
     // deploy the mock token
     l1Token = await new MockToken__factory(setup.l1Signer).deploy(
@@ -78,7 +78,7 @@ describe('Teleporter', () => {
     const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
 
     // todo: rename to teleport?
-    const depositTx = await teleporterUtils.deposit(
+    const depositTx = await l1l3Bridger.deposit(
       {
         l1Token: l1Token.address,
         to: l3Recipient,
@@ -128,12 +128,12 @@ describe('Teleporter', () => {
     }
 
     // make sure the tokens have landed in the right place
-    const l3TokenAddr = await teleporterUtils.getL3ERC20Address(
+    const l3TokenAddr = await l1l3Bridger.getL3ERC20Address(
       l1Token.address,
       setup.l1Signer.provider!,
       setup.l2Signer.provider!
     )
-    const l3Token = teleporterUtils.getL3TokenContract(
+    const l3Token = l1l3Bridger.getL3TokenContract(
       setup.l3Signer.provider!,
       l3TokenAddr
     )
