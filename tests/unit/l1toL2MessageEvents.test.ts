@@ -3,7 +3,7 @@ import { BigNumber, constants, providers } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { expect } from 'chai'
 
-describe('L1toL2Message events', () => {
+describe('ParentToChildMessage events', () => {
   it('does call for nitro events', async () => {
     // Receipt from mainnet tx: 0x00000a61331187be51ab9ae792d74f601a5a21fb112f5b9ac5bccb23d4d5aaba
     const receipt: providers.TransactionReceipt = {

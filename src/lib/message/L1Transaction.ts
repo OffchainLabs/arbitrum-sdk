@@ -21,13 +21,13 @@ import { Log, Provider } from '@ethersproject/abstract-provider'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
 import {
-  ParentChainToChainMessage as L1ToL2Message,
-  ParentChainToChainMessageReaderOrWriter as L1ToL2MessageReaderOrWriter,
-  ParentChainToChainMessageReader as L1ToL2MessageReader,
-  ParentChainToChainMessageReaderClassic as L1ToL2MessageReaderClassic,
-  ParentChainToChainMessageWriter as L1ToL2MessageWriter,
-  ParentChainToChainMessageStatus as L1ToL2MessageStatus,
-  ParentChainToChainMessageWaitResult as L1ToL2MessageWaitResult,
+  ParentToChildMessage as L1ToL2Message,
+  ParentToChildMessageReaderOrWriter as L1ToL2MessageReaderOrWriter,
+  ParentToChildMessageReader as L1ToL2MessageReader,
+  ParentToChildMessageReaderClassic as L1ToL2MessageReaderClassic,
+  ParentToChildMessageWriter as L1ToL2MessageWriter,
+  ParentToChildMessageStatus as L1ToL2MessageStatus,
+  ParentToChildMessageWaitResult as L1ToL2MessageWaitResult,
   EthDepositMessage,
   EthDepositMessageWaitResult,
 } from './L1ToL2Message'

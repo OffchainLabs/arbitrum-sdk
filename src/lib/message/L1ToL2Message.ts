@@ -43,7 +43,7 @@ import { getTransactionReceipt, isDefined } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
 import { ErrorCode, Logger } from '@ethersproject/logger'
 
-export enum ParentChainToChainMessageStatus {
+export enum ParentToChildMessageStatus {
   /**
    * The retryable ticket has yet to be created
    */
@@ -90,17 +90,14 @@ interface RetryableExistsError extends Error {
 
 /**
  * Conditional type for Signer or Provider. If T is of type Provider
- * then ParentChainToChainMessageReaderOrWriter<T> will be of type ParentChainToChainMessageReader.
- * If T is of type Signer then ParentChainToChainMessageReaderOrWriter<T> will be of
- * type ParentChainToChainMessageWriter.
+ * then ParentToChildMessageReaderOrWriter<T> will be of type ParentToChildMessageReader.
+ * If T is of type Signer then ParentToChildMessageReaderOrWriter<T> will be of
+ * type ParentToChildMessageWriter.
  */
-export type ParentChainToChainMessageReaderOrWriter<
-  T extends SignerOrProvider
-> = T extends Provider
-  ? ParentChainToChainMessageReader
-  : ParentChainToChainMessageWriter
+export type ParentToChildMessageReaderOrWriter<T extends SignerOrProvider> =
+  T extends Provider ? ParentToChildMessageReader : ParentToChildMessageWriter
 
-export abstract class ParentChainToChainMessage {
+export abstract class ParentToChildMessage {
   /**
    * When messages are sent from ParentChain to Chain a retryable ticket is created on Chain.
    * The retryableCreationId can be used to retrieve information about the success or failure of the
@@ -182,7 +179,7 @@ export abstract class ParentChainToChainMessage {
     messageNumber: BigNumber,
     parentChainBaseFee: BigNumber,
     messageData: RetryableMessageParams
-  ): ParentChainToChainMessageReaderOrWriter<T>
+  ): ParentToChildMessageReaderOrWriter<T>
   public static fromEventComponents<T extends SignerOrProvider>(
     chainSignerOrProvider: T,
     chainId: number,
@@ -190,9 +187,9 @@ export abstract class ParentChainToChainMessage {
     messageNumber: BigNumber,
     parentChainBaseFee: BigNumber,
     messageData: RetryableMessageParams
-  ): ParentChainToChainMessageReader | ParentChainToChainMessageWriter {
+  ): ParentToChildMessageReader | ParentToChildMessageWriter {
     return SignerProviderUtils.isSigner(chainSignerOrProvider)
-      ? new ParentChainToChainMessageWriter(
+      ? new ParentToChildMessageWriter(
           chainSignerOrProvider,
           chainId,
           sender,
@@ -200,7 +197,7 @@ export abstract class ParentChainToChainMessage {
           parentChainBaseFee,
           messageData
         )
-      : new ParentChainToChainMessageReader(
+      : new ParentToChildMessageReader(
           chainSignerOrProvider,
           chainId,
           sender,
@@ -217,22 +214,21 @@ export abstract class ParentChainToChainMessage {
     public readonly parentChainBaseFee: BigNumber,
     public readonly messageData: RetryableMessageParams
   ) {
-    this.retryableCreationId =
-      ParentChainToChainMessage.calculateSubmitRetryableId(
-        chainId,
-        sender,
-        messageNumber,
-        parentChainBaseFee,
-        messageData.destAddress,
-        messageData.l2CallValue,
-        messageData.l1Value,
-        messageData.maxSubmissionFee,
-        messageData.excessFeeRefundAddress,
-        messageData.callValueRefundAddress,
-        messageData.gasLimit,
-        messageData.maxFeePerGas,
-        messageData.data
-      )
+    this.retryableCreationId = ParentToChildMessage.calculateSubmitRetryableId(
+      chainId,
+      sender,
+      messageNumber,
+      parentChainBaseFee,
+      messageData.destAddress,
+      messageData.l2CallValue,
+      messageData.l1Value,
+      messageData.maxSubmissionFee,
+      messageData.excessFeeRefundAddress,
+      messageData.callValueRefundAddress,
+      messageData.gasLimit,
+      messageData.maxFeePerGas,
+      messageData.data
+    )
   }
 }
 
@@ -240,15 +236,15 @@ export abstract class ParentChainToChainMessage {
  * If the status is redeemed an chainTxReceipt is populated.
  * For all other statuses chainTxReceipt is not populated
  */
-export type ParentChainToChainMessageWaitResult =
+export type ParentToChildMessageWaitResult =
   | {
-      status: ParentChainToChainMessageStatus.REDEEMED
+      status: ParentToChildMessageStatus.REDEEMED
       chainTxReceipt: TransactionReceipt
     }
   | {
       status: Exclude<
-        ParentChainToChainMessageStatus,
-        ParentChainToChainMessageStatus.REDEEMED
+        ParentToChildMessageStatus,
+        ParentToChildMessageStatus.REDEEMED
       >
     }
 
@@ -256,7 +252,7 @@ export type EthDepositMessageWaitResult = {
   chainTxReceipt: TransactionReceipt | null
 }
 
-export class ParentChainToChainMessageReader extends ParentChainToChainMessage {
+export class ParentToChildMessageReader extends ParentToChildMessage {
   private retryableCreationReceipt: TransactionReceipt | undefined | null
   public constructor(
     public readonly chainProvider: Provider,
@@ -321,7 +317,7 @@ export class ParentChainToChainMessageReader extends ParentChainToChainMessage {
    * Receipt for the successful chain transaction created by this message.
    * @returns TransactionReceipt of the first successful redeem if exists, otherwise the current status of the message.
    */
-  public async getSuccessfulRedeem(): Promise<ParentChainToChainMessageWaitResult> {
+  public async getSuccessfulRedeem(): Promise<ParentToChildMessageWaitResult> {
     const chainNetwork = await getChainNetwork(this.chainProvider)
     const eventFetcher = new EventFetcher(this.chainProvider)
     const creationReceipt = await this.getRetryableCreationReceipt()
@@ -329,11 +325,11 @@ export class ParentChainToChainMessageReader extends ParentChainToChainMessage {
     if (!isDefined(creationReceipt)) {
       // retryable was never created, or not created yet
       // therefore it cant have been redeemed or be expired
-      return { status: ParentChainToChainMessageStatus.NOT_YET_CREATED }
+      return { status: ParentToChildMessageStatus.NOT_YET_CREATED }
     }
 
     if (creationReceipt.status === 0) {
-      return { status: ParentChainToChainMessageStatus.CREATION_FAILED }
+      return { status: ParentToChildMessageStatus.CREATION_FAILED }
     }
 
     // check the auto redeem first to avoid doing costly log queries in the happy case
@@ -341,7 +337,7 @@ export class ParentChainToChainMessageReader extends ParentChainToChainMessage {
     if (autoRedeem && autoRedeem.status === 1) {
       return {
         chainTxReceipt: autoRedeem,
-        status: ParentChainToChainMessageStatus.REDEEMED,
+        status: ParentToChildMessageStatus.REDEEMED,
       }
     }
 
@@ -349,7 +345,7 @@ export class ParentChainToChainMessageReader extends ParentChainToChainMessage {
       // the retryable was created and still exists
       // therefore it cant have been redeemed or be expired
       return {
-        status: ParentChainToChainMessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
+        status: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       }
     }
 
@@ -397,7 +393,7 @@ export class ParentChainToChainMessageReader extends ParentChainToChainMessage {
       if (successfulRedeem.length == 1)
         return {
           chainTxReceipt: successfulRedeem[0],
-          status: ParentChainToChainMessageStatus.REDEEMED,
+          status: ParentToChildMessageStatus.REDEEMED,
         }
 
       const toBlock = await this.chainProvider.getBlock(toBlockNumber)
@@ -440,7 +436,7 @@ export class ParentChainToChainMessageReader extends ParentChainToChainMessage {
 
     // we know from earlier that the retryable no longer exists, so if we havent found the redemption
     // we know that it must have expired
-    return { status: ParentChainToChainMessageStatus.EXPIRED }
+    return { status: ParentToChildMessageStatus.EXPIRED }
   }
 
   /**
@@ -474,7 +470,7 @@ export class ParentChainToChainMessageReader extends ParentChainToChainMessage {
     }
   }
 
-  public async status(): Promise<ParentChainToChainMessageStatus> {
+  public async status(): Promise<ParentToChildMessageStatus> {
     return (await this.getSuccessfulRedeem()).status
   }
 
@@ -493,7 +489,7 @@ export class ParentChainToChainMessageReader extends ParentChainToChainMessage {
   public async waitForStatus(
     confirmations?: number,
     timeout?: number
-  ): Promise<ParentChainToChainMessageWaitResult> {
+  ): Promise<ParentToChildMessageWaitResult> {
     const chainNetwork = await getChainNetwork(this.chainId)
 
     const chosenTimeout = isDefined(timeout)
@@ -557,7 +553,7 @@ export class ParentChainToChainMessageReader extends ParentChainToChainMessage {
   }
 }
 
-export class ParentChainToChainMessageReaderClassic {
+export class ParentToChildMessageReaderClassic {
   private retryableCreationReceipt: TransactionReceipt | undefined | null
   public readonly messageNumber: BigNumber
   public readonly retryableCreationId: string
@@ -628,15 +624,15 @@ export class ParentChainToChainMessageReaderClassic {
     return this.retryableCreationReceipt || null
   }
 
-  public async status(): Promise<ParentChainToChainMessageStatus> {
+  public async status(): Promise<ParentToChildMessageStatus> {
     const creationReceipt = await this.getRetryableCreationReceipt()
 
     if (!isDefined(creationReceipt)) {
-      return ParentChainToChainMessageStatus.NOT_YET_CREATED
+      return ParentToChildMessageStatus.NOT_YET_CREATED
     }
 
     if (creationReceipt.status === 0) {
-      return ParentChainToChainMessageStatus.CREATION_FAILED
+      return ParentToChildMessageStatus.CREATION_FAILED
     }
 
     const chainDerivedHash = this.calculateChainDerivedHash(
@@ -647,14 +643,14 @@ export class ParentChainToChainMessageReaderClassic {
     )
 
     if (chainTxReceipt && chainTxReceipt.status === 1) {
-      return ParentChainToChainMessageStatus.REDEEMED
+      return ParentToChildMessageStatus.REDEEMED
     }
 
-    return ParentChainToChainMessageStatus.EXPIRED
+    return ParentToChildMessageStatus.EXPIRED
   }
 }
 
-export class ParentChainToChainMessageWriter extends ParentChainToChainMessageReader {
+export class ParentToChildMessageWriter extends ParentToChildMessageReader {
   public constructor(
     public readonly chainSigner: Signer,
     chainId: number,
@@ -677,11 +673,11 @@ export class ParentChainToChainMessageWriter extends ParentChainToChainMessageRe
 
   /**
    * Manually redeem the retryable ticket.
-   * Throws if message status is not ParentChainToChainMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+   * Throws if message status is not ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
    */
   public async redeem(overrides?: Overrides): Promise<RedeemTransaction> {
     const status = await this.status()
-    if (status === ParentChainToChainMessageStatus.FUNDS_DEPOSITED_ON_CHAIN) {
+    if (status === ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN) {
       const arbRetryableTx = ArbRetryableTx__factory.connect(
         ARB_RETRYABLE_TX_ADDRESS,
         this.chainSigner
@@ -698,10 +694,10 @@ export class ParentChainToChainMessageWriter extends ParentChainToChainMessageRe
     } else {
       throw new ArbSdkError(
         `Cannot redeem as retryable does not exist. Message status: ${
-          ParentChainToChainMessageStatus[status]
+          ParentToChildMessageStatus[status]
         } must be: ${
-          ParentChainToChainMessageStatus[
-            ParentChainToChainMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+          ParentToChildMessageStatus[
+            ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
           ]
         }.`
       )
@@ -710,11 +706,11 @@ export class ParentChainToChainMessageWriter extends ParentChainToChainMessageRe
 
   /**
    * Cancel the retryable ticket.
-   * Throws if message status is not ParentChainToChainMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+   * Throws if message status is not ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
    */
   public async cancel(overrides?: Overrides): Promise<ContractTransaction> {
     const status = await this.status()
-    if (status === ParentChainToChainMessageStatus.FUNDS_DEPOSITED_ON_CHAIN) {
+    if (status === ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN) {
       const arbRetryableTx = ArbRetryableTx__factory.connect(
         ARB_RETRYABLE_TX_ADDRESS,
         this.chainSigner
@@ -723,10 +719,10 @@ export class ParentChainToChainMessageWriter extends ParentChainToChainMessageRe
     } else {
       throw new ArbSdkError(
         `Cannot cancel as retryable does not exist. Message status: ${
-          ParentChainToChainMessageStatus[status]
+          ParentToChildMessageStatus[status]
         } must be: ${
-          ParentChainToChainMessageStatus[
-            ParentChainToChainMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+          ParentToChildMessageStatus[
+            ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
           ]
         }.`
       )
@@ -735,11 +731,11 @@ export class ParentChainToChainMessageWriter extends ParentChainToChainMessageRe
 
   /**
    * Increase the timeout of a retryable ticket.
-   * Throws if message status is not ParentChainToChainMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+   * Throws if message status is not ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
    */
   public async keepAlive(overrides?: Overrides): Promise<ContractTransaction> {
     const status = await this.status()
-    if (status === ParentChainToChainMessageStatus.FUNDS_DEPOSITED_ON_CHAIN) {
+    if (status === ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN) {
       const arbRetryableTx = ArbRetryableTx__factory.connect(
         ARB_RETRYABLE_TX_ADDRESS,
         this.chainSigner
@@ -748,10 +744,10 @@ export class ParentChainToChainMessageWriter extends ParentChainToChainMessageRe
     } else {
       throw new ArbSdkError(
         `Cannot keep alive as retryable does not exist. Message status: ${
-          ParentChainToChainMessageStatus[status]
+          ParentToChildMessageStatus[status]
         } must be: ${
-          ParentChainToChainMessageStatus[
-            ParentChainToChainMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+          ParentToChildMessageStatus[
+            ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
           ]
         }.`
       )
