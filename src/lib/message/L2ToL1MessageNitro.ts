@@ -64,15 +64,13 @@ const ASSERTION_CONFIRMED_PADDING = 20
 const l2BlockRangeCache: { [key in string]: number[] } = {}
 
 export function getL2BlockRangeCacheKey({
-  parentChainId,
   chainId,
   l1BlockNumber,
 }: {
-  parentChainId: number
   chainId: number
   l1BlockNumber: number
 }) {
-  return `${parentChainId}-${chainId}-${l1BlockNumber}`
+  return `${chainId}-${l1BlockNumber}`
 }
 
 export function getL2BlockRangeCache(key: string) {
@@ -234,10 +232,8 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     // If L1 is Arbitrum, then L2 is an Orbit chain.
     if (await isArbitrumChain(this.l1Provider)) {
       let l2BlockRange
-      const parentChainId = (await this.l1Provider.getNetwork()).chainId
       const chainId = (await l2Provider.getNetwork()).chainId
       const l2BlockRangeCacheKey = getL2BlockRangeCacheKey({
-        parentChainId,
         chainId,
         l1BlockNumber: createdAtBlock.toNumber(),
       })
