@@ -11,6 +11,7 @@ async function main() {
   const cwd = process.cwd()
 
   const nitroPath = getPackagePath('@arbitrum/nitro-contracts')
+  const teleporterPath = getPackagePath('arb-teleporter') // TODO: just symlinked to the repo on my machine
   const peripheralsPath = getPackagePath('@arbitrum/token-bridge-contracts')
 
   console.log('Compiling paths.')
@@ -37,11 +38,17 @@ async function main() {
     cwd: peripheralsPath,
   })
 
+  console.log('building teleporter')
+  execSync(`${npmExec} run hardhat compile`, {
+    cwd: teleporterPath,
+  })
+
   console.log('Done compiling')
 
   const nitroFiles = glob(cwd, [
     `${peripheralsPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
     `${nitroPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
+    `${teleporterPath}/artifacts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
   ])
 
   // TODO: generate files into different subfolders (ie `/nitro/*`) to avoid overwrite of contracts with the same name

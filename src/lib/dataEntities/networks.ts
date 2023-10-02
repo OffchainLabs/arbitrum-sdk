@@ -27,10 +27,16 @@ export interface L1Network extends Network {
   isArbitrum: false
 }
 
+export interface TeleporterAddresses {
+  l1Teleporter: string
+  l2ForwarderFactory: string
+}
+
 export interface L2Network extends Network {
   partnerChainIDs?: number[]
   tokenBridge: TokenBridge
   ethBridge: EthBridge
+  teleporterAddresses?: TeleporterAddresses
   partnerChainID: number
   isArbitrum: true
   confirmPeriodBlocks: number
