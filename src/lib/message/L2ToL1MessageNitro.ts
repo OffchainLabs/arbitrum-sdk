@@ -65,7 +65,7 @@ const ASSERTION_CONFIRMED_PADDING = 20
 const l2BlockRangeCache: { [key in string]: (number | undefined)[] } = {}
 const mutex = new Mutex()
 
-export function getL2BlockRangeCacheKey({
+function getL2BlockRangeCacheKey({
   chainId,
   l1BlockNumber,
 }: {
