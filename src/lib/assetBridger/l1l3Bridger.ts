@@ -38,35 +38,7 @@ import { L1ToL2MessageStatus } from '../message/L1ToL2Message'
 import { L2ForwarderPredictor } from '../abi/L2ForwarderPredictor'
 import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
 
-/*
-API:
-
-
-fromProvider
-DONE: checkL1Network (and L2 and L3)
-
-deposit
-getDepositRequest
-
-DONE: getL1L2GatewayAddress (and L2L3)
-
-approveToken
-DONE (untested): getApproveTokenRequest
-
-DONE: getL1TokenContract (L2 and L3 too)
-
-DONE: getL2ERC20Address (L3)
-
-DONE: l1TokenIsDisabled (L2)
-
-
-for gas estimation:
-  if the l1l2 gateway is default, use hardcoded gas limit and calldata size
-  if it is custom, then throw if user does not provide a specific gas limit and calldata size
-  do the same for the l2l3 gateway
-*/
-
-export enum TeleportationLeg {
+export enum Erc20TeleportationLeg {
   BridgeToL2,
   CallL2ForwarderFactory,
   BridgeToL3,
@@ -90,7 +62,7 @@ export interface PopulatedRetryableGasParams extends ManualRetryableGasParams {
   l3GasPrice: BigNumber
 }
 
-export interface DepositRequestParams {
+export interface Erc20DepositRequestParams {
   erc20L1Address: string
   to: string
   amount: BigNumberish
@@ -101,7 +73,7 @@ export interface DepositRequestParams {
   }
 }
 
-export interface DepositEthRequestParams {
+export interface EthDepositRequestParams {
   to: string
   amount: BigNumberish
   overrides?: {
@@ -110,9 +82,9 @@ export interface DepositEthRequestParams {
 }
 
 // if using relayer and leg 1 times out, failedLegStatus will be undefined
-export interface WaitForDepositResult {
+export interface WaitForErc20DepositResult {
   success: boolean
-  failedLeg?: TeleportationLeg
+  failedLeg?: Erc20TeleportationLeg
   failedLegStatus?: Exclude<L1ToL2MessageStatus, L1ToL2MessageStatus.REDEEMED>
 }
 
@@ -126,12 +98,12 @@ export type RelayerInfo = L2ForwarderPredictor.L2ForwarderParamsStruct & {
   chainId: number
 }
 
-export type DepositRequestUsingRelayerResult = {
+export type RelayedErc20DepositRequestResult = {
   txRequest: L1ToL2TransactionRequest
   relayerInfo: RelayerInfo
 }
 
-export type DepositUsingRelayerResult = {
+export type RelayedErc20DepositResult = {
   tx: L1ContractCallTransaction
   relayerInfo: RelayerInfo
 }
@@ -200,7 +172,7 @@ class BaseL1L3Bridger {
   }
 }
 
-class Erc20L1L3Bridger extends BaseL1L3Bridger {
+class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
   public readonly teleporterAddresses: TeleporterAddresses
 
   // todo: tune these
@@ -441,7 +413,7 @@ class Erc20L1L3Bridger extends BaseL1L3Bridger {
   }
 
   protected async _populateGasParams(
-    params: DepositRequestParams,
+    params: Erc20DepositRequestParams,
     l1Provider: Provider,
     l2Provider: Provider,
     l3Provider: Provider
@@ -489,7 +461,7 @@ class Erc20L1L3Bridger extends BaseL1L3Bridger {
   }
 }
 
-export class L1L3Bridger extends Erc20L1L3Bridger {
+export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
   /**
    * Get a tx request to approve tokens for teleportation.
    * The tokens will be approved for the Teleporter on L1.
@@ -524,7 +496,7 @@ export class L1L3Bridger extends Erc20L1L3Bridger {
   }
 
   public async getDepositRequest(
-    params: DepositRequestParams,
+    params: Erc20DepositRequestParams,
     l1Provider: Provider,
     l2Provider: Provider,
     l3Provider: Provider
@@ -570,7 +542,7 @@ export class L1L3Bridger extends Erc20L1L3Bridger {
   }
 
   public async deposit(
-    params: DepositRequestParams,
+    params: Erc20DepositRequestParams,
     l1Signer: Signer,
     l2Provider: Provider,
     l3Provider: Provider
@@ -591,7 +563,7 @@ export class L1L3Bridger extends Erc20L1L3Bridger {
     depositTxReceipt: L1TransactionReceipt,
     l2Provider: Provider,
     l3Provider: Provider
-  ): Promise<WaitForDepositResult> {
+  ): Promise<WaitForErc20DepositResult> {
     if (depositTxReceipt.to !== this.teleporterAddresses.l1Teleporter) {
       throw new ArbSdkError(
         `Transaction receipt is not for the teleporter: ${depositTxReceipt.to}`
@@ -608,13 +580,13 @@ export class L1L3Bridger extends Erc20L1L3Bridger {
     if (firstLegStatus != L1ToL2MessageStatus.REDEEMED) {
       return {
         success: false,
-        failedLeg: TeleportationLeg.BridgeToL2,
+        failedLeg: Erc20TeleportationLeg.BridgeToL2,
         failedLegStatus: firstLegStatus,
       }
     } else if (secondLegStatus != L1ToL2MessageStatus.REDEEMED) {
       return {
         success: false,
-        failedLeg: TeleportationLeg.CallL2ForwarderFactory,
+        failedLeg: Erc20TeleportationLeg.CallL2ForwarderFactory,
         failedLegStatus: secondLegStatus,
       }
     }
@@ -630,7 +602,7 @@ export class L1L3Bridger extends Erc20L1L3Bridger {
     if (thirdLegStatus != L1ToL2MessageStatus.REDEEMED) {
       return {
         success: false,
-        failedLeg: TeleportationLeg.BridgeToL3,
+        failedLeg: Erc20TeleportationLeg.BridgeToL3,
         failedLegStatus: thirdLegStatus,
       }
     }
@@ -641,7 +613,7 @@ export class L1L3Bridger extends Erc20L1L3Bridger {
   }
 }
 
-export class L1L3BridgerUsingRelayer extends Erc20L1L3Bridger {
+export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
   public async getApproveTokenRequest(
     params: TokenApproveParams,
     l1Provider: Provider
@@ -657,11 +629,11 @@ export class L1L3BridgerUsingRelayer extends Erc20L1L3Bridger {
   }
 
   public async getDepositRequest(
-    params: DepositRequestParams,
+    params: Erc20DepositRequestParams,
     l1Signer: Signer,
     l2Provider: Provider,
     l3Provider: Provider
-  ): Promise<DepositRequestUsingRelayerResult> {
+  ): Promise<RelayedErc20DepositRequestResult> {
     await this._checkL1Network(l1Signer)
     await this._checkL2Network(l2Provider)
     await this._checkL3Network(l3Provider)
@@ -738,19 +710,19 @@ export class L1L3BridgerUsingRelayer extends Erc20L1L3Bridger {
   }
 
   public async deposit(
-    params: DepositRequestParams,
+    params: Erc20DepositRequestParams,
     l1Signer: Signer,
     l2Provider: Provider,
     l3Provider: Provider
-  ): Promise<DepositUsingRelayerResult> {
+  ): Promise<RelayedErc20DepositResult> {
     throw new Error('Not implemented')
   }
 
   public async waitForDeposit(
-    depositResult: DepositUsingRelayerResult,
+    depositResult: RelayedErc20DepositResult,
     l2Provider: Provider,
     l3Provider: Provider
-  ): Promise<WaitForDepositResult> {
+  ): Promise<WaitForErc20DepositResult> {
     throw new Error('Not implemented')
   }
 

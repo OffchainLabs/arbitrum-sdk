@@ -1,5 +1,5 @@
 import { testSetup } from '../../scripts/testSetup'
-import { L1L3Bridger } from '../../src'
+import { Erc20L1L3Bridger } from '../../src'
 import { L2ForwarderContractsDeployer__factory } from '../../src/lib/abi/factories/L2ForwarderContractsDeployer__factory'
 import { MockToken__factory } from '../../src/lib/abi/factories/MockToken__factory'
 import { MockToken } from '../../src/lib/abi/MockToken'
@@ -11,7 +11,7 @@ type Unwrap<T> = T extends Promise<infer U> ? U : T
 
 describe('Teleporter', () => {
   let setup: Unwrap<ReturnType<typeof testSetup>>
-  let l1l3Bridger: L1L3Bridger
+  let l1l3Bridger: Erc20L1L3Bridger
   let l1Token: MockToken
 
   before(async function () {
@@ -45,7 +45,7 @@ describe('Teleporter', () => {
       l2ForwarderFactory,
     }
 
-    l1l3Bridger = new L1L3Bridger(setup.l3Network)
+    l1l3Bridger = new Erc20L1L3Bridger(setup.l3Network)
 
     // deploy the mock token
     l1Token = await new MockToken__factory(setup.l1Signer).deploy(
