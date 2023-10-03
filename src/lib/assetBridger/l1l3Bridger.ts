@@ -136,7 +136,7 @@ export type DepositUsingRelayerResult = {
   relayerInfo: RelayerInfo
 }
 
-export class L1L3Bridger {
+class Erc20L1L3Bridger {
   public readonly l1Network: L1Network
   public readonly l2Network: L2Network
   public readonly teleporterAddresses: TeleporterAddresses
@@ -417,40 +417,7 @@ export class L1L3Bridger {
     )
   }
 
-  /**
-   * Get a tx request to approve tokens for teleportation.
-   * The tokens will be approved for the Teleporter on L1.
-   * @param params
-   * @returns
-   */
-  public async getApproveTokenRequest(
-    params: TokenApproveParams
-  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
-    const iErc20Interface = ERC20__factory.createInterface()
-    const data = iErc20Interface.encodeFunctionData('approve', [
-      this.teleporterAddresses.l1Teleporter,
-      params.amount || ethers.constants.MaxUint256,
-    ])
-
-    return {
-      to: params.erc20L1Address,
-      data,
-      value: BigNumber.from(0),
-    }
-  }
-
-  public async approveToken(
-    params: TokenApproveParams,
-    l1Signer: Signer
-  ): Promise<ethers.ContractTransaction> {
-    await this.checkL1Network(l1Signer)
-
-    const approveRequest = await this.getApproveTokenRequest(params)
-
-    return l1Signer.sendTransaction(approveRequest)
-  }
-
-  private async _populateGasParams(
+  protected async _populateGasParams(
     params: DepositRequestParams,
     l1Provider: Provider,
     l2Provider: Provider,
@@ -485,17 +452,57 @@ export class L1L3Bridger {
     // populate gasParams gas prices
     return {
       ...manualGasParams,
-      l2GasPrice: this.percentIncrease(
+      l2GasPrice: this._percentIncrease(
         await l2Provider.getGasPrice(),
         params.overrides.gasPricePercentIncrease ||
           this.defaultGasPricePercentIncrease
       ),
-      l3GasPrice: this.percentIncrease(
+      l3GasPrice: this._percentIncrease(
         await l3Provider.getGasPrice(),
         params.overrides.gasPricePercentIncrease ||
           this.defaultGasPricePercentIncrease
       ),
     }
+  }
+
+  // todo: find and replace '100' with this
+  protected _percentIncrease(base: BigNumber, percent: BigNumber) {
+    return base.mul(percent).div(100)
+  }
+}
+
+export class L1L3Bridger extends Erc20L1L3Bridger {
+  /**
+   * Get a tx request to approve tokens for teleportation.
+   * The tokens will be approved for the Teleporter on L1.
+   * @param params
+   * @returns
+   */
+  public async getApproveTokenRequest(
+    params: TokenApproveParams
+  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
+    const iErc20Interface = ERC20__factory.createInterface()
+    const data = iErc20Interface.encodeFunctionData('approve', [
+      this.teleporterAddresses.l1Teleporter,
+      params.amount || ethers.constants.MaxUint256,
+    ])
+
+    return {
+      to: params.erc20L1Address,
+      data,
+      value: BigNumber.from(0),
+    }
+  }
+
+  public async approveToken(
+    params: TokenApproveParams,
+    l1Signer: Signer
+  ): Promise<ethers.ContractTransaction> {
+    await this.checkL1Network(l1Signer)
+
+    const approveRequest = await this.getApproveTokenRequest(params)
+
+    return l1Signer.sendTransaction(approveRequest)
   }
 
   public async getDepositRequest(
@@ -533,7 +540,7 @@ export class L1L3Bridger {
 
     const calculatedGasCosts = await teleporter.calculateRetryableGasCosts(
       this.l2Network.ethBridge.inbox,
-      this.percentIncrease(l1GasPrice, this.defaultGasPricePercentIncrease),
+      this._percentIncrease(l1GasPrice, this.defaultGasPricePercentIncrease),
       gasParams
     )
 
@@ -614,15 +621,24 @@ export class L1L3Bridger {
       success: true,
     }
   }
+}
 
-  public async getApproveTokenRequestUsingRelayer(
+class L1L3BridgerUsingRelayer extends Erc20L1L3Bridger {
+  public async getApproveTokenRequest(
     params: TokenApproveParams,
     l1Provider: Provider
   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
     throw new Error('Not implemented')
   }
 
-  public async getDepositRequestUsingRelayer(
+  public async approveToken(
+    params: TokenApproveParams,
+    l1Signer: Signer
+  ): Promise<ethers.ContractTransaction> {
+    throw new Error('Not implemented')
+  }
+
+  public async getDepositRequest(
     params: DepositRequestParams,
     l1Signer: Signer,
     l2Provider: Provider,
@@ -644,7 +660,7 @@ export class L1L3Bridger {
       l1Signer
     )
 
-    const relayerPayment = this.percentIncrease(
+    const relayerPayment = this._percentIncrease(
       populatedGasParams.l2ForwarderFactoryGasLimit.mul(
         populatedGasParams.l2GasPrice
       ),
@@ -703,7 +719,7 @@ export class L1L3Bridger {
     }
   }
 
-  public async depositUsingRelayer(
+  public async deposit(
     params: DepositRequestParams,
     l1Signer: Signer,
     l2Provider: Provider,
@@ -712,7 +728,7 @@ export class L1L3Bridger {
     throw new Error('Not implemented')
   }
 
-  public async waitForDepositUsingRelayer(
+  public async waitForDeposit(
     depositResult: DepositUsingRelayerResult,
     l2Provider: Provider,
     l3Provider: Provider
@@ -727,94 +743,89 @@ export class L1L3Bridger {
   ): Promise<ethers.ContractTransaction> {
     throw new Error('Not implemented')
   }
-
-  // todo: find and replace '100' with this
-  private percentIncrease(base: BigNumber, percent: BigNumber) {
-    return base.mul(percent).div(100)
-  }
 }
 
 // for reference
-interface IL1L3Bridger {
-  getApproveTokenRequest(
-    params: TokenApproveParams
-  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>>
+// interface IL1L3Bridger {
+//   getApproveTokenRequest(
+//     params: TokenApproveParams
+//   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>>
 
-  approveToken(
-    params: TokenApproveParams,
-    l1Signer: Signer
-  ): Promise<ethers.ContractTransaction>
+//   approveToken(
+//     params: TokenApproveParams,
+//     l1Signer: Signer
+//   ): Promise<ethers.ContractTransaction>
 
-  getDepositRequest(
-    params: DepositRequestParams,
-    l1Provider: Provider,
-    l2Provider: Provider,
-    l3Provider: Provider
-  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>>
+//   getDepositRequest(
+//     params: DepositRequestParams,
+//     l1Provider: Provider,
+//     l2Provider: Provider,
+//     l3Provider: Provider
+//   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>>
 
-  deposit(
-    params: DepositRequestParams,
-    l1Signer: Signer,
-    l2Provider: Provider,
-    l3Provider: Provider
-  ): Promise<L1ContractCallTransaction>
+//   deposit(
+//     params: DepositRequestParams,
+//     l1Signer: Signer,
+//     l2Provider: Provider,
+//     l3Provider: Provider
+//   ): Promise<L1ContractCallTransaction>
 
-  // waits for deposit to arrive on L3
-  waitForDeposit(
-    depositTxReceipt: L1TransactionReceipt,
-    l2Provider: Provider,
-    l3Provider: Provider
-  ): Promise<WaitForDepositResult>
+//   // waits for deposit to arrive on L3
+//   waitForDeposit(
+//     depositTxReceipt: L1TransactionReceipt,
+//     l2Provider: Provider,
+//     l3Provider: Provider
+//   ): Promise<WaitForDepositResult>
 
-  getApproveTokenRequestUsingRelayer(
-    params: TokenApproveParams,
-    l1Provider: Provider
-  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>>
+//   getApproveTokenRequestUsingRelayer(
+//     params: TokenApproveParams,
+//     l1Provider: Provider
+//   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>>
 
-  getDepositRequestUsingRelayer(
-    params: DepositRequestParams,
-    l1Signer: Signer,
-    l2Provider: Provider,
-    l3Provider: Provider
-  ): Promise<DepositRequestUsingRelayerResult>
+//   getDepositRequestUsingRelayer(
+//     params: DepositRequestParams,
+//     l1Signer: Signer,
+//     l2Provider: Provider,
+//     l3Provider: Provider
+//   ): Promise<DepositRequestUsingRelayerResult>
 
-  depositUsingRelayer(
-    params: DepositRequestParams,
-    l1Signer: Signer,
-    l2Provider: Provider,
-    l3Provider: Provider
-  ): Promise<DepositUsingRelayerResult>
+//   depositUsingRelayer(
+//     params: DepositRequestParams,
+//     l1Signer: Signer,
+//     l2Provider: Provider,
+//     l3Provider: Provider
+//   ): Promise<DepositUsingRelayerResult>
 
-  waitForDepositUsingRelayer(
-    depositResult: DepositUsingRelayerResult,
-    l2Provider: Provider,
-    l3Provider: Provider
-  ): Promise<WaitForDepositResult>
+//   waitForDepositUsingRelayer(
+//     depositResult: DepositUsingRelayerResult,
+//     l2Provider: Provider,
+//     l3Provider: Provider
+//   ): Promise<WaitForDepositResult>
 
-  getDepositEthRequest(
-    params: DepositEthRequestParams,
-    l1Provider: Provider,
-    l2Provider: Provider,
-    l3Provider: Provider
-  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>>
+//   getDepositEthRequest(
+//     params: DepositEthRequestParams,
+//     l1Provider: Provider,
+//     l2Provider: Provider,
+//     l3Provider: Provider
+//   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>>
 
-  depositEth(
-    params: DepositEthRequestParams,
-    l1Signer: Signer,
-    l2Provider: Provider,
-    l3Provider: Provider
-  ): Promise<L1ContractCallTransaction>
+//   depositEth(
+//     params: DepositEthRequestParams,
+//     l1Signer: Signer,
+//     l2Provider: Provider,
+//     l3Provider: Provider
+//   ): Promise<L1ContractCallTransaction>
 
-  // waits for deposit to arrive on L3
-  waitForDepositEth(
-    depositTxReceipt: L1TransactionReceipt,
-    l2Provider: Provider,
-    l3Provider: Provider
-  ): Promise<WaitForEthDepositResult>
+//   // waits for deposit to arrive on L3
+//   waitForDepositEth(
+//     depositTxReceipt: L1TransactionReceipt,
+//     l2Provider: Provider,
+//     l3Provider: Provider
+//   ): Promise<WaitForEthDepositResult>
 
-  // static
-  relayDeposit(
-    relayerInfo: RelayerInfo,
-    l2Signer: Signer
-  ): Promise<ethers.ContractTransaction>
-}
+//   // static
+//   relayDeposit(
+//     relayerInfo: RelayerInfo,
+//     l2Signer: Signer
+//   ): Promise<ethers.ContractTransaction>
+// }

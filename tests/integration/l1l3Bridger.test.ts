@@ -73,7 +73,7 @@ describe('Teleporter', () => {
     // todo: rename to teleport?
     const depositTx = await l1l3Bridger.deposit(
       {
-        l1Token: l1Token.address,
+        erc20L1Address: l1Token.address,
         to: l3Recipient,
         amount: ethers.utils.parseEther('1'),
       },
