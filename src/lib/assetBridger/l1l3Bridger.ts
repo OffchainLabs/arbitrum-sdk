@@ -66,10 +66,7 @@ for gas estimation:
   do the same for the l2l3 gateway
 */
 
-
-export interface RetryableGasParams {
-  l2GasPrice?: BigNumber
-  l3GasPrice?: BigNumber
+export interface ManualRetryableGasParams {
   l2ForwarderFactoryGasLimit: BigNumber
   l1l2TokenBridgeGasLimit: BigNumber
   l2l3TokenBridgeGasLimit: BigNumber
@@ -77,20 +74,28 @@ export interface RetryableGasParams {
   l2l3TokenBridgeRetryableSize: BigNumber // todo: could call the gateway to get the calldata for a given token?
 }
 
+export interface PopulatedRetryableGasParams extends ManualRetryableGasParams {
+  l2GasPrice: BigNumber
+  l3GasPrice: BigNumber
+}
+
 export interface DepositRequestParams {
   l1Token: string
   to: string
   amount: BigNumberish
-  gasParams?: RetryableGasParams
+  overrides?: {
+    gasPricePercentIncrease?: BigNumber
+    relayerPaymentPercentIncrease?: BigNumber
+    manualGasParams?: ManualRetryableGasParams
+  }
 }
 
+// if using relayer and leg 1 times out, failedLegStatus will be undefined
 export interface WaitForDepositResult {
   success: boolean
   failedLeg?: 0 | 1 | 2 // 0 is token bridge to l2, 1 is call to l2 forwarder factory, 2 is token bridge to l3
   failedLegStatus?: Exclude<L1ToL2MessageStatus, L1ToL2MessageStatus.REDEEMED>
 }
-
-export type ApproveTokenRequestResult = Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
 
 export type RelayerInfo = L2ForwarderPredictor.L2ForwarderParamsStruct & {
   chainId: number
@@ -112,7 +117,7 @@ export class L1L3Bridger {
   public readonly teleporterAddresses: TeleporterAddresses
 
   // todo: tune these
-  public readonly defaultRetryableGasParams: RetryableGasParams = {
+  public readonly defaultRetryableGasParams: ManualRetryableGasParams = {
     l2ForwarderFactoryGasLimit: BigNumber.from(1_000_000),
     l1l2TokenBridgeGasLimit: BigNumber.from(1_000_000),
     l2l3TokenBridgeGasLimit: BigNumber.from(1_000_000),
@@ -409,7 +414,10 @@ export class L1L3Bridger {
     }
   }
 
-  public async approveToken(params: TokenApproveParams, l1Signer: Signer): Promise<ethers.ContractTransaction> {
+  public async approveToken(
+    params: TokenApproveParams,
+    l1Signer: Signer
+  ): Promise<ethers.ContractTransaction> {
     await this.checkL1Network(l1Signer)
 
     const approveRequest = await this.getApproveTokenRequest(params)
@@ -421,10 +429,12 @@ export class L1L3Bridger {
     params: DepositRequestParams,
     l1Provider: Provider,
     l2Provider: Provider,
-    l3Provider: Provider,
-    gasPricePercentIncrease: BigNumber
-  ) {
-    if (!params.gasParams) {
+    l3Provider: Provider
+  ): Promise<PopulatedRetryableGasParams> {
+    params.overrides = params.overrides || {}
+
+    let manualGasParams = params.overrides.manualGasParams
+    if (!manualGasParams) {
       // make sure both gateways are default
       if (!(await this.isL1L2GatewayDefault(params.l1Token, l1Provider))) {
         throw new ArbSdkError(
@@ -444,24 +454,22 @@ export class L1L3Bridger {
         )
       }
 
-      params.gasParams = this.defaultRetryableGasParams
+      manualGasParams = this.defaultRetryableGasParams
     }
 
     // populate gasParams gas prices
     return {
-      ...params.gasParams,
-      l2GasPrice:
-        params.gasParams.l2GasPrice ||
-        this.percentIncrease(
-          await l2Provider.getGasPrice(),
-          gasPricePercentIncrease
-        ),
-      l3GasPrice:
-        params.gasParams.l3GasPrice ||
-        this.percentIncrease(
-          await l3Provider.getGasPrice(),
-          gasPricePercentIncrease
-        ),
+      ...manualGasParams,
+      l2GasPrice: this.percentIncrease(
+        await l2Provider.getGasPrice(),
+        params.overrides.gasPricePercentIncrease ||
+          this.defaultGasPricePercentIncrease
+      ),
+      l3GasPrice: this.percentIncrease(
+        await l3Provider.getGasPrice(),
+        params.overrides.gasPricePercentIncrease ||
+          this.defaultGasPricePercentIncrease
+      ),
     }
   }
 
@@ -469,24 +477,17 @@ export class L1L3Bridger {
     params: DepositRequestParams,
     l1Provider: Provider,
     l2Provider: Provider,
-    l3Provider: Provider,
-    gasPricePercentIncrease?: BigNumber
-  ): Promise<
-    Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
-  > {
+    l3Provider: Provider
+  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
     await this.checkL1Network(l1Provider)
     await this.checkL2Network(l2Provider)
     await this.checkL3Network(l3Provider)
-
-    gasPricePercentIncrease =
-      gasPricePercentIncrease || this.defaultGasPricePercentIncrease
 
     const gasParams = await this._populateGasParams(
       params,
       l1Provider,
       l2Provider,
-      l3Provider,
-      gasPricePercentIncrease
+      l3Provider
     )
 
     const teleporter = Teleporter__factory.connect(
@@ -522,15 +523,13 @@ export class L1L3Bridger {
     params: DepositRequestParams,
     l1Signer: Signer,
     l2Provider: Provider,
-    l3Provider: Provider,
-    gasPricePercentIncrease?: BigNumber
+    l3Provider: Provider
   ): Promise<L1ContractCallTransaction> {
     const txRequest = await this.getDepositRequest(
       params,
       l1Signer.provider!,
       l2Provider,
-      l3Provider,
-      gasPricePercentIncrease
+      l3Provider
     )
 
     return L1TransactionReceipt.monkeyPatchContractCallWait(
@@ -591,7 +590,10 @@ export class L1L3Bridger {
     }
   }
 
-  public async getApproveTokenRequestUsingRelayer(params: TokenApproveParams & { l1Provider: Provider }) {
+  public async getApproveTokenRequestUsingRelayer(
+    params: TokenApproveParams,
+    l1Provider: Provider
+  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
     throw new Error('Not implemented')
   }
 
@@ -599,29 +601,30 @@ export class L1L3Bridger {
     params: DepositRequestParams,
     l1Signer: Signer,
     l2Provider: Provider,
-    l3Provider: Provider,
-    overrides: {gasPricePercentIncrease?: BigNumber, relayerPaymentPercentIncrease?: BigNumber} = {}
+    l3Provider: Provider
   ): Promise<DepositRequestUsingRelayerResult> {
     await this.checkL1Network(l1Signer)
     await this.checkL2Network(l2Provider)
     await this.checkL3Network(l3Provider)
 
-    const gasPricePercentIncrease =
-      overrides.gasPricePercentIncrease || this.defaultGasPricePercentIncrease
-    const relayerPaymentPercentIncrease =
-      overrides.relayerPaymentPercentIncrease || this.defaultRelayerPaymentPercentIncrease
-
-    const gasParams = await this._populateGasParams(
+    const populatedGasParams = await this._populateGasParams(
       params,
       l1Signer.provider!,
       l2Provider,
-      l3Provider,
-      gasPricePercentIncrease
+      l3Provider
     )
 
     const teleporter = Teleporter__factory.connect(
       this.teleporterAddresses.l1Teleporter,
       l1Signer
+    )
+
+    const relayerPayment = this.percentIncrease(
+      populatedGasParams.l2ForwarderFactoryGasLimit.mul(
+        populatedGasParams.l2GasPrice
+      ),
+      params.overrides?.relayerPaymentPercentIncrease ||
+        this.defaultRelayerPaymentPercentIncrease
     )
 
     // calculate l2 forwarder address
@@ -631,12 +634,9 @@ export class L1L3Bridger {
       router: this.l3Network.tokenBridge.l1GatewayRouter,
       to: params.to,
       amount: params.amount,
-      gasLimit: gasParams.l2l3TokenBridgeGasLimit,
-      gasPrice: gasParams.l3GasPrice,
-      // todo: custom relayer payment parameter. default percent increase.
-      relayerPayment: gasParams.l2ForwarderFactoryGasLimit.mul(
-        gasParams.l2GasPrice
-      ),
+      gasLimit: populatedGasParams.l2l3TokenBridgeGasLimit,
+      gasPrice: populatedGasParams.l3GasPrice,
+      relayerPayment,
     }
 
     const l2ForwarderAddress = await teleporter.l2ForwarderAddress(
@@ -660,19 +660,21 @@ export class L1L3Bridger {
     const calculatedGasCosts = await teleporter.calculateRetryableGasCosts(
       this.l2Network.ethBridge.inbox,
       '0', // we don't care about L1 gas price, this will just set it to current gas price
-      gasParams
+      populatedGasParams
     )
     const extraValue = calculatedGasCosts.l2l3TokenBridgeGasCost
       .add(calculatedGasCosts.l2l3TokenBridgeSubmissionCost)
-      .add(relayerPaymentPercentIncrease.mul(l2ForwarderParams.relayerPayment).div(100))
-    tokenBridgeRequest.txRequest.value = extraValue.add(tokenBridgeRequest.txRequest.value)
+      .add(relayerPayment)
+    tokenBridgeRequest.txRequest.value = extraValue.add(
+      tokenBridgeRequest.txRequest.value
+    )
 
     return {
       relayerInfo: {
         ...l2ForwarderParams,
-        chainId: this.l2Network.chainID
+        chainId: this.l2Network.chainID,
       },
-      txRequest: tokenBridgeRequest
+      txRequest: tokenBridgeRequest,
     }
   }
 
@@ -680,18 +682,24 @@ export class L1L3Bridger {
     params: DepositRequestParams,
     l1Signer: Signer,
     l2Provider: Provider,
-    l3Provider: Provider,
-    overrides: {gasPricePercentIncrease?: BigNumber, relayerPaymentPercentIncrease?: BigNumber} = {}
+    l3Provider: Provider
   ): Promise<DepositUsingRelayerResult> {
     throw new Error('Not implemented')
   }
 
-  public async waitForDepositUsingRelayer() {
+  public async waitForDepositUsingRelayer(
+    depositResult: DepositUsingRelayerResult,
+    l2Provider: Provider,
+    l3Provider: Provider
+  ): Promise<WaitForDepositResult> {
     throw new Error('Not implemented')
   }
 
   // takes: deposit tx hash, l2 forwarder params, l2 signer
-  public async relayDeposit() {
+  public static async relayDeposit(
+    relayerInfo: RelayerInfo,
+    l2Signer: Signer
+  ): Promise<ethers.ContractTransaction> {
     throw new Error('Not implemented')
   }
 
@@ -699,4 +707,68 @@ export class L1L3Bridger {
   private percentIncrease(base: BigNumber, percent: BigNumber) {
     return base.mul(percent).div(100)
   }
+}
+
+// for reference
+interface IL1L3Bridger {
+  getApproveTokenRequest(
+    params: TokenApproveParams
+  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>>
+
+  approveToken(
+    params: TokenApproveParams,
+    l1Signer: Signer
+  ): Promise<ethers.ContractTransaction>
+
+  getDepositRequest(
+    params: DepositRequestParams,
+    l1Provider: Provider,
+    l2Provider: Provider,
+    l3Provider: Provider
+  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>>
+
+  deposit(
+    params: DepositRequestParams,
+    l1Signer: Signer,
+    l2Provider: Provider,
+    l3Provider: Provider
+  ): Promise<L1ContractCallTransaction>
+
+  // waits for deposit to arrive on L3
+  waitForDeposit(
+    depositTxReceipt: L1TransactionReceipt,
+    l2Provider: Provider,
+    l3Provider: Provider
+  ): Promise<WaitForDepositResult>
+
+  getApproveTokenRequestUsingRelayer(
+    params: TokenApproveParams,
+    l1Provider: Provider
+  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>>
+
+  getDepositRequestUsingRelayer(
+    params: DepositRequestParams,
+    l1Signer: Signer,
+    l2Provider: Provider,
+    l3Provider: Provider
+  ): Promise<DepositRequestUsingRelayerResult>
+
+  depositUsingRelayer(
+    params: DepositRequestParams,
+    l1Signer: Signer,
+    l2Provider: Provider,
+    l3Provider: Provider
+  ): Promise<DepositUsingRelayerResult>
+
+  waitForDepositUsingRelayer(
+    depositResult: DepositUsingRelayerResult,
+    l2Provider: Provider,
+    l3Provider: Provider
+  ): Promise<WaitForDepositResult>
+
+  // static
+  relayDeposit(
+    relayerInfo: RelayerInfo,
+    l2Signer: Signer
+  ): Promise<ethers.ContractTransaction>
 }
