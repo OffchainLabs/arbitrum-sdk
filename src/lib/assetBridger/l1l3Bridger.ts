@@ -30,11 +30,13 @@ import {
 import { Teleporter__factory } from '../abi/factories/Teleporter__factory'
 import { AbiCoder } from 'ethers/lib/utils'
 import {
+  L1ContractCallTransaction,
   L1ContractCallTransactionReceipt,
   L1TransactionReceipt,
 } from '../message/L1Transaction'
 import { L1ToL2MessageStatus } from '../message/L1ToL2Message'
 import { L2ForwarderPredictor } from '../abi/L2ForwarderPredictor'
+import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
 
 /*
 API:
@@ -64,6 +66,7 @@ for gas estimation:
   do the same for the l2l3 gateway
 */
 
+
 export interface RetryableGasParams {
   l2GasPrice?: BigNumber
   l3GasPrice?: BigNumber
@@ -85,6 +88,22 @@ export interface WaitForDepositResult {
   success: boolean
   failedLeg?: 0 | 1 | 2 // 0 is token bridge to l2, 1 is call to l2 forwarder factory, 2 is token bridge to l3
   failedLegStatus?: Exclude<L1ToL2MessageStatus, L1ToL2MessageStatus.REDEEMED>
+}
+
+export type ApproveTokenRequestResult = Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
+
+export type RelayerInfo = L2ForwarderPredictor.L2ForwarderParamsStruct & {
+  chainId: number
+}
+
+export type DepositRequestUsingRelayerResult = {
+  txRequest: L1ToL2TransactionRequest
+  relayerInfo: RelayerInfo
+}
+
+export type DepositUsingRelayerResult = {
+  tx: L1ContractCallTransaction
+  relayerInfo: RelayerInfo
 }
 
 export class L1L3Bridger {
@@ -390,7 +409,7 @@ export class L1L3Bridger {
     }
   }
 
-  public async approveToken(params: TokenApproveParams, l1Signer: Signer) {
+  public async approveToken(params: TokenApproveParams, l1Signer: Signer): Promise<ethers.ContractTransaction> {
     await this.checkL1Network(l1Signer)
 
     const approveRequest = await this.getApproveTokenRequest(params)
@@ -448,14 +467,14 @@ export class L1L3Bridger {
 
   public async getDepositRequest(
     params: DepositRequestParams,
-    l1Signer: Signer,
+    l1Provider: Provider,
     l2Provider: Provider,
     l3Provider: Provider,
     gasPricePercentIncrease?: BigNumber
   ): Promise<
-    Required<Pick<TransactionRequest, 'to' | 'data' | 'value' | 'from'>>
+    Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
   > {
-    await this.checkL1Network(l1Signer)
+    await this.checkL1Network(l1Provider)
     await this.checkL2Network(l2Provider)
     await this.checkL3Network(l3Provider)
 
@@ -464,7 +483,7 @@ export class L1L3Bridger {
 
     const gasParams = await this._populateGasParams(
       params,
-      l1Signer.provider!,
+      l1Provider,
       l2Provider,
       l3Provider,
       gasPricePercentIncrease
@@ -472,7 +491,7 @@ export class L1L3Bridger {
 
     const teleporter = Teleporter__factory.connect(
       this.teleporterAddresses.l1Teleporter,
-      l1Signer
+      l1Provider
     )
 
     const calldata = teleporter.interface.encodeFunctionData('teleport', [
@@ -484,7 +503,7 @@ export class L1L3Bridger {
       gasParams,
     ])
 
-    const l1GasPrice = await l1Signer.provider!.getGasPrice()
+    const l1GasPrice = await l1Provider.getGasPrice()
 
     const calculatedGasCosts = await teleporter.calculateRetryableGasCosts(
       this.l2Network.ethBridge.inbox,
@@ -496,7 +515,6 @@ export class L1L3Bridger {
       to: this.teleporterAddresses.l1Teleporter,
       data: calldata,
       value: calculatedGasCosts.total,
-      from: await l1Signer.getAddress(),
     }
   }
 
@@ -506,10 +524,10 @@ export class L1L3Bridger {
     l2Provider: Provider,
     l3Provider: Provider,
     gasPricePercentIncrease?: BigNumber
-  ) {
+  ): Promise<L1ContractCallTransaction> {
     const txRequest = await this.getDepositRequest(
       params,
-      l1Signer,
+      l1Signer.provider!,
       l2Provider,
       l3Provider,
       gasPricePercentIncrease
@@ -573,7 +591,7 @@ export class L1L3Bridger {
     }
   }
 
-  public async getApproveTokenRequestUsingRelayer() {
+  public async getApproveTokenRequestUsingRelayer(params: TokenApproveParams & { l1Provider: Provider }) {
     throw new Error('Not implemented')
   }
 
@@ -583,7 +601,7 @@ export class L1L3Bridger {
     l2Provider: Provider,
     l3Provider: Provider,
     overrides: {gasPricePercentIncrease?: BigNumber, relayerPaymentPercentIncrease?: BigNumber} = {}
-  ) {
+  ): Promise<DepositRequestUsingRelayerResult> {
     await this.checkL1Network(l1Signer)
     await this.checkL2Network(l2Provider)
     await this.checkL3Network(l3Provider)
@@ -633,6 +651,9 @@ export class L1L3Bridger {
       l2Provider: l2Provider,
       erc20L1Address: params.l1Token,
       from: await l1Signer.getAddress(),
+      destinationAddress: l2ForwarderAddress,
+      callValueRefundAddress: l2ForwarderAddress,
+      excessFeeRefundAddress: l2ForwarderAddress,
     })
 
     // add relayer payment and l3 retryable costs to value
@@ -646,10 +667,22 @@ export class L1L3Bridger {
       .add(relayerPaymentPercentIncrease.mul(l2ForwarderParams.relayerPayment).div(100))
     tokenBridgeRequest.txRequest.value = extraValue.add(tokenBridgeRequest.txRequest.value)
 
-    return tokenBridgeRequest
+    return {
+      relayerInfo: {
+        ...l2ForwarderParams,
+        chainId: this.l2Network.chainID
+      },
+      txRequest: tokenBridgeRequest
+    }
   }
 
-  public async depositUsingRelayer() {
+  public async depositUsingRelayer(
+    params: DepositRequestParams,
+    l1Signer: Signer,
+    l2Provider: Provider,
+    l3Provider: Provider,
+    overrides: {gasPricePercentIncrease?: BigNumber, relayerPaymentPercentIncrease?: BigNumber} = {}
+  ): Promise<DepositUsingRelayerResult> {
     throw new Error('Not implemented')
   }
 
@@ -662,6 +695,7 @@ export class L1L3Bridger {
     throw new Error('Not implemented')
   }
 
+  // todo: find and replace '100' with this
   private percentIncrease(base: BigNumber, percent: BigNumber) {
     return base.mul(percent).div(100)
   }
