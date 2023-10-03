@@ -66,6 +66,17 @@ for gas estimation:
   do the same for the l2l3 gateway
 */
 
+export enum TeleportationLeg {
+  BridgeToL2,
+  CallL2ForwarderFactory,
+  BridgeToL3,
+}
+
+export enum EthTeleportationLeg {
+  L2Retryable,
+  L3Retryable,
+}
+
 export interface ManualRetryableGasParams {
   l2ForwarderFactoryGasLimit: BigNumber
   l1l2TokenBridgeGasLimit: BigNumber
@@ -80,7 +91,7 @@ export interface PopulatedRetryableGasParams extends ManualRetryableGasParams {
 }
 
 export interface DepositRequestParams {
-  l1Token: string
+  erc20L1Address: string
   to: string
   amount: BigNumberish
   overrides?: {
@@ -90,10 +101,24 @@ export interface DepositRequestParams {
   }
 }
 
+export interface DepositEthRequestParams {
+  to: string
+  amount: BigNumberish
+  overrides?: {
+    gasPricePercentIncrease?: BigNumber
+  }
+}
+
 // if using relayer and leg 1 times out, failedLegStatus will be undefined
 export interface WaitForDepositResult {
   success: boolean
-  failedLeg?: 0 | 1 | 2 // 0 is token bridge to l2, 1 is call to l2 forwarder factory, 2 is token bridge to l3
+  failedLeg?: TeleportationLeg
+  failedLegStatus?: Exclude<L1ToL2MessageStatus, L1ToL2MessageStatus.REDEEMED>
+}
+
+export interface WaitForEthDepositResult {
+  success: boolean
+  failedLeg?: EthTeleportationLeg
   failedLegStatus?: Exclude<L1ToL2MessageStatus, L1ToL2MessageStatus.REDEEMED>
 }
 
@@ -436,7 +461,7 @@ export class L1L3Bridger {
     let manualGasParams = params.overrides.manualGasParams
     if (!manualGasParams) {
       // make sure both gateways are default
-      if (!(await this.isL1L2GatewayDefault(params.l1Token, l1Provider))) {
+      if (!(await this.isL1L2GatewayDefault(params.erc20L1Address, l1Provider))) {
         throw new ArbSdkError(
           `Cannot estimate gas for custom l1l2 gateway, please provide gas params`
         )
@@ -444,7 +469,7 @@ export class L1L3Bridger {
 
       if (
         !(await this.isL2L3GatewayDefault(
-          params.l1Token,
+          params.erc20L1Address,
           l1Provider,
           l2Provider
         ))
@@ -496,7 +521,7 @@ export class L1L3Bridger {
     )
 
     const calldata = teleporter.interface.encodeFunctionData('teleport', [
-      params.l1Token,
+      params.erc20L1Address,
       this.l2Network.tokenBridge.l1GatewayRouter,
       this.l3Network.tokenBridge.l1GatewayRouter,
       params.to,
@@ -558,13 +583,13 @@ export class L1L3Bridger {
     if (firstLegStatus != L1ToL2MessageStatus.REDEEMED) {
       return {
         success: false,
-        failedLeg: 0,
+        failedLeg: TeleportationLeg.BridgeToL2,
         failedLegStatus: firstLegStatus,
       }
     } else if (secondLegStatus != L1ToL2MessageStatus.REDEEMED) {
       return {
         success: false,
-        failedLeg: 1,
+        failedLeg: TeleportationLeg.CallL2ForwarderFactory,
         failedLegStatus: secondLegStatus,
       }
     }
@@ -580,7 +605,7 @@ export class L1L3Bridger {
     if (thirdLegStatus != L1ToL2MessageStatus.REDEEMED) {
       return {
         success: false,
-        failedLeg: 2,
+        failedLeg: TeleportationLeg.BridgeToL3,
         failedLegStatus: thirdLegStatus,
       }
     }
@@ -630,7 +655,7 @@ export class L1L3Bridger {
     // calculate l2 forwarder address
     const l2ForwarderParams: L2ForwarderPredictor.L2ForwarderParamsStruct = {
       owner: await l1Signer.getAddress(),
-      token: params.l1Token,
+      token: params.erc20L1Address,
       router: this.l3Network.tokenBridge.l1GatewayRouter,
       to: params.to,
       amount: params.amount,
@@ -649,7 +674,7 @@ export class L1L3Bridger {
       amount: BigNumber.from(params.amount),
       l1Provider: l1Signer.provider!,
       l2Provider: l2Provider,
-      erc20L1Address: params.l1Token,
+      erc20L1Address: params.erc20L1Address,
       from: await l1Signer.getAddress(),
       destinationAddress: l2ForwarderAddress,
       callValueRefundAddress: l2ForwarderAddress,
@@ -765,6 +790,27 @@ interface IL1L3Bridger {
     l2Provider: Provider,
     l3Provider: Provider
   ): Promise<WaitForDepositResult>
+
+  getDepositEthRequest(
+    params: DepositEthRequestParams,
+    l1Provider: Provider,
+    l2Provider: Provider,
+    l3Provider: Provider
+  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>>
+
+  depositEth(
+    params: DepositEthRequestParams,
+    l1Signer: Signer,
+    l2Provider: Provider,
+    l3Provider: Provider
+  ): Promise<L1ContractCallTransaction>
+
+  // waits for deposit to arrive on L3
+  waitForDepositEth(
+    depositTxReceipt: L1TransactionReceipt,
+    l2Provider: Provider,
+    l3Provider: Provider
+  ): Promise<WaitForEthDepositResult>
 
   // static
   relayDeposit(
