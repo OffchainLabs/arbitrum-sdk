@@ -136,9 +136,71 @@ export type DepositUsingRelayerResult = {
   relayerInfo: RelayerInfo
 }
 
-class Erc20L1L3Bridger {
+class BaseL1L3Bridger {
   public readonly l1Network: L1Network
   public readonly l2Network: L2Network
+  public readonly l3Network: L2Network
+
+  public readonly defaultGasPricePercentIncrease: BigNumber =
+    BigNumber.from(130) // 30% increase
+
+  constructor(l3Network: L2Network) {
+    const l2Network = l2Networks[l3Network.partnerChainID]
+    if (!l2Network) {
+      throw new ArbSdkError(
+        `Unknown l2 network chain id: ${l3Network.partnerChainID}`
+      )
+    }
+
+    if (!l2Network.teleporterAddresses) {
+      throw new ArbSdkError(
+        `L2 network ${l2Network.name} does not have a teleporter`
+      )
+    }
+
+    const l1Network = l1Networks[l2Network.partnerChainID]
+    if (!l1Network) {
+      throw new ArbSdkError(
+        `Unknown l1 network chain id: ${l2Network.partnerChainID}`
+      )
+    }
+
+    this.l1Network = l1Network
+    this.l2Network = l2Network
+    this.l3Network = l3Network
+  }
+
+  /**
+   * Check the signer/provider matches the l1Network, throws if not
+   * @param sop
+   */
+  protected async _checkL1Network(sop: SignerOrProvider): Promise<void> {
+    await SignerProviderUtils.checkNetworkMatches(sop, this.l1Network.chainID)
+  }
+
+  /**
+   * Check the signer/provider matches the l2Network, throws if not
+   * @param sop
+   */
+  protected async _checkL2Network(sop: SignerOrProvider): Promise<void> {
+    await SignerProviderUtils.checkNetworkMatches(sop, this.l2Network.chainID)
+  }
+
+  /**
+   * Check the signer/provider matches the l2Network, throws if not
+   * @param sop
+   */
+  protected async _checkL3Network(sop: SignerOrProvider): Promise<void> {
+    await SignerProviderUtils.checkNetworkMatches(sop, this.l3Network.chainID)
+  }
+
+  // todo: find and replace '100' with this
+  protected _percentIncrease(base: BigNumber, percent: BigNumber) {
+    return base.mul(percent).div(100)
+  }
+}
+
+class Erc20L1L3Bridger extends BaseL1L3Bridger {
   public readonly teleporterAddresses: TeleporterAddresses
 
   // todo: tune these
@@ -150,58 +212,19 @@ class Erc20L1L3Bridger {
     l2l3TokenBridgeRetryableSize: BigNumber.from(1000),
   } as const
 
-  public readonly defaultGasPricePercentIncrease: BigNumber =
-    BigNumber.from(130) // 30% increase
-
   public readonly defaultRelayerPaymentPercentIncrease: BigNumber =
     BigNumber.from(130) // 30% increase
 
   public constructor(public readonly l3Network: L2Network) {
-    this.l2Network = l2Networks[l3Network.partnerChainID]
-    if (!this.l2Network) {
-      throw new ArbSdkError(
-        `Unknown l2 network chain id: ${l3Network.partnerChainID}`
-      )
-    }
+    super(l3Network)
 
     if (!this.l2Network.teleporterAddresses) {
       throw new ArbSdkError(
-        `L2 network ${this.l2Network.name} does not have a teleporter`
+        `L2 network ${this.l2Network.name} does not have teleporter contracts`
       )
     }
 
     this.teleporterAddresses = this.l2Network.teleporterAddresses
-
-    this.l1Network = l1Networks[this.l2Network.partnerChainID]
-    if (!this.l1Network) {
-      throw new ArbSdkError(
-        `Unknown l1 network chain id: ${this.l2Network.partnerChainID}`
-      )
-    }
-  }
-
-  /**
-   * Check the signer/provider matches the l1Network, throws if not
-   * @param sop
-   */
-  protected async checkL1Network(sop: SignerOrProvider): Promise<void> {
-    await SignerProviderUtils.checkNetworkMatches(sop, this.l1Network.chainID)
-  }
-
-  /**
-   * Check the signer/provider matches the l2Network, throws if not
-   * @param sop
-   */
-  protected async checkL2Network(sop: SignerOrProvider): Promise<void> {
-    await SignerProviderUtils.checkNetworkMatches(sop, this.l2Network.chainID)
-  }
-
-  /**
-   * Check the signer/provider matches the l2Network, throws if not
-   * @param sop
-   */
-  protected async checkL3Network(sop: SignerOrProvider): Promise<void> {
-    await SignerProviderUtils.checkNetworkMatches(sop, this.l3Network.chainID)
   }
 
   /**
@@ -214,7 +237,7 @@ class Erc20L1L3Bridger {
     erc20L1Address: string,
     l1Provider: Provider
   ): Promise<string> {
-    await this.checkL1Network(l1Provider)
+    await this._checkL1Network(l1Provider)
     return this._getChildErc20Address(
       erc20L1Address,
       l1Provider,
@@ -234,7 +257,7 @@ class Erc20L1L3Bridger {
     l1Provider: Provider,
     l2Provider: Provider
   ): Promise<string> {
-    await this.checkL2Network(l2Provider)
+    await this._checkL2Network(l2Provider)
     return this._getChildErc20Address(
       await this.getL2ERC20Address(erc20L1Address, l1Provider),
       l2Provider,
@@ -266,7 +289,7 @@ class Erc20L1L3Bridger {
     erc20L1Address: string,
     l1Provider: Provider
   ): Promise<string> {
-    await this.checkL1Network(l1Provider)
+    await this._checkL1Network(l1Provider)
 
     return await L1GatewayRouter__factory.connect(
       this.l2Network.tokenBridge.l1GatewayRouter,
@@ -286,8 +309,8 @@ class Erc20L1L3Bridger {
     l1Provider: Provider,
     l2Provider: Provider
   ): Promise<string> {
-    await this.checkL1Network(l1Provider)
-    await this.checkL2Network(l2Provider)
+    await this._checkL1Network(l1Provider)
+    await this._checkL2Network(l2Provider)
 
     const l2Token = await this.getL2ERC20Address(erc20L1Address, l1Provider)
 
@@ -373,7 +396,7 @@ class Erc20L1L3Bridger {
     l1TokenAddress: string,
     l1Provider: Provider
   ): Promise<boolean> {
-    await this.checkL1Network(l1Provider)
+    await this._checkL1Network(l1Provider)
 
     return this._tokenIsDisabled(
       l1TokenAddress,
@@ -392,7 +415,7 @@ class Erc20L1L3Bridger {
     l2TokenAddress: string,
     l2Provider: Provider
   ): Promise<boolean> {
-    await this.checkL2Network(l2Provider)
+    await this._checkL2Network(l2Provider)
 
     return this._tokenIsDisabled(
       l2TokenAddress,
@@ -464,11 +487,6 @@ class Erc20L1L3Bridger {
       ),
     }
   }
-
-  // todo: find and replace '100' with this
-  protected _percentIncrease(base: BigNumber, percent: BigNumber) {
-    return base.mul(percent).div(100)
-  }
 }
 
 export class L1L3Bridger extends Erc20L1L3Bridger {
@@ -498,7 +516,7 @@ export class L1L3Bridger extends Erc20L1L3Bridger {
     params: TokenApproveParams,
     l1Signer: Signer
   ): Promise<ethers.ContractTransaction> {
-    await this.checkL1Network(l1Signer)
+    await this._checkL1Network(l1Signer)
 
     const approveRequest = await this.getApproveTokenRequest(params)
 
@@ -511,9 +529,9 @@ export class L1L3Bridger extends Erc20L1L3Bridger {
     l2Provider: Provider,
     l3Provider: Provider
   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
-    await this.checkL1Network(l1Provider)
-    await this.checkL2Network(l2Provider)
-    await this.checkL3Network(l3Provider)
+    await this._checkL1Network(l1Provider)
+    await this._checkL2Network(l2Provider)
+    await this._checkL3Network(l3Provider)
 
     const gasParams = await this._populateGasParams(
       params,
@@ -580,8 +598,8 @@ export class L1L3Bridger extends Erc20L1L3Bridger {
       )
     }
 
-    await this.checkL2Network(l2Provider)
-    await this.checkL3Network(l3Provider)
+    await this._checkL2Network(l2Provider)
+    await this._checkL3Network(l3Provider)
 
     const l1l2Messages = await depositTxReceipt.getL1ToL2Messages(l2Provider)
     const firstLegStatus = (await l1l2Messages[0].waitForStatus()).status
@@ -623,7 +641,7 @@ export class L1L3Bridger extends Erc20L1L3Bridger {
   }
 }
 
-class L1L3BridgerUsingRelayer extends Erc20L1L3Bridger {
+export class L1L3BridgerUsingRelayer extends Erc20L1L3Bridger {
   public async getApproveTokenRequest(
     params: TokenApproveParams,
     l1Provider: Provider
@@ -644,9 +662,9 @@ class L1L3BridgerUsingRelayer extends Erc20L1L3Bridger {
     l2Provider: Provider,
     l3Provider: Provider
   ): Promise<DepositRequestUsingRelayerResult> {
-    await this.checkL1Network(l1Signer)
-    await this.checkL2Network(l2Provider)
-    await this.checkL3Network(l3Provider)
+    await this._checkL1Network(l1Signer)
+    await this._checkL2Network(l2Provider)
+    await this._checkL3Network(l3Provider)
 
     const populatedGasParams = await this._populateGasParams(
       params,
@@ -745,87 +763,6 @@ class L1L3BridgerUsingRelayer extends Erc20L1L3Bridger {
   }
 }
 
-// for reference
-// interface IL1L3Bridger {
-//   getApproveTokenRequest(
-//     params: TokenApproveParams
-//   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>>
+export class EthL1L3Bridger extends BaseL1L3Bridger {
 
-//   approveToken(
-//     params: TokenApproveParams,
-//     l1Signer: Signer
-//   ): Promise<ethers.ContractTransaction>
-
-//   getDepositRequest(
-//     params: DepositRequestParams,
-//     l1Provider: Provider,
-//     l2Provider: Provider,
-//     l3Provider: Provider
-//   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>>
-
-//   deposit(
-//     params: DepositRequestParams,
-//     l1Signer: Signer,
-//     l2Provider: Provider,
-//     l3Provider: Provider
-//   ): Promise<L1ContractCallTransaction>
-
-//   // waits for deposit to arrive on L3
-//   waitForDeposit(
-//     depositTxReceipt: L1TransactionReceipt,
-//     l2Provider: Provider,
-//     l3Provider: Provider
-//   ): Promise<WaitForDepositResult>
-
-//   getApproveTokenRequestUsingRelayer(
-//     params: TokenApproveParams,
-//     l1Provider: Provider
-//   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>>
-
-//   getDepositRequestUsingRelayer(
-//     params: DepositRequestParams,
-//     l1Signer: Signer,
-//     l2Provider: Provider,
-//     l3Provider: Provider
-//   ): Promise<DepositRequestUsingRelayerResult>
-
-//   depositUsingRelayer(
-//     params: DepositRequestParams,
-//     l1Signer: Signer,
-//     l2Provider: Provider,
-//     l3Provider: Provider
-//   ): Promise<DepositUsingRelayerResult>
-
-//   waitForDepositUsingRelayer(
-//     depositResult: DepositUsingRelayerResult,
-//     l2Provider: Provider,
-//     l3Provider: Provider
-//   ): Promise<WaitForDepositResult>
-
-//   getDepositEthRequest(
-//     params: DepositEthRequestParams,
-//     l1Provider: Provider,
-//     l2Provider: Provider,
-//     l3Provider: Provider
-//   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>>
-
-//   depositEth(
-//     params: DepositEthRequestParams,
-//     l1Signer: Signer,
-//     l2Provider: Provider,
-//     l3Provider: Provider
-//   ): Promise<L1ContractCallTransaction>
-
-//   // waits for deposit to arrive on L3
-//   waitForDepositEth(
-//     depositTxReceipt: L1TransactionReceipt,
-//     l2Provider: Provider,
-//     l3Provider: Provider
-//   ): Promise<WaitForEthDepositResult>
-
-//   // static
-//   relayDeposit(
-//     relayerInfo: RelayerInfo,
-//     l2Signer: Signer
-//   ): Promise<ethers.ContractTransaction>
-// }
+}
