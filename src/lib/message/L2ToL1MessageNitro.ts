@@ -66,32 +66,32 @@ const l2BlockRangeCache: { [key in string]: (number | undefined)[] } = {}
 const mutex = new Mutex()
 
 function getL2BlockRangeCacheKey({
-  chainId,
+  l2ChainId,
   l1BlockNumber,
 }: {
-  chainId: number
+  l2ChainId: number
   l1BlockNumber: number
 }) {
-  return `${chainId}-${l1BlockNumber}`
+  return `${l2ChainId}-${l1BlockNumber}`
 }
 
 function setL2BlockRangeCache(key: string, value: (number | undefined)[]) {
   l2BlockRangeCache[key] = value
 }
 
-async function getL2BlockRangeCache({
+async function getBlockRangesForL1BlockWithCache({
   l1Provider,
   l2Provider,
-  l1BlockNumber,
+  forL1Block,
 }: {
   l1Provider: JsonRpcProvider
   l2Provider: JsonRpcProvider
-  l1BlockNumber: number
+  forL1Block: number
 }) {
-  const { chainId } = await l2Provider.getNetwork()
+  const l2ChainId = (await l2Provider.getNetwork()).chainId
   const key = getL2BlockRangeCacheKey({
-    chainId,
-    l1BlockNumber,
+    l2ChainId,
+    l1BlockNumber: forL1Block,
   })
 
   if (l2BlockRangeCache[key]) {
@@ -109,7 +109,7 @@ async function getL2BlockRangeCache({
 
   try {
     const l2BlockRange = await getBlockRangesForL1Block({
-      forL1Block: l1BlockNumber,
+      forL1Block,
       provider: l1Provider,
     })
     setL2BlockRangeCache(key, l2BlockRange)
@@ -271,10 +271,10 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     // If L1 is Arbitrum, then L2 is an Orbit chain.
     if (await isArbitrumChain(this.l1Provider)) {
       try {
-        const l2BlockRange = await getL2BlockRangeCache({
+        const l2BlockRange = await getBlockRangesForL1BlockWithCache({
           l1Provider: this.l1Provider as JsonRpcProvider,
           l2Provider: l2Provider as JsonRpcProvider,
-          l1BlockNumber: createdAtBlock.toNumber(),
+          forL1Block: createdAtBlock.toNumber(),
         })
         const startBlock = l2BlockRange[0]
         const endBlock = l2BlockRange[1]
