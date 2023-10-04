@@ -32,11 +32,15 @@ import { AbiCoder } from 'ethers/lib/utils'
 import {
   L1ContractCallTransaction,
   L1ContractCallTransactionReceipt,
+  L1EthDepositTransaction,
+  L1EthDepositTransactionReceipt,
   L1TransactionReceipt,
 } from '../message/L1Transaction'
 import { L1ToL2MessageStatus } from '../message/L1ToL2Message'
 import { L2ForwarderPredictor } from '../abi/L2ForwarderPredictor'
 import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
+import { L1ToL2MessageCreator } from '../message/L1ToL2MessageCreator'
+import { Address } from '../dataEntities/address'
 
 export enum Erc20TeleportationLeg {
   BridgeToL2,
@@ -64,7 +68,7 @@ export interface PopulatedRetryableGasParams extends ManualRetryableGasParams {
 
 export interface Erc20DepositRequestParams {
   erc20L1Address: string
-  to: string
+  to: string // todo: make optional, default to signer's address
   amount: BigNumberish
   overrides?: {
     gasPricePercentIncrease?: BigNumber
@@ -74,10 +78,15 @@ export interface Erc20DepositRequestParams {
 }
 
 export interface EthDepositRequestParams {
-  to: string
   amount: BigNumberish
+  destinationOverrides?: {
+    l3DestinationAddress: string,
+    l2RefundAddress: string,
+  }
   overrides?: {
     gasPricePercentIncrease?: BigNumber
+    l2RetryableGasLimit?: BigNumber
+    l3RetryableGasLimit?: BigNumber
   }
 }
 
@@ -121,12 +130,6 @@ class BaseL1L3Bridger {
     if (!l2Network) {
       throw new ArbSdkError(
         `Unknown l2 network chain id: ${l3Network.partnerChainID}`
-      )
-    }
-
-    if (!l2Network.teleporterAddresses) {
-      throw new ArbSdkError(
-        `L2 network ${l2Network.name} does not have a teleporter`
       )
     }
 
@@ -735,6 +738,112 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
   }
 }
 
-export class EthL1L3Bridger extends BaseL1L3Bridger {
+export type EthDepositStatus = {
+  l2RetryableStatus: L1ToL2MessageStatus
+  l3RetryableStatus: L1ToL2MessageStatus
+}
 
+export class EthL1L3Bridger extends BaseL1L3Bridger {
+  // getDepositRequest
+  // deposit
+  // some status check function
+
+  public async getDepositRequest(
+    params: EthDepositRequestParams,
+    l1Signer: Signer,
+    l2Provider: Provider,
+    l3Provider: Provider
+  ): Promise<L1ToL2TransactionRequest> {
+    await this._checkL1Network(l1Signer)
+    await this._checkL2Network(l2Provider)
+    await this._checkL3Network(l3Provider)
+
+    const l1Address = await l1Signer.getAddress()
+
+    const l3DestinationAddress = params.destinationOverrides?.l3DestinationAddress || l1Address
+    const l2RefundAddress = params.destinationOverrides?.l2RefundAddress || l1Address
+
+    const l3TicketRequest = await L1ToL2MessageCreator.getTicketCreationRequest(
+      {
+        to: l3DestinationAddress,
+        data: '0x',
+        from: new Address(l1Address).applyAlias().value,
+        l2CallValue: BigNumber.from(params.amount),
+        excessFeeRefundAddress: l3DestinationAddress,
+        callValueRefundAddress: l3DestinationAddress
+      }, 
+      l2Provider, 
+      l3Provider
+    )
+
+    const l2TicketRequest = await L1ToL2MessageCreator.getTicketCreationRequest(
+      {
+        from: l1Address,
+        to: l3TicketRequest.txRequest.to,
+        l2CallValue: BigNumber.from(l3TicketRequest.txRequest.value),
+        data: ethers.utils.hexlify(l3TicketRequest.txRequest.data),
+        excessFeeRefundAddress: l2RefundAddress,
+        callValueRefundAddress: l2RefundAddress,
+      },
+      l1Signer.provider!,
+      l2Provider
+    )
+    
+    return l2TicketRequest
+  }
+
+  public async deposit(
+    params: EthDepositRequestParams,
+    l1Signer: Signer,
+    l2Provider: Provider,
+    l3Provider: Provider
+  ): Promise<L1EthDepositTransaction> {
+    const txRequest = await this.getDepositRequest(
+      params,
+      l1Signer,
+      l2Provider,
+      l3Provider
+    )
+
+    return L1TransactionReceipt.monkeyPatchEthDepositWait(
+      await l1Signer.sendTransaction(txRequest.txRequest)
+    )
+  }
+
+  // don't pass a tx that isn't an l1 to l3 eth deposit
+  public async getDepositStatus(
+    l1TxReceipt: L1EthDepositTransactionReceipt,
+    l2Provider: Provider,
+    l3Provider: Provider
+  ): Promise<EthDepositStatus> {
+    const l1l2Message = (await l1TxReceipt.getL1ToL2Messages(l2Provider))[0]
+
+    const l1l2Redeem = await l1l2Message.getSuccessfulRedeem()
+
+    if (l1l2Redeem.status != L1ToL2MessageStatus.REDEEMED) {
+      return {
+        l2RetryableStatus: l1l2Redeem.status,
+        l3RetryableStatus: L1ToL2MessageStatus.NOT_YET_CREATED,
+      }
+    }
+
+    const l2l3Message = (
+      await new L1EthDepositTransactionReceipt(l1l2Redeem.l2TxReceipt).getL1ToL2Messages(
+        l3Provider
+      )
+    )[0]
+
+    if (l2l3Message === undefined) {
+      throw new ArbSdkError(
+        `L2 to L3 message not found`
+      )
+    }
+
+    const l2l3Redeem = await l2l3Message.getSuccessfulRedeem()
+
+    return {
+      l2RetryableStatus: l1l2Redeem.status,
+      l3RetryableStatus: l2l3Redeem.status,
+    }
+  }
 }
