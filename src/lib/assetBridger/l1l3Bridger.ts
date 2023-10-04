@@ -90,17 +90,18 @@ export interface EthDepositRequestParams {
   }
 }
 
-// if using relayer and leg 1 times out, failedLegStatus will be undefined
-export interface WaitForErc20DepositResult {
-  success: boolean
-  failedLeg?: Erc20TeleportationLeg
-  failedLegStatus?: Exclude<L1ToL2MessageStatus, L1ToL2MessageStatus.REDEEMED>
+export interface Erc20DepositStatus {
+  bridgeToL2Status: L1ToL2MessageStatus
+  callToL2ForwarderStatus: L1ToL2MessageStatus
+  bridgeToL3Status: L1ToL2MessageStatus
+  completed: boolean
 }
 
-export interface WaitForEthDepositResult {
-  success: boolean
-  failedLeg?: EthTeleportationLeg
-  failedLegStatus?: Exclude<L1ToL2MessageStatus, L1ToL2MessageStatus.REDEEMED>
+export interface RelayedErc20DepositStatus {
+  bridgeToL2Status: L1ToL2MessageStatus
+  l2ForwarderCalled: boolean
+  bridgeToL3Status: L1ToL2MessageStatus
+  completed: boolean
 }
 
 export type RelayerInfo = L2ForwarderPredictor.L2ForwarderParamsStruct & {
@@ -115,6 +116,12 @@ export type RelayedErc20DepositRequestResult = {
 export type RelayedErc20DepositResult = {
   tx: L1ContractCallTransaction
   relayerInfo: RelayerInfo
+}
+
+export type EthDepositStatus = {
+  l2RetryableStatus: L1ToL2MessageStatus
+  l3RetryableStatus: L1ToL2MessageStatus
+  completed: boolean
 }
 
 class BaseL1L3Bridger {
@@ -564,56 +571,57 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
     )
   }
 
-  public async waitForDeposit(
-    depositTxReceipt: L1TransactionReceipt,
+  /**
+   * Get the status of a deposit given an L1 tx receipt.
+   *
+   * Note: This function does not verify that the tx is actually a deposit tx.
+   *
+   * Note: It is possible that two identical deposits are made where the first leg of one deposit has redeemed
+   * as well as the second/third legs of the other deposit. In this case, neither deposit will be marked as completed.
+   * In other words, a deposit is only marked as completed if all three legs have been redeemed.
+   * @param depositTxReceipt
+   * @param l2Provider
+   * @param l3Provider
+   * @returns
+   */
+  public async getDepositStatus(
+    depositTxReceipt: L1ContractCallTransactionReceipt,
     l2Provider: Provider,
     l3Provider: Provider
-  ): Promise<WaitForErc20DepositResult> {
-    if (depositTxReceipt.to !== this.teleporterAddresses.l1Teleporter) {
-      throw new ArbSdkError(
-        `Transaction receipt is not for the teleporter: ${depositTxReceipt.to}`
-      )
-    }
-
+  ): Promise<Erc20DepositStatus> {
     await this._checkL2Network(l2Provider)
     await this._checkL3Network(l3Provider)
 
     const l1l2Messages = await depositTxReceipt.getL1ToL2Messages(l2Provider)
-    const firstLegStatus = (await l1l2Messages[0].waitForStatus()).status
-    const secondLegStatus = (await l1l2Messages[1].waitForStatus()).status
+    const firstLegRedeem = await l1l2Messages[0].getSuccessfulRedeem()
+    const secondLegRedeem = await l1l2Messages[1].getSuccessfulRedeem()
 
-    if (firstLegStatus != L1ToL2MessageStatus.REDEEMED) {
+    // if second leg is not redeemed, the third must not be created
+    if (secondLegRedeem.status !== L1ToL2MessageStatus.REDEEMED) {
       return {
-        success: false,
-        failedLeg: Erc20TeleportationLeg.BridgeToL2,
-        failedLegStatus: firstLegStatus,
-      }
-    } else if (secondLegStatus != L1ToL2MessageStatus.REDEEMED) {
-      return {
-        success: false,
-        failedLeg: Erc20TeleportationLeg.CallL2ForwarderFactory,
-        failedLegStatus: secondLegStatus,
+        bridgeToL2Status: firstLegRedeem.status,
+        callToL2ForwarderStatus: secondLegRedeem.status,
+        bridgeToL3Status: L1ToL2MessageStatus.NOT_YET_CREATED,
+        completed: false,
       }
     }
 
+    // otherwise, third leg must be created
     const thirdLegMessage = (
-      await new L1ContractCallTransactionReceipt(
-        (await l1l2Messages[1].getAutoRedeemAttempt())!
+      await new L1TransactionReceipt(
+        secondLegRedeem.l2TxReceipt
       ).getL1ToL2Messages(l3Provider)
     )[0]
 
-    const thirdLegStatus = (await thirdLegMessage.waitForStatus()).status
-
-    if (thirdLegStatus != L1ToL2MessageStatus.REDEEMED) {
-      return {
-        success: false,
-        failedLeg: Erc20TeleportationLeg.BridgeToL3,
-        failedLegStatus: thirdLegStatus,
-      }
-    }
+    const thirdLegRedeem = await thirdLegMessage.getSuccessfulRedeem()
 
     return {
-      success: true,
+      bridgeToL2Status: firstLegRedeem.status,
+      callToL2ForwarderStatus: secondLegRedeem.status,
+      bridgeToL3Status: thirdLegRedeem.status,
+      completed:
+        firstLegRedeem.status === L1ToL2MessageStatus.REDEEMED &&
+        thirdLegRedeem.status === L1ToL2MessageStatus.REDEEMED,
     }
   }
 }
@@ -723,11 +731,12 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     throw new Error('Not implemented')
   }
 
-  public async waitForDeposit(
-    depositResult: RelayedErc20DepositResult,
+  public async getDepositStatus(
+    depositTxReceipt: L1ContractCallTransactionReceipt,
+    relayerInfo: RelayerInfo,
     l2Provider: Provider,
     l3Provider: Provider
-  ): Promise<WaitForErc20DepositResult> {
+  ): Promise<RelayedErc20DepositStatus> {
     throw new Error('Not implemented')
   }
 
@@ -738,11 +747,6 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
   ): Promise<ethers.ContractTransaction> {
     throw new Error('Not implemented')
   }
-}
-
-export type EthDepositStatus = {
-  l2RetryableStatus: L1ToL2MessageStatus
-  l3RetryableStatus: L1ToL2MessageStatus
 }
 
 export class EthL1L3Bridger extends BaseL1L3Bridger {
@@ -824,6 +828,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
       return {
         l2RetryableStatus: l1l2Redeem.status,
         l3RetryableStatus: L1ToL2MessageStatus.NOT_YET_CREATED,
+        completed: false,
       }
     }
 
@@ -842,6 +847,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
     return {
       l2RetryableStatus: l1l2Redeem.status,
       l3RetryableStatus: l2l3Redeem.status,
+      completed: l2l3Redeem.status === L1ToL2MessageStatus.REDEEMED,
     }
   }
 }

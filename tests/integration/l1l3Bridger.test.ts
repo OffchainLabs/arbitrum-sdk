@@ -31,7 +31,6 @@ function poll(
   })
 }
 
-
 describe('L1 to L3 Bridging', () => {
   let setup: Unwrap<ReturnType<typeof testSetup>>
 
@@ -58,15 +57,17 @@ describe('L1 to L3 Bridging', () => {
       // makes sure that appropriate amounts land at the right places
       it('happy path', async () => {
         const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
-        const l2RefundAddress = ethers.utils.hexlify(ethers.utils.randomBytes(20))
+        const l2RefundAddress = ethers.utils.hexlify(
+          ethers.utils.randomBytes(20)
+        )
 
         const depositTx = await l1l3Bridger.deposit(
           {
             amount: ethers.utils.parseEther('1'),
             destinationOverrides: {
               l3DestinationAddress: l3Recipient,
-              l2RefundAddress: l2RefundAddress
-            }
+              l2RefundAddress: l2RefundAddress,
+            },
           },
           setup.l1Signer,
           setup.l2Signer.provider!,
@@ -77,19 +78,22 @@ describe('L1 to L3 Bridging', () => {
 
         // poll status
         await poll(async () => {
-          const status = await l1l3Bridger.getDepositStatus(depositReceipt, setup.l2Signer.provider!, setup.l3Signer.provider!)
-          if (status.l2RetryableStatus === L1ToL2MessageStatus.REDEEMED && status.l3RetryableStatus === L1ToL2MessageStatus.REDEEMED) {
-            return true
-          }
-          return false
+          const status = await l1l3Bridger.getDepositStatus(
+            depositReceipt,
+            setup.l2Signer.provider!,
+            setup.l3Signer.provider!
+          )
+          return status.completed
         }, 1000)
 
         // check eth balances
         const l3Balance = await setup.l3Signer.provider!.getBalance(l3Recipient)
-        expect(l3Balance.gt(ethers.utils.parseEther('1'))).to.be.true;
+        expect(l3Balance.gt(ethers.utils.parseEther('1'))).to.be.true
 
-        const l2Balance = await setup.l2Signer.provider!.getBalance(l2RefundAddress)
-        expect(l2Balance.gt(ethers.utils.parseEther('0'))).to.be.true;
+        const l2Balance = await setup.l2Signer.provider!.getBalance(
+          l2RefundAddress
+        )
+        expect(l2Balance.gt(ethers.utils.parseEther('0'))).to.be.true
       })
     })
   })
@@ -167,21 +171,15 @@ describe('L1 to L3 Bridging', () => {
 
         const depositReceipt = await depositTx.wait()
 
-        // wait for l1 l2 messages to redeem
-        const depositWaitResult = await l1l3Bridger.waitForDeposit(
-          depositReceipt,
-          setup.l2Signer.provider!,
-          setup.l3Signer.provider!
-        )
-
-        // just checking .success should be sufficient normally
-        if (
-          depositWaitResult.success !== true ||
-          depositWaitResult.failedLeg !== undefined ||
-          depositWaitResult.failedLegStatus !== undefined
-        ) {
-          throw new Error('Deposit failed')
-        }
+        // poll status
+        await poll(async () => {
+          const status = await l1l3Bridger.getDepositStatus(
+            depositReceipt,
+            setup.l2Signer.provider!,
+            setup.l3Signer.provider!
+          )
+          return status.completed
+        }, 1000)
 
         // make sure the tokens have landed in the right place
         const l3TokenAddr = await l1l3Bridger.getL3ERC20Address(
