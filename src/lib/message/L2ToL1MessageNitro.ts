@@ -32,6 +32,7 @@ import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { L2ToL1TxEvent } from '../abi/ArbSys'
 import { ContractTransaction, Overrides } from 'ethers'
+import { Mutex } from 'async-mutex'
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
@@ -60,6 +61,64 @@ export type L2ToL1MessageReaderOrWriterNitro<T extends SignerOrProvider> =
 const ASSERTION_CREATED_PADDING = 50
 // expected number of L1 blocks that it takes for a validator to confirm an L1 block after the node deadline is passed
 const ASSERTION_CONFIRMED_PADDING = 20
+
+const l2BlockRangeCache: { [key in string]: (number | undefined)[] } = {}
+const mutex = new Mutex()
+
+function getL2BlockRangeCacheKey({
+  l2ChainId,
+  l1BlockNumber,
+}: {
+  l2ChainId: number
+  l1BlockNumber: number
+}) {
+  return `${l2ChainId}-${l1BlockNumber}`
+}
+
+function setL2BlockRangeCache(key: string, value: (number | undefined)[]) {
+  l2BlockRangeCache[key] = value
+}
+
+async function getBlockRangesForL1BlockWithCache({
+  l1Provider,
+  l2Provider,
+  forL1Block,
+}: {
+  l1Provider: JsonRpcProvider
+  l2Provider: JsonRpcProvider
+  forL1Block: number
+}) {
+  const l2ChainId = (await l2Provider.getNetwork()).chainId
+  const key = getL2BlockRangeCacheKey({
+    l2ChainId,
+    l1BlockNumber: forL1Block,
+  })
+
+  if (l2BlockRangeCache[key]) {
+    return l2BlockRangeCache[key]
+  }
+
+  // implements a lock that only fetches cache once
+  const release = await mutex.acquire()
+
+  // if cache has been acquired while awaiting the lock
+  if (l2BlockRangeCache[key]) {
+    release()
+    return l2BlockRangeCache[key]
+  }
+
+  try {
+    const l2BlockRange = await getBlockRangesForL1Block({
+      forL1Block,
+      provider: l1Provider,
+    })
+    setL2BlockRangeCache(key, l2BlockRange)
+  } finally {
+    release()
+  }
+
+  return l2BlockRangeCache[key]
+}
 
 /**
  * Base functionality for nitro L2->L1 messages
@@ -212,9 +271,10 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     // If L1 is Arbitrum, then L2 is an Orbit chain.
     if (await isArbitrumChain(this.l1Provider)) {
       try {
-        const l2BlockRange = await getBlockRangesForL1Block({
+        const l2BlockRange = await getBlockRangesForL1BlockWithCache({
+          l1Provider: this.l1Provider as JsonRpcProvider,
+          l2Provider: l2Provider as JsonRpcProvider,
           forL1Block: createdAtBlock.toNumber(),
-          provider: this.l1Provider as JsonRpcProvider,
         })
         const startBlock = l2BlockRange[0]
         const endBlock = l2BlockRange[1]
