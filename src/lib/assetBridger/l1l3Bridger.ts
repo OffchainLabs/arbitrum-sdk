@@ -731,6 +731,21 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     throw new Error('Not implemented')
   }
 
+  /**
+   * Get the status of a deposit given an L1 tx receipt and relayer info.
+   *
+   * Note: This function does not verify that the tx is actually a deposit tx.
+   *
+   * Note: It is possible that two or more identical deposits are made where both token deposits to L2 have succeeded, 
+   * but < 2 of the relayer calls have been made. In this case, neither deposit will be marked as completed.
+   * If one of the relayer calls has been made, both will be marked as not completed until the second relayer call has been made, 
+   * after which BOTH will be marked as completed.
+   * 
+   * @param depositTxReceipt 
+   * @param relayerInfo 
+   * @param l2Provider 
+   * @param l3Provider 
+   */
   public async getDepositStatus(
     depositTxReceipt: L1ContractCallTransactionReceipt,
     relayerInfo: RelayerInfo,
