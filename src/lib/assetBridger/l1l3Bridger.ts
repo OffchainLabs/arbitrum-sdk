@@ -80,8 +80,8 @@ export interface Erc20DepositRequestParams {
 export interface EthDepositRequestParams {
   amount: BigNumberish
   destinationOverrides?: {
-    l3DestinationAddress: string,
-    l2RefundAddress: string,
+    l3DestinationAddress: string
+    l2RefundAddress: string
   }
   overrides?: {
     gasPricePercentIncrease?: BigNumber
@@ -426,7 +426,9 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     let manualGasParams = params.overrides.manualGasParams
     if (!manualGasParams) {
       // make sure both gateways are default
-      if (!(await this.isL1L2GatewayDefault(params.erc20L1Address, l1Provider))) {
+      if (
+        !(await this.isL1L2GatewayDefault(params.erc20L1Address, l1Provider))
+      ) {
         throw new ArbSdkError(
           `Cannot estimate gas for custom l1l2 gateway, please provide gas params`
         )
@@ -744,10 +746,6 @@ export type EthDepositStatus = {
 }
 
 export class EthL1L3Bridger extends BaseL1L3Bridger {
-  // getDepositRequest
-  // deposit
-  // some status check function
-
   public async getDepositRequest(
     params: EthDepositRequestParams,
     l1Signer: Signer,
@@ -760,8 +758,10 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
 
     const l1Address = await l1Signer.getAddress()
 
-    const l3DestinationAddress = params.destinationOverrides?.l3DestinationAddress || l1Address
-    const l2RefundAddress = params.destinationOverrides?.l2RefundAddress || l1Address
+    const l3DestinationAddress =
+      params.destinationOverrides?.l3DestinationAddress || l1Address
+    const l2RefundAddress =
+      params.destinationOverrides?.l2RefundAddress || l1Address
 
     const l3TicketRequest = await L1ToL2MessageCreator.getTicketCreationRequest(
       {
@@ -770,9 +770,9 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
         from: new Address(l1Address).applyAlias().value,
         l2CallValue: BigNumber.from(params.amount),
         excessFeeRefundAddress: l3DestinationAddress,
-        callValueRefundAddress: l3DestinationAddress
-      }, 
-      l2Provider, 
+        callValueRefundAddress: l3DestinationAddress,
+      },
+      l2Provider,
       l3Provider
     )
 
@@ -788,7 +788,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
       l1Signer.provider!,
       l2Provider
     )
-    
+
     return l2TicketRequest
   }
 
@@ -828,15 +828,13 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
     }
 
     const l2l3Message = (
-      await new L1EthDepositTransactionReceipt(l1l2Redeem.l2TxReceipt).getL1ToL2Messages(
-        l3Provider
-      )
+      await new L1EthDepositTransactionReceipt(
+        l1l2Redeem.l2TxReceipt
+      ).getL1ToL2Messages(l3Provider)
     )[0]
 
     if (l2l3Message === undefined) {
-      throw new ArbSdkError(
-        `L2 to L3 message not found`
-      )
+      throw new ArbSdkError(`L2 to L3 message not found`)
     }
 
     const l2l3Redeem = await l2l3Message.getSuccessfulRedeem()
