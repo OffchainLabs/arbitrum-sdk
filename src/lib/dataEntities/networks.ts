@@ -286,6 +286,7 @@ export const l2Networks: L2Networks = {
     isCustom: false,
     name: 'Arbitrum Rollup Sepolia Testnet',
     partnerChainID: 11155111,
+    partnerChainIDs: [23011913],
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     tokenBridge: {
       l1CustomGateway: '0xba2F7B6eAe1F9d174199C5E4867b563E0eaC40F3',
