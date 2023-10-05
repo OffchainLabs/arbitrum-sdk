@@ -20,7 +20,7 @@ import { expect } from 'chai'
 import { providers, utils } from 'ethers'
 import { fundL1, skipIfMainnet } from './testHelpers'
 import { testSetup } from '../../scripts/testSetup'
-import { L1ToL2MessageCreator } from '../../src/lib/message/L1ToL2MessageCreator'
+import { ParentToChildMessageCreator as L1ToL2MessageCreator } from '../../src/lib/message/L1ToL2MessageCreator'
 import { L1ToL2MessageStatus } from '../../src'
 
 describe('L1ToL2MessageCreator', () => {

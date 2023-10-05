@@ -14,8 +14,8 @@ import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
 import { getBaseFee, isDefined } from '../utils/lib'
 import { OmitTyped } from '../utils/types'
 import {
-  L1ToL2MessageGasParams,
-  L1ToL2MessageNoGasParams,
+  ParentToChildMessageGasParams as L1ToL2MessageGasParams,
+  ParentToChildMessageNoGasParams as L1ToL2MessageNoGasParams,
 } from './L1ToL2MessageCreator'
 
 /**

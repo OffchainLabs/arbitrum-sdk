@@ -3,7 +3,7 @@ import { Provider } from '@ethersproject/abstract-provider'
 
 import {
   GasOverrides,
-  L1ToL2MessageGasEstimator,
+  L1ToL2MessageGasEstimator as ParentToChildMessageGasEstimator,
 } from './L1ToL2MessageGasEstimator'
 import { L1ContractTransaction, L1TransactionReceipt } from './L1Transaction'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
@@ -13,28 +13,34 @@ import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getBaseFee } from '../utils/lib'
 import {
-  isL1ToL2TransactionRequest,
-  L1ToL2TransactionRequest,
+  isL1ToL2TransactionRequest as isParentToChildTransactionRequest,
+  L1ToL2TransactionRequest as ParentToChildTransactionRequest,
 } from '../dataEntities/transactionRequest'
 import { RetryableData } from '../dataEntities/retryableData'
 import { OmitTyped, PartialPick } from '../utils/types'
 
-type L1ToL2GasKeys =
+type ParentToChildGasKeys =
   | 'maxSubmissionCost'
   | 'maxFeePerGas'
   | 'gasLimit'
   | 'deposit'
-export type L1ToL2MessageGasParams = Pick<RetryableData, L1ToL2GasKeys>
-export type L1ToL2MessageNoGasParams = OmitTyped<RetryableData, L1ToL2GasKeys>
-export type L1ToL2MessageParams = PartialPick<
-  L1ToL2MessageNoGasParams,
+export type ParentToChildMessageGasParams = Pick<
+  RetryableData,
+  ParentToChildGasKeys
+>
+export type ParentToChildMessageNoGasParams = OmitTyped<
+  RetryableData,
+  ParentToChildGasKeys
+>
+export type ParentToChildMessageParams = PartialPick<
+  ParentToChildMessageNoGasParams,
   'excessFeeRefundAddress' | 'callValueRefundAddress'
 >
 
 /**
  * Creates retryable tickets by directly calling the Inbox contract on L1
  */
-export class L1ToL2MessageCreator {
+export class ParentToChildMessageCreator {
   constructor(public readonly l1Signer: Signer) {
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
       throw new MissingProviderArbSdkError('l1Signer')
@@ -50,14 +56,14 @@ export class L1ToL2MessageCreator {
    * @returns
    */
   protected static async getTicketEstimate(
-    params: L1ToL2MessageNoGasParams,
+    params: ParentToChildMessageNoGasParams,
     l1Provider: Provider,
     l2Provider: Provider,
     retryableGasOverrides?: GasOverrides
-  ): Promise<Pick<RetryableData, L1ToL2GasKeys>> {
+  ): Promise<Pick<RetryableData, ParentToChildGasKeys>> {
     const baseFee = await getBaseFee(l1Provider)
 
-    const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
+    const gasEstimator = new ParentToChildMessageGasEstimator(l2Provider)
     return await gasEstimator.estimateAll(
       params,
       baseFee,
@@ -75,21 +81,21 @@ export class L1ToL2MessageCreator {
    * @returns
    */
   public static async getTicketCreationRequest(
-    params: L1ToL2MessageParams,
+    params: ParentToChildMessageParams,
     l1Provider: Provider,
     l2Provider: Provider,
     options?: GasOverrides
-  ): Promise<L1ToL2TransactionRequest> {
+  ): Promise<ParentToChildTransactionRequest> {
     const excessFeeRefundAddress = params.excessFeeRefundAddress || params.from
     const callValueRefundAddress = params.callValueRefundAddress || params.from
 
-    const parsedParams: L1ToL2MessageNoGasParams = {
+    const parsedParams: ParentToChildMessageNoGasParams = {
       ...params,
       excessFeeRefundAddress,
       callValueRefundAddress,
     }
 
-    const estimates = await L1ToL2MessageCreator.getTicketEstimate(
+    const estimates = await ParentToChildMessageCreator.getTicketEstimate(
       parsedParams,
       l1Provider,
       l2Provider,
@@ -132,13 +138,13 @@ export class L1ToL2MessageCreator {
         deposit: estimates.deposit,
       },
       isValid: async () => {
-        const reEstimates = await L1ToL2MessageCreator.getTicketEstimate(
+        const reEstimates = await ParentToChildMessageCreator.getTicketEstimate(
           parsedParams,
           l1Provider,
           l2Provider,
           options
         )
-        return L1ToL2MessageGasEstimator.isValid(estimates, reEstimates)
+        return ParentToChildMessageGasEstimator.isValid(estimates, reEstimates)
       },
     }
   }
@@ -148,15 +154,15 @@ export class L1ToL2MessageCreator {
    */
   public async createRetryableTicket(
     params:
-      | (L1ToL2MessageParams & { overrides?: PayableOverrides })
-      | (L1ToL2TransactionRequest & { overrides?: PayableOverrides }),
+      | (ParentToChildMessageParams & { overrides?: PayableOverrides })
+      | (ParentToChildTransactionRequest & { overrides?: PayableOverrides }),
     l2Provider: Provider,
     options?: GasOverrides
   ): Promise<L1ContractTransaction> {
     const l1Provider = SignerProviderUtils.getProviderOrThrow(this.l1Signer)
-    const createRequest = isL1ToL2TransactionRequest(params)
+    const createRequest = isParentToChildTransactionRequest(params)
       ? params
-      : await L1ToL2MessageCreator.getTicketCreationRequest(
+      : await ParentToChildMessageCreator.getTicketCreationRequest(
           params,
           l1Provider,
           l2Provider,

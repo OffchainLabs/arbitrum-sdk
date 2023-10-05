@@ -1,8 +1,8 @@
 import { TransactionRequest, Provider } from '@ethersproject/providers'
 import { BigNumber } from 'ethers'
 import {
-  L1ToL2MessageGasParams,
-  L1ToL2MessageParams,
+  ParentToChildMessageGasParams as L1ToL2MessageGasParams,
+  ParentToChildMessageParams as L1ToL2MessageParams,
 } from '../message/L1ToL2MessageCreator'
 import { isDefined } from '../utils/lib'
 

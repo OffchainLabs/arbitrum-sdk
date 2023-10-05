@@ -70,7 +70,7 @@ import { defaultAbiCoder } from 'ethers/lib/utils'
 import { OmitTyped, RequiredPick } from '../utils/types'
 import { RetryableDataTools } from '../dataEntities/retryableData'
 import { EventArgs } from '../dataEntities/event'
-import { L1ToL2MessageGasParams } from '../message/L1ToL2MessageCreator'
+import { ParentToChildMessageGasParams as L1ToL2MessageGasParams } from '../message/L1ToL2MessageCreator'
 
 export interface TokenApproveParams {
   /**

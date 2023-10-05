@@ -34,7 +34,7 @@ import {
   L2ContractTransaction,
   L2TransactionReceipt,
 } from '../message/L2Transaction'
-import { L1ToL2MessageCreator } from '../message/L1ToL2MessageCreator'
+import { ParentToChildMessageCreator } from '../message/L1ToL2MessageCreator'
 import { GasOverrides } from '../message/L1ToL2MessageGasEstimator'
 import {
   isL1ToL2TransactionRequest,
@@ -215,7 +215,7 @@ export class EthBridger extends AssetBridger<
     // Gas overrides can be passed in the parameters
     const gasOverrides = params.retryableGasOverrides || undefined
 
-    return L1ToL2MessageCreator.getTicketCreationRequest(
+    return ParentToChildMessageCreator.getTicketCreationRequest(
       requestParams,
       params.l1Provider,
       params.l2Provider,
