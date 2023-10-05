@@ -231,7 +231,7 @@ describe('Ether', async () => {
       'eth withdraw getWithdrawalsInL2Transaction query came back empty'
     ).to.exist
 
-    const withdrawEvents = await L2ToL1Message.getChildToParentEvents(
+    const withdrawEvents = await L2ToL1Message.getChildToParentChainEvents(
       l2Signer.provider!,
       { fromBlock: withdrawEthRec.blockNumber, toBlock: 'latest' },
       undefined,

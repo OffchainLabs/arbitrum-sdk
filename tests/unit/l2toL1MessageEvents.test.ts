@@ -59,7 +59,7 @@ describe('ChildToParentMessage events', () => {
     const fromBlock = 0
     const toBlock = 1000
 
-    await ChildToParentMessage.getChildToParentEvents(l2Provider, {
+    await ChildToParentMessage.getChildToParentChainEvents(l2Provider, {
       fromBlock: fromBlock,
       toBlock: toBlock,
     })
@@ -82,7 +82,7 @@ describe('ChildToParentMessage events', () => {
     const fromBlock = l2Network.nitroGenesisBlock
     const toBlock = l2Network.nitroGenesisBlock + 500
 
-    await ChildToParentMessage.getChildToParentEvents(l2Provider, {
+    await ChildToParentMessage.getChildToParentChainEvents(l2Provider, {
       fromBlock: fromBlock,
       toBlock: toBlock,
     })
@@ -105,7 +105,7 @@ describe('ChildToParentMessage events', () => {
     const fromBlock = 0
     const toBlock = l2Network.nitroGenesisBlock + 500
 
-    await ChildToParentMessage.getChildToParentEvents(l2Provider, {
+    await ChildToParentMessage.getChildToParentChainEvents(l2Provider, {
       fromBlock: fromBlock,
       toBlock: toBlock,
     })
@@ -138,7 +138,7 @@ describe('ChildToParentMessage events', () => {
     const fromBlock = 'earliest'
     const toBlock = 'latest'
 
-    await ChildToParentMessage.getChildToParentEvents(l2Provider, {
+    await ChildToParentMessage.getChildToParentChainEvents(l2Provider, {
       fromBlock: fromBlock,
       toBlock: toBlock,
     })
@@ -171,7 +171,7 @@ describe('ChildToParentMessage events', () => {
     const fromBlock = l2Network.nitroGenesisBlock + 2
     const toBlock = 'latest'
 
-    await ChildToParentMessage.getChildToParentEvents(l2Provider, {
+    await ChildToParentMessage.getChildToParentChainEvents(l2Provider, {
       fromBlock: fromBlock,
       toBlock: toBlock,
     })
@@ -194,7 +194,7 @@ describe('ChildToParentMessage events', () => {
     const fromBlock = 'earliest'
     const toBlock = 'latest'
 
-    await ChildToParentMessage.getChildToParentEvents(l2Provider, {
+    await ChildToParentMessage.getChildToParentChainEvents(l2Provider, {
       fromBlock: fromBlock,
       toBlock: toBlock,
     })
