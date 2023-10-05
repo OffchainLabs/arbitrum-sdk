@@ -530,12 +530,15 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
     )
 
     const calldata = teleporter.interface.encodeFunctionData('teleport', [
-      params.erc20L1Address,
-      this.l2Network.tokenBridge.l1GatewayRouter,
-      this.l3Network.tokenBridge.l1GatewayRouter,
-      params.to,
-      params.amount,
-      gasParams,
+      {
+        l1Token: params.erc20L1Address,
+        l1l2Router: this.l2Network.tokenBridge.l1GatewayRouter,
+        l2l3Router: this.l3Network.tokenBridge.l1GatewayRouter,
+        to: params.to,
+        amount: params.amount,
+        gasParams,
+        randomNonce: ethers.utils.randomBytes(32),
+      },
     ])
 
     const l1GasPrice = await l1Provider.getGasPrice()
@@ -681,6 +684,7 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
       gasLimit: populatedGasParams.l2l3TokenBridgeGasLimit,
       gasPrice: populatedGasParams.l3GasPrice,
       relayerPayment,
+      randomNonce: ethers.utils.randomBytes(32),
     }
 
     const l2ForwarderAddress = await teleporter.l2ForwarderAddress(
@@ -736,15 +740,10 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
    *
    * Note: This function does not verify that the tx is actually a deposit tx.
    *
-   * Note: It is possible that two or more identical deposits are made where both token deposits to L2 have succeeded, 
-   * but < 2 of the relayer calls have been made. In this case, neither deposit will be marked as completed.
-   * If one of the relayer calls has been made, both will be marked as not completed until the second relayer call has been made, 
-   * after which BOTH will be marked as completed.
-   * 
-   * @param depositTxReceipt 
-   * @param relayerInfo 
-   * @param l2Provider 
-   * @param l3Provider 
+   * @param depositTxReceipt
+   * @param relayerInfo
+   * @param l2Provider
+   * @param l3Provider
    */
   public async getDepositStatus(
     depositTxReceipt: L1ContractCallTransactionReceipt,
