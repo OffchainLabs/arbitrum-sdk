@@ -10,12 +10,12 @@ import {
   RetryableData,
   RetryableDataTools,
 } from '../dataEntities/retryableData'
-import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
+import { L1ToL2TransactionRequest as ParentToChildTransactionRequest } from '../dataEntities/transactionRequest'
 import { getBaseFee, isDefined } from '../utils/lib'
 import { OmitTyped } from '../utils/types'
 import {
-  ParentToChildMessageGasParams as L1ToL2MessageGasParams,
-  ParentToChildMessageNoGasParams as L1ToL2MessageNoGasParams,
+  ParentToChildMessageGasParams,
+  ParentToChildMessageNoGasParams,
 } from './L1ToL2MessageCreator'
 
 /**
@@ -62,7 +62,7 @@ export interface GasOverrides {
   deposit?: Pick<PercentIncrease, 'base'>
 }
 
-const defaultL1ToL2MessageEstimateOptions = {
+const defaultParentToChildMessageEstimateOptions = {
   maxSubmissionFeePercentIncrease: DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE,
   // gas limit for l1->l2 messages should be predictable. If it isn't due to the nature
   // of the specific transaction, then the caller should provide a 'min' override
@@ -70,7 +70,7 @@ const defaultL1ToL2MessageEstimateOptions = {
   maxFeePerGasPercentIncrease: DEFAULT_GAS_PRICE_PERCENT_INCREASE,
 }
 
-export class L1ToL2MessageGasEstimator {
+export class ParentToChildMessageGasEstimator {
   constructor(public readonly l2Provider: Provider) {}
 
   private percentIncrease(num: BigNumber, increase: BigNumber): BigNumber {
@@ -84,7 +84,7 @@ export class L1ToL2MessageGasEstimator {
       base: maxSubmissionFeeOptions?.base,
       percentIncrease:
         maxSubmissionFeeOptions?.percentIncrease ||
-        defaultL1ToL2MessageEstimateOptions.maxSubmissionFeePercentIncrease,
+        defaultParentToChildMessageEstimateOptions.maxSubmissionFeePercentIncrease,
     }
   }
 
@@ -93,7 +93,7 @@ export class L1ToL2MessageGasEstimator {
       base: maxFeePerGasOptions?.base,
       percentIncrease:
         maxFeePerGasOptions?.percentIncrease ||
-        defaultL1ToL2MessageEstimateOptions.maxFeePerGasPercentIncrease,
+        defaultParentToChildMessageEstimateOptions.maxFeePerGasPercentIncrease,
     }
   }
 
@@ -104,7 +104,7 @@ export class L1ToL2MessageGasEstimator {
       base: gasLimitDefaults?.base,
       percentIncrease:
         gasLimitDefaults?.percentIncrease ||
-        defaultL1ToL2MessageEstimateOptions.gasLimitPercentIncrease,
+        defaultParentToChildMessageEstimateOptions.gasLimitPercentIncrease,
       min: gasLimitDefaults?.min || constants.Zero,
     }
   }
@@ -122,7 +122,7 @@ export class L1ToL2MessageGasEstimator {
     l1BaseFee: BigNumber,
     callDataSize: BigNumber | number,
     options?: PercentIncrease
-  ): Promise<L1ToL2MessageGasParams['maxSubmissionCost']> {
+  ): Promise<ParentToChildMessageGasParams['maxSubmissionCost']> {
     const defaultedOptions = this.applySubmissionPriceDefaults(options)
 
     const network = await getChainNetwork(this.l2Provider)
@@ -150,9 +150,9 @@ export class L1ToL2MessageGasEstimator {
       excessFeeRefundAddress,
       callValueRefundAddress,
       data,
-    }: L1ToL2MessageNoGasParams,
+    }: ParentToChildMessageNoGasParams,
     senderDeposit: BigNumber = utils.parseEther('1').add(l2CallValue)
-  ): Promise<L1ToL2MessageGasParams['gasLimit']> {
+  ): Promise<ParentToChildMessageGasParams['gasLimit']> {
     const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
       this.l2Provider
@@ -176,7 +176,7 @@ export class L1ToL2MessageGasEstimator {
    */
   public async estimateMaxFeePerGas(
     options?: PercentIncrease
-  ): Promise<L1ToL2MessageGasParams['maxFeePerGas']> {
+  ): Promise<ParentToChildMessageGasParams['maxFeePerGas']> {
     const maxFeePerGasDefaults = this.applyMaxFeePerGasDefaults(options)
 
     // estimate the l2 gas price
@@ -193,8 +193,8 @@ export class L1ToL2MessageGasEstimator {
    * @returns
    */
   public static async isValid(
-    estimates: L1ToL2MessageGasParams,
-    reEstimates: L1ToL2MessageGasParams
+    estimates: ParentToChildMessageGasParams,
+    reEstimates: ParentToChildMessageGasParams
   ): Promise<boolean> {
     // L2 base fee and minimum submission cost which affect the success of the tx
     return (
@@ -212,11 +212,11 @@ export class L1ToL2MessageGasEstimator {
    * @returns
    */
   public async estimateAll(
-    retryableEstimateData: L1ToL2MessageNoGasParams,
+    retryableEstimateData: ParentToChildMessageNoGasParams,
     l1BaseFee: BigNumber,
     l1Provider: Provider,
     options?: GasOverrides
-  ): Promise<L1ToL2MessageGasParams> {
+  ): Promise<ParentToChildMessageGasParams> {
     const { data } = retryableEstimateData
     const gasLimitDefaults = this.applyGasLimitDefaults(options?.gasLimit)
 
@@ -282,8 +282,8 @@ export class L1ToL2MessageGasEstimator {
      * the real params. Then called again with the real params to form the final data to be submitted
      */
     dataFunc: (
-      params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
-    ) => L1ToL2TransactionRequest['txRequest'],
+      params: OmitTyped<ParentToChildMessageGasParams, 'deposit'>
+    ) => ParentToChildTransactionRequest['txRequest'],
     l1Provider: Provider,
     gasOverrides?: GasOverrides
   ) {
@@ -323,7 +323,6 @@ export class L1ToL2MessageGasEstimator {
     }
 
     // use retryable data to get gas estimates
-    // const gasEstimator = new L1ToL2MessageGasEstimator(l2Provider)
     const baseFee = await getBaseFee(l1Provider)
     const estimates = await this.estimateAll(
       {

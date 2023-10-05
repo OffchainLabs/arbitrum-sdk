@@ -42,7 +42,7 @@ import { WithdrawalInitiatedEvent } from '../abi/L2ArbitrumGateway'
 import { GatewaySetEvent } from '../abi/L1GatewayRouter'
 import {
   GasOverrides,
-  L1ToL2MessageGasEstimator,
+  ParentToChildMessageGasEstimator as L1ToL2MessageGasEstimator,
 } from '../message/L1ToL2MessageGasEstimator'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { ChainNetwork, getChainNetwork } from '../dataEntities/networks'

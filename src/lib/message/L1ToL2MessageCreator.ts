@@ -3,7 +3,7 @@ import { Provider } from '@ethersproject/abstract-provider'
 
 import {
   GasOverrides,
-  L1ToL2MessageGasEstimator as ParentToChildMessageGasEstimator,
+  ParentToChildMessageGasEstimator,
 } from './L1ToL2MessageGasEstimator'
 import { L1ContractTransaction, L1TransactionReceipt } from './L1Transaction'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
