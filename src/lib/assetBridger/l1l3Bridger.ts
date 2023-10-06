@@ -1,3 +1,4 @@
+import { JsonRpcProvider } from "@ethersproject/providers"
 import { Provider, TransactionRequest } from '@ethersproject/abstract-provider'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
@@ -22,7 +23,9 @@ import { Erc20Bridger, TokenApproveParams } from './erc20Bridger'
 import {
   BigNumber,
   BigNumberish,
+  Contract,
   ContractFactory,
+  Overrides,
   Signer,
   Wallet,
   ethers,
@@ -41,6 +44,10 @@ import { L2ForwarderPredictor } from '../abi/L2ForwarderPredictor'
 import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
 import { L1ToL2MessageCreator } from '../message/L1ToL2MessageCreator'
 import { Address } from '../dataEntities/address'
+import { L2ForwarderFactory__factory } from '../abi/factories/L2ForwarderFactory__factory'
+import { EventFetcher } from '../utils/eventFetcher'
+import { L2Forwarder__factory } from '../abi/factories/L2Forwarder__factory'
+import { getFirstBlockForL1Block } from '../utils/lib'
 
 export enum Erc20TeleportationLeg {
   BridgeToL2,
@@ -69,7 +76,7 @@ export interface PopulatedRetryableGasParams extends ManualRetryableGasParams {
 export interface Erc20DepositRequestParams {
   erc20L1Address: string
   to: string // todo: make optional, default to signer's address
-  amount: BigNumberish
+  amount: BigNumber
   overrides?: {
     gasPricePercentIncrease?: BigNumber
     relayerPaymentPercentIncrease?: BigNumber
@@ -97,6 +104,7 @@ export interface Erc20DepositStatus {
   completed: boolean
 }
 
+// todo: change to L1ToL2MessageWaitResult and transaction receipt
 export interface RelayedErc20DepositStatus {
   bridgeToL2Status: L1ToL2MessageStatus
   l2ForwarderCalled: boolean
@@ -332,7 +340,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
    * @param l1TokenAddr
    * @returns
    */
-  public getL1TokenContract(l1Provider: Provider, l1TokenAddr: string): ERC20 {
+  public getL1TokenContract(l1TokenAddr: string, l1Provider: Provider): ERC20 {
     return ERC20__factory.connect(l1TokenAddr, l1Provider)
   }
 
@@ -346,8 +354,8 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
    * @returns
    */
   public getL2TokenContract(
-    l2Provider: Provider,
-    l2TokenAddr: string
+    l2TokenAddr: string,
+    l2Provider: Provider
   ): L2GatewayToken {
     return L2GatewayToken__factory.connect(l2TokenAddr, l2Provider)
   }
@@ -362,10 +370,10 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
    * @returns
    */
   public getL3TokenContract(
-    l3Provider: Provider,
-    l3TokenAddr: string
+    l3TokenAddr: string,
+    l3Provider: Provider
   ): L2GatewayToken {
-    return this.getL2TokenContract(l3Provider, l3TokenAddr)
+    return L2GatewayToken__factory.connect(l3TokenAddr, l3Provider)
   }
 
   /**
@@ -579,9 +587,6 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
    *
    * Note: This function does not verify that the tx is actually a deposit tx.
    *
-   * Note: It is possible that two identical deposits are made where the first leg of one deposit has redeemed
-   * as well as the second/third legs of the other deposit. In this case, neither deposit will be marked as completed.
-   * In other words, a deposit is only marked as completed if all three legs have been redeemed.
    * @param depositTxReceipt
    * @param l2Provider
    * @param l3Provider
@@ -622,9 +627,7 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
       bridgeToL2Status: firstLegRedeem.status,
       callToL2ForwarderStatus: secondLegRedeem.status,
       bridgeToL3Status: thirdLegRedeem.status,
-      completed:
-        firstLegRedeem.status === L1ToL2MessageStatus.REDEEMED &&
-        thirdLegRedeem.status === L1ToL2MessageStatus.REDEEMED,
+      completed: thirdLegRedeem.status === L1ToL2MessageStatus.REDEEMED,
     }
   }
 }
@@ -634,14 +637,20 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     params: TokenApproveParams,
     l1Provider: Provider
   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
-    throw new Error('Not implemented')
+    return new Erc20Bridger(this.l2Network).getApproveTokenRequest({
+      ...params,
+      l1Provider,
+    })
   }
 
   public async approveToken(
     params: TokenApproveParams,
     l1Signer: Signer
   ): Promise<ethers.ContractTransaction> {
-    throw new Error('Not implemented')
+    return new Erc20Bridger(this.l2Network).approveToken({
+      ...params,
+      l1Signer,
+    })
   }
 
   public async getDepositRequest(
@@ -659,11 +668,6 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
       l1Signer.provider!,
       l2Provider,
       l3Provider
-    )
-
-    const teleporter = Teleporter__factory.connect(
-      this.teleporterAddresses.l1Teleporter,
-      l1Signer
     )
 
     const relayerPayment = this._percentIncrease(
@@ -687,13 +691,18 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
       randomNonce: ethers.utils.randomBytes(32),
     }
 
+    const teleporter = Teleporter__factory.connect(
+      this.teleporterAddresses.l1Teleporter,
+      l1Signer
+    )
+
     const l2ForwarderAddress = await teleporter.l2ForwarderAddress(
       l2ForwarderParams
     )
 
-    const erc20Bridger = new Erc20Bridger(this.l2Network)
-
-    const tokenBridgeRequest = await erc20Bridger.getDepositRequest({
+    const tokenBridgeRequest = await new Erc20Bridger(
+      this.l2Network
+    ).getDepositRequest({
       amount: BigNumber.from(params.amount),
       l1Provider: l1Signer.provider!,
       l2Provider: l2Provider,
@@ -704,7 +713,7 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
       excessFeeRefundAddress: l2ForwarderAddress,
     })
 
-    // add relayer payment and l3 retryable costs to value
+    // figure out how much extra ETH we should pass along through the token bridge
     const calculatedGasCosts = await teleporter.calculateRetryableGasCosts(
       this.l2Network.ethBridge.inbox,
       '0', // we don't care about L1 gas price, this will just set it to current gas price
@@ -732,13 +741,25 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     l2Provider: Provider,
     l3Provider: Provider
   ): Promise<RelayedErc20DepositResult> {
-    throw new Error('Not implemented')
+    const depositRequest = await this.getDepositRequest(
+      params,
+      l1Signer,
+      l2Provider,
+      l3Provider
+    )
+
+    return {
+      tx: L1TransactionReceipt.monkeyPatchContractCallWait(
+        await l1Signer.sendTransaction(depositRequest.txRequest.txRequest)
+      ),
+      relayerInfo: depositRequest.relayerInfo,
+    }
   }
 
   /**
    * Get the status of a deposit given an L1 tx receipt and relayer info.
    *
-   * Note: This function does not verify that the tx is actually a deposit tx.
+   * Note: This function does not verify that the tx is actually a deposit tx, nor does it check the provider chain ids.
    *
    * @param depositTxReceipt
    * @param relayerInfo
@@ -748,10 +769,55 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
   public async getDepositStatus(
     depositTxReceipt: L1ContractCallTransactionReceipt,
     relayerInfo: RelayerInfo,
-    l2Provider: Provider,
+    l2Provider: JsonRpcProvider,
     l3Provider: Provider
   ): Promise<RelayedErc20DepositStatus> {
-    throw new Error('Not implemented')
+    const firstLegRedeem = await (
+      await depositTxReceipt.getL1ToL2Messages(l2Provider)
+    )[0].getSuccessfulRedeem()
+
+    if (firstLegRedeem.status !== L1ToL2MessageStatus.REDEEMED) {
+      return {
+        bridgeToL2Status: firstLegRedeem.status,
+        l2ForwarderCalled: false,
+        bridgeToL3Status: L1ToL2MessageStatus.NOT_YET_CREATED,
+        completed: false,
+      }
+    }
+
+    const l2ForwarderAddress = await L2ForwarderFactory__factory.connect(
+      this.teleporterAddresses.l2ForwarderFactory,
+      l2Provider
+    ).l2ForwarderAddress(relayerInfo)
+
+    const bridgeToL3Event = await this._findBridgedToL3Event(
+      l2ForwarderAddress,
+      firstLegRedeem.l2TxReceipt.blockNumber,
+      l2Provider
+    )
+
+    if (bridgeToL3Event === undefined) {
+      return {
+        bridgeToL2Status: firstLegRedeem.status,
+        l2ForwarderCalled: false,
+        bridgeToL3Status: L1ToL2MessageStatus.NOT_YET_CREATED,
+        completed: false,
+      }
+    }
+
+    // get tx or receipt from the event
+    const tx = await l2Provider.getTransaction(bridgeToL3Event.transactionHash)
+    const receipt = new L1ContractCallTransactionReceipt(await tx.wait())
+    const l2l3Redeem = await ((
+      await receipt.getL1ToL2Messages(l3Provider)
+    )[0].getSuccessfulRedeem())
+
+    return {
+      bridgeToL2Status: firstLegRedeem.status,
+      l2ForwarderCalled: true,
+      bridgeToL3Status: l2l3Redeem.status,
+      completed: l2l3Redeem.status === L1ToL2MessageStatus.REDEEMED,
+    }
   }
 
   // takes: deposit tx hash, l2 forwarder params, l2 signer
@@ -759,7 +825,55 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     relayerInfo: RelayerInfo,
     l2Signer: Signer
   ): Promise<ethers.ContractTransaction> {
-    throw new Error('Not implemented')
+    const teleporterAddresses = l2Networks[relayerInfo.chainId].teleporterAddresses
+
+    if (!teleporterAddresses) {
+      throw new ArbSdkError(
+        `L2 network ${l2Networks[relayerInfo.chainId].name} does not have teleporter contracts`
+      )
+    }
+
+    const l2ForwarderFactory = L2ForwarderFactory__factory.connect(
+      teleporterAddresses.l2ForwarderFactory,
+      l2Signer
+    )
+
+    return l2ForwarderFactory.callForwarder(relayerInfo)
+  }
+
+  // todo: cache last toBlock and use it as fromBlock
+  // cache answer
+  // cache l1 -> l2 block
+  private async _findBridgedToL3Event(
+    l2ForwarderAddress: string,
+    fromL1Block: number,
+    l2Provider: JsonRpcProvider
+  ) {
+    const fromL2Block = await getFirstBlockForL1Block({
+      provider: l2Provider,
+      forL1Block: fromL1Block
+    })
+
+    if (fromL2Block === undefined) {
+      throw new ArbSdkError(`Could not find L2 block for L1 block ${fromL1Block}`)
+    }
+
+    const latest = await l2Provider.getBlockNumber()
+    const eventFetcher = new EventFetcher(l2Provider)
+    const events = (
+      await eventFetcher.getEvents(
+        L2Forwarder__factory,
+        contract =>
+          contract.filters.BridgedToL3(),
+        { address: l2ForwarderAddress, fromBlock: fromL2Block, toBlock: latest }
+      )
+    )
+
+    if (events.length === 0) {
+      return undefined
+    }
+
+    return events[0]
   }
 }
 

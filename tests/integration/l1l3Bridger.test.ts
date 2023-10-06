@@ -188,8 +188,8 @@ describe('L1 to L3 Bridging', () => {
           setup.l2Signer.provider!
         )
         const l3Token = l1l3Bridger.getL3TokenContract(
+          l3TokenAddr,
           setup.l3Signer.provider!,
-          l3TokenAddr
         )
 
         const l3Balance = await l3Token.balanceOf(l3Recipient)
