@@ -25,11 +25,11 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import {
-  ChildToParentMessageReader as L2ToL1MessageReader,
-  ChildToParentMessageReaderOrWriter as L2ToL1MessageReaderOrWriter,
-  ChildToParentMessage as L2ToL1Message,
-  ChildToParentMessageWriter as L2ToL1MessageWriter,
-  ChildToParentTransactionEvent as L2ToL1TransactionEvent,
+  ChildToParentMessageReader,
+  ChildToParentMessageReaderOrWriter,
+  ChildToParentMessage,
+  ChildToParentMessageWriter,
+  ChildToParentTransactionEvent,
 } from './L2ToL1Message'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
@@ -91,10 +91,10 @@ export class L2TransactionReceipt implements TransactionReceipt {
   }
 
   /**
-   * Get an L2ToL1TxEvent events created by this transaction
+   * Get an ChildToParentTxEvent events created by this transaction
    * @returns
    */
-  public getL2ToL1Events(): L2ToL1TransactionEvent[] {
+  public getChildToParentEvents(): ChildToParentTransactionEvent[] {
     const classicLogs = parseTypedLogs(
       ArbSys__factory,
       this.logs,
@@ -116,17 +116,17 @@ export class L2TransactionReceipt implements TransactionReceipt {
    * Get any l2-to-l1-messages created by this transaction
    * @param l2SignerOrProvider
    */
-  public async getL2ToL1Messages<T extends SignerOrProvider>(
+  public async getChildToParentMessages<T extends SignerOrProvider>(
     l1SignerOrProvider: T
-  ): Promise<L2ToL1MessageReaderOrWriter<T>[]>
-  public async getL2ToL1Messages<T extends SignerOrProvider>(
+  ): Promise<ChildToParentMessageReaderOrWriter<T>[]>
+  public async getChildToParentMessages<T extends SignerOrProvider>(
     l1SignerOrProvider: T
-  ): Promise<L2ToL1MessageReader[] | L2ToL1MessageWriter[]> {
+  ): Promise<ChildToParentMessageReader[] | ChildToParentMessageWriter[]> {
     const provider = SignerProviderUtils.getProvider(l1SignerOrProvider)
     if (!provider) throw new ArbSdkError('Signer not connected to provider.')
 
-    return this.getL2ToL1Events().map(log =>
-      L2ToL1Message.fromEvent(l1SignerOrProvider, log)
+    return this.getChildToParentEvents().map(log =>
+      ChildToParentMessage.fromEvent(l1SignerOrProvider, log)
     )
   }
 
