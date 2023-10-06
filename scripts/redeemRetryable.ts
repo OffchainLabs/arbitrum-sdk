@@ -20,7 +20,7 @@ import { ContractReceipt } from '@ethersproject/contracts'
 
 import { testSetup } from '../scripts/testSetup'
 import args from './getCLargs'
-import { L1TransactionReceipt } from '../src/lib/message/L1Transaction'
+import { ParentChainTransactionReceipt as L1TransactionReceipt } from '../src/lib/message/L1Transaction'
 import { L1ToL2MessageStatus, L1ToL2MessageWriter } from '../src'
 import { fundL2 } from '../integration_test/testHelpers'
 

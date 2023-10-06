@@ -1,4 +1,4 @@
-import { L1TransactionReceipt } from '../../src'
+import { L1TransactionReceipt as ParentChainTransactionReceipt } from '../../src'
 import { BigNumber, constants, providers } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { expect } from 'chai'
@@ -150,17 +150,19 @@ describe('ParentToChildMessage events', () => {
     }
 
     const arbProvider = new JsonRpcProvider('https://arb1.arbitrum.io/rpc')
-    const l1TxnReceipt = new L1TransactionReceipt(receipt)
+    const parentChainTxnReceipt = new ParentChainTransactionReceipt(receipt)
 
     let txReceipt
     try {
       // Try getting classic messages using a nitro tx
-      txReceipt = await l1TxnReceipt.getL1ToL2MessagesClassic(arbProvider)
+      txReceipt = await parentChainTxnReceipt.getParentToChildMessagesClassic(
+        arbProvider
+      )
     } catch (err) {
       // This call should throw an error
       expect(err).to.be.an('error')
       expect((err as Error).message).to.be.eq(
-        "This method is only for classic transactions. Use 'getL1ToL2Messages' for nitro transactions."
+        "This method is only for classic transactions. Use 'getParentToChildMessages' for nitro transactions."
       )
     } finally {
       // Should not successfully get classic messages
@@ -170,8 +172,10 @@ describe('ParentToChildMessage events', () => {
       ).to.be.undefined
     }
 
-    const isClassic = await l1TxnReceipt.isClassic(arbProvider)
-    const msg = (await l1TxnReceipt.getL1ToL2Messages(arbProvider))[0]
+    const isClassic = await parentChainTxnReceipt.isClassic(arbProvider)
+    const msg = (
+      await parentChainTxnReceipt.getParentToChildMessages(arbProvider)
+    )[0]
 
     expect(isClassic, 'incorrect tx type returned by isClassic call').to.be
       .false
@@ -286,17 +290,19 @@ describe('ParentToChildMessage events', () => {
     }
 
     const arbProvider = new JsonRpcProvider('https://arb1.arbitrum.io/rpc')
-    const l1TxnReceipt = new L1TransactionReceipt(receipt)
+    const parentChainTxnReceipt = new ParentChainTransactionReceipt(receipt)
 
     let txReceipt
     try {
       // Try getting nitro messages using a classic tx
-      txReceipt = await l1TxnReceipt.getL1ToL2Messages(arbProvider)
+      txReceipt = await parentChainTxnReceipt.getParentToChildMessages(
+        arbProvider
+      )
     } catch (err) {
       // This call should throw an error
       expect(err).to.be.an('error')
       expect((err as Error).message).to.be.eq(
-        "This method is only for nitro transactions. Use 'getL1ToL2MessagesClassic' for classic transactions."
+        "This method is only for nitro transactions. Use 'getParentToChildMessagesClassic' for classic transactions."
       )
     } finally {
       // Should not successfully get nitro messages
@@ -306,8 +312,10 @@ describe('ParentToChildMessage events', () => {
       ).to.be.undefined
     }
 
-    const isClassic = await l1TxnReceipt.isClassic(arbProvider)
-    const msg = (await l1TxnReceipt.getL1ToL2MessagesClassic(arbProvider))[0]
+    const isClassic = await parentChainTxnReceipt.isClassic(arbProvider)
+    const msg = (
+      await parentChainTxnReceipt.getParentToChildMessagesClassic(arbProvider)
+    )[0]
     const status = await msg.status()
 
     expect(isClassic, 'incorrect tx type returned by isClassic call').to.be.true

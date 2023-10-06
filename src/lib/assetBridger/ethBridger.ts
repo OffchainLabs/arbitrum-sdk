@@ -26,9 +26,9 @@ import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 import { AssetBridger } from './assetBridger'
 import {
-  L1EthDepositTransaction,
-  L1ContractCallTransaction,
-  L1TransactionReceipt,
+  ParentChainEthDepositTransaction,
+  ParentChainContractCallTransaction,
+  ParentChainTransactionReceipt,
 } from '../message/L1Transaction'
 import {
   L2ContractTransaction,
@@ -178,7 +178,7 @@ export class EthBridger extends AssetBridger<
    */
   public async deposit(
     params: EthDepositParams | L1ToL2TxReqAndSigner
-  ): Promise<L1EthDepositTransaction> {
+  ): Promise<ParentChainEthDepositTransaction> {
     await this.checkL1Network(params.l1Signer)
 
     const ethDeposit = isL1ToL2TransactionRequest(params)
@@ -193,7 +193,7 @@ export class EthBridger extends AssetBridger<
       ...params.overrides,
     })
 
-    return L1TransactionReceipt.monkeyPatchEthDepositWait(tx)
+    return ParentChainTransactionReceipt.monkeyPatchEthDepositWait(tx)
   }
 
   /**
@@ -232,7 +232,7 @@ export class EthBridger extends AssetBridger<
     params:
       | EthDepositToParams
       | (L1ToL2TxReqAndSigner & { l2Provider: Provider })
-  ): Promise<L1ContractCallTransaction> {
+  ): Promise<ParentChainContractCallTransaction> {
     await this.checkL1Network(params.l1Signer)
     await this.checkL2Network(params.l2Provider)
 
@@ -249,7 +249,7 @@ export class EthBridger extends AssetBridger<
       ...params.overrides,
     })
 
-    return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
+    return ParentChainTransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
   /**

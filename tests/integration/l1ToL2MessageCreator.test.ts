@@ -62,7 +62,7 @@ describe('L1ToL2MessageCreator', () => {
     const l1SubmissionTxReceipt = await l1SubmissionTx.wait()
 
     // Getting the L1ToL2Message
-    const l1ToL2messages = await l1SubmissionTxReceipt.getL1ToL2Messages(
+    const l1ToL2messages = await l1SubmissionTxReceipt.getParentToChildMessages(
       arbProvider
     )
     expect(l1ToL2messages.length).to.eq(1)
@@ -122,7 +122,7 @@ describe('L1ToL2MessageCreator', () => {
     const l1SubmissionTxReceipt = await l1SubmissionTx.wait()
 
     // Getting the L1ToL2Message
-    const l1ToL2messages = await l1SubmissionTxReceipt.getL1ToL2Messages(
+    const l1ToL2messages = await l1SubmissionTxReceipt.getParentToChildMessages(
       arbProvider
     )
     expect(l1ToL2messages.length).to.eq(1)

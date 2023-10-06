@@ -188,7 +188,7 @@ export const setupNetworks = async (
         },
       ])
     ).wait()
-  ).waitForL2(l2Deployer)
+  ).waitForChild(l2Deployer)
 
   return {
     l1Network,

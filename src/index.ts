@@ -28,8 +28,8 @@ export {
   ChildToParentMessageReader as L2ToL1MessageReader,
 } from './lib/message/L2ToL1Message'
 export {
-  L1ContractTransaction,
-  L1TransactionReceipt,
+  ParentChainContractTransaction as L1ContractTransaction,
+  ParentChainTransactionReceipt as L1TransactionReceipt,
 } from './lib/message/L1Transaction'
 export {
   ParentToChildMessageStatus as L1ToL2MessageStatus,

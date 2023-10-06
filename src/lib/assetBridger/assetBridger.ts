@@ -17,7 +17,7 @@
 'use strict'
 
 import { ArbSdkError } from '../dataEntities/errors'
-import { L1ContractTransaction } from '../message/L1Transaction'
+import { ParentChainContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'
 
 import {
@@ -65,7 +65,9 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    * Transfer assets from L1 to L2
    * @param params
    */
-  public abstract deposit(params: DepositParams): Promise<L1ContractTransaction>
+  public abstract deposit(
+    params: DepositParams
+  ): Promise<ParentChainContractTransaction>
 
   /**
    * Transfer assets from L2 to L1

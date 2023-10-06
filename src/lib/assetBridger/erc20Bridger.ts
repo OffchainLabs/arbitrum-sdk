@@ -52,9 +52,9 @@ import { EventFetcher } from '../utils/eventFetcher'
 import { EthDepositParams, EthWithdrawParams } from './ethBridger'
 import { AssetBridger } from './assetBridger'
 import {
-  L1ContractCallTransaction,
-  L1ContractTransaction,
-  L1TransactionReceipt,
+  ParentChainContractCallTransaction as L1ContractCallTransaction,
+  ParentChainContractTransaction as L1ContractTransaction,
+  ParentChainTransactionReceipt as L1TransactionReceipt,
 } from '../message/L1Transaction'
 import {
   L2ContractTransaction,

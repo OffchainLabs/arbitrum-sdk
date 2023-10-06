@@ -286,7 +286,7 @@ export const depositToken = async (
     userBalBefore.sub(depositAmount).toString()
   )
 
-  const waitRes = await depositRec.waitForL2(l2Signer)
+  const waitRes = await depositRec.waitForChild(l2Signer)
 
   expect(waitRes.status, 'Unexpected status').to.eq(expectedStatus)
   if (retryableOverrides) {

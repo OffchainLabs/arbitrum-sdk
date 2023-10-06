@@ -5,7 +5,10 @@ import {
   GasOverrides,
   ParentToChildMessageGasEstimator,
 } from './L1ToL2MessageGasEstimator'
-import { L1ContractTransaction, L1TransactionReceipt } from './L1Transaction'
+import {
+  ParentChainContractTransaction,
+  ParentChainTransactionReceipt,
+} from './L1Transaction'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { getChainNetwork } from '../dataEntities/networks'
 import { PayableOverrides } from '@ethersproject/contracts'
@@ -158,7 +161,7 @@ export class ParentToChildMessageCreator {
       | (ParentToChildTransactionRequest & { overrides?: PayableOverrides }),
     l2Provider: Provider,
     options?: GasOverrides
-  ): Promise<L1ContractTransaction> {
+  ): Promise<ParentChainContractTransaction> {
     const l1Provider = SignerProviderUtils.getProviderOrThrow(this.l1Signer)
     const createRequest = isParentToChildTransactionRequest(params)
       ? params
@@ -174,6 +177,6 @@ export class ParentToChildMessageCreator {
       ...params.overrides,
     })
 
-    return L1TransactionReceipt.monkeyPatchWait(tx)
+    return ParentChainTransactionReceipt.monkeyPatchWait(tx)
   }
 }
