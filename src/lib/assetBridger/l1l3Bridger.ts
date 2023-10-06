@@ -1,5 +1,22 @@
-import { JsonRpcProvider } from "@ethersproject/providers"
 import { Provider, TransactionRequest } from '@ethersproject/abstract-provider'
+import { JsonRpcProvider } from "@ethersproject/providers"
+import {
+  BigNumber,
+  BigNumberish, Signer, ethers
+} from 'ethers'
+import { ERC20 } from '../abi/ERC20'
+import { BridgedToL3Event } from '../abi/L2Forwarder'
+import { L2ForwarderPredictor } from '../abi/L2ForwarderPredictor'
+import { L2GatewayToken } from '../abi/L2GatewayToken'
+import { ERC20__factory } from '../abi/factories/ERC20__factory'
+import { L1GatewayRouter__factory } from '../abi/factories/L1GatewayRouter__factory'
+import { L2ForwarderFactory__factory } from '../abi/factories/L2ForwarderFactory__factory'
+import { L2Forwarder__factory } from '../abi/factories/L2Forwarder__factory'
+import { L2GatewayRouter__factory } from '../abi/factories/L2GatewayRouter__factory'
+import { L2GatewayToken__factory } from '../abi/factories/L2GatewayToken__factory'
+import { Teleporter__factory } from '../abi/factories/Teleporter__factory'
+import { Address } from '../dataEntities/address'
+import { DISABLED_GATEWAY } from '../dataEntities/constants'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
   L1Network,
@@ -12,26 +29,9 @@ import {
   SignerOrProvider,
   SignerProviderUtils,
 } from '../dataEntities/signerOrProvider'
-import { L2GatewayRouter__factory } from '../abi/factories/L2GatewayRouter__factory'
-import { L1GatewayRouter__factory } from '../abi/factories/L1GatewayRouter__factory'
-import { L2GatewayToken } from '../abi/L2GatewayToken'
-import { L2GatewayToken__factory } from '../abi/factories/L2GatewayToken__factory'
-import { ERC20 } from '../abi/ERC20'
-import { ERC20__factory } from '../abi/factories/ERC20__factory'
-import { DISABLED_GATEWAY } from '../dataEntities/constants'
-import { Erc20Bridger, TokenApproveParams } from './erc20Bridger'
-import {
-  BigNumber,
-  BigNumberish,
-  Contract,
-  ContractFactory,
-  Overrides,
-  Signer,
-  Wallet,
-  ethers,
-} from 'ethers'
-import { Teleporter__factory } from '../abi/factories/Teleporter__factory'
-import { AbiCoder } from 'ethers/lib/utils'
+import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
+import { L1ToL2MessageStatus } from '../message/L1ToL2Message'
+import { L1ToL2MessageCreator } from '../message/L1ToL2MessageCreator'
 import {
   L1ContractCallTransaction,
   L1ContractCallTransactionReceipt,
@@ -39,15 +39,8 @@ import {
   L1EthDepositTransactionReceipt,
   L1TransactionReceipt,
 } from '../message/L1Transaction'
-import { L1ToL2MessageStatus } from '../message/L1ToL2Message'
-import { L2ForwarderPredictor } from '../abi/L2ForwarderPredictor'
-import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
-import { L1ToL2MessageCreator } from '../message/L1ToL2MessageCreator'
-import { Address } from '../dataEntities/address'
-import { L2ForwarderFactory__factory } from '../abi/factories/L2ForwarderFactory__factory'
-import { EventFetcher } from '../utils/eventFetcher'
-import { L2Forwarder__factory } from '../abi/factories/L2Forwarder__factory'
-import { getFirstBlockForL1Block } from '../utils/lib'
+import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
+import { Erc20Bridger, TokenApproveParams } from './erc20Bridger'
 
 export enum Erc20TeleportationLeg {
   BridgeToL2,
@@ -137,6 +130,7 @@ class BaseL1L3Bridger {
   public readonly l2Network: L2Network
   public readonly l3Network: L2Network
 
+  // TODO: REPLACE THIS WITH L1TOL2MESSAGEGASESTIMATOR 
   public readonly defaultGasPricePercentIncrease: BigNumber =
     BigNumber.from(130) // 30% increase
 
@@ -640,6 +634,9 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
 }
 
 export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
+  // value is [lastBlockChecked, event]
+  private readonly _eventFetchCache: Map<string, [number, FetchedEvent<BridgedToL3Event> | undefined]> = new Map()
+
   public async getApproveTokenRequest(
     params: TokenApproveParams,
     l1Provider: Provider
@@ -865,6 +862,21 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
   ) {
     const latest = await l2Provider.getBlockNumber()
     const eventFetcher = new EventFetcher(l2Provider)
+
+
+    // begin maybe useless caching stuff
+    let cacheValue = this._eventFetchCache.get(l2ForwarderAddress)
+    if (!cacheValue) {
+      cacheValue = [fromL2Block, undefined]
+      this._eventFetchCache.set(l2ForwarderAddress, cacheValue)
+    }
+    const [lastBlockChecked, event] = cacheValue
+
+    if (event) return event
+    
+    fromL2Block = lastBlockChecked
+    // end maybe useless caching stuff
+    
     const events = (
       await eventFetcher.getEvents(
         L2Forwarder__factory,
@@ -874,9 +886,13 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
       )
     )
 
+    cacheValue[0] = latest
+    
     if (events.length === 0) {
       return undefined
     }
+    
+    cacheValue[1] = events[0]
 
     return events[0]
   }
