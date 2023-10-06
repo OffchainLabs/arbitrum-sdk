@@ -414,6 +414,13 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     )
   }
 
+  public l2ForwarderAddress(
+    params: L2ForwarderPredictor.L2ForwarderParamsStruct,
+    l2Provider: Provider
+  ): Promise<string> {
+    return L2ForwarderFactory__factory.connect(this.teleporterAddresses.l2ForwarderFactory, l2Provider).l2ForwarderAddress(params)
+  }
+
   private async _tokenIsDisabled(
     tokenAddress: string,
     gatewayRouterAddress: string,
@@ -681,7 +688,7 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     // calculate l2 forwarder address
     const l2ForwarderParams: L2ForwarderPredictor.L2ForwarderParamsStruct = {
       owner: await l1Signer.getAddress(),
-      token: params.erc20L1Address,
+      token: await this.getL2ERC20Address(params.erc20L1Address, l1Signer.provider!),
       router: this.l3Network.tokenBridge.l1GatewayRouter,
       to: params.to,
       amount: params.amount,
@@ -691,29 +698,12 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
       randomNonce: ethers.utils.randomBytes(32),
     }
 
+    // figure out how much extra ETH we should pass along through the token bridge
+    // populatedGasParams has a 30% default increase already
     const teleporter = Teleporter__factory.connect(
       this.teleporterAddresses.l1Teleporter,
       l1Signer
     )
-
-    const l2ForwarderAddress = await teleporter.l2ForwarderAddress(
-      l2ForwarderParams
-    )
-
-    const tokenBridgeRequest = await new Erc20Bridger(
-      this.l2Network
-    ).getDepositRequest({
-      amount: BigNumber.from(params.amount),
-      l1Provider: l1Signer.provider!,
-      l2Provider: l2Provider,
-      erc20L1Address: params.erc20L1Address,
-      from: await l1Signer.getAddress(),
-      destinationAddress: l2ForwarderAddress,
-      callValueRefundAddress: l2ForwarderAddress,
-      excessFeeRefundAddress: l2ForwarderAddress,
-    })
-
-    // figure out how much extra ETH we should pass along through the token bridge
     const calculatedGasCosts = await teleporter.calculateRetryableGasCosts(
       this.l2Network.ethBridge.inbox,
       '0', // we don't care about L1 gas price, this will just set it to current gas price
@@ -722,10 +712,35 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     const extraValue = calculatedGasCosts.l2l3TokenBridgeGasCost
       .add(calculatedGasCosts.l2l3TokenBridgeSubmissionCost)
       .add(relayerPayment)
-    tokenBridgeRequest.txRequest.value = extraValue.add(
-      tokenBridgeRequest.txRequest.value
-    )
+      .add(ethers.utils.parseEther("0.1"))
+    
+    const l2ForwarderAddress = await this.l2ForwarderAddress(l2ForwarderParams, l2Provider)
+    const baseDepositRequestParams = {
+      amount: BigNumber.from(params.amount),
+      l1Provider: l1Signer.provider!,
+      l2Provider: l2Provider,
+      erc20L1Address: params.erc20L1Address,
+      from: await l1Signer.getAddress(),
+      destinationAddress: l2ForwarderAddress,
+      callValueRefundAddress: l2ForwarderAddress,
+      excessFeeRefundAddress: l2ForwarderAddress,
+    }
 
+    const erc20Bridger = new Erc20Bridger(this.l2Network)
+    const submissionCostBefore = (await erc20Bridger.getDepositRequest(baseDepositRequestParams)).retryableData.maxSubmissionCost
+    const tokenBridgeRequest = await erc20Bridger.getDepositRequest({
+      ...baseDepositRequestParams,
+      retryableGasOverrides: {
+        // we need to INCREASE submission cost by extraValue
+        // percent increase has already been applied to submissionCostBefore and extraValue
+        // so we set percentIncrease to 0 so we don't needlessly increase again
+        maxSubmissionFee: {
+          base: submissionCostBefore.add(extraValue),
+          percentIncrease: ethers.BigNumber.from(0)
+        }
+      }
+    })
+    
     return {
       relayerInfo: {
         ...l2ForwarderParams,
@@ -843,21 +858,11 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
 
   // todo: cache last toBlock and use it as fromBlock
   // cache answer
-  // cache l1 -> l2 block
   private async _findBridgedToL3Event(
     l2ForwarderAddress: string,
-    fromL1Block: number,
+    fromL2Block: number,
     l2Provider: JsonRpcProvider
   ) {
-    const fromL2Block = await getFirstBlockForL1Block({
-      provider: l2Provider,
-      forL1Block: fromL1Block
-    })
-
-    if (fromL2Block === undefined) {
-      throw new ArbSdkError(`Could not find L2 block for L1 block ${fromL1Block}`)
-    }
-
     const latest = await l2Provider.getBlockNumber()
     const eventFetcher = new EventFetcher(l2Provider)
     const events = (

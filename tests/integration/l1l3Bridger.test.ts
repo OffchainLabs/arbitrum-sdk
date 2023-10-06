@@ -1,4 +1,4 @@
-import { testSetup } from '../../scripts/testSetup'
+import { config, testSetup } from '../../scripts/testSetup'
 import { Erc20L1L3Bridger, L1ToL2MessageStatus } from '../../src'
 import { L2ForwarderContractsDeployer__factory } from '../../src/lib/abi/factories/L2ForwarderContractsDeployer__factory'
 import { MockToken__factory } from '../../src/lib/abi/factories/MockToken__factory'
@@ -6,7 +6,7 @@ import { MockToken } from '../../src/lib/abi/MockToken'
 import { Teleporter__factory } from '../../src/lib/abi/factories/Teleporter__factory'
 import { fundL1, fundL2, skipIfMainnet } from './testHelpers'
 import { ethers } from 'ethers'
-import { EthL1L3Bridger } from '../../src/lib/assetBridger/l1l3Bridger'
+import { EthL1L3Bridger, RelayedErc20L1L3Bridger } from '../../src/lib/assetBridger/l1l3Bridger'
 import { expect } from 'chai'
 
 type Unwrap<T> = T extends Promise<infer U> ? U : T
@@ -41,8 +41,8 @@ describe('L1 to L3 Bridging', () => {
     setup = await testSetup()
 
     // fund signers on L1 and L2
-    await fundL1(setup.l1Signer, ethers.utils.parseEther('100'))
-    await fundL2(setup.l2Signer, ethers.utils.parseEther('100'))
+    await fundL1(setup.l1Signer, ethers.utils.parseEther('1'))
+    await fundL2(setup.l2Signer, ethers.utils.parseEther('1'))
   })
 
   describe('ETH Bridging', () => {
@@ -63,7 +63,7 @@ describe('L1 to L3 Bridging', () => {
 
         const depositTx = await l1l3Bridger.deposit(
           {
-            amount: ethers.utils.parseEther('1'),
+            amount: ethers.utils.parseEther('0.1'),
             destinationOverrides: {
               l3DestinationAddress: l3Recipient,
               l2RefundAddress: l2RefundAddress,
@@ -88,7 +88,7 @@ describe('L1 to L3 Bridging', () => {
 
         // check eth balances
         const l3Balance = await setup.l3Signer.provider!.getBalance(l3Recipient)
-        expect(l3Balance.gt(ethers.utils.parseEther('1'))).to.be.true
+        expect(l3Balance.gt(ethers.utils.parseEther('0.1'))).to.be.true
 
         const l2Balance = await setup.l2Signer.provider!.getBalance(
           l2RefundAddress
@@ -195,6 +195,98 @@ describe('L1 to L3 Bridging', () => {
         const l3Balance = await l3Token.balanceOf(l3Recipient)
 
         if (!l3Balance.eq(ethers.utils.parseEther('1').sub(1))) {
+          throw new Error('L3 balance is incorrect')
+        }
+      })
+    })
+
+    describe('RelayedErc20L1L3Bridger', () => {
+      let l1l3Bridger: RelayedErc20L1L3Bridger
+
+      // create the bridger and approve the teleporter
+      before(async () => {
+        l1l3Bridger = new RelayedErc20L1L3Bridger(setup.l3Network)
+      })
+
+      // todo: change other tests to go like this instead of in before()
+      it('approves', async () => {
+        await (await l1l3Bridger.approveToken({
+          erc20L1Address: l1Token.address
+        }, setup.l1Signer)).wait()
+      })
+
+      // should throw if gas overrides not passed when using non default gateway
+      // test relayer stuff
+      // don't need to test rescue here i think
+
+      it('happy path', async () => {
+        const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
+
+        const depositResult = await l1l3Bridger.deposit(
+          {
+            erc20L1Address: l1Token.address,
+            to: l3Recipient,
+            amount: ethers.utils.parseEther('1'),
+          },
+          setup.l1Signer,
+          setup.l2Signer.provider!,
+          setup.l3Signer.provider!
+        )
+
+        const depositReceipt = await depositResult.tx.wait()
+
+        const l2JsonRpcProvider = new ethers.providers.JsonRpcProvider(config.arbUrl)
+
+        // wait until first leg finishes
+        await poll(async () => {
+          const status = await l1l3Bridger.getDepositStatus(
+            depositReceipt,
+            depositResult.relayerInfo,
+            l2JsonRpcProvider,
+            setup.l3Signer.provider!
+          )
+          return status.bridgeToL2Status === L1ToL2MessageStatus.REDEEMED
+        }, 1000)
+
+        // make sure status shows that l2 forwarder hasn't been called yet
+        expect((await l1l3Bridger.getDepositStatus(depositReceipt, depositResult.relayerInfo, l2JsonRpcProvider, setup.l3Signer.provider!)).l2ForwarderCalled).to.be.false
+
+        // relay
+        const relayTx = await RelayedErc20L1L3Bridger.relayDeposit(
+          depositResult.relayerInfo,
+          setup.l2Signer
+        )
+        
+        await relayTx.wait()
+
+        // make sure status is updated
+        expect((await l1l3Bridger.getDepositStatus(depositReceipt, depositResult.relayerInfo, l2JsonRpcProvider, setup.l3Signer.provider!)).l2ForwarderCalled).to.be.true
+
+        // wait for third leg to finish
+        await poll(async () => {
+          const status = await l1l3Bridger.getDepositStatus(
+            depositReceipt,
+            depositResult.relayerInfo,
+            l2JsonRpcProvider,
+            setup.l3Signer.provider!
+          )
+          return status.completed
+        }, 1000)
+
+        // make sure the tokens have landed in the right place
+        const l3TokenAddr = await l1l3Bridger.getL3ERC20Address(
+          l1Token.address,
+          setup.l1Signer.provider!,
+          setup.l2Signer.provider!
+        )
+        const l3Token = l1l3Bridger.getL3TokenContract(
+          l3TokenAddr,
+          setup.l3Signer.provider!,
+        )
+
+        const l3Balance = await l3Token.balanceOf(l3Recipient)
+
+        if (!l3Balance.eq(ethers.utils.parseEther('1'))) {
           throw new Error('L3 balance is incorrect')
         }
       })
