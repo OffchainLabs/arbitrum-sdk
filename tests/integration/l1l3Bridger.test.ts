@@ -136,6 +136,65 @@ describe('L1 to L3 Bridging', () => {
       await l1Token.deployed()
     })
 
+    describe('BaseErc20L1L3Bridger', () => {
+      // use Erc20L1L3Bridger to test base class
+      let l1l3Bridger: Erc20L1L3Bridger
+
+      // create the bridger and approve the teleporter
+      before(async () => {
+        l1l3Bridger = new Erc20L1L3Bridger(setup.l3Network)
+      })
+
+      it('getL2ERC20Address', async () => {
+        // use weth to test, since we already know its addresses
+        const l1Weth = setup.l2Network.tokenBridge.l1Weth
+        const l2Weth = setup.l2Network.tokenBridge.l2Weth
+        const ans = await l1l3Bridger.getL2ERC20Address(l1Weth, setup.l1Signer.provider!)
+        expect(ans).to.eq(l2Weth)
+      })
+
+      it('getL3ERC20Address', async () => {
+        // use weth to test, since we already know its addresses
+        const l1Weth = setup.l2Network.tokenBridge.l1Weth
+        const l3Weth = setup.l3Network.tokenBridge.l2Weth
+        const ans = await l1l3Bridger.getL3ERC20Address(l1Weth, setup.l1Signer.provider!, setup.l2Signer.provider!)
+        expect(ans).to.eq(l3Weth)
+      })
+
+      it('getL1L2GatewayAddress', async () => {
+        // test weth and default gateway
+        const l1Weth = setup.l2Network.tokenBridge.l1Weth
+        const l1l2WethGateway = setup.l2Network.tokenBridge.l1WethGateway
+
+        const wethAns = await l1l3Bridger.getL1L2GatewayAddress(l1Weth, setup.l1Signer.provider!)
+
+        expect(wethAns).to.eq(l1l2WethGateway)
+
+        // test default gateway
+        const l1l2Gateway = setup.l2Network.tokenBridge.l1ERC20Gateway
+        const defaultAns = await l1l3Bridger.getL1L2GatewayAddress(l1Token.address, setup.l1Signer.provider!)
+        expect(defaultAns).to.eq(l1l2Gateway)
+      })
+
+      it('getL2L3GatewayAddress', async () => {
+        // test weth and default gateway
+        const l1Weth = setup.l2Network.tokenBridge.l1Weth
+        const l2l3WethGateway = setup.l3Network.tokenBridge.l1WethGateway
+
+        const wethAns = await l1l3Bridger.getL2L3GatewayAddress(l1Weth, setup.l1Signer.provider!, setup.l2Signer.provider!)
+
+        expect(wethAns).to.eq(l2l3WethGateway)
+
+        // test default gateway
+        const l2l3Gateway = setup.l3Network.tokenBridge.l1ERC20Gateway
+        const defaultAns = await l1l3Bridger.getL2L3GatewayAddress(l1Token.address, setup.l1Signer.provider!, setup.l2Signer.provider!)
+        expect(defaultAns).to.eq(l2l3Gateway)
+      })
+
+      // todo: disabled
+      
+    })
+
     describe('Erc20L1L3Bridger', () => {
       let l1l3Bridger: Erc20L1L3Bridger
 
