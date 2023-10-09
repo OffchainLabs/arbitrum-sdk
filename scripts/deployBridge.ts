@@ -191,7 +191,8 @@ export const deployErc20AndInit = async (
     parent: Unwrap<ReturnType<typeof deployErc20Parent>>,
     child: Unwrap<ReturnType<typeof deployErc20Child>>,
     inboxAddress: string,
-    parentSigner: Signer
+    parentSigner: Signer,
+    parentWethAddressOverride?: string
   ) => {
     // initialize child
     await child.router.initialize(
@@ -218,14 +219,14 @@ export const deployErc20AndInit = async (
         'WETH',
         18,
         child.wethGateway.address,
-        parent.weth.address
+        parentWethAddressOverride || parent.weth.address
       )
     ).wait()
     await (
       await child.wethGateway.initialize(
         parent.wethGateway.address,
         child.router.address,
-        parent.weth.address,
+        parentWethAddressOverride || parent.weth.address,
         child.weth.address
       )
     ).wait()
@@ -263,7 +264,7 @@ export const deployErc20AndInit = async (
         child.wethGateway.address,
         parent.router.address,
         inboxAddress,
-        parent.weth.address,
+        parentWethAddressOverride || parent.weth.address,
         child.weth.address
       )
     ).wait()
@@ -273,12 +274,15 @@ export const deployErc20AndInit = async (
   await initializeParentChild(l1Parent, l2Child, l1InboxAddress, l1Signer)
 
   console.log('initialising L2 <-> L3')
-  await initializeParentChild(l2Parent, l3Child, l2InboxAddress, l2Signer)
+  await initializeParentChild(l2Parent, l3Child, l2InboxAddress, l2Signer, l2Child.weth.address)
 
   return {
     l1Parent,
     l2Child,
-    l2Parent,
+    l2Parent: {
+      ...l2Parent,
+      weth: l2Child.weth
+    },
     l3Child,
   }
 }
