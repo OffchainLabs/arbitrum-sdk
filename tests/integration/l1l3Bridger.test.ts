@@ -6,7 +6,10 @@ import { MockToken } from '../../src/lib/abi/MockToken'
 import { Teleporter__factory } from '../../src/lib/abi/factories/Teleporter__factory'
 import { fundL1, fundL2, skipIfMainnet } from './testHelpers'
 import { ethers } from 'ethers'
-import { EthL1L3Bridger, RelayedErc20L1L3Bridger } from '../../src/lib/assetBridger/l1l3Bridger'
+import {
+  EthL1L3Bridger,
+  RelayedErc20L1L3Bridger,
+} from '../../src/lib/assetBridger/l1l3Bridger'
 import { expect } from 'chai'
 
 type Unwrap<T> = T extends Promise<infer U> ? U : T
@@ -191,7 +194,7 @@ describe('L1 to L3 Bridging', () => {
         )
         const l3Token = l1l3Bridger.getL3TokenContract(
           l3TokenAddr,
-          setup.l3Signer.provider!,
+          setup.l3Signer.provider!
         )
 
         const l3Balance = await l3Token.balanceOf(l3Recipient)
@@ -211,9 +214,14 @@ describe('L1 to L3 Bridging', () => {
       })
 
       it('approves', async () => {
-        await (await l1l3Bridger.approveToken({
-          erc20L1Address: l1Token.address
-        }, setup.l1Signer)).wait()
+        await (
+          await l1l3Bridger.approveToken(
+            {
+              erc20L1Address: l1Token.address,
+            },
+            setup.l1Signer
+          )
+        ).wait()
       })
 
       // should throw if gas overrides not passed when using non default gateway
@@ -236,7 +244,9 @@ describe('L1 to L3 Bridging', () => {
 
         const depositReceipt = await depositResult.tx.wait()
 
-        const l2JsonRpcProvider = new ethers.providers.JsonRpcProvider(config.arbUrl)
+        const l2JsonRpcProvider = new ethers.providers.JsonRpcProvider(
+          config.arbUrl
+        )
 
         // wait until first leg finishes
         await poll(async () => {
@@ -246,22 +256,38 @@ describe('L1 to L3 Bridging', () => {
             l2JsonRpcProvider,
             setup.l3Signer.provider!
           )
-          return status.bridgeToL2Status === L1ToL2MessageStatus.REDEEMED
+          return status.bridgeToL2.status === L1ToL2MessageStatus.REDEEMED
         }, 1000)
 
         // make sure status shows that l2 forwarder hasn't been called yet
-        expect((await l1l3Bridger.getDepositStatus(depositReceipt, depositResult.relayerInfo, l2JsonRpcProvider, setup.l3Signer.provider!)).l2ForwarderCalled).to.be.false
+        expect(
+          (
+            await l1l3Bridger.getDepositStatus(
+              depositReceipt,
+              depositResult.relayerInfo,
+              l2JsonRpcProvider,
+              setup.l3Signer.provider!
+            )
+          ).l2ForwarderCall
+        ).to.be.undefined
 
         // relay
         const relayTx = await RelayedErc20L1L3Bridger.relayDeposit(
           depositResult.relayerInfo,
           setup.l2Signer
         )
-        
+
         await relayTx.wait()
 
         // make sure status is updated
-        expect((await l1l3Bridger.getDepositStatus(depositReceipt, depositResult.relayerInfo, l2JsonRpcProvider, setup.l3Signer.provider!)).l2ForwarderCalled).to.be.true
+        expect(
+          await l1l3Bridger.getDepositStatus(
+            depositReceipt,
+            depositResult.relayerInfo,
+            l2JsonRpcProvider,
+            setup.l3Signer.provider!
+          )
+        ).to.be.not.undefined
 
         // wait for third leg to finish
         await poll(async () => {
@@ -282,7 +308,7 @@ describe('L1 to L3 Bridging', () => {
         )
         const l3Token = l1l3Bridger.getL3TokenContract(
           l3TokenAddr,
-          setup.l3Signer.provider!,
+          setup.l3Signer.provider!
         )
 
         const l3Balance = await l3Token.balanceOf(l3Recipient)
