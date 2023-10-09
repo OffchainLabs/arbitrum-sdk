@@ -68,8 +68,8 @@ export interface PopulatedRetryableGasParams extends ManualRetryableGasParams {
 
 export interface Erc20DepositRequestParams {
   erc20L1Address: string
-  to: string // todo: make optional, default to signer's address
   amount: BigNumber
+  to?: string
   overrides?: {
     gasPricePercentIncrease?: BigNumber
     relayerPaymentPercentIncrease?: BigNumber
@@ -518,24 +518,24 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
 
   public async getDepositRequest(
     params: Erc20DepositRequestParams,
-    l1Provider: Provider,
+    l1Signer: Signer,
     l2Provider: Provider,
     l3Provider: Provider
   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
-    await this._checkL1Network(l1Provider)
+    await this._checkL1Network(l1Signer)
     await this._checkL2Network(l2Provider)
     await this._checkL3Network(l3Provider)
 
     const gasParams = await this._populateGasParams(
       params,
-      l1Provider,
+      l1Signer.provider!,
       l2Provider,
       l3Provider
     )
 
     const teleporter = Teleporter__factory.connect(
       this.teleporterAddresses.l1Teleporter,
-      l1Provider
+      l1Signer
     )
 
     const calldata = teleporter.interface.encodeFunctionData('teleport', [
@@ -543,14 +543,14 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
         l1Token: params.erc20L1Address,
         l1l2Router: this.l2Network.tokenBridge.l1GatewayRouter,
         l2l3Router: this.l3Network.tokenBridge.l1GatewayRouter,
-        to: params.to,
+        to: params.to || await l1Signer.getAddress(),
         amount: params.amount,
         gasParams,
         randomNonce: ethers.utils.randomBytes(32),
       },
     ])
 
-    const l1GasPrice = await l1Provider.getGasPrice()
+    const l1GasPrice = await l1Signer.provider!.getGasPrice()
 
     const calculatedGasCosts = await teleporter.calculateRetryableGasCosts(
       this.l2Network.ethBridge.inbox,
@@ -573,7 +573,7 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
   ): Promise<L1ContractCallTransaction> {
     const txRequest = await this.getDepositRequest(
       params,
-      l1Signer.provider!,
+      l1Signer,
       l2Provider,
       l3Provider
     )
@@ -634,9 +634,6 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
 }
 
 export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
-  // value is [lastBlockChecked, event]
-  private readonly _eventFetchCache: Map<string, [number, FetchedEvent<BridgedToL3Event> | undefined]> = new Map()
-
   public async getApproveTokenRequest(
     params: TokenApproveParams,
     l1Provider: Provider
@@ -687,7 +684,7 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
       owner: await l1Signer.getAddress(),
       token: await this.getL2ERC20Address(params.erc20L1Address, l1Signer.provider!),
       router: this.l3Network.tokenBridge.l1GatewayRouter,
-      to: params.to,
+      to: params.to || await l1Signer.getAddress(),
       amount: params.amount,
       gasLimit: populatedGasParams.l2l3TokenBridgeGasLimit,
       gasPrice: populatedGasParams.l3GasPrice,
@@ -862,20 +859,6 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
   ) {
     const latest = await l2Provider.getBlockNumber()
     const eventFetcher = new EventFetcher(l2Provider)
-
-
-    // begin maybe useless caching stuff
-    let cacheValue = this._eventFetchCache.get(l2ForwarderAddress)
-    if (!cacheValue) {
-      cacheValue = [fromL2Block, undefined]
-      this._eventFetchCache.set(l2ForwarderAddress, cacheValue)
-    }
-    const [lastBlockChecked, event] = cacheValue
-
-    if (event) return event
-    
-    fromL2Block = lastBlockChecked
-    // end maybe useless caching stuff
     
     const events = (
       await eventFetcher.getEvents(
@@ -885,15 +868,11 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
         { address: l2ForwarderAddress, fromBlock: fromL2Block, toBlock: latest }
       )
     )
-
-    cacheValue[0] = latest
     
     if (events.length === 0) {
       return undefined
     }
     
-    cacheValue[1] = events[0]
-
     return events[0]
   }
 }

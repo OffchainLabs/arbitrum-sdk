@@ -139,7 +139,9 @@ describe('L1 to L3 Bridging', () => {
       // create the bridger and approve the teleporter
       before(async () => {
         l1l3Bridger = new Erc20L1L3Bridger(setup.l3Network)
+      })
 
+      it('approves', async () => {
         // approve the teleporter
         await (
           await l1Token
@@ -208,7 +210,6 @@ describe('L1 to L3 Bridging', () => {
         l1l3Bridger = new RelayedErc20L1L3Bridger(setup.l3Network)
       })
 
-      // todo: change other tests to go like this instead of in before()
       it('approves', async () => {
         await (await l1l3Bridger.approveToken({
           erc20L1Address: l1Token.address
