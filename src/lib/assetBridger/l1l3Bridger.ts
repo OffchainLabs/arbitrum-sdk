@@ -129,9 +129,8 @@ class BaseL1L3Bridger {
   public readonly l2Network: L2Network
   public readonly l3Network: L2Network
 
-  // TODO: REPLACE THIS WITH L1TOL2MESSAGEGASESTIMATOR
   public readonly defaultGasPricePercentIncrease: BigNumber =
-    BigNumber.from(130) // 30% increase
+    BigNumber.from(200)
 
   constructor(l3Network: L2Network) {
     const l2Network = l2Networks[l3Network.partnerChainID]
@@ -177,8 +176,8 @@ class BaseL1L3Bridger {
     await SignerProviderUtils.checkNetworkMatches(sop, this.l3Network.chainID)
   }
 
-  protected _percentIncrease(base: BigNumber, percent: BigNumber) {
-    return base.mul(percent).div(100)
+  protected _percentIncrease(num: BigNumber, increase: BigNumber): BigNumber {
+    return num.add(num.mul(increase).div(100))
   }
 }
 
@@ -195,7 +194,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
   } as const
 
   public readonly defaultRelayerPaymentPercentIncrease: BigNumber =
-    BigNumber.from(130) // 30% increase
+    BigNumber.from(30)
 
   public constructor(public readonly l3Network: L2Network) {
     super(l3Network)
