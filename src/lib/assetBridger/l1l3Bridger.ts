@@ -41,6 +41,7 @@ import {
 } from '../message/L1Transaction'
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { Erc20Bridger, TokenApproveParams } from './erc20Bridger'
+import { PercentIncrease } from '../message/L1ToL2MessageGasEstimator'
 
 export enum Erc20TeleportationLeg {
   BridgeToL2,
@@ -71,8 +72,10 @@ export interface Erc20DepositRequestParams {
   amount: BigNumber
   to?: string
   overrides?: {
-    gasPricePercentIncrease?: BigNumber
-    relayerPaymentPercentIncrease?: BigNumber
+    // gasPricePercentIncrease?: BigNumber
+    l2GasPrice?: PercentIncrease
+    l3GasPrice?: PercentIncrease
+    relayerPayment?: PercentIncrease
     manualGasParams?: ManualRetryableGasParams
   }
 }
@@ -425,10 +428,11 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
   }
 
   public getRecipientFromParentBridgeTx(
-    depositTxReceipt: L1ContractCallTransactionReceipt,
+    depositTxReceipt: L1ContractCallTransactionReceipt
   ) {
-    const topic0 = L1GatewayRouter__factory.createInterface().getEventTopic('TransferRouted')
-    const log = depositTxReceipt.logs.find(log => log.topics[0] === topic0)
+    const topic0 =
+      L1GatewayRouter__factory.createInterface().getEventTopic('TransferRouted')
+    const log = depositTxReceipt.logs.find(x => x.topics[0] === topic0)
 
     if (!log) {
       throw new ArbSdkError(`Could not find TransferRouted event in tx receipt`)
@@ -495,13 +499,13 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     return {
       ...manualGasParams,
       l2GasPrice: this._percentIncrease(
-        await l2Provider.getGasPrice(),
-        params.overrides.gasPricePercentIncrease ||
+        params.overrides.l2GasPrice?.base || (await l2Provider.getGasPrice()),
+        params.overrides.l2GasPrice?.percentIncrease ||
           this.defaultGasPricePercentIncrease
       ),
       l3GasPrice: this._percentIncrease(
-        await l3Provider.getGasPrice(),
-        params.overrides.gasPricePercentIncrease ||
+        params.overrides.l3GasPrice?.base || (await l3Provider.getGasPrice()),
+        params.overrides.l3GasPrice?.percentIncrease ||
           this.defaultGasPricePercentIncrease
       ),
     }
@@ -661,18 +665,17 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
       }
     }
 
-    let secondLegTxReceipt: ethers.providers.TransactionReceipt;
+    let secondLegTxReceipt: ethers.providers.TransactionReceipt
     if (secondLegRedeem.status === L1ToL2MessageStatus.REDEEMED) {
       secondLegTxReceipt = secondLegRedeem.l2TxReceipt
-    }
-    else {
+    } else {
       // see if there are any other calls to the l2 forwarder after the first leg redeem
       const bridgedToL3Event = await this._findBridgedToL3Event(
         this.getRecipientFromParentBridgeTx(depositTxReceipt),
         firstLegRedeem.l2TxReceipt.blockNumber,
         l2Provider
       )
-      
+
       // second leg has not completed
       if (!bridgedToL3Event) {
         return {
@@ -691,7 +694,9 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
     }
 
     // third leg must be created
-    const secondLegL1TxReceipt = new L1ContractCallTransactionReceipt(secondLegTxReceipt)
+    const secondLegL1TxReceipt = new L1ContractCallTransactionReceipt(
+      secondLegTxReceipt
+    )
     const thirdLegMessage = (
       await secondLegL1TxReceipt.getL1ToL2Messages(l3Provider)
     )[0]
@@ -701,7 +706,10 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
     return {
       bridgeToL2: firstLegRedeem,
       retryableL2ForwarderCall: secondLegRedeem,
-      otherL2ForwarderCall: secondLegRedeem.status === L1ToL2MessageStatus.REDEEMED ? undefined : secondLegL1TxReceipt,
+      otherL2ForwarderCall:
+        secondLegRedeem.status === L1ToL2MessageStatus.REDEEMED
+          ? undefined
+          : secondLegL1TxReceipt,
       bridgeToL3: thirdLegRedeem,
       completed: thirdLegRedeem.status === L1ToL2MessageStatus.REDEEMED,
     }
@@ -747,10 +755,11 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     )
 
     const relayerPayment = this._percentIncrease(
-      populatedGasParams.l2ForwarderFactoryGasLimit.mul(
-        populatedGasParams.l2GasPrice
-      ),
-      params.overrides?.relayerPaymentPercentIncrease ||
+      params.overrides?.relayerPayment?.base ||
+        populatedGasParams.l2ForwarderFactoryGasLimit.mul(
+          populatedGasParams.l2GasPrice
+        ),
+      params.overrides?.relayerPayment?.percentIncrease ||
         this.defaultRelayerPaymentPercentIncrease
     )
 
@@ -874,7 +883,8 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
       }
     }
 
-    const l2ForwarderAddress = this.getRecipientFromParentBridgeTx(depositTxReceipt)
+    const l2ForwarderAddress =
+      this.getRecipientFromParentBridgeTx(depositTxReceipt)
 
     const bridgeToL3Event = await this._findBridgedToL3Event(
       l2ForwarderAddress,

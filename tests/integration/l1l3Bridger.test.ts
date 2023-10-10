@@ -1,11 +1,11 @@
 import { config, testSetup } from '../../scripts/testSetup'
-import { Erc20L1L3Bridger, L1ToL2MessageStatus } from '../../src'
+import { Address, Erc20L1L3Bridger, L1ToL2MessageStatus } from '../../src'
 import { L2ForwarderContractsDeployer__factory } from '../../src/lib/abi/factories/L2ForwarderContractsDeployer__factory'
 import { MockToken__factory } from '../../src/lib/abi/factories/MockToken__factory'
 import { MockToken } from '../../src/lib/abi/MockToken'
 import { Teleporter__factory } from '../../src/lib/abi/factories/Teleporter__factory'
 import { fundL1, fundL2, skipIfMainnet } from './testHelpers'
-import { ethers } from 'ethers'
+import { BigNumber, ethers } from 'ethers'
 import {
   EthL1L3Bridger,
   RelayedErc20L1L3Bridger,
@@ -150,7 +150,10 @@ describe('L1 to L3 Bridging', () => {
         // use weth to test, since we already know its addresses
         const l1Weth = setup.l2Network.tokenBridge.l1Weth
         const l2Weth = setup.l2Network.tokenBridge.l2Weth
-        const ans = await l1l3Bridger.getL2ERC20Address(l1Weth, setup.l1Signer.provider!)
+        const ans = await l1l3Bridger.getL2ERC20Address(
+          l1Weth,
+          setup.l1Signer.provider!
+        )
         expect(ans).to.eq(l2Weth)
       })
 
@@ -158,7 +161,11 @@ describe('L1 to L3 Bridging', () => {
         // use weth to test, since we already know its addresses
         const l1Weth = setup.l2Network.tokenBridge.l1Weth
         const l3Weth = setup.l3Network.tokenBridge.l2Weth
-        const ans = await l1l3Bridger.getL3ERC20Address(l1Weth, setup.l1Signer.provider!, setup.l2Signer.provider!)
+        const ans = await l1l3Bridger.getL3ERC20Address(
+          l1Weth,
+          setup.l1Signer.provider!,
+          setup.l2Signer.provider!
+        )
         expect(ans).to.eq(l3Weth)
       })
 
@@ -167,13 +174,19 @@ describe('L1 to L3 Bridging', () => {
         const l1Weth = setup.l2Network.tokenBridge.l1Weth
         const l1l2WethGateway = setup.l2Network.tokenBridge.l1WethGateway
 
-        const wethAns = await l1l3Bridger.getL1L2GatewayAddress(l1Weth, setup.l1Signer.provider!)
+        const wethAns = await l1l3Bridger.getL1L2GatewayAddress(
+          l1Weth,
+          setup.l1Signer.provider!
+        )
 
         expect(wethAns).to.eq(l1l2WethGateway)
 
         // test default gateway
         const l1l2Gateway = setup.l2Network.tokenBridge.l1ERC20Gateway
-        const defaultAns = await l1l3Bridger.getL1L2GatewayAddress(l1Token.address, setup.l1Signer.provider!)
+        const defaultAns = await l1l3Bridger.getL1L2GatewayAddress(
+          l1Token.address,
+          setup.l1Signer.provider!
+        )
         expect(defaultAns).to.eq(l1l2Gateway)
       })
 
@@ -182,18 +195,25 @@ describe('L1 to L3 Bridging', () => {
         const l1Weth = setup.l2Network.tokenBridge.l1Weth
         const l2l3WethGateway = setup.l3Network.tokenBridge.l1WethGateway
 
-        const wethAns = await l1l3Bridger.getL2L3GatewayAddress(l1Weth, setup.l1Signer.provider!, setup.l2Signer.provider!)
+        const wethAns = await l1l3Bridger.getL2L3GatewayAddress(
+          l1Weth,
+          setup.l1Signer.provider!,
+          setup.l2Signer.provider!
+        )
 
         expect(wethAns).to.eq(l2l3WethGateway)
 
         // test default gateway
         const l2l3Gateway = setup.l3Network.tokenBridge.l1ERC20Gateway
-        const defaultAns = await l1l3Bridger.getL2L3GatewayAddress(l1Token.address, setup.l1Signer.provider!, setup.l2Signer.provider!)
+        const defaultAns = await l1l3Bridger.getL2L3GatewayAddress(
+          l1Token.address,
+          setup.l1Signer.provider!,
+          setup.l2Signer.provider!
+        )
         expect(defaultAns).to.eq(l2l3Gateway)
       })
 
       // todo: disabled
-      
     })
 
     describe('Erc20L1L3Bridger', () => {
@@ -206,20 +226,19 @@ describe('L1 to L3 Bridging', () => {
 
       it('approves', async () => {
         // approve the teleporter
-        await (
-          await l1Token
-            .connect(setup.l1Signer)
-            .approve(
-              setup.l2Network.teleporterAddresses!.l1Teleporter,
-              ethers.utils.parseEther('100')
-            )
-        ).wait()
+        await (await l1l3Bridger.approveToken(
+          {
+            erc20L1Address: l1Token.address,
+          },
+          setup.l1Signer
+        )).wait()
       })
 
       // should throw if gas overrides not passed when using non default gateway
       // test relayer stuff
       // don't need to test rescue here i think
 
+      // todo: check status at each step, do this for other happy path tests too
       it('happy path', async () => {
         const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
 
@@ -262,6 +281,100 @@ describe('L1 to L3 Bridging', () => {
         if (!l3Balance.eq(ethers.utils.parseEther('1').sub(1))) {
           throw new Error('L3 balance is incorrect')
         }
+      })
+
+      it('should report correct status when second leg is frontran', async () => {
+        const adjustedL3GasPrice = (await setup.l3Signer.provider!.getGasPrice()).mul(3)
+        const depositTx = await l1l3Bridger.deposit(
+          {
+            erc20L1Address: l1Token.address,
+            amount: ethers.utils.parseEther('1'),
+            overrides: {
+              manualGasParams: {
+                ...l1l3Bridger.defaultRetryableGasParams,
+                l2ForwarderFactoryGasLimit: BigNumber.from(10) // make sure the second leg retryable fails
+              },
+              l3GasPrice: {
+                base: adjustedL3GasPrice,
+                percentIncrease: BigNumber.from(0)
+              }
+            }
+          },
+          setup.l1Signer,
+          setup.l2Signer.provider!,
+          setup.l3Signer.provider!
+        )
+
+        const depositReceipt = await depositTx.wait()
+
+        // poll status until first leg completes
+        await poll(async () => {
+          const status = await l1l3Bridger.getDepositStatus(
+            depositReceipt,
+            l2JsonRpcProvider,
+            setup.l3Signer.provider!
+          )
+          return status.bridgeToL2.status === L1ToL2MessageStatus.REDEEMED
+        }, 1000)
+
+        // make sure we have FUNDS_DEPOSITED_ON_L2 and undefined
+        const statusAfterLeg1 = await l1l3Bridger.getDepositStatus(
+          depositReceipt,
+          l2JsonRpcProvider,
+          setup.l3Signer.provider!
+        )
+        expect(statusAfterLeg1.retryableL2ForwarderCall.status).to.eq(L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2)
+        expect(statusAfterLeg1.otherL2ForwarderCall).to.be.undefined
+        expect(statusAfterLeg1.bridgeToL3.status).to.eq(L1ToL2MessageStatus.NOT_YET_CREATED)
+
+        // relay the second leg (use the RelayedErc20L1L3Bridger to do this)
+        const l1SignerAddr = await setup.l1Signer.getAddress()
+        const relayTx = await RelayedErc20L1L3Bridger.relayDeposit(
+          {
+            owner: new Address(l1SignerAddr).applyAlias().value,
+            token: await l1l3Bridger.getL2ERC20Address(l1Token.address, setup.l1Signer.provider!),
+            router: setup.l3Network.tokenBridge.l1GatewayRouter,
+            to: l1SignerAddr, // here we're doubling this test to make sure it defaults to the signer when "to" is not passed to deposit
+            gasLimit: l1l3Bridger.defaultRetryableGasParams.l2l3TokenBridgeGasLimit,
+            gasPrice: adjustedL3GasPrice,
+            relayerPayment: BigNumber.from(0),
+            chainId: setup.l2Network.chainID
+          },
+          setup.l2Signer
+        )
+
+        await relayTx.wait()
+
+        // make sure we get FUNDS_DEPOSITED_ON_L2 and the relay tx receipt
+        const statusAfterLeg2 = await l1l3Bridger.getDepositStatus(
+          depositReceipt,
+          l2JsonRpcProvider,
+          setup.l3Signer.provider!
+        )
+        expect(statusAfterLeg2.bridgeToL2.status).to.eq(L1ToL2MessageStatus.REDEEMED)
+        expect(statusAfterLeg2.retryableL2ForwarderCall.status).to.eq(L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2)
+        expect(statusAfterLeg2.otherL2ForwarderCall?.transactionHash).to.eq(relayTx.hash)
+        expect(statusAfterLeg2.bridgeToL3.status).to.eq(L1ToL2MessageStatus.NOT_YET_CREATED)
+
+        // make sure we get the correct final result on L3
+        await poll(async () => {
+          const status = await l1l3Bridger.getDepositStatus(
+            depositReceipt,
+            l2JsonRpcProvider,
+            setup.l3Signer.provider!
+          )
+          return status.completed
+        }, 1000)
+
+        const statusAfterLeg3 = await l1l3Bridger.getDepositStatus(
+          depositReceipt,
+          l2JsonRpcProvider,
+          setup.l3Signer.provider!
+        )
+        expect(statusAfterLeg3.completed).to.be.true
+        expect(statusAfterLeg3.retryableL2ForwarderCall.status).to.eq(L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2)
+        expect(statusAfterLeg3.otherL2ForwarderCall?.transactionHash).to.eq(relayTx.hash)
+        expect(statusAfterLeg3.bridgeToL3.status).to.eq(L1ToL2MessageStatus.REDEEMED)
       })
     })
 
