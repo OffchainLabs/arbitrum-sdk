@@ -36,6 +36,7 @@ function poll(
 
 describe('L1 to L3 Bridging', () => {
   let setup: Unwrap<ReturnType<typeof testSetup>>
+  const l2JsonRpcProvider = new ethers.providers.JsonRpcProvider(config.arbUrl)
 
   // setup for all test cases
   before(async function () {
@@ -239,7 +240,7 @@ describe('L1 to L3 Bridging', () => {
         await poll(async () => {
           const status = await l1l3Bridger.getDepositStatus(
             depositReceipt,
-            setup.l2Signer.provider!,
+            l2JsonRpcProvider,
             setup.l3Signer.provider!
           )
           return status.completed
@@ -303,15 +304,10 @@ describe('L1 to L3 Bridging', () => {
 
         const depositReceipt = await depositResult.tx.wait()
 
-        const l2JsonRpcProvider = new ethers.providers.JsonRpcProvider(
-          config.arbUrl
-        )
-
         // wait until first leg finishes
         await poll(async () => {
           const status = await l1l3Bridger.getDepositStatus(
             depositReceipt,
-            depositResult.relayerInfo,
             l2JsonRpcProvider,
             setup.l3Signer.provider!
           )
@@ -323,7 +319,6 @@ describe('L1 to L3 Bridging', () => {
           (
             await l1l3Bridger.getDepositStatus(
               depositReceipt,
-              depositResult.relayerInfo,
               l2JsonRpcProvider,
               setup.l3Signer.provider!
             )
@@ -342,7 +337,6 @@ describe('L1 to L3 Bridging', () => {
         expect(
           await l1l3Bridger.getDepositStatus(
             depositReceipt,
-            depositResult.relayerInfo,
             l2JsonRpcProvider,
             setup.l3Signer.provider!
           )
@@ -352,7 +346,6 @@ describe('L1 to L3 Bridging', () => {
         await poll(async () => {
           const status = await l1l3Bridger.getDepositStatus(
             depositReceipt,
-            depositResult.relayerInfo,
             l2JsonRpcProvider,
             setup.l3Signer.provider!
           )

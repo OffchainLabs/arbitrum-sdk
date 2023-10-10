@@ -90,10 +90,19 @@ export interface EthDepositRequestParams {
   }
 }
 
+/**
+ * @param bridgeToL2 The status + tx receipt of the first leg of the teleportation
+ * @param retryableL2ForwarderCall The status + tx receipt of the second leg of the teleportation
+ * @param otherL2ForwarderCall Since calling the L2 forwarder is permissionless, the retryable can be frontran.
+ * In this case then retryableL2ForwarderCall will not redeem, but that's okay beacause ETH and tokens will still be forwarded to L3.
+ * @param bridgeToL3 The status + tx receipt of the third leg of the teleportation
+ * @param completed Whether the teleportation has completed
+ */
 export interface Erc20DepositStatus {
-  bridgeToL2Status: L1ToL2MessageWaitResult
-  callToL2ForwarderStatus: L1ToL2MessageWaitResult
-  bridgeToL3Status: L1ToL2MessageWaitResult
+  bridgeToL2: L1ToL2MessageWaitResult
+  retryableL2ForwarderCall: L1ToL2MessageWaitResult
+  otherL2ForwarderCall: L1ContractCallTransactionReceipt | undefined
+  bridgeToL3: L1ToL2MessageWaitResult
   completed: boolean
 }
 
@@ -415,6 +424,23 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     ).l2ForwarderAddress(params)
   }
 
+  public getRecipientFromParentBridgeTx(
+    depositTxReceipt: L1ContractCallTransactionReceipt,
+  ) {
+    const topic0 = L1GatewayRouter__factory.createInterface().getEventTopic('TransferRouted')
+    const log = depositTxReceipt.logs.find(log => log.topics[0] === topic0)
+
+    if (!log) {
+      throw new ArbSdkError(`Could not find TransferRouted event in tx receipt`)
+    }
+
+    // topic 3 is "_userTo"
+    const bytes32UserTo = log.topics[3]
+
+    // parse address
+    return ethers.utils.getAddress(bytes32UserTo.slice(26))
+  }
+
   private async _tokenIsDisabled(
     tokenAddress: string,
     gatewayRouterAddress: string,
@@ -479,6 +505,27 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
           this.defaultGasPricePercentIncrease
       ),
     }
+  }
+
+  protected async _findBridgedToL3Event(
+    l2ForwarderAddress: string,
+    fromL2Block: number,
+    l2Provider: JsonRpcProvider
+  ) {
+    const latest = await l2Provider.getBlockNumber()
+    const eventFetcher = new EventFetcher(l2Provider)
+
+    const events = await eventFetcher.getEvents(
+      L2Forwarder__factory,
+      contract => contract.filters.BridgedToL3(),
+      { address: l2ForwarderAddress, fromBlock: fromL2Block, toBlock: latest }
+    )
+
+    if (events.length === 0) {
+      return undefined
+    }
+
+    return events[0]
   }
 }
 
@@ -594,7 +641,7 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
    */
   public async getDepositStatus(
     depositTxReceipt: L1ContractCallTransactionReceipt,
-    l2Provider: Provider,
+    l2Provider: JsonRpcProvider,
     l3Provider: Provider
   ): Promise<Erc20DepositStatus> {
     await this._checkL2Network(l2Provider)
@@ -604,29 +651,58 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
     const firstLegRedeem = await l1l2Messages[0].getSuccessfulRedeem()
     const secondLegRedeem = await l1l2Messages[1].getSuccessfulRedeem()
 
-    // if second leg is not redeemed, the third must not be created
-    if (secondLegRedeem.status !== L1ToL2MessageStatus.REDEEMED) {
+    if (firstLegRedeem.status !== L1ToL2MessageStatus.REDEEMED) {
       return {
-        bridgeToL2Status: firstLegRedeem,
-        callToL2ForwarderStatus: secondLegRedeem,
-        bridgeToL3Status: { status: L1ToL2MessageStatus.NOT_YET_CREATED },
+        bridgeToL2: firstLegRedeem,
+        retryableL2ForwarderCall: secondLegRedeem,
+        otherL2ForwarderCall: undefined,
+        bridgeToL3: { status: L1ToL2MessageStatus.NOT_YET_CREATED },
         completed: false,
       }
     }
 
-    // otherwise, third leg must be created
+    let secondLegTxReceipt: ethers.providers.TransactionReceipt;
+    if (secondLegRedeem.status === L1ToL2MessageStatus.REDEEMED) {
+      secondLegTxReceipt = secondLegRedeem.l2TxReceipt
+    }
+    else {
+      // see if there are any other calls to the l2 forwarder after the first leg redeem
+      const bridgedToL3Event = await this._findBridgedToL3Event(
+        this.getRecipientFromParentBridgeTx(depositTxReceipt),
+        firstLegRedeem.l2TxReceipt.blockNumber,
+        l2Provider
+      )
+      
+      // second leg has not completed
+      if (!bridgedToL3Event) {
+        return {
+          bridgeToL2: firstLegRedeem,
+          retryableL2ForwarderCall: secondLegRedeem,
+          otherL2ForwarderCall: undefined,
+          bridgeToL3: { status: L1ToL2MessageStatus.NOT_YET_CREATED },
+          completed: false,
+        }
+      }
+
+      // second leg has completed via another forwarder call
+      secondLegTxReceipt = await l2Provider.getTransactionReceipt(
+        bridgedToL3Event.transactionHash
+      )
+    }
+
+    // third leg must be created
+    const secondLegL1TxReceipt = new L1ContractCallTransactionReceipt(secondLegTxReceipt)
     const thirdLegMessage = (
-      await new L1TransactionReceipt(
-        secondLegRedeem.l2TxReceipt
-      ).getL1ToL2Messages(l3Provider)
+      await secondLegL1TxReceipt.getL1ToL2Messages(l3Provider)
     )[0]
 
     const thirdLegRedeem = await thirdLegMessage.getSuccessfulRedeem()
 
     return {
-      bridgeToL2Status: firstLegRedeem,
-      callToL2ForwarderStatus: secondLegRedeem,
-      bridgeToL3Status: thirdLegRedeem,
+      bridgeToL2: firstLegRedeem,
+      retryableL2ForwarderCall: secondLegRedeem,
+      otherL2ForwarderCall: secondLegRedeem.status === L1ToL2MessageStatus.REDEEMED ? undefined : secondLegL1TxReceipt,
+      bridgeToL3: thirdLegRedeem,
       completed: thirdLegRedeem.status === L1ToL2MessageStatus.REDEEMED,
     }
   }
@@ -782,7 +858,6 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
    */
   public async getDepositStatus(
     depositTxReceipt: L1ContractCallTransactionReceipt,
-    relayerInfo: RelayerInfo,
     l2Provider: JsonRpcProvider,
     l3Provider: Provider
   ): Promise<RelayedErc20DepositStatus> {
@@ -799,10 +874,7 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
       }
     }
 
-    const l2ForwarderAddress = await L2ForwarderFactory__factory.connect(
-      this.teleporterAddresses.l2ForwarderFactory,
-      l2Provider
-    ).l2ForwarderAddress(relayerInfo)
+    const l2ForwarderAddress = this.getRecipientFromParentBridgeTx(depositTxReceipt)
 
     const bridgeToL3Event = await this._findBridgedToL3Event(
       l2ForwarderAddress,
@@ -856,27 +928,6 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     )
 
     return l2ForwarderFactory.callForwarder(relayerInfo)
-  }
-
-  private async _findBridgedToL3Event(
-    l2ForwarderAddress: string,
-    fromL2Block: number,
-    l2Provider: JsonRpcProvider
-  ) {
-    const latest = await l2Provider.getBlockNumber()
-    const eventFetcher = new EventFetcher(l2Provider)
-
-    const events = await eventFetcher.getEvents(
-      L2Forwarder__factory,
-      contract => contract.filters.BridgedToL3(),
-      { address: l2ForwarderAddress, fromBlock: fromL2Block, toBlock: latest }
-    )
-
-    if (events.length === 0) {
-      return undefined
-    }
-
-    return events[0]
   }
 }
 
