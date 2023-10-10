@@ -546,7 +546,6 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
         to: params.to || (await l1Signer.getAddress()),
         amount: params.amount,
         gasParams,
-        randomNonce: ethers.utils.randomBytes(32),
       },
     ])
 
@@ -688,11 +687,9 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
       ),
       router: this.l3Network.tokenBridge.l1GatewayRouter,
       to: params.to || (await l1Signer.getAddress()),
-      amount: params.amount,
       gasLimit: populatedGasParams.l2l3TokenBridgeGasLimit,
       gasPrice: populatedGasParams.l3GasPrice,
       relayerPayment,
-      randomNonce: ethers.utils.randomBytes(32),
     }
 
     // figure out how much extra ETH we should pass along through the token bridge
