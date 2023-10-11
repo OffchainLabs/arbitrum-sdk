@@ -46,112 +46,165 @@ import { BridgedToL3Event } from '../abi/L2Forwarder'
 
 // todo: make sure all fields of all types are actually used
 
-/**
- * Some manual or hardcoded gas params for retryables. Includes gas limits and retryable sizes.
- */
 export interface ManualRetryableGasParams {
+  /**
+   * Gas limit for the L2ForwarderFactory contract call
+   */
   l2ForwarderFactoryGasLimit: BigNumber
+  /**
+   * Gas limit for the L1 to L2 token bridge ticket redemption
+   */
   l1l2TokenBridgeGasLimit: BigNumber
+  /**
+   * Gas limit for the L2 to L3 token bridge ticket redemption
+   */
   l2l3TokenBridgeGasLimit: BigNumber
+  /**
+   * Calldata size of the L1 to L2 token bridge ticket
+   */
   l1l2TokenBridgeRetryableSize: BigNumber
+  /**
+   * Calldata size of the L2 to L3 token bridge ticket
+   */
   l2l3TokenBridgeRetryableSize: BigNumber
 }
 
-export interface Erc20DepositRequestParamsOverrides {
+export interface Erc20DepositRequestParamsGasOverrides {
+  /**
+   * Optional L2 gas price override
+   */
   l2GasPrice?: PercentIncrease
+  /**
+   * Optional L3 gas price override
+   */
   l3GasPrice?: PercentIncrease
+  /**
+   * Optional manual gas params override. Not optional if the L1 to L2 or L2 to L3 gateways are not the default gateways.
+   */
   manualGasParams?: ManualRetryableGasParams
 }
 
-/**
- * Parameters for `Erc20L1L3Bridger` functions `getDepositRequest` and `deposit`
- * @param erc20L1Address  Address of L1 token
- * @param amount          Amount of L1 token to send to L3
- * @param to              Optional recipient on L3, defaults to signer's address
- * @param overrides       Optional overrides for retryable gas parameters and relayer payment
- */
 export interface Erc20DepositRequestParams {
+  /**
+   * Address of L1 token
+   */
   erc20L1Address: string
+  /**
+   * Amount of L1 token to send to L3
+   */
   amount: BigNumber
+  /**
+   * Optional recipient on L3, defaults to signer's address
+   */
   to?: string
-  overrides?: Erc20DepositRequestParamsOverrides
+  /**
+   * Optional overrides for retryable gas parameters
+   */
+  overrides?: Erc20DepositRequestParamsGasOverrides
 }
 
-/**
- * Parameters for `RelayedErc20L1L3Bridger` functions `getDepositRequest` and `deposit`
- */
 export interface RelayedErc20DepositRequestParams extends Erc20DepositRequestParams {
-  overrides?: Erc20DepositRequestParamsOverrides & {
+  /**
+   * Optional overrides for retryable gas parameters and relayer payment
+   */
+  overrides?: Erc20DepositRequestParamsGasOverrides & {
+    /**
+     * Optional relayer payment override
+     */
     relayerPayment?: PercentIncrease
   }
 }
 
-/**
- * Parameters for `EthL1L3Bridger` functions `getDepositRequest` and `deposit`
- * @param amount Amount of ETH to send to L3
- * @param to Optional recipient on L3, defaults to signer's address
- * @param l2RefundAddress Optional fee refund address on L2, defaults to signer's address
- * @param l2TicketGasOverrides Optional gas overrides for L1 to L2 message
- * @param l3TicketGasOverrides Optional gas overrides for L2 to L3 message
- */
 export interface EthDepositRequestParams {
+  /**
+   * Amount of ETH to send to L3
+   */
   amount: BigNumberish
-  to?: string // todo: document defaults in the function docstrings as well
+  /**
+   * Optional recipient on L3, defaults to signer's address
+   */
+  to?: string
+  /**
+   * Optional fee refund address on L2, defaults to signer's address
+   */
   l2RefundAddress?: string
+  /**
+   * Optional gas overrides for L1 to L2 message
+   */
   l2TicketGasOverrides?: Omit<GasOverrides, 'deposit'>
+  /**
+   * Optional gas overrides for L2 to L3 message
+   */
   l3TicketGasOverrides?: Omit<GasOverrides, 'deposit'>
 }
 
-/**
- * Return type for `BaseErc20L1L3Bridger.getDepositStatus`
- * @param bridgeToL2 The status + tx receipt of the first leg of the teleportation
- * @param l2ForwarderCall tx receipt of the second leg of the teleportation
- * @param bridgeToL3 The status + tx receipt of the third leg of the teleportation
- * @param completed Whether the teleportation has completed
- */
 interface BaseErc20DepositStatus {
+  /**
+   * Status + redemption tx receipt of the token bridge to L2
+   */
   bridgeToL2: L1ToL2MessageWaitResult
+  /**
+   * Tx receipt of the call to the L2Forwarder contract
+   */
   l2ForwarderCall: L1ContractCallTransactionReceipt | undefined
+  /**
+   * Status + redemption tx receipt of the token bridge to L3
+   */
   bridgeToL3: L1ToL2MessageWaitResult
+  /**
+   * Whether the teleportation has completed
+   */
   completed: boolean
 }
 
 /**
- * Return type for `Erc20L1L3Bridger.getDepositStatus`.
  * The second leg of the teleportation is a retryable tx, so this type includes the status of that tx as well as the base type's `l2ForwarderCall`.
  * This is because the retryable could possibly be frontran and the teleportation will still succeed.
- * @param retryableL2ForwarderCall The status + tx receipt of the second leg retryable
  */
 export interface Erc20DepositStatus extends BaseErc20DepositStatus {
+  /**
+   * The status + redemption tx receipt of the retryable to call the L2Forwarder contract
+   */
   retryableL2ForwarderCall: L1ToL2MessageWaitResult
 }
 
-/**
- * Return type for `RelayedErc20L1L3Bridger.getDepositStatus`
- */
 export type RelayedErc20DepositStatus = BaseErc20DepositStatus
 
-/**
- * Return type for `EthL1L3Bridger.getDepositStatus`
- */
 export type EthDepositStatus = {
+  /**
+   * Status + redemption tx receipt of the retryable ticket to L2
+   */
   l2RetryableStatus: L1ToL2MessageStatus
+  /**
+   * Status + redemption tx receipt of the retryable ticket to L3
+   */
   l3RetryableStatus: L1ToL2MessageStatus
+  /**
+   * Whether the teleportation has completed
+   */
   completed: boolean
 }
 
 /**
  * Information required by a relayer to relay a deposit.
+ * 
+ * This information is also required to rescue funds from the L2Forwarder contract.
  */
 export type RelayerInfo = L2ForwarderPredictor.L2ForwarderParamsStruct & {
   chainId: number
 }
 
-/**
- * Return type for `RelayedErc20L1L3Bridger.getDepositRequest`. Includes the transaction request as well as relayer info.
- */
 export type RelayedErc20DepositRequestResult = {
+  /**
+   * The transaction request to deposit ERC20 tokens to L3 using a relayer
+   */
   txRequest: L1ToL2TransactionRequest
+  /**
+   * Information required by the relayer to forward tokens from L2 to L3
+   * 
+   * IMPORTANT! DO NOT LOSE THIS INFO! 
+   * Once tokens are sent through the bridge, losing this information means losing the funds!
+   */
   relayerInfo: RelayerInfo
 }
 
@@ -159,7 +212,16 @@ export type RelayedErc20DepositRequestResult = {
  * Return type for `RelayedErc20L1L3Bridger.deposit`. Includes the transaction as well as relayer info.
  */
 export type RelayedErc20DepositResult = {
+  /**
+   * The transaction that was sent to deposit ERC20 tokens to L3 using a relayer
+   */
   tx: L1ContractCallTransaction
+  /**
+   * Information required by the relayer to forward tokens from L2 to L3
+   * 
+   * IMPORTANT! DO NOT LOSE THIS INFO! 
+   * Once tokens are sent through the bridge, losing this information means losing the funds!
+   */
   relayerInfo: RelayerInfo
 }
 
@@ -791,7 +853,10 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
   }
 
   /**
-   * Get a tx request to deposit tokens to L3. Will call the `L1GatewayRouter` directly 
+   * Get a tx request to deposit tokens to L3. Will call the `L1GatewayRouter` directly.
+   * 
+   * IMPORTANT! DO NOT LOSE THE RETURNED RELAYER INFO! 
+   * Once tokens are sent through the bridge, losing this information means losing the funds!
    */
   public async getDepositRequest(
     params: RelayedErc20DepositRequestParams,
@@ -891,6 +956,9 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
 
   /**
    * Deposit tokens to L3. Will call the `L1GatewayRouter` directly.
+   * 
+   * IMPORTANT! DO NOT LOSE THE RETURNED RELAYER INFO! 
+   * Once tokens are sent through the bridge, losing this information means losing the funds!
    */
   public async deposit(
     params: Erc20DepositRequestParams,
@@ -985,6 +1053,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
     const l2RefundAddress =
       params.l2RefundAddress || l1Address
 
+    // todo: use the ethBridger instead to create this request
     const l3TicketRequest = await L1ToL2MessageCreator.getTicketCreationRequest(
       {
         to: l3DestinationAddress,
@@ -1047,7 +1116,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
   ): Promise<EthDepositStatus> {
     await this._checkL2Network(l2Provider)
     await this._checkL3Network(l3Provider)
-    
+
     const l1l2Message = (await l1TxReceipt.getL1ToL2Messages(l2Provider))[0]
 
     const l1l2Redeem = await l1l2Message.getSuccessfulRedeem()
