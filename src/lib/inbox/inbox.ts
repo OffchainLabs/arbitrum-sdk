@@ -354,7 +354,7 @@ export class InboxTools {
    * you can call inboxTools.signChainMessage to get.
    * @returns The parentChain delayed inbox's transaction itself.
    */
-  public async sendChainSignedTx(
+  public async sendChildChainSignedTx(
     signedTx: string
   ): Promise<ContractTransaction | null> {
     const delayedInbox = IInbox__factory.connect(
@@ -382,7 +382,7 @@ export class InboxTools {
    * @param chainSigner ethers Signer type, used to sign Chain transaction
    * @returns The parentChain delayed inbox's transaction signed data.
    */
-  public async signChainTx(
+  public async signChildChainTx(
     txRequest: RequiredTransactionRequestType,
     chainSigner: Signer
   ): Promise<string> {
