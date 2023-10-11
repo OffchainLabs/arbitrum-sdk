@@ -50,7 +50,7 @@ type GasComponentsWithChainPart = {
   gasEstimateForL1: BigNumber
   baseFee: BigNumber
   l1BaseFeeEstimate: BigNumber
-  gasEstimateForChain: BigNumber
+  gasEstimateForChildChain: BigNumber
 }
 type RequiredTransactionRequestType = RequiredPick<
   TransactionRequest,
@@ -106,14 +106,14 @@ export class InboxTools {
     )
   }
 
-  //Check if this request is contract creation or not.
+  // Check if this request is contract creation or not.
   private isContractCreation(
-    transactionChainRequest: TransactionRequest
+    childChainTransactionRequest: TransactionRequest
   ): boolean {
     if (
-      transactionChainRequest.to === '0x' ||
-      !isDefined(transactionChainRequest.to) ||
-      transactionChainRequest.to === ethers.constants.AddressZero
+      childChainTransactionRequest.to === '0x' ||
+      !isDefined(childChainTransactionRequest.to) ||
+      childChainTransactionRequest.to === ethers.constants.AddressZero
     ) {
       return true
     }
@@ -126,7 +126,7 @@ export class InboxTools {
    * gas fee part.
    */
   private async estimateArbitrumGas(
-    transactionChainRequest: RequiredTransactionRequestType,
+    childChainTransactionRequest: RequiredTransactionRequestType,
     chainProvider: Provider
   ): Promise<GasComponentsWithChainPart> {
     const nodeInterface = NodeInterface__factory.connect(
@@ -134,20 +134,22 @@ export class InboxTools {
       chainProvider
     )
 
-    const contractCreation = this.isContractCreation(transactionChainRequest)
+    const contractCreation = this.isContractCreation(
+      childChainTransactionRequest
+    )
     const gasComponents = await nodeInterface.callStatic.gasEstimateComponents(
-      transactionChainRequest.to || ethers.constants.AddressZero,
+      childChainTransactionRequest.to || ethers.constants.AddressZero,
       contractCreation,
-      transactionChainRequest.data,
+      childChainTransactionRequest.data,
       {
-        from: transactionChainRequest.from,
-        value: transactionChainRequest.value,
+        from: childChainTransactionRequest.from,
+        value: childChainTransactionRequest.value,
       }
     )
-    const gasEstimateForChain: BigNumber = gasComponents.gasEstimate.sub(
+    const gasEstimateForChildChain: BigNumber = gasComponents.gasEstimate.sub(
       gasComponents.gasEstimateForL1
     )
-    return { ...gasComponents, gasEstimateForChain }
+    return { ...gasComponents, gasEstimateForChildChain }
   }
 
   /**
@@ -304,7 +306,7 @@ export class InboxTools {
 
   /**
    * Force includes all eligible messages in the delayed inbox.
-   * The inbox contract doesnt allow a message to be force-included
+   * The inbox contract doesn't allow a message to be force-included
    * until after a delay period has been completed.
    * @param messageDeliveredEvent Provide this to include all messages up to this one. Responsibility is on the caller to check the eligibility of this event.
    * @returns The force include transaction, or null if no eligible message were found for inclusion
@@ -347,7 +349,7 @@ export class InboxTools {
   }
 
   /**
-   * Send Chain signed tx using delayed inbox, which won't alias the sender's address
+   * Send Child Chain signed tx using delayed inbox, which won't alias the sender's address
    * It will be automatically included by the sequencer on Chain, if it isn't included
    * within 24 hours, you can force include it
    * @param signedTx A signed transaction which can be sent directly to network,
@@ -379,36 +381,36 @@ export class InboxTools {
    * contractCreation is true, no need provide tx.to. tx.gasPrice and tx.nonce
    * can be overrided. (You can also send contract creation transaction by set tx.to
    * to zero address or null)
-   * @param chainSigner ethers Signer type, used to sign Chain transaction
+   * @param childChainSigner ethers Signer type, used to sign Chain transaction
    * @returns The parentChain delayed inbox's transaction signed data.
    */
   public async signChildChainTx(
     txRequest: RequiredTransactionRequestType,
-    chainSigner: Signer
+    childChainSigner: Signer
   ): Promise<string> {
     const tx: RequiredTransactionRequestType = { ...txRequest }
     const contractCreation = this.isContractCreation(tx)
 
     if (!isDefined(tx.nonce)) {
-      tx.nonce = await chainSigner.getTransactionCount()
+      tx.nonce = await childChainSigner.getTransactionCount()
     }
 
     //check transaction type (if no transaction type or gasPrice provided, use eip1559 type)
     if (tx.type === 1 || tx.gasPrice) {
       if (tx.gasPrice) {
-        tx.gasPrice = await chainSigner.getGasPrice()
+        tx.gasPrice = await childChainSigner.getGasPrice()
       }
     } else {
       if (!isDefined(tx.maxFeePerGas)) {
-        const feeData = await chainSigner.getFeeData()
+        const feeData = await childChainSigner.getFeeData()
         tx.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas!
         tx.maxFeePerGas = feeData.maxFeePerGas!
       }
       tx.type = 2
     }
 
-    tx.from = await chainSigner.getAddress()
-    tx.chainId = await chainSigner.getChainId()
+    tx.from = await childChainSigner.getAddress()
+    tx.chainId = await childChainSigner.getChainId()
 
     // if this is contract creation, user might not input the to address,
     // however, it is needed when we call to estimateArbitrumGas, so
@@ -417,17 +419,17 @@ export class InboxTools {
       tx.to = ethers.constants.AddressZero
     }
 
-    //estimate gas on Chain
+    //estimate gas on child chain
     try {
       tx.gasLimit = (
-        await this.estimateArbitrumGas(tx, chainSigner.provider!)
-      ).gasEstimateForChain
+        await this.estimateArbitrumGas(tx, childChainSigner.provider!)
+      ).gasEstimateForChildChain
     } catch (error) {
       throw new ArbSdkError('execution failed (estimate gas failed)')
     }
     if (contractCreation) {
       delete tx.to
     }
-    return await chainSigner.signTransaction(tx)
+    return await childChainSigner.signTransaction(tx)
   }
 }
