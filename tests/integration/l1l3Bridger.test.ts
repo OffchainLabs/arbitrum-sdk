@@ -68,10 +68,8 @@ describe('L1 to L3 Bridging', () => {
         const depositTx = await l1l3Bridger.deposit(
           {
             amount: ethers.utils.parseEther('0.1'),
-            destinationOverrides: {
-              l3DestinationAddress: l3Recipient,
-              l2RefundAddress: l2RefundAddress,
-            },
+            to: l3Recipient,
+            l2RefundAddress: l2RefundAddress,
           },
           setup.l1Signer,
           setup.l2Signer.provider!,
