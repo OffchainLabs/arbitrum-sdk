@@ -1053,7 +1053,6 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
     const l2RefundAddress =
       params.l2RefundAddress || l1Address
 
-    // todo: use the ethBridger instead to create this request
     const l3TicketRequest = await L1ToL2MessageCreator.getTicketCreationRequest(
       {
         to: l3DestinationAddress,
