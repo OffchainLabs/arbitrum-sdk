@@ -2,8 +2,10 @@ import { Provider, TransactionRequest } from '@ethersproject/abstract-provider'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { BigNumber, BigNumberish, Signer, ethers } from 'ethers'
 import { ERC20 } from '../abi/ERC20'
+import { BridgedToL3Event } from '../abi/L2Forwarder'
 import { L2ForwarderPredictor } from '../abi/L2ForwarderPredictor'
 import { L2GatewayToken } from '../abi/L2GatewayToken'
+import { Teleporter } from '../abi/Teleporter'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { L1GatewayRouter__factory } from '../abi/factories/L1GatewayRouter__factory'
 import { L2ForwarderFactory__factory } from '../abi/factories/L2ForwarderFactory__factory'
@@ -41,10 +43,6 @@ import {
 } from '../message/L1Transaction'
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { Erc20Bridger, TokenApproveParams } from './erc20Bridger'
-import { Teleporter } from '../abi/Teleporter'
-import { BridgedToL3Event } from '../abi/L2Forwarder'
-
-// todo: make sure all fields of all types are actually used
 
 export interface ManualRetryableGasParams {
   /**
