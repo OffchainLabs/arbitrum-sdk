@@ -30,7 +30,7 @@ import { RequiredPick } from '../utils/types'
 import { MessageDeliveredEvent } from '../abi/Bridge'
 import {
   l1Networks as parentChainNetworks,
-  L2Network as ChainNetwork,
+  L2Network as ArbitrumChain,
 } from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
@@ -65,15 +65,15 @@ export class InboxTools {
 
   constructor(
     private readonly parentChainSigner: Signer,
-    private readonly chainNetwork: ChainNetwork
+    private readonly childChain: ArbitrumChain
   ) {
     this.parentChainProvider = SignerProviderUtils.getProviderOrThrow(
       this.parentChainSigner
     )
-    this.parentChainNetwork = parentChainNetworks[chainNetwork.partnerChainID]
+    this.parentChainNetwork = parentChainNetworks[childChain.partnerChainID]
     if (!this.parentChainNetwork)
       throw new ArbSdkError(
-        `ParentChainNetwork not found for chain id: ${chainNetwork.partnerChainID}.`
+        `ParentChainNetwork not found for chain id: ${childChain.partnerChainID}.`
       )
   }
 
@@ -157,7 +157,7 @@ export class InboxTools {
    */
   private async getForceIncludableBlockRange(blockNumberRangeSize: number) {
     const sequencerInbox = SequencerInbox__factory.connect(
-      this.chainNetwork.ethBridge.sequencerInbox,
+      this.childChain.ethBridge.sequencerInbox,
       this.parentChainProvider
     )
 
@@ -266,7 +266,7 @@ export class InboxTools {
     rangeMultiplier = 2
   ): Promise<ForceInclusionParams | null> {
     const bridge = Bridge__factory.connect(
-      this.chainNetwork.ethBridge.bridge,
+      this.childChain.ethBridge.bridge,
       this.parentChainProvider
     )
 
@@ -285,7 +285,7 @@ export class InboxTools {
     // take the last event - as including this one will include all previous events
     const eventInfo = events[events.length - 1]
     const sequencerInbox = SequencerInbox__factory.connect(
-      this.chainNetwork.ethBridge.sequencerInbox,
+      this.childChain.ethBridge.sequencerInbox,
       this.parentChainProvider
     )
     // has the sequencer inbox already read this latest message
@@ -325,7 +325,7 @@ export class InboxTools {
     overrides?: Overrides
   ): Promise<ContractTransaction | null> {
     const sequencerInbox = SequencerInbox__factory.connect(
-      this.chainNetwork.ethBridge.sequencerInbox,
+      this.childChain.ethBridge.sequencerInbox,
       this.parentChainSigner
     )
     const eventInfo =
@@ -358,7 +358,7 @@ export class InboxTools {
     signedTx: string
   ): Promise<ContractTransaction | null> {
     const delayedInbox = IInbox__factory.connect(
-      this.chainNetwork.ethBridge.inbox,
+      this.childChain.ethBridge.inbox,
       this.parentChainSigner
     )
 
