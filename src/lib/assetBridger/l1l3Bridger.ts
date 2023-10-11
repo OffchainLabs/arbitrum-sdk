@@ -113,7 +113,7 @@ export interface Erc20DepositStatus extends BaseErc20DepositStatus {
   retryableL2ForwarderCall: L1ToL2MessageWaitResult
 }
 
-export interface RelayedErc20DepositStatus extends BaseErc20DepositStatus {}
+export type RelayedErc20DepositStatus = BaseErc20DepositStatus
 
 export type RelayerInfo = L2ForwarderPredictor.L2ForwarderParamsStruct & {
   chainId: number
@@ -204,9 +204,6 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     l2l3TokenBridgeRetryableSize: BigNumber.from(1000),
   } as const
 
-  public readonly defaultRelayerPaymentPercentIncrease: BigNumber =
-    BigNumber.from(30)
-
   public constructor(public readonly l3Network: L2Network) {
     super(l3Network)
 
@@ -221,9 +218,6 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
 
   /**
    * Get the corresponding L2 token address for the provided L1 token
-   * @param erc20L1Address
-   * @param l1Provider
-   * @returns
    */
   public async getL2ERC20Address(
     erc20L1Address: string,
@@ -239,10 +233,6 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
 
   /**
    * Get the corresponding L3 token address for the provided L1 token
-   * @param erc20L1Address
-   * @param l1Provider
-   * @param l2Provider
-   * @returns
    */
   public async getL3ERC20Address(
     erc20L1Address: string,
@@ -492,9 +482,9 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     }
 
     // second leg has completed via another forwarder call
-    const secondLegTxReceipt = new L1ContractCallTransactionReceipt(await l2Provider.getTransactionReceipt(
-      bridgedToL3Event.transactionHash
-    ))
+    const secondLegTxReceipt = new L1ContractCallTransactionReceipt(
+      await l2Provider.getTransactionReceipt(bridgedToL3Event.transactionHash)
+    )
 
     const thirdLegMessage = (
       await secondLegTxReceipt.getL1ToL2Messages(l3Provider)
@@ -719,7 +709,9 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
       l3Provider
     )
 
-    const secondLegRetryableRedeem = await (await depositTxReceipt.getL1ToL2Messages(l2Provider))[1].getSuccessfulRedeem()
+    const secondLegRetryableRedeem = await (
+      await depositTxReceipt.getL1ToL2Messages(l2Provider)
+    )[1].getSuccessfulRedeem()
 
     return {
       ...baseStatus,
@@ -729,6 +721,12 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
 }
 
 export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
+  /**
+   * The default percent increase for the relayer payment
+   */
+  public readonly defaultRelayerPaymentPercentIncrease: BigNumber =
+    BigNumber.from(30)
+
   public async getApproveTokenRequest(
     params: TokenApproveParams,
     l1Provider: Provider
@@ -890,9 +888,11 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     relayerInfo: RelayerInfo,
     l2Signer: Signer
   ): Promise<ethers.ContractTransaction> {
-    if (await l2Signer.getChainId() !== relayerInfo.chainId) {
+    if ((await l2Signer.getChainId()) !== relayerInfo.chainId) {
       throw new ArbSdkError(
-        `L2 signer chain id ${await l2Signer.getChainId()} does not match correct chain id ${relayerInfo.chainId}`
+        `L2 signer chain id ${await l2Signer.getChainId()} does not match correct chain id ${
+          relayerInfo.chainId
+        }`
       )
     }
 

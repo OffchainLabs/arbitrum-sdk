@@ -226,12 +226,14 @@ describe('L1 to L3 Bridging', () => {
 
       it('approves', async () => {
         // approve the teleporter
-        await (await l1l3Bridger.approveToken(
-          {
-            erc20L1Address: l1Token.address,
-          },
-          setup.l1Signer
-        )).wait()
+        await (
+          await l1l3Bridger.approveToken(
+            {
+              erc20L1Address: l1Token.address,
+            },
+            setup.l1Signer
+          )
+        ).wait()
       })
 
       // should throw if gas overrides not passed when using non default gateway
@@ -284,7 +286,9 @@ describe('L1 to L3 Bridging', () => {
       })
 
       it('should report correct status when second leg is frontran', async () => {
-        const adjustedL3GasPrice = (await setup.l3Signer.provider!.getGasPrice()).mul(3)
+        const adjustedL3GasPrice = (
+          await setup.l3Signer.provider!.getGasPrice()
+        ).mul(3)
         const depositTx = await l1l3Bridger.deposit(
           {
             erc20L1Address: l1Token.address,
@@ -292,13 +296,13 @@ describe('L1 to L3 Bridging', () => {
             overrides: {
               manualGasParams: {
                 ...l1l3Bridger.defaultRetryableGasParams,
-                l2ForwarderFactoryGasLimit: BigNumber.from(10) // make sure the second leg retryable fails
+                l2ForwarderFactoryGasLimit: BigNumber.from(10), // make sure the second leg retryable fails
               },
               l3GasPrice: {
                 base: adjustedL3GasPrice,
-                percentIncrease: BigNumber.from(0)
-              }
-            }
+                percentIncrease: BigNumber.from(0),
+              },
+            },
           },
           setup.l1Signer,
           setup.l2Signer.provider!,
@@ -323,22 +327,30 @@ describe('L1 to L3 Bridging', () => {
           l2JsonRpcProvider,
           setup.l3Signer.provider!
         )
-        expect(statusAfterLeg1.retryableL2ForwarderCall.status).to.eq(L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2)
+        expect(statusAfterLeg1.retryableL2ForwarderCall.status).to.eq(
+          L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+        )
         expect(statusAfterLeg1.l2ForwarderCall).to.be.undefined
-        expect(statusAfterLeg1.bridgeToL3.status).to.eq(L1ToL2MessageStatus.NOT_YET_CREATED)
+        expect(statusAfterLeg1.bridgeToL3.status).to.eq(
+          L1ToL2MessageStatus.NOT_YET_CREATED
+        )
 
         // relay the second leg (use the RelayedErc20L1L3Bridger to do this)
         const l1SignerAddr = await setup.l1Signer.getAddress()
         const relayTx = await RelayedErc20L1L3Bridger.relayDeposit(
           {
             owner: new Address(l1SignerAddr).applyAlias().value,
-            token: await l1l3Bridger.getL2ERC20Address(l1Token.address, setup.l1Signer.provider!),
+            token: await l1l3Bridger.getL2ERC20Address(
+              l1Token.address,
+              setup.l1Signer.provider!
+            ),
             router: setup.l3Network.tokenBridge.l1GatewayRouter,
             to: l1SignerAddr, // here we're doubling this test to make sure it defaults to the signer when "to" is not passed to deposit
-            gasLimit: l1l3Bridger.defaultRetryableGasParams.l2l3TokenBridgeGasLimit,
+            gasLimit:
+              l1l3Bridger.defaultRetryableGasParams.l2l3TokenBridgeGasLimit,
             gasPrice: adjustedL3GasPrice,
             relayerPayment: BigNumber.from(0),
-            chainId: setup.l2Network.chainID
+            chainId: setup.l2Network.chainID,
           },
           setup.l2Signer
         )
@@ -351,10 +363,18 @@ describe('L1 to L3 Bridging', () => {
           l2JsonRpcProvider,
           setup.l3Signer.provider!
         )
-        expect(statusAfterLeg2.bridgeToL2.status).to.eq(L1ToL2MessageStatus.REDEEMED)
-        expect(statusAfterLeg2.retryableL2ForwarderCall.status).to.eq(L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2)
-        expect(statusAfterLeg2.l2ForwarderCall?.transactionHash).to.eq(relayTx.hash)
-        expect(statusAfterLeg2.bridgeToL3.status).to.eq(L1ToL2MessageStatus.NOT_YET_CREATED)
+        expect(statusAfterLeg2.bridgeToL2.status).to.eq(
+          L1ToL2MessageStatus.REDEEMED
+        )
+        expect(statusAfterLeg2.retryableL2ForwarderCall.status).to.eq(
+          L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+        )
+        expect(statusAfterLeg2.l2ForwarderCall?.transactionHash).to.eq(
+          relayTx.hash
+        )
+        expect(statusAfterLeg2.bridgeToL3.status).to.eq(
+          L1ToL2MessageStatus.NOT_YET_CREATED
+        )
 
         // make sure we get the correct final result on L3
         await poll(async () => {
@@ -372,9 +392,15 @@ describe('L1 to L3 Bridging', () => {
           setup.l3Signer.provider!
         )
         expect(statusAfterLeg3.completed).to.be.true
-        expect(statusAfterLeg3.retryableL2ForwarderCall.status).to.eq(L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2)
-        expect(statusAfterLeg3.l2ForwarderCall?.transactionHash).to.eq(relayTx.hash)
-        expect(statusAfterLeg3.bridgeToL3.status).to.eq(L1ToL2MessageStatus.REDEEMED)
+        expect(statusAfterLeg3.retryableL2ForwarderCall.status).to.eq(
+          L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+        )
+        expect(statusAfterLeg3.l2ForwarderCall?.transactionHash).to.eq(
+          relayTx.hash
+        )
+        expect(statusAfterLeg3.bridgeToL3.status).to.eq(
+          L1ToL2MessageStatus.REDEEMED
+        )
       })
     })
 
