@@ -95,26 +95,25 @@ export interface EthDepositRequestParams {
 
 /**
  * @param bridgeToL2 The status + tx receipt of the first leg of the teleportation
- * @param retryableL2ForwarderCall The status + tx receipt of the second leg of the teleportation
- * @param otherL2ForwarderCall Since calling the L2 forwarder is permissionless, the retryable can be frontran.
- * In this case then retryableL2ForwarderCall will not redeem, but that's okay beacause ETH and tokens will still be forwarded to L3.
+ * @param l2ForwarderCall tx receipt of the second leg of the teleportation
  * @param bridgeToL3 The status + tx receipt of the third leg of the teleportation
  * @param completed Whether the teleportation has completed
  */
-export interface Erc20DepositStatus {
-  bridgeToL2: L1ToL2MessageWaitResult
-  retryableL2ForwarderCall: L1ToL2MessageWaitResult
-  otherL2ForwarderCall: L1ContractCallTransactionReceipt | undefined
-  bridgeToL3: L1ToL2MessageWaitResult
-  completed: boolean
-}
-
-export interface RelayedErc20DepositStatus {
+interface BaseErc20DepositStatus {
   bridgeToL2: L1ToL2MessageWaitResult
   l2ForwarderCall: L1ContractCallTransactionReceipt | undefined
   bridgeToL3: L1ToL2MessageWaitResult
   completed: boolean
 }
+
+/**
+ * @param retryableL2ForwarderCall The status + tx receipt of the second leg retryable
+ */
+export interface Erc20DepositStatus extends BaseErc20DepositStatus {
+  retryableL2ForwarderCall: L1ToL2MessageWaitResult
+}
+
+export interface RelayedErc20DepositStatus extends BaseErc20DepositStatus {}
 
 export type RelayerInfo = L2ForwarderPredictor.L2ForwarderParamsStruct & {
   chainId: number
@@ -445,6 +444,72 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     return ethers.utils.getAddress(bytes32UserTo.slice(26))
   }
 
+  /**
+   * Get the status of a deposit given an L1 tx receipt.
+   *
+   * Note: This function does not verify that the tx is actually a deposit tx.
+   *
+   * @param depositTxReceipt
+   * @param l2Provider
+   * @param l3Provider
+   * @returns
+   */
+  protected async _getDepositStatus(
+    depositTxReceipt: L1ContractCallTransactionReceipt,
+    l2Provider: JsonRpcProvider,
+    l3Provider: Provider
+  ): Promise<BaseErc20DepositStatus> {
+    await this._checkL2Network(l2Provider)
+    await this._checkL3Network(l3Provider)
+
+    const l1l2Messages = await depositTxReceipt.getL1ToL2Messages(l2Provider)
+    const firstLegRedeem = await l1l2Messages[0].getSuccessfulRedeem()
+
+    if (firstLegRedeem.status !== L1ToL2MessageStatus.REDEEMED) {
+      return {
+        bridgeToL2: firstLegRedeem,
+        l2ForwarderCall: undefined,
+        bridgeToL3: { status: L1ToL2MessageStatus.NOT_YET_CREATED },
+        completed: false,
+      }
+    }
+
+    // see if there are any other calls to the l2 forwarder after the first leg redeem
+    const bridgedToL3Event = await this._findBridgedToL3Event(
+      this.getRecipientFromParentBridgeTx(depositTxReceipt),
+      firstLegRedeem.l2TxReceipt.blockNumber,
+      l2Provider
+    )
+
+    // second leg has not completed
+    if (!bridgedToL3Event) {
+      return {
+        bridgeToL2: firstLegRedeem,
+        l2ForwarderCall: undefined,
+        bridgeToL3: { status: L1ToL2MessageStatus.NOT_YET_CREATED },
+        completed: false,
+      }
+    }
+
+    // second leg has completed via another forwarder call
+    const secondLegTxReceipt = new L1ContractCallTransactionReceipt(await l2Provider.getTransactionReceipt(
+      bridgedToL3Event.transactionHash
+    ))
+
+    const thirdLegMessage = (
+      await secondLegTxReceipt.getL1ToL2Messages(l3Provider)
+    )[0]
+
+    const thirdLegRedeem = await thirdLegMessage.getSuccessfulRedeem()
+
+    return {
+      bridgeToL2: firstLegRedeem,
+      l2ForwarderCall: secondLegTxReceipt,
+      bridgeToL3: thirdLegRedeem,
+      completed: thirdLegRedeem.status === L1ToL2MessageStatus.REDEEMED,
+    }
+  }
+
   private async _tokenIsDisabled(
     tokenAddress: string,
     gatewayRouterAddress: string,
@@ -648,70 +713,17 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
     l2Provider: JsonRpcProvider,
     l3Provider: Provider
   ): Promise<Erc20DepositStatus> {
-    await this._checkL2Network(l2Provider)
-    await this._checkL3Network(l3Provider)
-
-    const l1l2Messages = await depositTxReceipt.getL1ToL2Messages(l2Provider)
-    const firstLegRedeem = await l1l2Messages[0].getSuccessfulRedeem()
-    const secondLegRedeem = await l1l2Messages[1].getSuccessfulRedeem()
-
-    if (firstLegRedeem.status !== L1ToL2MessageStatus.REDEEMED) {
-      return {
-        bridgeToL2: firstLegRedeem,
-        retryableL2ForwarderCall: secondLegRedeem,
-        otherL2ForwarderCall: undefined,
-        bridgeToL3: { status: L1ToL2MessageStatus.NOT_YET_CREATED },
-        completed: false,
-      }
-    }
-
-    let secondLegTxReceipt: ethers.providers.TransactionReceipt
-    if (secondLegRedeem.status === L1ToL2MessageStatus.REDEEMED) {
-      secondLegTxReceipt = secondLegRedeem.l2TxReceipt
-    } else {
-      // see if there are any other calls to the l2 forwarder after the first leg redeem
-      const bridgedToL3Event = await this._findBridgedToL3Event(
-        this.getRecipientFromParentBridgeTx(depositTxReceipt),
-        firstLegRedeem.l2TxReceipt.blockNumber,
-        l2Provider
-      )
-
-      // second leg has not completed
-      if (!bridgedToL3Event) {
-        return {
-          bridgeToL2: firstLegRedeem,
-          retryableL2ForwarderCall: secondLegRedeem,
-          otherL2ForwarderCall: undefined,
-          bridgeToL3: { status: L1ToL2MessageStatus.NOT_YET_CREATED },
-          completed: false,
-        }
-      }
-
-      // second leg has completed via another forwarder call
-      secondLegTxReceipt = await l2Provider.getTransactionReceipt(
-        bridgedToL3Event.transactionHash
-      )
-    }
-
-    // third leg must be created
-    const secondLegL1TxReceipt = new L1ContractCallTransactionReceipt(
-      secondLegTxReceipt
+    const baseStatus = await this._getDepositStatus(
+      depositTxReceipt,
+      l2Provider,
+      l3Provider
     )
-    const thirdLegMessage = (
-      await secondLegL1TxReceipt.getL1ToL2Messages(l3Provider)
-    )[0]
 
-    const thirdLegRedeem = await thirdLegMessage.getSuccessfulRedeem()
+    const secondLegRetryableRedeem = await (await depositTxReceipt.getL1ToL2Messages(l2Provider))[1].getSuccessfulRedeem()
 
     return {
-      bridgeToL2: firstLegRedeem,
-      retryableL2ForwarderCall: secondLegRedeem,
-      otherL2ForwarderCall:
-        secondLegRedeem.status === L1ToL2MessageStatus.REDEEMED
-          ? undefined
-          : secondLegL1TxReceipt,
-      bridgeToL3: thirdLegRedeem,
-      completed: thirdLegRedeem.status === L1ToL2MessageStatus.REDEEMED,
+      ...baseStatus,
+      retryableL2ForwarderCall: secondLegRetryableRedeem,
     }
   }
 }
@@ -865,55 +877,12 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
    * @param l2Provider
    * @param l3Provider
    */
-  public async getDepositStatus(
+  public getDepositStatus(
     depositTxReceipt: L1ContractCallTransactionReceipt,
     l2Provider: JsonRpcProvider,
     l3Provider: Provider
   ): Promise<RelayedErc20DepositStatus> {
-    const firstLegRedeem = await (
-      await depositTxReceipt.getL1ToL2Messages(l2Provider)
-    )[0].getSuccessfulRedeem()
-
-    if (firstLegRedeem.status !== L1ToL2MessageStatus.REDEEMED) {
-      return {
-        bridgeToL2: firstLegRedeem,
-        l2ForwarderCall: undefined,
-        bridgeToL3: { status: L1ToL2MessageStatus.NOT_YET_CREATED },
-        completed: false,
-      }
-    }
-
-    const l2ForwarderAddress =
-      this.getRecipientFromParentBridgeTx(depositTxReceipt)
-
-    const bridgeToL3Event = await this._findBridgedToL3Event(
-      l2ForwarderAddress,
-      firstLegRedeem.l2TxReceipt.blockNumber,
-      l2Provider
-    )
-
-    if (bridgeToL3Event === undefined) {
-      return {
-        bridgeToL2: firstLegRedeem,
-        l2ForwarderCall: undefined,
-        bridgeToL3: { status: L1ToL2MessageStatus.NOT_YET_CREATED },
-        completed: false,
-      }
-    }
-
-    // get tx or receipt from the event
-    const tx = await l2Provider.getTransaction(bridgeToL3Event.transactionHash)
-    const receipt = new L1ContractCallTransactionReceipt(await tx.wait())
-    const l2l3Redeem = await (
-      await receipt.getL1ToL2Messages(l3Provider)
-    )[0].getSuccessfulRedeem()
-
-    return {
-      bridgeToL2: firstLegRedeem,
-      l2ForwarderCall: receipt,
-      bridgeToL3: l2l3Redeem,
-      completed: l2l3Redeem.status === L1ToL2MessageStatus.REDEEMED,
-    }
+    return this._getDepositStatus(depositTxReceipt, l2Provider, l3Provider)
   }
 
   // takes: deposit tx hash, l2 forwarder params, l2 signer
@@ -921,6 +890,12 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     relayerInfo: RelayerInfo,
     l2Signer: Signer
   ): Promise<ethers.ContractTransaction> {
+    if (await l2Signer.getChainId() !== relayerInfo.chainId) {
+      throw new ArbSdkError(
+        `L2 signer chain id ${await l2Signer.getChainId()} does not match correct chain id ${relayerInfo.chainId}`
+      )
+    }
+
     const teleporterAddresses =
       l2Networks[relayerInfo.chainId].teleporterAddresses
 

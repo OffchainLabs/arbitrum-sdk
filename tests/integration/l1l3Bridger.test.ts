@@ -324,7 +324,7 @@ describe('L1 to L3 Bridging', () => {
           setup.l3Signer.provider!
         )
         expect(statusAfterLeg1.retryableL2ForwarderCall.status).to.eq(L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2)
-        expect(statusAfterLeg1.otherL2ForwarderCall).to.be.undefined
+        expect(statusAfterLeg1.l2ForwarderCall).to.be.undefined
         expect(statusAfterLeg1.bridgeToL3.status).to.eq(L1ToL2MessageStatus.NOT_YET_CREATED)
 
         // relay the second leg (use the RelayedErc20L1L3Bridger to do this)
@@ -353,7 +353,7 @@ describe('L1 to L3 Bridging', () => {
         )
         expect(statusAfterLeg2.bridgeToL2.status).to.eq(L1ToL2MessageStatus.REDEEMED)
         expect(statusAfterLeg2.retryableL2ForwarderCall.status).to.eq(L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2)
-        expect(statusAfterLeg2.otherL2ForwarderCall?.transactionHash).to.eq(relayTx.hash)
+        expect(statusAfterLeg2.l2ForwarderCall?.transactionHash).to.eq(relayTx.hash)
         expect(statusAfterLeg2.bridgeToL3.status).to.eq(L1ToL2MessageStatus.NOT_YET_CREATED)
 
         // make sure we get the correct final result on L3
@@ -373,7 +373,7 @@ describe('L1 to L3 Bridging', () => {
         )
         expect(statusAfterLeg3.completed).to.be.true
         expect(statusAfterLeg3.retryableL2ForwarderCall.status).to.eq(L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2)
-        expect(statusAfterLeg3.otherL2ForwarderCall?.transactionHash).to.eq(relayTx.hash)
+        expect(statusAfterLeg3.l2ForwarderCall?.transactionHash).to.eq(relayTx.hash)
         expect(statusAfterLeg3.bridgeToL3.status).to.eq(L1ToL2MessageStatus.REDEEMED)
       })
     })
