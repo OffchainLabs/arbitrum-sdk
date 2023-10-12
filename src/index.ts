@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-export { Erc20L1L3Bridger } from './lib/assetBridger/l1l3Bridger'
+export { Erc20L1L3Bridger, RelayedErc20L1L3Bridger, EthL1L3Bridger } from './lib/assetBridger/l1l3Bridger'
 export { EthBridger } from './lib/assetBridger/ethBridger'
 export { Erc20Bridger } from './lib/assetBridger/erc20Bridger'
 export {
