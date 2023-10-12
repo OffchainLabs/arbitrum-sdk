@@ -115,13 +115,17 @@ export type Erc20DepositRequestParams = {
 
 export type RelayedErc20DepositRequestParams = Erc20DepositRequestParams & {
   /**
-   * Optional overrides for retryable gas parameters and relayer payment
+   * Optional overrides for retryable gas parameters, relayer payment and L2Forwarder owner
    */
   overrides?: BaseErc20DepositRequestParamsGasOverrides & {
     /**
      * Optional relayer payment override
      */
     relayerPayment?: PercentIncrease
+    /**
+     * Optional L2Forwarder owner override. This L2 account is able to make arbitrary calls from the L2Forwarder in order to rescue funds.
+     */
+    l2ForwarderOwner?: string
   }
 }
 
@@ -764,8 +768,10 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
     ])
 
     const adjustedL1GasPrice = this._percentIncrease(
-      params.overrides?.l1GasPrice?.base || (await l1Signer.provider!.getGasPrice()),
-      params.overrides?.l1GasPrice?.percentIncrease || this.defaultGasPricePercentIncrease
+      params.overrides?.l1GasPrice?.base ||
+        (await l1Signer.provider!.getGasPrice()),
+      params.overrides?.l1GasPrice?.percentIncrease ||
+        this.defaultGasPricePercentIncrease
     )
 
     const calculatedGasCosts = await teleporter.calculateRetryableGasCosts(
@@ -898,7 +904,8 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     )
 
     const l2ForwarderParams: L2ForwarderPredictor.L2ForwarderParamsStruct = {
-      owner: await l1Signer.getAddress(), // todo: add override
+      owner:
+        params.overrides?.l2ForwarderOwner || (await l1Signer.getAddress()),
       token: await this.getL2ERC20Address(
         params.erc20L1Address,
         l1Signer.provider!
