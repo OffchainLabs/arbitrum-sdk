@@ -278,9 +278,7 @@ describe('L1 to L3 Bridging', () => {
 
         const l3Balance = await l3Token.balanceOf(l3Recipient)
 
-        if (!l3Balance.eq(ethers.utils.parseEther('1').sub(1))) {
-          throw new Error('L3 balance is incorrect')
-        }
+        expect(l3Balance.eq(ethers.utils.parseEther('1'))).to.be.true
       })
 
       it('should report correct status when second leg is frontran', async () => {
