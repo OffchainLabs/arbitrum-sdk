@@ -44,7 +44,11 @@ import {
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { Erc20Bridger, TokenApproveParams } from './erc20Bridger'
 
-export interface ManualRetryableGasParams {
+/**
+ * Manual gas parameters for the L1 to L2 and L2 to L3 tickets.
+ * Percent increase is not applied to these values.
+ */
+export type ManualRetryableGasParams = {
   /**
    * Gas limit for the L2ForwarderFactory contract call
    */
@@ -67,7 +71,7 @@ export interface ManualRetryableGasParams {
   l2l3TokenBridgeRetryableSize: BigNumber
 }
 
-export interface Erc20DepositRequestParamsGasOverrides {
+export type Erc20DepositRequestParamsGasOverrides = {
   /**
    * Optional L2 gas price override
    */
@@ -82,7 +86,7 @@ export interface Erc20DepositRequestParamsGasOverrides {
   manualGasParams?: ManualRetryableGasParams
 }
 
-export interface Erc20DepositRequestParams {
+export type Erc20DepositRequestParams = {
   /**
    * Address of L1 token
    */
@@ -101,7 +105,7 @@ export interface Erc20DepositRequestParams {
   overrides?: Erc20DepositRequestParamsGasOverrides
 }
 
-export interface RelayedErc20DepositRequestParams extends Erc20DepositRequestParams {
+export type RelayedErc20DepositRequestParams = Erc20DepositRequestParams & {
   /**
    * Optional overrides for retryable gas parameters and relayer payment
    */
@@ -113,7 +117,7 @@ export interface RelayedErc20DepositRequestParams extends Erc20DepositRequestPar
   }
 }
 
-export interface EthDepositRequestParams {
+export type EthDepositRequestParams = {
   /**
    * Amount of ETH to send to L3
    */
@@ -136,7 +140,7 @@ export interface EthDepositRequestParams {
   l3TicketGasOverrides?: Omit<GasOverrides, 'deposit'>
 }
 
-interface BaseErc20DepositStatus {
+type BaseErc20DepositStatus = {
   /**
    * Status + redemption tx receipt of the token bridge to L2
    */
@@ -156,10 +160,10 @@ interface BaseErc20DepositStatus {
 }
 
 /**
- * The second leg of the teleportation is a retryable tx, so this type includes the status of that tx as well as the base type's `l2ForwarderCall`.
+ * When using the L1 Teleporter the second leg is a retryable tx, so this type includes the status of that tx as well as the base type's `l2ForwarderCall`.
  * This is because the retryable could possibly be frontran and the teleportation will still succeed.
  */
-export interface Erc20DepositStatus extends BaseErc20DepositStatus {
+export type Erc20DepositStatus = BaseErc20DepositStatus & {
   /**
    * The status + redemption tx receipt of the retryable to call the L2Forwarder contract
    */
@@ -565,7 +569,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
       }
     }
 
-    // second leg has completed via another forwarder call
+    // second leg has completed
     const secondLegTxReceipt = new L1ContractCallTransactionReceipt(
       await l2Provider.getTransactionReceipt(bridgedToL3Event.transactionHash)
     )
@@ -618,7 +622,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     if (!manualGasParams) {
       // make sure both gateways are default
       if (
-        !(await this.isL1L2GatewayDefault(params.erc20L1Address, l1Provider))
+        !(await this.isL1L2GatewayDefault(params.erc20L1Address, l1Provider)) // todo: test this
       ) {
         throw new ArbSdkError(
           `Cannot estimate gas for custom l1l2 gateway, please provide gas params`
@@ -702,7 +706,7 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
   }
 
   /**
-   * Approve tokens for teleportation. The tokens will be approved to be spent by the `Teleporter` on L1. 
+   * Approve tokens for teleportation. The tokens will be approved to be spent by the L1 `Teleporter`
    */
   public async approveToken(
     params: TokenApproveParams,
@@ -755,7 +759,7 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
 
     const calculatedGasCosts = await teleporter.calculateRetryableGasCosts(
       this.l2Network.ethBridge.inbox,
-      this._percentIncrease(l1GasPrice, this.defaultGasPricePercentIncrease),
+      this._percentIncrease(l1GasPrice, this.defaultGasPricePercentIncrease), // todo: this should have overrides
       gasParams
     )
 
@@ -882,9 +886,8 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
         this.defaultRelayerPaymentPercentIncrease
     )
 
-    // calculate l2 forwarder address
     const l2ForwarderParams: L2ForwarderPredictor.L2ForwarderParamsStruct = {
-      owner: await l1Signer.getAddress(),
+      owner: await l1Signer.getAddress(), // todo: add override
       token: await this.getL2ERC20Address(
         params.erc20L1Address,
         l1Signer.provider!
@@ -897,7 +900,7 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     }
 
     // figure out how much extra ETH we should pass along through the token bridge
-    // populatedGasParams has already applied a percent increase to gas prices
+    // _populateGasParams has already applied a percent increase to gas prices
     const teleporter = Teleporter__factory.connect(
       this.teleporterAddresses.l1Teleporter,
       l1Signer
@@ -915,6 +918,8 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
       l2ForwarderParams,
       l2Provider
     )
+
+    // parameters cfor Erc20Bridger.getDepositRequest
     const baseDepositRequestParams = {
       amount: BigNumber.from(params.amount),
       l1Provider: l1Signer.provider!,
@@ -942,6 +947,8 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
         },
       },
     })
+
+    // todo: double check here that the computed l2 forwarder is correct
 
     return {
       relayerInfo: {
@@ -1001,20 +1008,15 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
   ): Promise<ethers.ContractTransaction> {
     if ((await l2Signer.getChainId()) !== relayerInfo.chainId) {
       throw new ArbSdkError(
-        `L2 signer chain id ${await l2Signer.getChainId()} does not match correct chain id ${
-          relayerInfo.chainId
-        }`
+        `L2 signer chain id ${await l2Signer.getChainId()} does not match correct chain id ${relayerInfo.chainId}`
       )
     }
 
-    const teleporterAddresses =
-      l2Networks[relayerInfo.chainId].teleporterAddresses
+    const teleporterAddresses = l2Networks[relayerInfo.chainId].teleporterAddresses
 
     if (!teleporterAddresses) {
       throw new ArbSdkError(
-        `L2 network ${
-          l2Networks[relayerInfo.chainId].name
-        } does not have teleporter contracts`
+        `L2 network ${l2Networks[relayerInfo.chainId].name} does not have teleporter contracts`
       )
     }
 
@@ -1120,7 +1122,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
 
     if (l1l2Redeem.status != L1ToL2MessageStatus.REDEEMED) {
       return {
-        l2RetryableStatus: l1l2Redeem.status,
+        l2RetryableStatus: l1l2Redeem.status, // todo: change these to be wait results like the other bridgers
         l3RetryableStatus: L1ToL2MessageStatus.NOT_YET_CREATED,
         completed: false,
       }
