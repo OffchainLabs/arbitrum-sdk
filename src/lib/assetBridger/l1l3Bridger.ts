@@ -188,11 +188,11 @@ export type EthDepositStatus = {
   /**
    * Status + redemption tx receipt of the retryable ticket to L2
    */
-  l2RetryableStatus: L1ToL2MessageStatus
+  l2RetryableStatus: L1ToL2MessageWaitResult
   /**
    * Status + redemption tx receipt of the retryable ticket to L3
    */
-  l3RetryableStatus: L1ToL2MessageStatus
+  l3RetryableStatus: L1ToL2MessageWaitResult
   /**
    * Whether the teleportation has completed
    */
@@ -966,8 +966,6 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
       },
     })
 
-    // todo: double check here that the computed l2 forwarder is correct
-
     return {
       relayerInfo: {
         ...l2ForwarderParams,
@@ -1143,8 +1141,8 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
 
     if (l1l2Redeem.status != L1ToL2MessageStatus.REDEEMED) {
       return {
-        l2RetryableStatus: l1l2Redeem.status, // todo: change these to be wait results like the other bridgers
-        l3RetryableStatus: L1ToL2MessageStatus.NOT_YET_CREATED,
+        l2RetryableStatus: l1l2Redeem,
+        l3RetryableStatus: { status: L1ToL2MessageStatus.NOT_YET_CREATED },
         completed: false,
       }
     }
@@ -1162,8 +1160,8 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
     const l2l3Redeem = await l2l3Message.getSuccessfulRedeem()
 
     return {
-      l2RetryableStatus: l1l2Redeem.status,
-      l3RetryableStatus: l2l3Redeem.status,
+      l2RetryableStatus: l1l2Redeem,
+      l3RetryableStatus: l2l3Redeem,
       completed: l2l3Redeem.status === L1ToL2MessageStatus.REDEEMED,
     }
   }
