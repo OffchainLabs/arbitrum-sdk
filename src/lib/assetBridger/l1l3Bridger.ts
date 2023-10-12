@@ -74,7 +74,7 @@ export type ManualRetryableGasParams = {
   l2l3TokenBridgeRetryableSize: BigNumber
 }
 
-export type Erc20DepositRequestParamsGasOverrides = {
+export type BaseErc20DepositRequestParamsGasOverrides = {
   /**
    * Optional L2 gas price override
    */
@@ -105,14 +105,19 @@ export type Erc20DepositRequestParams = {
   /**
    * Optional overrides for retryable gas parameters
    */
-  overrides?: Erc20DepositRequestParamsGasOverrides
+  overrides?: BaseErc20DepositRequestParamsGasOverrides & {
+    /**
+     * Optional L1 gas price override. Used to estimate submission fees.
+     */
+    l1GasPrice?: PercentIncrease
+  }
 }
 
 export type RelayedErc20DepositRequestParams = Erc20DepositRequestParams & {
   /**
    * Optional overrides for retryable gas parameters and relayer payment
    */
-  overrides?: Erc20DepositRequestParamsGasOverrides & {
+  overrides?: BaseErc20DepositRequestParamsGasOverrides & {
     /**
      * Optional relayer payment override
      */
@@ -758,11 +763,14 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
       },
     ])
 
-    const l1GasPrice = await l1Signer.provider!.getGasPrice()
+    const adjustedL1GasPrice = this._percentIncrease(
+      params.overrides?.l1GasPrice?.base || (await l1Signer.provider!.getGasPrice()),
+      params.overrides?.l1GasPrice?.percentIncrease || this.defaultGasPricePercentIncrease
+    )
 
     const calculatedGasCosts = await teleporter.calculateRetryableGasCosts(
       this.l2Network.ethBridge.inbox,
-      this._percentIncrease(l1GasPrice, this.defaultGasPricePercentIncrease), // todo: this should have overrides
+      adjustedL1GasPrice,
       gasParams
     )
 
