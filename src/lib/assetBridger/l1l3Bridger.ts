@@ -33,7 +33,10 @@ import {
   L1ToL2MessageWaitResult,
 } from '../message/L1ToL2Message'
 import { L1ToL2MessageCreator } from '../message/L1ToL2MessageCreator'
-import { GasOverrides, PercentIncrease } from '../message/L1ToL2MessageGasEstimator'
+import {
+  GasOverrides,
+  PercentIncrease,
+} from '../message/L1ToL2MessageGasEstimator'
 import {
   L1ContractCallTransaction,
   L1ContractCallTransactionReceipt,
@@ -189,7 +192,7 @@ export type EthDepositStatus = {
 
 /**
  * Information required by a relayer to relay a deposit.
- * 
+ *
  * This information is also required to rescue funds from the L2Forwarder contract.
  */
 export type RelayerInfo = L2ForwarderPredictor.L2ForwarderParamsStruct & {
@@ -203,8 +206,8 @@ export type RelayedErc20DepositRequestResult = {
   txRequest: L1ToL2TransactionRequest
   /**
    * Information required by the relayer to forward tokens from L2 to L3
-   * 
-   * IMPORTANT! DO NOT LOSE THIS INFO! 
+   *
+   * IMPORTANT! DO NOT LOSE THIS INFO!
    * Once tokens are sent through the bridge, losing this information means losing the funds!
    */
   relayerInfo: RelayerInfo
@@ -220,8 +223,8 @@ export type RelayedErc20DepositResult = {
   tx: L1ContractCallTransaction
   /**
    * Information required by the relayer to forward tokens from L2 to L3
-   * 
-   * IMPORTANT! DO NOT LOSE THIS INFO! 
+   *
+   * IMPORTANT! DO NOT LOSE THIS INFO!
    * Once tokens are sent through the bridge, losing this information means losing the funds!
    */
   relayerInfo: RelayerInfo
@@ -856,8 +859,8 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
 
   /**
    * Get a tx request to deposit tokens to L3. Will call the `L1GatewayRouter` directly.
-   * 
-   * IMPORTANT! DO NOT LOSE THE RETURNED RELAYER INFO! 
+   *
+   * IMPORTANT! DO NOT LOSE THE RETURNED RELAYER INFO!
    * Once tokens are sent through the bridge, losing this information means losing the funds!
    */
   public async getDepositRequest(
@@ -961,8 +964,8 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
 
   /**
    * Deposit tokens to L3. Will call the `L1GatewayRouter` directly.
-   * 
-   * IMPORTANT! DO NOT LOSE THE RETURNED RELAYER INFO! 
+   *
+   * IMPORTANT! DO NOT LOSE THE RETURNED RELAYER INFO!
    * Once tokens are sent through the bridge, losing this information means losing the funds!
    */
   public async deposit(
@@ -1008,15 +1011,20 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
   ): Promise<ethers.ContractTransaction> {
     if ((await l2Signer.getChainId()) !== relayerInfo.chainId) {
       throw new ArbSdkError(
-        `L2 signer chain id ${await l2Signer.getChainId()} does not match correct chain id ${relayerInfo.chainId}`
+        `L2 signer chain id ${await l2Signer.getChainId()} does not match correct chain id ${
+          relayerInfo.chainId
+        }`
       )
     }
 
-    const teleporterAddresses = l2Networks[relayerInfo.chainId].teleporterAddresses
+    const teleporterAddresses =
+      l2Networks[relayerInfo.chainId].teleporterAddresses
 
     if (!teleporterAddresses) {
       throw new ArbSdkError(
-        `L2 network ${l2Networks[relayerInfo.chainId].name} does not have teleporter contracts`
+        `L2 network ${
+          l2Networks[relayerInfo.chainId].name
+        } does not have teleporter contracts`
       )
     }
 
@@ -1048,10 +1056,8 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
 
     const l1Address = await l1Signer.getAddress()
 
-    const l3DestinationAddress =
-      params.to || l1Address
-    const l2RefundAddress =
-      params.l2RefundAddress || l1Address
+    const l3DestinationAddress = params.to || l1Address
+    const l2RefundAddress = params.l2RefundAddress || l1Address
 
     const l3TicketRequest = await L1ToL2MessageCreator.getTicketCreationRequest(
       {
