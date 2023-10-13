@@ -5,14 +5,14 @@ import { ERC20 } from '../abi/ERC20'
 import { BridgedToL3Event } from '../abi/L2Forwarder'
 import { L2ForwarderPredictor } from '../abi/L2ForwarderPredictor'
 import { L2GatewayToken } from '../abi/L2GatewayToken'
-import { Teleporter } from '../abi/Teleporter'
+import { L1Teleporter } from '../abi/L1Teleporter'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { L1GatewayRouter__factory } from '../abi/factories/L1GatewayRouter__factory'
 import { L2ForwarderFactory__factory } from '../abi/factories/L2ForwarderFactory__factory'
 import { L2Forwarder__factory } from '../abi/factories/L2Forwarder__factory'
 import { L2GatewayRouter__factory } from '../abi/factories/L2GatewayRouter__factory'
 import { L2GatewayToken__factory } from '../abi/factories/L2GatewayToken__factory'
-import { Teleporter__factory } from '../abi/factories/Teleporter__factory'
+import { L1Teleporter__factory } from '../abi/factories/L1Teleporter__factory'
 import { Address } from '../dataEntities/address'
 import { DISABLED_GATEWAY } from '../dataEntities/constants'
 import { ArbSdkError } from '../dataEntities/errors'
@@ -172,7 +172,7 @@ type BaseErc20DepositStatus = {
 }
 
 /**
- * When using the L1 Teleporter the second leg is a retryable tx, so this type includes the status of that tx as well as the base type's `l2ForwarderCall`.
+ * When using the L1Teleporter the second leg is a retryable tx, so this type includes the status of that tx as well as the base type's `l2ForwarderCall`.
  * This is because the retryable could possibly be frontran and the teleportation will still succeed.
  */
 export type Erc20DepositStatus = BaseErc20DepositStatus & {
@@ -627,7 +627,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     l1Provider: Provider,
     l2Provider: Provider,
     l3Provider: Provider
-  ): Promise<Teleporter.RetryableGasParamsStruct> {
+  ): Promise<L1Teleporter.RetryableGasParamsStruct> {
     params.overrides = params.overrides || {}
 
     let manualGasParams = params.overrides.manualGasParams
@@ -694,12 +694,12 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
 }
 
 /**
- * Bridge ERC20 tokens from L1 to L3 using the L1 Teleporter contract.
+ * Bridge ERC20 tokens from L1 to L3 using the L1Teleporter contract.
  */
 export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
   /**
    * Get a tx request to approve tokens for teleportation.
-   * The tokens will be approved to be spent by the Teleporter on L1.
+   * The tokens will be approved to be spent by the L1Teleporter.
    */
   public async getApproveTokenRequest(
     params: TokenApproveParams
@@ -718,7 +718,7 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
   }
 
   /**
-   * Approve tokens for teleportation. The tokens will be approved to be spent by the L1 `Teleporter`
+   * Approve tokens for teleportation. The tokens will be approved to be spent by the `L1Teleporter`
    */
   public async approveToken(
     params: TokenApproveParams,
@@ -732,7 +732,7 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
   }
 
   /**
-   * Get a tx request to deposit tokens to L3 through the L1 Teleporter contract.
+   * Get a tx request to deposit tokens to L3 through the L1Teleporter contract.
    */
   public async getDepositRequest(
     params: Erc20DepositRequestParams,
@@ -751,7 +751,7 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
       l3Provider
     )
 
-    const teleporter = Teleporter__factory.connect(
+    const teleporter = L1Teleporter__factory.connect(
       this.teleporterAddresses.l1Teleporter,
       l1Signer
     )
@@ -788,7 +788,7 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
   }
 
   /**
-   * Deposit tokens to L3 through the L1 Teleporter contract.
+   * Deposit tokens to L3 through the L1Teleporter contract.
    */
   public async deposit(
     params: Erc20DepositRequestParams,
@@ -919,7 +919,7 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
 
     // figure out how much extra ETH we should pass along through the token bridge
     // _populateGasParams has already applied a percent increase to gas prices
-    const teleporter = Teleporter__factory.connect(
+    const teleporter = L1Teleporter__factory.connect(
       this.teleporterAddresses.l1Teleporter,
       l1Signer
     )

@@ -3,7 +3,7 @@ import { Address, Erc20L1L3Bridger, L1ToL2MessageStatus } from '../../src'
 import { L2ForwarderContractsDeployer__factory } from '../../src/lib/abi/factories/L2ForwarderContractsDeployer__factory'
 import { MockToken__factory } from '../../src/lib/abi/factories/MockToken__factory'
 import { MockToken } from '../../src/lib/abi/MockToken'
-import { Teleporter__factory } from '../../src/lib/abi/factories/Teleporter__factory'
+import { L1Teleporter__factory } from '../../src/lib/abi/factories/L1Teleporter__factory'
 import { fundL1, fundL2, skipIfMainnet } from './testHelpers'
 import { BigNumber, ethers } from 'ethers'
 import {
@@ -113,7 +113,7 @@ describe('L1 to L3 Bridging', () => {
       const l2ForwarderImplAddr = await l2ContractsDeployer.implementation()
       const l2ForwarderFactory = await l2ContractsDeployer.factory()
 
-      const l1Teleporter = await new Teleporter__factory(setup.l1Signer).deploy(
+      const l1Teleporter = await new L1Teleporter__factory(setup.l1Signer).deploy(
         l2ForwarderFactory,
         l2ForwarderImplAddr
       )
