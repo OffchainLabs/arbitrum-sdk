@@ -113,10 +113,9 @@ describe('L1 to L3 Bridging', () => {
       const l2ForwarderImplAddr = await l2ContractsDeployer.implementation()
       const l2ForwarderFactory = await l2ContractsDeployer.factory()
 
-      const l1Teleporter = await new L1Teleporter__factory(setup.l1Signer).deploy(
-        l2ForwarderFactory,
-        l2ForwarderImplAddr
-      )
+      const l1Teleporter = await new L1Teleporter__factory(
+        setup.l1Signer
+      ).deploy(l2ForwarderFactory, l2ForwarderImplAddr)
       await l1Teleporter.deployed()
 
       // set the teleporter on the l2Network
@@ -234,7 +233,6 @@ describe('L1 to L3 Bridging', () => {
         ).wait()
       })
 
-      // todo: check status at each step, do this for other happy path tests too
       it('happy path', async () => {
         const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
 
