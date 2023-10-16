@@ -234,10 +234,6 @@ describe('L1 to L3 Bridging', () => {
         ).wait()
       })
 
-      // should throw if gas overrides not passed when using non default gateway
-      // test relayer stuff
-      // don't need to test rescue here i think
-
       // todo: check status at each step, do this for other happy path tests too
       it('happy path', async () => {
         const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
