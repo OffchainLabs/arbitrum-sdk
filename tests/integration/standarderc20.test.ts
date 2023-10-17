@@ -215,7 +215,7 @@ describe('standard ERC20', () => {
     await redeemAndTest(
       waitRes.message,
       0,
-      gasComponents.gasEstimateForL1.sub(200000)
+      gasComponents.gasEstimate.sub(200000)
     )
     await redeemAndTest(waitRes.message, 1)
   })
