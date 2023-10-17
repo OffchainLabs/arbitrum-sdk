@@ -233,6 +233,20 @@ describe('L1 to L3 Bridging', () => {
         ).wait()
       })
 
+      it('should throw if using non-default gateway and gas overrides not passed', async () => {
+        try {
+          await l1l3Bridger.getDepositRequest({
+            erc20L1Address: setup.l2Network.tokenBridge.l1Weth,
+            amount: BigNumber.from(1)
+          }, setup.l1Signer, setup.l2Signer.provider!, setup.l3Signer.provider!)
+          throw new Error()
+        } catch (e: any) {
+          expect(e.message).to.eq('Cannot estimate gas for custom l1l2 gateway, please provide gas params')
+        }
+
+        // l1 to l2 default but l2 to l3 gateway non default, we have to register a custom one
+      })
+
       it('happy path', async () => {
         const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
 

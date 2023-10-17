@@ -564,7 +564,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
       }
     }
 
-    // see if there are any other calls to the l2 forwarder after the first leg redeem
+    // see if there are any calls to the l2 forwarder after the first leg redeem
     const bridgedToL3Event = await this._findBridgedToL3Event(
       this.getRecipientFromParentBridgeTx(depositTxReceipt),
       firstLegRedeem.l2TxReceipt.blockNumber,
@@ -628,9 +628,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     l2Provider: Provider,
     l3Provider: Provider
   ): Promise<L1Teleporter.RetryableGasParamsStruct> {
-    params.overrides = params.overrides || {}
-
-    let manualGasParams = params.overrides.manualGasParams
+    let manualGasParams = params.overrides?.manualGasParams
     if (!manualGasParams) {
       // make sure both gateways are default
       if (
@@ -660,13 +658,13 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     return {
       ...manualGasParams,
       l2GasPrice: this._percentIncrease(
-        params.overrides.l2GasPrice?.base || (await l2Provider.getGasPrice()),
-        params.overrides.l2GasPrice?.percentIncrease ||
+        params.overrides?.l2GasPrice?.base || (await l2Provider.getGasPrice()),
+        params.overrides?.l2GasPrice?.percentIncrease ||
           this.defaultGasPricePercentIncrease
       ),
       l3GasPrice: this._percentIncrease(
-        params.overrides.l3GasPrice?.base || (await l3Provider.getGasPrice()),
-        params.overrides.l3GasPrice?.percentIncrease ||
+        params.overrides?.l3GasPrice?.base || (await l3Provider.getGasPrice()),
+        params.overrides?.l3GasPrice?.percentIncrease ||
           this.defaultGasPricePercentIncrease
       ),
     }
