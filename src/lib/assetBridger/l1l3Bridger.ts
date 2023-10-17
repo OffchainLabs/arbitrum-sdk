@@ -632,7 +632,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     if (!manualGasParams) {
       // make sure both gateways are default
       if (
-        !(await this.isL1L2GatewayDefault(params.erc20L1Address, l1Provider)) // todo: test this
+        !(await this.isL1L2GatewayDefault(params.erc20L1Address, l1Provider))
       ) {
         throw new ArbSdkError(
           `Cannot estimate gas for custom l1l2 gateway, please provide gas params`
