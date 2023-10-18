@@ -212,11 +212,7 @@ describe('standard ERC20', () => {
 
     // force the redeem to fail by submitted just a bit under the required gas
     // so it is enough to pay for L1 + L2 intrinsic gas costs
-    await redeemAndTest(
-      waitRes.message,
-      0,
-      gasComponents.gasEstimate.sub(1000)
-    )
+    await redeemAndTest(waitRes.message, 0, gasComponents.gasEstimate.sub(1000))
     await redeemAndTest(waitRes.message, 1)
   })
 
