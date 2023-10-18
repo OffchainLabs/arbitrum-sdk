@@ -20,7 +20,7 @@
 import { BigNumber, ethers, Signer } from 'ethers'
 import { InboxTools } from '../../src/lib/inbox/inbox'
 import {
-  getChainNetwork as getL2Network,
+  getChildChain as getL2Network,
   ChainNetwork as L2Network,
 } from '../../src/lib/dataEntities/networks'
 import { testSetup } from '../../scripts/testSetup'
