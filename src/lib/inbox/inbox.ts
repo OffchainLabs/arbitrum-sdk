@@ -29,8 +29,8 @@ import { IInbox__factory } from '../abi/factories/IInbox__factory'
 import { RequiredPick } from '../utils/types'
 import { MessageDeliveredEvent } from '../abi/Bridge'
 import {
-  l1Networks as parentChainNetworks,
-  L2Network as ArbitrumChain,
+  l1Networks as parentChains,
+  L2Network as ChildChain,
 } from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
@@ -61,17 +61,17 @@ type RequiredTransactionRequestType = RequiredPick<
  */
 export class InboxTools {
   private readonly parentChainProvider
-  private readonly parentChainNetwork
+  private readonly parentChain
 
   constructor(
     private readonly parentChainSigner: Signer,
-    private readonly childChain: ArbitrumChain
+    private readonly childChain: ChildChain
   ) {
     this.parentChainProvider = SignerProviderUtils.getProviderOrThrow(
       this.parentChainSigner
     )
-    this.parentChainNetwork = parentChainNetworks[childChain.partnerChainID]
-    if (!this.parentChainNetwork)
+    this.parentChain = parentChains[childChain.partnerChainID]
+    if (!this.parentChain)
       throw new ArbSdkError(
         `ParentChainNetwork not found for chain id: ${childChain.partnerChainID}.`
       )
@@ -96,7 +96,7 @@ export class InboxTools {
     // we take a long average block time of 14s
     // and always move at least 10 blocks
     const diffBlocks = Math.max(
-      Math.ceil(diff / this.parentChainNetwork.blockTime),
+      Math.ceil(diff / this.parentChain.blockTime),
       10
     )
 
@@ -352,7 +352,7 @@ export class InboxTools {
    * Send Child Chain signed tx using delayed inbox, which won't alias the sender's address
    * It will be automatically included by the sequencer on Chain, if it isn't included
    * within 24 hours, you can force include it
-   * @param signedTx A signed transaction which can be sent directly to network,
+   * @param signedTx A signed transaction which can be sent directly to chain,
    * you can call inboxTools.signChainMessage to get.
    * @returns The parentChain delayed inbox's transaction itself.
    */
@@ -376,7 +376,7 @@ export class InboxTools {
    * Sign a transaction with msg.to, msg.value and msg.data.
    * You can use this as a helper to call inboxTools.sendChainSignedMessage
    * above.
-   * @param message A signed transaction which can be sent directly to network,
+   * @param message A signed transaction which can be sent directly to chain,
    * tx.to, tx.data, tx.value must be provided when not contract creation, if
    * contractCreation is true, no need provide tx.to. tx.gasPrice and tx.nonce
    * can be overrided. (You can also send contract creation transaction by set tx.to
