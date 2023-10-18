@@ -28,10 +28,7 @@ import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factor
 import { IInbox__factory } from '../abi/factories/IInbox__factory'
 import { RequiredPick } from '../utils/types'
 import { MessageDeliveredEvent } from '../abi/Bridge'
-import {
-  parentChain as parentChains,
-  Chain as ChildChain,
-} from '../dataEntities/networks'
+import { parentChains, ChildChain } from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
 import { MultiCaller, CallInput } from '../utils/multicall'

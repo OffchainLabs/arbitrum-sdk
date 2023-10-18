@@ -34,7 +34,7 @@ import {
 import { ArbSdkError } from '../dataEntities/errors'
 import { ethers, Overrides } from 'ethers'
 import { L2TransactionReceipt, RedeemTransaction } from './L2Transaction'
-import { getChainNetwork } from '../../lib/dataEntities/networks'
+import { getChildChain as getL2Network } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt, isDefined } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
@@ -307,7 +307,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    * @returns TransactionReceipt of the first successful redeem if exists, otherwise the current status of the message.
    */
   public async getSuccessfulRedeem(): Promise<L1ToL2MessageWaitResult> {
-    const l2Network = await getChainNetwork(this.l2Provider)
+    const l2Network = await getL2Network(this.l2Provider)
     const eventFetcher = new EventFetcher(this.l2Provider)
     const creationReceipt = await this.getRetryableCreationReceipt()
 
@@ -472,7 +472,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     confirmations?: number,
     timeout?: number
   ): Promise<L1ToL2MessageWaitResult> {
-    const l2Network = await getChainNetwork(this.chainId)
+    const l2Network = await getL2Network(this.chainId)
 
     const chosenTimeout = isDefined(timeout)
       ? timeout
@@ -846,7 +846,7 @@ export class EthDepositMessage {
   }
 
   public async wait(confirmations?: number, timeout?: number) {
-    const l2Network = await getChainNetwork(this.l2ChainId)
+    const l2Network = await getL2Network(this.l2ChainId)
 
     const chosenTimeout = isDefined(timeout)
       ? timeout

@@ -27,7 +27,7 @@ export interface ParentChain extends Network {
   isArbitrum: false
 }
 
-export interface Chain extends Network {
+export interface ChildChain extends Network {
   tokenBridge: TokenBridge
   ethBridge: EthBridge
   partnerChainID: number
@@ -81,8 +81,8 @@ export interface ParentChains {
   [id: string]: ParentChain
 }
 
-export interface Chains {
-  [id: string]: Chain
+export interface ChildChains {
+  [id: string]: ChildChain
 }
 
 const mainnetTokenBridge: TokenBridge = {
@@ -114,7 +114,7 @@ const mainnetETHBridge: EthBridge = {
   },
 }
 
-export const parentChain: ParentChains = {
+export const parentChains: ParentChains = {
   1: {
     chainID: 1,
     name: 'Mainnet',
@@ -153,7 +153,7 @@ export const parentChain: ParentChains = {
   },
 }
 
-export const chains: Chains = {
+export const childChains: ChildChains = {
   42161: {
     chainID: 42161,
     name: 'Arbitrum One',
@@ -345,7 +345,7 @@ const getNetwork = async (
     return chainId
   })()
 
-  const networks = layer === 1 ? parentChain : chains
+  const networks = layer === 1 ? parentChains : childChains
   if (networks[chainID]) {
     return networks[chainID]
   } else {
@@ -358,10 +358,10 @@ export const getParentChain = (
 ): Promise<ParentChain> => {
   return getNetwork(signerOrProviderOrChainID, 1) as Promise<ParentChain>
 }
-export const getChain = (
+export const getChildChain = (
   signerOrProviderOrChainID: SignerOrProvider | number
-): Promise<Chain> => {
-  return getNetwork(signerOrProviderOrChainID, 2) as Promise<Chain>
+): Promise<ChildChain> => {
+  return getNetwork(signerOrProviderOrChainID, 2) as Promise<ChildChain>
 }
 
 /**
@@ -400,10 +400,10 @@ export const addCustomNetwork = ({
   customChain,
 }: {
   customParentChain?: ParentChain
-  customChain: Chain
+  customChain: ChildChain
 }): void => {
   if (customParentChain) {
-    if (parentChain[customParentChain.chainID]) {
+    if (parentChains[customParentChain.chainID]) {
       throw new ArbSdkError(
         `Network ${customParentChain.chainID} already included`
       )
@@ -412,11 +412,11 @@ export const addCustomNetwork = ({
         `Custom network ${customParentChain.chainID} must have isCustom flag set to true`
       )
     } else {
-      parentChain[customParentChain.chainID] = customParentChain
+      parentChains[customParentChain.chainID] = customParentChain
     }
   }
 
-  if (chains[customChain.chainID])
+  if (childChains[customChain.chainID])
     throw new ArbSdkError(`Network ${customChain.chainID} already included`)
   else if (!customChain.isCustom) {
     throw new ArbSdkError(
@@ -424,9 +424,9 @@ export const addCustomNetwork = ({
     )
   }
 
-  chains[customChain.chainID] = customChain
+  childChains[customChain.chainID] = customChain
 
-  const parentChainPartnerChain = parentChain[customChain.partnerChainID]
+  const parentChainPartnerChain = parentChains[customChain.partnerChainID]
   if (!parentChainPartnerChain)
     throw new ArbSdkError(
       `Network ${customChain.chainID}'s partner network, ${customChain.partnerChainID}, not recognized`
@@ -444,7 +444,7 @@ export const addCustomNetwork = ({
  */
 export const addDefaultLocalNetwork = (): {
   parentChain: ParentChain
-  chain: Chain
+  chain: ChildChain
 } => {
   const defaultLocalParentChain: ParentChain = {
     blockTime: 10,
@@ -456,7 +456,7 @@ export const addDefaultLocalNetwork = (): {
     isArbitrum: false,
   }
 
-  const defaultLocalChain: Chain = {
+  const defaultLocalChain: ChildChain = {
     chainID: 412346,
     confirmPeriodBlocks: 20,
     ethBridge: {
@@ -505,7 +505,7 @@ export const addDefaultLocalNetwork = (): {
 }
 
 export const isParentChain = (
-  network: ParentChain | Chain
+  network: ParentChain | ChildChain
 ): network is ParentChain => {
   if ((network as ParentChain).partnerChainIDs) return true
   else return false

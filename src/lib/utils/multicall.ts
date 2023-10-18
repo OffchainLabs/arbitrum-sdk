@@ -24,11 +24,11 @@ import { Multicall2 } from '../abi/Multicall2'
 import { Multicall2__factory } from '../abi/factories/Multicall2__factory'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
-  isParentChainNetwork,
-  ParentChainNetwork,
-  parentChainNetworks,
-  ChainNetwork,
-  chainNetworks,
+  isParentChain as isL1Network,
+  ParentChain as L1Network,
+  parentChains as l1Networks,
+  ChildChain as L2Network,
+  childChains as l2Networks,
 } from '../dataEntities/networks'
 
 /**
@@ -131,10 +131,8 @@ export class MultiCaller {
    */
   public static async fromProvider(provider: Provider): Promise<MultiCaller> {
     const chainId = (await provider.getNetwork()).chainId
-    const l2Network = chainNetworks[chainId] as ChainNetwork | undefined
-    const l1Network = parentChainNetworks[chainId] as
-      | ParentChainNetwork
-      | undefined
+    const l2Network = l2Networks[chainId] as L2Network | undefined
+    const l1Network = l1Networks[chainId] as L1Network | undefined
 
     const network = l2Network || l1Network
     if (!network) {
@@ -144,8 +142,8 @@ export class MultiCaller {
     }
 
     let multiCallAddr: string
-    if (isParentChainNetwork(network)) {
-      const firstL2 = chainNetworks[network.partnerChainIDs[0]]
+    if (isL1Network(network)) {
+      const firstL2 = l2Networks[network.partnerChainIDs[0]]
       if (!firstL2)
         throw new ArbSdkError(
           `No partner chain found l1 network: ${network.chainID} : partner chain ids ${network.partnerChainIDs}`

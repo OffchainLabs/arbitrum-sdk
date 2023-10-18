@@ -22,10 +22,10 @@ import { Wallet } from '@ethersproject/wallet'
 import dotenv from 'dotenv'
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
-  ParentChainNetwork,
-  ChainNetwork,
-  getParentChainNetwork,
-  getChainNetwork,
+  ParentChain as L1Network,
+  ChildChain as L2Network,
+  getParentChain as getL1Network,
+  getChain as getL2Network,
   addCustomNetwork,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
@@ -70,8 +70,8 @@ export const getCustomNetworks = async (
   l1Url: string,
   l2Url: string
 ): Promise<{
-  l1Network: ParentChainNetwork
-  l2Network: Omit<ChainNetwork, 'tokenBridge'>
+  l1Network: L1Network
+  l2Network: Omit<L2Network, 'tokenBridge'>
 }> => {
   const l1Provider = new JsonRpcProvider(l1Url)
   const l2Provider = new JsonRpcProvider(l2Url)
@@ -98,7 +98,7 @@ export const getCustomNetworks = async (
   const l1NetworkInfo = await l1Provider.getNetwork()
   const l2NetworkInfo = await l2Provider.getNetwork()
 
-  const l1Network: ParentChainNetwork = {
+  const l1Network: L1Network = {
     blockTime: 10,
     chainID: l1NetworkInfo.chainId,
     explorerUrl: '',
@@ -108,7 +108,7 @@ export const getCustomNetworks = async (
     isArbitrum: false,
   }
 
-  const l2Network: Omit<ChainNetwork, 'tokenBridge'> = {
+  const l2Network: Omit<L2Network, 'tokenBridge'> = {
     chainID: l2NetworkInfo.chainId,
     confirmPeriodBlocks: confirmPeriodBlocks.toNumber(),
     ethBridge: {
@@ -149,7 +149,7 @@ export const setupNetworks = async (
     l2Deployer,
     coreL2Network.ethBridge.inbox
   )
-  const l2Network: ChainNetwork = {
+  const l2Network: L2Network = {
     ...coreL2Network,
     tokenBridge: {
       l1CustomGateway: l1Contracts.customGateway.address,
@@ -171,7 +171,7 @@ export const setupNetworks = async (
   }
 
   addCustomNetwork({
-    customParentChainNetwork: l1Network,
+    customL1Network: l1Network,
     customChainNetwork: l2Network,
   })
 
@@ -204,8 +204,8 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
 }
 
 export const testSetup = async (): Promise<{
-  l1Network: ParentChainNetwork
-  l2Network: ChainNetwork
+  l1Network: L1Network
+  l2Network: L2Network
   l1Signer: Signer
   l2Signer: Signer
   erc20Bridger: Erc20Bridger
@@ -225,10 +225,10 @@ export const testSetup = async (): Promise<{
   const l1Signer = seed.connect(ethProvider)
   const l2Signer = seed.connect(arbProvider)
 
-  let setL1Network: ParentChainNetwork, setL2Network: ChainNetwork
+  let setL1Network: L1Network, setL2Network: L2Network
   try {
-    const l1Network = await getParentChainNetwork(l1Deployer)
-    const l2Network = await getChainNetwork(l2Deployer)
+    const l1Network = await getL1Network(l1Deployer)
+    const l2Network = await getL2Network(l2Deployer)
     setL1Network = l1Network
     setL2Network = l2Network
   } catch (err) {
@@ -240,12 +240,12 @@ export const testSetup = async (): Promise<{
       const { l1Network, l2Network } = JSON.parse(
         fs.readFileSync(localNetworkFile).toString()
       ) as {
-        l1Network: ParentChainNetwork
-        l2Network: ChainNetwork
+        l1Network: L1Network
+        l2Network: L2Network
       }
       addCustomNetwork({
-        customParentChainNetwork: l1Network,
-        customChainNetwork: l2Network,
+        customParentChain: l1Network,
+        customChain: l2Network,
       })
       setL1Network = l1Network
       setL2Network = l2Network
