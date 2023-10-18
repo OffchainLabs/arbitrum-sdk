@@ -43,12 +43,12 @@ export { L1ToL2MessageGasEstimator } from './lib/message/L1ToL2MessageGasEstimat
 export { argSerializerConstructor } from './lib/utils/byte_serialize_params'
 export { CallInput, MultiCaller } from './lib/utils/multicall'
 export {
-  ParentChainNetworks as L1Networks,
-  ChainNetworks as L2Networks,
-  ParentChainNetwork,
-  ChainNetwork as L2Network,
-  getParentChainNetwork as getL1Network,
-  getChainNetwork as getL2Network,
+  ParentChains as L1Networks,
+  Chains as L2Networks,
+  ParentChain as L1Network,
+  Chain as L2Network,
+  getParentChain as getL1Network,
+  getChain as getL2Network,
   addCustomNetwork,
   addDefaultLocalNetwork,
 } from './lib/dataEntities/networks'
