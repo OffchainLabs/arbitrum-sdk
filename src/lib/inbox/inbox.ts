@@ -70,7 +70,7 @@ export class InboxTools {
     this.parentChain = parentChains[childChain.partnerChainID]
     if (!this.parentChain)
       throw new ArbSdkError(
-        `ParentChainNetwork not found for chain id: ${childChain.partnerChainID}.`
+        `ParentChain not found for chain id: ${childChain.partnerChainID}.`
       )
   }
 

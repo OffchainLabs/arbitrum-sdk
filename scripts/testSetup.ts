@@ -25,7 +25,7 @@ import {
   ParentChain as L1Network,
   ChildChain as L2Network,
   getParentChain as getL1Network,
-  getChain as getL2Network,
+  getChildChain as getL2Network,
   addCustomNetwork,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
@@ -171,8 +171,8 @@ export const setupNetworks = async (
   }
 
   addCustomNetwork({
-    customL1Network: l1Network,
-    customChainNetwork: l2Network,
+    customParentChain: l1Network,
+    customChildChain: l2Network,
   })
 
   // also register the weth gateway
@@ -245,7 +245,7 @@ export const testSetup = async (): Promise<{
       }
       addCustomNetwork({
         customParentChain: l1Network,
-        customChain: l2Network,
+        customChildChain: l2Network,
       })
       setL1Network = l1Network
       setL2Network = l2Network

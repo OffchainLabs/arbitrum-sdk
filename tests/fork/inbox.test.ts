@@ -31,7 +31,7 @@ import { InboxTools } from '../../src'
 import { ethers, network } from 'hardhat'
 import { hexZeroPad } from '@ethersproject/bytes'
 import {
-  ChainNetwork as L2Network,
+  ChildChain as L2Network,
   getChildChain as getL2Network,
 } from '../../src/lib/dataEntities/networks'
 import { solidityKeccak256 } from 'ethers/lib/utils'

@@ -397,10 +397,10 @@ export const getEthBridgeInformation = async (
 
 export const addCustomNetwork = ({
   customParentChain,
-  customChain,
+  customChildChain,
 }: {
   customParentChain?: ParentChain
-  customChain: ChildChain
+  customChildChain: ChildChain
 }): void => {
   if (customParentChain) {
     if (parentChains[customParentChain.chainID]) {
@@ -416,24 +416,28 @@ export const addCustomNetwork = ({
     }
   }
 
-  if (childChains[customChain.chainID])
-    throw new ArbSdkError(`Network ${customChain.chainID} already included`)
-  else if (!customChain.isCustom) {
+  if (childChains[customChildChain.chainID])
     throw new ArbSdkError(
-      `Custom network ${customChain.chainID} must have isCustom flag set to true`
+      `Network ${customChildChain.chainID} already included`
+    )
+  else if (!customChildChain.isCustom) {
+    throw new ArbSdkError(
+      `Custom network ${customChildChain.chainID} must have isCustom flag set to true`
     )
   }
 
-  childChains[customChain.chainID] = customChain
+  childChains[customChildChain.chainID] = customChildChain
 
-  const parentChainPartnerChain = parentChains[customChain.partnerChainID]
+  const parentChainPartnerChain = parentChains[customChildChain.partnerChainID]
   if (!parentChainPartnerChain)
     throw new ArbSdkError(
-      `Network ${customChain.chainID}'s partner network, ${customChain.partnerChainID}, not recognized`
+      `Network ${customChildChain.chainID}'s partner network, ${customChildChain.partnerChainID}, not recognized`
     )
 
-  if (!parentChainPartnerChain.partnerChainIDs.includes(customChain.chainID)) {
-    parentChainPartnerChain.partnerChainIDs.push(customChain.chainID)
+  if (
+    !parentChainPartnerChain.partnerChainIDs.includes(customChildChain.chainID)
+  ) {
+    parentChainPartnerChain.partnerChainIDs.push(customChildChain.chainID)
   }
 }
 
@@ -495,7 +499,7 @@ export const addDefaultLocalNetwork = (): {
 
   addCustomNetwork({
     customParentChain: defaultLocalParentChain,
-    customChain: defaultLocalChain,
+    customChildChain: defaultLocalChain,
   })
 
   return {
