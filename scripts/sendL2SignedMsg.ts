@@ -29,8 +29,8 @@ const sendSignedMsg = async () => {
     value: BigNumber.from(0),
     data: '0x12',
   }
-  const signedTx = await inbox.signL2Tx(message, l2Deployer)
-  await inbox.sendL2SignedTx(signedTx)
+  const signedTx = await inbox.signChildChainTx(message, l2Deployer)
+  await inbox.sendChildChainSignedTx(signedTx)
 }
 
 sendSignedMsg()
