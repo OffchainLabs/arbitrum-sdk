@@ -1,4 +1,4 @@
-import { transformUniversalProviderToEthersV5Provider } from './../src/lib/utils/providerTransforms'
+import { transformUniversalProviderToEthersV5Provider } from '../src/lib/utils/universal/providerTransforms'
 /*
  * Copyright 2021, Offchain Labs, Inc.
  *

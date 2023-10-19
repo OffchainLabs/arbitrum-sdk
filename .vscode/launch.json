@@ -47,6 +47,20 @@
       "skipFiles": [
         "<node_internals>/**"
       ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Run Universal Tests",
+      "runtimeVersion": "16.16.0",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run-script",
+        "test:universal"
+      ],
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
     }
   ]
 }

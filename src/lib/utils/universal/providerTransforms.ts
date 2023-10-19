@@ -2,8 +2,10 @@ import EthersV5, {
   JsonRpcProvider,
   WebSocketProvider,
   FallbackProvider,
+  getNetwork,
+  StaticJsonRpcProvider,
 } from '@ethersproject/providers'
-import { HttpTransport, PublicClient } from 'viem'
+import { HttpTransport, PublicClient, createWalletClient, http } from 'viem'
 import EthersV6 from 'ethers-v6'
 import Web3, { Web3BaseProvider } from 'web3'
 
@@ -94,21 +96,10 @@ export function isHttpProvider(object: any): object is Web3BaseProvider {
   )
 }
 
-export function publicClientToProvider(publicClient: PublicClient) {
-  const { chain, transport } = publicClient
-  if (!chain) throw new Error('Missing chain')
-  const network = {
-    chainId: chain.id,
-    name: chain.name,
-    ensAddress: chain?.contracts?.ensRegistry?.address,
-  }
-  if (transport.type === 'fallback' && network)
-    return new FallbackProvider(
-      (transport.transports as ReturnType<HttpTransport>[]).map(
-        ({ value }) => new JsonRpcProvider(value?.url, network)
-      )
-    )
-  return new JsonRpcProvider(transport.url, network)
+export async function publicClientToProvider(publicClient: PublicClient) {
+  const { transport } = publicClient
+  if (!transport) throw new Error('Missing transport')
+  return new StaticJsonRpcProvider(transport.url)
 }
 
 export function isPublicClient(object: any): object is PublicClient {
@@ -157,4 +148,17 @@ export const transformUniversalProviderToEthersV5Provider = async (
   }
 
   return new JsonRpcProvider(url)
+}
+
+export const transformEthersProviderToWalletClient = async (
+  provider: JsonRpcProvider
+) => {
+  const url = provider.connection.url
+  if (typeof url === 'string') {
+    const walletClient = createWalletClient({
+      transport: http(url),
+    })
+    return walletClient
+  }
+  throw new Error('Invalid provider')
 }

@@ -3,30 +3,29 @@ import { providers } from 'ethers'
 import { JsonRpcProvider } from 'ethers-v6'
 import { createPublicClient, http } from 'viem'
 import Web3 from 'web3'
-import { config } from '../../scripts/testSetup'
+import { config } from '../../../scripts/testSetup'
 import {
   EthBridger,
   addDefaultLocalNetwork,
   enableExperimentalFeatures,
-} from '../../src'
+} from '../../../src'
 import 'dotenv/config'
 import { arbitrumGoerli } from 'viem/chains'
 
 addDefaultLocalNetwork()
 const defaultUrl = config.arbUrl
 enableExperimentalFeatures()
-describe('provider', () => {
+describe('universal provider', () => {
   it('should convert viem public client to ethers-v5 provider', async () => {
-    // TODO: Fix arb goerli url to use local rpc
     const url = arbitrumGoerli.rpcUrls.default.http[0]
     const publicClient = createPublicClient({
-      // chain: {
-      //   ...arbitrumGoerli,
-      //   rpcUrls: { default: { http: [defaultUrl] } },
-      // },
-      chain: arbitrumGoerli,
+      chain: {
+        ...arbitrumGoerli,
+        rpcUrls: { default: { http: [defaultUrl] } },
+      },
+      // chain: arbitrumGoerli,
       transport: http(url),
-    }) as any // as any is required here for strange type reasons
+    })
     const viemEthBridger = await EthBridger.fromProvider(publicClient)
 
     const provider = new providers.StaticJsonRpcProvider(url)

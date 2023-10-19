@@ -49,7 +49,7 @@ import { getL2Network } from '../dataEntities/networks'
 import {
   Providerish,
   transformUniversalProviderToEthersV5Provider,
-} from '../utils/providerTransforms'
+} from '../utils/universal/providerTransforms'
 import { experimentalFeaturesEnabled } from '../utils/globalConfig'
 
 export interface EthWithdrawParams {

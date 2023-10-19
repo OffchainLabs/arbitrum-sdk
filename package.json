@@ -32,6 +32,7 @@
     "test:coverage": "nyc mocha",
     "test:fork": "SHOULD_FORK=1 hardhat test tests/fork/*.test.ts",
     "test:integration": "mocha tests/integration/ --timeout 30000000 --bail",
+    "test:universal": "mocha tests/integration/universal --timeout 30000000 --bail",
     "test:unit": "mocha --parallel tests/unit/ --timeout 30000 --bail",
     "test:ci": "nyc --reporter=lcovonly mocha --reporter xunit",
     "lint": "eslint .",
@@ -50,7 +51,8 @@
     "@ethersproject/bignumber": "^5.1.1",
     "@ethersproject/bytes": "^5.0.8",
     "async-mutex": "^0.4.0",
-    "ethers": "^5.1.0"
+    "ethers": "^5.1.0",
+    "wagmi": "^1.4.4"
   },
   "devDependencies": {
     "@arbitrum/nitro-contracts": "1.0.1",
