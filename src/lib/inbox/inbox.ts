@@ -45,7 +45,7 @@ type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
 }
 
-type GasComponentsWithChainPart = {
+type GasComponentsWithChildChainPart = {
   gasEstimate: BigNumber
   gasEstimateForL1: BigNumber
   baseFee: BigNumber
@@ -127,11 +127,11 @@ export class InboxTools {
    */
   private async estimateArbitrumGas(
     childChainTransactionRequest: RequiredTransactionRequestType,
-    chainProvider: Provider
-  ): Promise<GasComponentsWithChainPart> {
+    childChainProvider: Provider
+  ): Promise<GasComponentsWithChildChainPart> {
     const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
-      chainProvider
+      childChainProvider
     )
 
     const contractCreation = this.isContractCreation(
