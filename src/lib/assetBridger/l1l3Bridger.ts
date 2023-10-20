@@ -403,7 +403,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     const l2Token = await this.getL2ERC20Address(erc20L1Address, l1Provider)
 
     return await L1GatewayRouter__factory.connect(
-      this.l3Network.tokenBridge.l1GatewayRouter,
+      this.l3Network.tokenBridge.l1GatewayRouter, // note: this is the L2 <-> L3 gateway router on L2
       l2Provider
     ).getGateway(l2Token)
   }
