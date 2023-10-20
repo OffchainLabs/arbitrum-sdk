@@ -447,7 +447,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
 
   /**
    * Get the L2 token contract at the provided address
-   * Note: This function just returns a typed ethers object for the provided address, it doesnt
+   * Note: This function just returns a typed ethers object for the provided address, it doesn't
    * check the underlying form of the contract bytecode to see if it's an erc20, and doesn't ensure the validity
    * of any of the underlying functions on that contract.
    */
