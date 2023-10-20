@@ -701,7 +701,7 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
    */
   public async getApproveTokenRequest(
     params: TokenApproveParams
-  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
+  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data'>>> {
     const iErc20Interface = ERC20__factory.createInterface()
     const data = iErc20Interface.encodeFunctionData('approve', [
       this.teleporterAddresses.l1Teleporter,
@@ -711,7 +711,6 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
     return {
       to: params.erc20L1Address,
       data,
-      value: BigNumber.from(0),
     }
   }
 
@@ -849,7 +848,7 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
   public async getApproveTokenRequest(
     params: TokenApproveParams,
     l1Provider: Provider
-  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
+  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data'>>> {
     return new Erc20Bridger(this.l2Network).getApproveTokenRequest({
       ...params,
       l1Provider,
