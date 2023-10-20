@@ -536,7 +536,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     const bytes32UserTo = log.topics[3]
 
     // parse address
-    return ethers.utils.getAddress(bytes32UserTo.slice(26))
+    return ethers.utils.getAddress(ethers.utils.hexDataSlice(bytes32UserTo, 12))
   }
 
   /**
