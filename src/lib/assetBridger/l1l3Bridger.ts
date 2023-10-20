@@ -329,16 +329,11 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
   /**
    * Get the corresponding L2 token address for the provided L1 token
    */
-  public async getL2ERC20Address(
+  public getL2ERC20Address(
     erc20L1Address: string,
     l1Provider: Provider
   ): Promise<string> {
-    await this._checkL1Network(l1Provider)
-    return this._getChildErc20Address(
-      erc20L1Address,
-      l1Provider,
-      this.l2Network
-    )
+    return new Erc20Bridger(this.l2Network).getL2ERC20Address(erc20L1Address, l1Provider)
   }
 
   /**
@@ -349,29 +344,10 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     l1Provider: Provider,
     l2Provider: Provider
   ): Promise<string> {
-    await this._checkL2Network(l2Provider)
-    return this._getChildErc20Address(
+    return new Erc20Bridger(this.l3Network).getL2ERC20Address(
       await this.getL2ERC20Address(erc20L1Address, l1Provider),
-      l2Provider,
-      this.l3Network
+      l2Provider
     )
-  }
-
-  /**
-   * Given an erc20 address on a parent network, get the corresponding erc20 address on a child network
-   */
-  private _getChildErc20Address(
-    erc20ParentAddress: string,
-    parentProvider: Provider,
-    childNetwork: L2Network
-  ) {
-    // assume that provider has been checked
-    const parentGatewayRouter = L1GatewayRouter__factory.connect(
-      childNetwork.tokenBridge.l1GatewayRouter,
-      parentProvider
-    )
-
-    return parentGatewayRouter.calculateL2TokenAddress(erc20ParentAddress)
   }
 
   /**
