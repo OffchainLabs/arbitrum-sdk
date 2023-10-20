@@ -287,7 +287,7 @@ class BaseL1L3Bridger {
   }
 
   /**
-   * Check the signer/provider matches the l2Network, throws if not
+   * Check the signer/provider matches the l3Network, throws if not
    * @param sop
    */
   protected async _checkL3Network(sop: SignerOrProvider): Promise<void> {
