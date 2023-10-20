@@ -375,7 +375,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
   }
 
   /**
-   * Get the address of the L1 <-> L2 gateway on L1 given an L1 token address
+   * Given an L1 token's address, get the address of the token's L1 <-> L2 gateway on L1 
    */
   public async getL1L2GatewayAddress(
     erc20L1Address: string,
