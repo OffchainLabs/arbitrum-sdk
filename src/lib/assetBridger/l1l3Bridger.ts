@@ -173,7 +173,7 @@ type BaseErc20DepositStatus = {
 
 /**
  * When using the L1Teleporter the second leg is a retryable tx, so this type includes the status of that tx as well as the base type's `l2ForwarderCall`.
- * This is because the retryable could possibly be frontran and the teleportation will still succeed.
+ * This is because the retryable could possibly be frontrun and the teleportation will still succeed.
  */
 export type Erc20DepositStatus = BaseErc20DepositStatus & {
   /**
