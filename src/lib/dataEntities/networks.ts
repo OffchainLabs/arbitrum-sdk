@@ -22,7 +22,7 @@ import { SEVEN_DAYS_IN_SECONDS } from './constants'
 import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__factory'
 
 export interface ParentChain extends Network {
-  partnerChainIDs: number[]
+  childChainIds: number[]
   blockTime: number //seconds
   isArbitrum: false
 }
@@ -30,7 +30,7 @@ export interface ParentChain extends Network {
 export interface ChildChain extends Network {
   tokenBridge: TokenBridge
   ethBridge: EthBridge
-  partnerChainID: number
+  parentChainId: number
   isArbitrum: true
   confirmPeriodBlocks: number
   retryableLifetimeSeconds: number
@@ -119,7 +119,7 @@ export const parentChains: ParentChains = {
     chainID: 1,
     name: 'Mainnet',
     explorerUrl: 'https://etherscan.io',
-    partnerChainIDs: [42161, 42170],
+    childChainIds: [42161, 42170],
     blockTime: 14,
     isCustom: false,
     isArbitrum: false,
@@ -128,7 +128,7 @@ export const parentChains: ParentChains = {
     chainID: 1338,
     name: 'Hardhat_Mainnet_Fork',
     explorerUrl: 'https://etherscan.io',
-    partnerChainIDs: [42161],
+    childChainIds: [42161],
     blockTime: 1,
     isCustom: false,
     isArbitrum: false,
@@ -139,14 +139,14 @@ export const parentChains: ParentChains = {
     explorerUrl: 'https://goerli.etherscan.io',
     isCustom: false,
     name: 'Goerli',
-    partnerChainIDs: [421613],
+    childChainIds: [421613],
     isArbitrum: false,
   },
   11155111: {
     chainID: 11155111,
     name: 'Sepolia',
     explorerUrl: 'https://sepolia.etherscan.io',
-    partnerChainIDs: [421614],
+    childChainIds: [421614],
     blockTime: 12,
     isCustom: false,
     isArbitrum: false,
@@ -158,7 +158,7 @@ export const childChains: ChildChains = {
     chainID: 42161,
     name: 'Arbitrum One',
     explorerUrl: 'https://arbiscan.io',
-    partnerChainID: 1,
+    parentChainId: 1,
     isArbitrum: true,
     tokenBridge: mainnetTokenBridge,
     ethBridge: mainnetETHBridge,
@@ -189,7 +189,7 @@ export const childChains: ChildChains = {
     isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Rollup Goerli Testnet',
-    partnerChainID: 5,
+    parentChainId: 5,
     tokenBridge: {
       l1CustomGateway: '0x9fDD1C4E4AA24EEc1d913FABea925594a20d43C7',
       l1ERC20Gateway: '0x715D99480b77A8d9D603638e593a539E21345FdF',
@@ -228,7 +228,7 @@ export const childChains: ChildChains = {
     isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Nova',
-    partnerChainID: 1,
+    parentChainId: 1,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     tokenBridge: {
       l1CustomGateway: '0x23122da8C581AA7E0d07A36Ff1f16F799650232f',
@@ -269,7 +269,7 @@ export const childChains: ChildChains = {
     isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Rollup Sepolia Testnet',
-    partnerChainID: 11155111,
+    parentChainId: 11155111,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     tokenBridge: {
       l1CustomGateway: '0xba2F7B6eAe1F9d174199C5E4867b563E0eaC40F3',
@@ -305,7 +305,7 @@ export const childChains: ChildChains = {
     isArbitrum: true,
     isCustom: false,
     name: 'Stylus Testnet',
-    partnerChainID: 421614,
+    parentChainId: 421614,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     tokenBridge: {
       l1CustomGateway: '0xd624D491A5Bc32de52a2e1481846752213bF7415',
@@ -402,6 +402,7 @@ export const addCustomNetwork = ({
   customParentChain?: ParentChain
   customChildChain: ChildChain
 }): void => {
+  console.log({ customChildChain })
   if (customParentChain) {
     if (parentChains[customParentChain.chainID]) {
       throw new ArbSdkError(
@@ -428,16 +429,14 @@ export const addCustomNetwork = ({
 
   childChains[customChildChain.chainID] = customChildChain
 
-  const parentChainPartnerChain = parentChains[customChildChain.partnerChainID]
-  if (!parentChainPartnerChain)
+  const parentChainChildChain = parentChains[customChildChain.parentChainId]
+  if (!parentChainChildChain)
     throw new ArbSdkError(
-      `Network ${customChildChain.chainID}'s partner network, ${customChildChain.partnerChainID}, not recognized`
+      `Network ${customChildChain.chainID}'s parent chain, ${customChildChain.parentChainId}, not recognized`
     )
 
-  if (
-    !parentChainPartnerChain.partnerChainIDs.includes(customChildChain.chainID)
-  ) {
-    parentChainPartnerChain.partnerChainIDs.push(customChildChain.chainID)
+  if (!parentChainChildChain.childChainIds.includes(customChildChain.chainID)) {
+    parentChainChildChain.childChainIds.push(customChildChain.chainID)
   }
 }
 
@@ -456,7 +455,7 @@ export const addDefaultLocalNetwork = (): {
     explorerUrl: '',
     isCustom: true,
     name: 'EthLocal',
-    partnerChainIDs: [412346],
+    childChainIds: [412346],
     isArbitrum: false,
   }
 
@@ -474,7 +473,7 @@ export const addDefaultLocalNetwork = (): {
     isArbitrum: true,
     isCustom: true,
     name: 'ArbLocal',
-    partnerChainID: 1337,
+    parentChainId: 1337,
     retryableLifetimeSeconds: 604800,
     nitroGenesisBlock: 0,
     nitroGenesisL1Block: 0,
@@ -511,6 +510,6 @@ export const addDefaultLocalNetwork = (): {
 export const isParentChain = (
   network: ParentChain | ChildChain
 ): network is ParentChain => {
-  if ((network as ParentChain).partnerChainIDs) return true
+  if ((network as ParentChain).childChainIds) return true
   else return false
 }

@@ -67,10 +67,10 @@ export class InboxTools {
     this.parentChainProvider = SignerProviderUtils.getProviderOrThrow(
       this.parentChainSigner
     )
-    this.parentChain = parentChains[childChain.partnerChainID]
+    this.parentChain = parentChains[childChain.parentChainId]
     if (!this.parentChain)
       throw new ArbSdkError(
-        `ParentChain not found for chain id: ${childChain.partnerChainID}.`
+        `ParentChain not found for chain id: ${childChain.parentChainId}.`
       )
   }
 

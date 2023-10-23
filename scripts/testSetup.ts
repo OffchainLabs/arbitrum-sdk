@@ -104,7 +104,7 @@ export const getCustomNetworks = async (
     explorerUrl: '',
     isCustom: true,
     name: 'EthLocal',
-    partnerChainIDs: [l2NetworkInfo.chainId],
+    childChainIds: [l2NetworkInfo.chainId],
     isArbitrum: false,
   }
 
@@ -122,7 +122,7 @@ export const getCustomNetworks = async (
     isArbitrum: true,
     isCustom: true,
     name: 'ArbLocal',
-    partnerChainID: l1NetworkInfo.chainId,
+    parentChainId: l1NetworkInfo.chainId,
     retryableLifetimeSeconds: 7 * 24 * 60 * 60,
     nitroGenesisBlock: 0,
     nitroGenesisL1Block: 0,
