@@ -10,25 +10,20 @@ import {
   enableExperimentalFeatures,
 } from '../../../src'
 import 'dotenv/config'
-import { arbitrumGoerli } from 'viem/chains'
+
+const defaultUrl = config.arbUrl
 
 addDefaultLocalNetwork()
-const defaultUrl = config.arbUrl
 enableExperimentalFeatures()
+
 describe('universal provider', () => {
   it('should convert viem public client to ethers-v5 provider', async () => {
-    const url = arbitrumGoerli.rpcUrls.default.http[0]
     const publicClient = createPublicClient({
-      chain: {
-        ...arbitrumGoerli,
-        rpcUrls: { default: { http: [defaultUrl] } },
-      },
-      // chain: arbitrumGoerli,
-      transport: http(url),
+      transport: http(defaultUrl),
     })
     const viemEthBridger = await EthBridger.fromProvider(publicClient)
 
-    const provider = new providers.StaticJsonRpcProvider(url)
+    const provider = new providers.StaticJsonRpcProvider(defaultUrl)
     const ethersEthBridger = await EthBridger.fromProvider(provider)
 
     expect(viemEthBridger).to.be.deep.equal(ethersEthBridger)

@@ -1,12 +1,10 @@
 import EthersV5, {
   JsonRpcProvider,
-  WebSocketProvider,
-  FallbackProvider,
-  getNetwork,
   StaticJsonRpcProvider,
+  WebSocketProvider,
 } from '@ethersproject/providers'
-import { HttpTransport, PublicClient, createWalletClient, http } from 'viem'
 import EthersV6 from 'ethers-v6'
+import { PublicClient, createWalletClient, http } from 'viem'
 import Web3, { Web3BaseProvider } from 'web3'
 
 export type Providerish =
