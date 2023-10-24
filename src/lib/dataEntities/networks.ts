@@ -40,6 +40,12 @@ export interface L2Network extends Network {
    * How long to wait (ms) for a deposit to arrive on l2 before timing out a request
    */
   depositTimeout: number
+  /**
+   * Has the network been upgraded to bold. True if yes, otherwise undefined
+   * This is a temporary property and will be removed in future if Bold is widely adopted and
+   * the legacy challenge protocol is deprecated
+   */
+  isBold?: boolean
 }
 export interface Network {
   chainID: number
