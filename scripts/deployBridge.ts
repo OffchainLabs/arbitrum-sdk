@@ -195,11 +195,11 @@ export const deployErc20AndInit = async (
     parentWethAddressOverride?: string
   ) => {
     // initialize child
-    await child.router.initialize(
+    await (await child.router.initialize(
       parent.router.address,
       child.standardGateway.address
-    )
-    await child.beaconProxyFactory.initialize(child.beacon.address)
+    )).wait()
+    await (await child.beaconProxyFactory.initialize(child.beacon.address)).wait()
     await (
       await child.standardGateway.initialize(
         parent.standardGateway.address,
