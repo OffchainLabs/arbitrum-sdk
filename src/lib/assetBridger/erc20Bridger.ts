@@ -49,7 +49,7 @@ import { L2Network, getL2Network } from '../dataEntities/networks'
 import { ArbSdkError, MissingProviderArbSdkError } from '../dataEntities/errors'
 import { DISABLED_GATEWAY } from '../dataEntities/constants'
 import { EventFetcher } from '../utils/eventFetcher'
-import { EthDepositParams, EthWithdrawParams } from './ethBridger'
+import { EthDepositParams, EthWithdrawParams, Signerish } from './ethBridger'
 import { AssetBridger } from './assetBridger'
 import {
   L1ContractCallTransaction,
@@ -609,7 +609,8 @@ export class Erc20Bridger extends AssetBridger<
   public async deposit(
     params: Erc20DepositParams | L1ToL2TxReqAndSignerProvider
   ): Promise<L1ContractCallTransaction> {
-    await this.checkL1Network(params.l1Signer)
+    const signer = params.l1Signer as any
+    await this.checkL1Network(signer)
 
     // Although the types prevent should alert callers that value is not
     // a valid override, it is possible that they pass it in anyway as it's a common override
@@ -620,16 +621,16 @@ export class Erc20Bridger extends AssetBridger<
       )
     }
 
-    const l1Provider = SignerProviderUtils.getProviderOrThrow(params.l1Signer)
+    const l1Provider = SignerProviderUtils.getProviderOrThrow(signer)
     const tokenDeposit = isL1ToL2TransactionRequest(params)
       ? params
       : await this.getDepositRequest({
           ...params,
           l1Provider,
-          from: await params.l1Signer.getAddress(),
+          from: await signer.getAddress(),
         })
 
-    const tx = await params.l1Signer.sendTransaction({
+    const tx = await signer.sendTransaction({
       ...tokenDeposit.txRequest,
       ...params.overrides,
     })

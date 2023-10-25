@@ -1,44 +1,26 @@
-import { transformUniversalProviderToEthersV5Provider } from '../src/lib/utils/universal/providerTransforms'
-/*
- * Copyright 2021, Offchain Labs, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *    http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-/* eslint-env node */
 ;('use strict')
 
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { Wallet } from '@ethersproject/wallet'
 
+import { execSync } from 'child_process'
 import dotenv from 'dotenv'
-import { EthBridger, InboxTools, Erc20Bridger } from '../src'
+import { Signer } from 'ethers'
+import * as fs from 'fs'
+import * as path from 'path'
+import { Erc20Bridger, EthBridger, InboxTools } from '../src'
+import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
+import { RollupAdminLogic__factory } from '../src/lib/abi/factories/RollupAdminLogic__factory'
+import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
+import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import {
   L1Network,
   L2Network,
+  addCustomNetwork,
   getL1Network,
   getL2Network,
-  addCustomNetwork,
 } from '../src/lib/dataEntities/networks'
-import { Signer } from 'ethers'
-import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
-import { execSync } from 'child_process'
-import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
-import { RollupAdminLogic__factory } from '../src/lib/abi/factories/RollupAdminLogic__factory'
 import { deployErc20AndInit } from './deployBridge'
-import * as path from 'path'
-import * as fs from 'fs'
-import { ArbSdkError } from '../src/lib/dataEntities/errors'
-import { setupViemArbProvider, setupViemEthProvider } from './setupViemProvider'
 
 dotenv.config()
 
@@ -207,6 +189,7 @@ export const getSigner = (provider: any, key?: string) => {
 }
 
 export const testSetup = async (): Promise<{
+  seed: Wallet
   l1Network: L1Network
   l2Network: L2Network
   l1Signer: Signer
@@ -218,22 +201,8 @@ export const testSetup = async (): Promise<{
   l1Deployer: Signer
   l2Deployer: Signer
 }> => {
-  let ethProvider
-  let arbProvider
-
-  if (config.experimentalFeaturesEnabled) {
-    console.log('Experimental features enabled')
-    ethProvider = await transformUniversalProviderToEthersV5Provider(
-      setupViemEthProvider(config)
-    )
-
-    arbProvider = await transformUniversalProviderToEthersV5Provider(
-      setupViemArbProvider(config)
-    )
-  } else {
-    ethProvider = new JsonRpcProvider(config.ethUrl)
-    arbProvider = new JsonRpcProvider(config.arbUrl)
-  }
+  const ethProvider = new JsonRpcProvider(config.ethUrl)
+  const arbProvider = new JsonRpcProvider(config.arbUrl)
 
   const l1Deployer = getSigner(ethProvider, config.ethKey)
   const l2Deployer = getSigner(arbProvider, config.arbKey)
@@ -285,6 +254,7 @@ export const testSetup = async (): Promise<{
   const inboxTools = new InboxTools(l1Signer, setL2Network)
 
   return {
+    seed,
     l1Signer,
     l2Signer,
     l1Network: setL1Network,

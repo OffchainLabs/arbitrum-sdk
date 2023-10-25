@@ -1,5 +1,5 @@
 import { createPublicClient, http } from 'viem'
-import { arbitrumGoerli, localhost } from 'viem/chains'
+import { mainnet, arbitrumGoerli, localhost } from 'viem/chains'
 
 export const setupViemEthProvider = ({ ethUrl }: { ethUrl: string }) => {
   const provider = createPublicClient({
@@ -7,6 +7,25 @@ export const setupViemEthProvider = ({ ethUrl }: { ethUrl: string }) => {
     transport: http(ethUrl),
   }) as any
   return provider
+}
+export const ethLocalhost = {
+  ...mainnet,
+  id: 1337,
+  name: 'Ethereum',
+  network: 'ethereum',
+  nativeCurrency: {
+    decimals: 18,
+    name: 'Ether',
+    symbol: 'ETH',
+  },
+  rpcUrls: {
+    default: {
+      http: ['http://127.0.0.1:8545'],
+    },
+    public: {
+      http: ['http://127.0.0.1:8545'],
+    },
+  },
 }
 const arbLocalhost = {
   ...arbitrumGoerli,

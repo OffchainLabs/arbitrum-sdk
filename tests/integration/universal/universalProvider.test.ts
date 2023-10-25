@@ -1,7 +1,9 @@
 import { expect } from 'chai'
+import 'dotenv/config'
 import { providers } from 'ethers'
 import { JsonRpcProvider } from 'ethers-v6'
-import { createPublicClient, http } from 'viem'
+import { createPublicClient, defineChain, http } from 'viem'
+import { arbitrumGoerli } from 'viem/chains'
 import Web3 from 'web3'
 import { config } from '../../../scripts/testSetup'
 import {
@@ -9,17 +11,30 @@ import {
   addDefaultLocalNetwork,
   enableExperimentalFeatures,
 } from '../../../src'
-import 'dotenv/config'
 
 const defaultUrl = config.arbUrl
 
 addDefaultLocalNetwork()
 enableExperimentalFeatures()
 
+export const arbLocal = {
+  ...arbitrumGoerli,
+  id: 412346,
+  rpcUrls: {
+    default: {
+      http: ['http://127.0.0.1:8547'],
+    },
+    public: {
+      http: ['http://127.0.0.1:8547'],
+    },
+  },
+}
+
 describe('universal provider', () => {
   it('should convert viem public client to ethers-v5 provider', async () => {
     const publicClient = createPublicClient({
       transport: http(defaultUrl),
+      chain: defineChain(arbLocal),
     })
     const viemEthBridger = await EthBridger.fromProvider(publicClient)
 

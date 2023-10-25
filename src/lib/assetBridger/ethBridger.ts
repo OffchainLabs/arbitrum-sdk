@@ -17,6 +17,7 @@
 'use strict'
 
 import { Signer } from '@ethersproject/abstract-signer'
+// import { JsonRpcSigner } from '@ethersproject/providers'
 import { Provider } from '@ethersproject/abstract-provider'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
 import { BigNumber } from 'ethers'
@@ -51,6 +52,9 @@ import {
   transformUniversalProviderToEthersV5Provider,
 } from '../utils/universal/providerTransforms'
 import { experimentalFeaturesEnabled } from '../utils/globalConfig'
+import { transformUniversalSignerToEthersV5Signer } from '../utils/universal/signerTransforms'
+import { WalletClient } from 'viem'
+// import type { WalletClient } from 'viem'
 
 export interface EthWithdrawParams {
   /**
@@ -75,7 +79,7 @@ export type EthDepositParams = {
   /**
    * The L1 provider or signer
    */
-  l1Signer: Signer
+  l1Signer: Signerish
   /**
    * The amount of ETH or tokens to be deposited
    */
@@ -86,7 +90,19 @@ export type EthDepositParams = {
   overrides?: PayableOverrides
 }
 
-export type EthDepositToParams = EthDepositParams & {
+export type EthDepositToParams = {
+  /**
+   * The L1 provider or signer
+   */
+  l1Signer: Signer
+  /**
+   * The amount of ETH or tokens to be deposited
+   */
+  amount: BigNumber
+  /**
+   * Transaction overrides
+   */
+  overrides?: PayableOverrides
   /**
    * An L2 provider
    */
@@ -100,6 +116,7 @@ export type EthDepositToParams = EthDepositParams & {
    */
   retryableGasOverrides?: GasOverrides
 }
+export type Signerish = Signer | WalletClient
 
 export type L1ToL2TxReqAndSigner = L1ToL2TransactionRequest & {
   l1Signer: Signer
@@ -193,16 +210,19 @@ export class EthBridger extends AssetBridger<
   public async deposit(
     params: EthDepositParams | L1ToL2TxReqAndSigner
   ): Promise<L1EthDepositTransaction> {
-    await this.checkL1Network(params.l1Signer)
+    const signer = await transformUniversalSignerToEthersV5Signer(
+      params.l1Signer
+    )
+    // await this.checkL1Network(signer)
 
     const ethDeposit = isL1ToL2TransactionRequest(params)
       ? params
       : await this.getDepositRequest({
           ...params,
-          from: await params.l1Signer.getAddress(),
+          from: await signer.getAddress(),
         })
 
-    const tx = await params.l1Signer.sendTransaction({
+    const tx = await signer.sendTransaction({
       ...ethDeposit.txRequest,
       ...params.overrides,
     })

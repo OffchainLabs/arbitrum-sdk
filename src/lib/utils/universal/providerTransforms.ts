@@ -13,6 +13,7 @@ export type Providerish =
   | EthersV6.JsonRpcProvider
   | Web3BaseProvider
   | Web3
+  | any
 
 export const getEthersV5Url = (provider: Providerish) => {
   if (isEthersV5JsonRpcProvider(provider)) {
@@ -95,9 +96,14 @@ export function isHttpProvider(object: any): object is Web3BaseProvider {
 }
 
 export async function publicClientToProvider(publicClient: PublicClient) {
-  const { transport } = publicClient
+  const { transport, chain } = publicClient
   if (!transport) throw new Error('Missing transport')
-  return new StaticJsonRpcProvider(transport.url)
+  if (!chain) throw new Error('Missing chain')
+
+  return new StaticJsonRpcProvider(transport.url, {
+    name: chain.name,
+    chainId: chain.id,
+  })
 }
 
 export function isPublicClient(object: any): object is PublicClient {
