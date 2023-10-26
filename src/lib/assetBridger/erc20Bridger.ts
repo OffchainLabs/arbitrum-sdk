@@ -172,7 +172,7 @@ export class Erc20Bridger extends AssetBridger<
   Erc20DepositParams | L1ToL2TxReqAndSignerProvider,
   OmitTyped<Erc20WithdrawParams, 'from'> | L2ToL1TransactionRequest
 > {
-  public static MAX_APPROVAL = MaxUint256
+  public static MAX_APPROVAL: BigNumber = MaxUint256
   public static MIN_CUSTOM_DEPOSIT_GAS_LIMIT = BigNumber.from(275000)
 
   /**
