@@ -11,8 +11,8 @@ async function main() {
   const cwd = process.cwd()
 
   const nitroPath = getPackagePath('@arbitrum/nitro-contracts')
-  const teleporterPath = getPackagePath('arb-teleporter') // TODO: just symlinked to the repo on my machine
   const peripheralsPath = getPackagePath('@arbitrum/token-bridge-contracts')
+  const teleporterPath = getPackagePath('l1-l3-teleport-contracts')
 
   console.log('Compiling paths.')
 
@@ -33,13 +33,8 @@ async function main() {
     cwd: nitroPath,
   })
 
-  console.log('building peripherals')
-  execSync(`${npmExec} && ${npmExec} run hardhat compile`, {
-    cwd: peripheralsPath,
-  })
-
   console.log('building teleporter')
-  execSync(`${npmExec} run hardhat compile`, {
+  execSync(`${npmExec} && ${npmExec} run hardhat compile --config ./hardhat.config.js`, {
     cwd: teleporterPath,
   })
 

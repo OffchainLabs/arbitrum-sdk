@@ -52,6 +52,7 @@
     "ethers": "^5.1.0"
   },
   "devDependencies": {
+    "l1-l3-teleport-contracts": "^0.1.0",
     "@arbitrum/nitro-contracts": "1.0.1",
     "@arbitrum/token-bridge-contracts": "1.0.0-beta.0",
     "@nomiclabs/hardhat-ethers": "^2.0.4",
