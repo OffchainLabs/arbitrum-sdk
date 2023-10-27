@@ -1,56 +1,18 @@
-// import { WalletClient, getWalletClient } from '@wagmi/core'
-
+import { JsonRpcSigner, Web3Provider } from '@ethersproject/providers'
 import { WalletClient, createPublicClient, http } from 'viem'
 import { Signerish } from '../../assetBridger/ethBridger'
-import { JsonRpcProvider, JsonRpcSigner } from '@ethersproject/providers'
 
-import { Signer } from 'ethers'
-
-class ViemSigner extends Signer {
-  private walletClient: WalletClient
-
-  constructor(walletClient: WalletClient) {
-    super()
-    this.walletClient = walletClient
+export function walletClientToSigner(walletClient: WalletClient) {
+  const { account, chain, transport } = walletClient
+  const network = {
+    chainId: chain?.id,
+    name: chain?.name,
+    ensAddress: chain?.contracts?.ensRegistry?.address,
   }
-
-  async getAddress(): Promise<string> {
-    const addresses = await this.walletClient.getAddresses()
-    return addresses[0] // Assume the first address is the desired address
-  }
-
-  async signMessage(message: any): Promise<string> {
-    return this.walletClient.signMessage(message)
-  }
-
-  async signTransaction(transaction: any): Promise<any> {
-    return this.walletClient
-  }
-
-  connect(provider: any): any {
-    return this.walletClient
-  }
-
-  async sendTransaction(transaction: any): Promise<any> {
-    return this.walletClient.sendTransaction(transaction)
-  }
-}
-
-export function walletClientToSigner(
-  walletClient: WalletClient
-): JsonRpcSigner {
-  // console.log({ walletClient })
-  // const { account, chain, transport } = walletClient
-  // const network = {
-  //   chainId: chain?.id,
-  //   name: chain?.name,
-  //   ensAddress: chain?.contracts?.ensRegistry?.address,
-  // }
-  // const provider = new JsonRpcProvider(transport.url)
-  // const signer = provider.getSigner(account?.address)
-  // return signer as JsonRpcSigner
-
-  return new ViemSigner(walletClient) as any
+  //@ts-ignore
+  const provider = new Web3Provider(transport, network)
+  const signer = provider.getSigner(account?.address)
+  return signer
 }
 
 export const transformEthersSignerToPublicClient = async (

@@ -68,9 +68,10 @@ describe('universal signer', async () => {
       account,
       chain,
     })
+
     const viemAddresses = await walletClient.getAddresses()
     console.log({ viemAddresses })
-
+    // TODO: not actually using the WC addresses
     const viemAddress = account.address
     console.log({ viemAddress })
 
