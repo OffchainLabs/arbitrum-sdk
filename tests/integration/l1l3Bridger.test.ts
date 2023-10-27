@@ -289,7 +289,7 @@ describe('L1 to L3 Bridging', () => {
         expect(l3Balance.eq(ethers.utils.parseEther('1'))).to.be.true
       })
 
-      it('should report correct status when second leg is frontran', async () => {
+      it('should report correct status when second step is frontran', async () => {
         const adjustedL3GasPrice = (
           await setup.l3Signer.provider!.getGasPrice()
         ).mul(3)
@@ -300,7 +300,7 @@ describe('L1 to L3 Bridging', () => {
             overrides: {
               manualGasParams: {
                 ...l1l3Bridger.defaultRetryableGasParams,
-                l2ForwarderFactoryGasLimit: BigNumber.from(10), // make sure the second leg retryable fails
+                l2ForwarderFactoryGasLimit: BigNumber.from(10), // make sure the second step retryable fails
               },
               l3GasPrice: {
                 base: adjustedL3GasPrice,
@@ -315,7 +315,7 @@ describe('L1 to L3 Bridging', () => {
 
         const depositReceipt = await depositTx.wait()
 
-        // poll status until first leg completes
+        // poll status until first step completes
         await poll(async () => {
           const status = await l1l3Bridger.getDepositStatus(
             depositReceipt,
@@ -326,20 +326,20 @@ describe('L1 to L3 Bridging', () => {
         }, 1000)
 
         // make sure we have FUNDS_DEPOSITED_ON_L2 and undefined
-        const statusAfterLeg1 = await l1l3Bridger.getDepositStatus(
+        const statusAfterStep1 = await l1l3Bridger.getDepositStatus(
           depositReceipt,
           l2JsonRpcProvider,
           setup.l3Signer.provider!
         )
-        expect(statusAfterLeg1.retryableL2ForwarderCall.status).to.eq(
+        expect(statusAfterStep1.retryableL2ForwarderCall.status).to.eq(
           L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
         )
-        expect(statusAfterLeg1.l2ForwarderCall).to.be.undefined
-        expect(statusAfterLeg1.bridgeToL3.status).to.eq(
+        expect(statusAfterStep1.l2ForwarderCall).to.be.undefined
+        expect(statusAfterStep1.bridgeToL3.status).to.eq(
           L1ToL2MessageStatus.NOT_YET_CREATED
         )
 
-        // relay the second leg (use the RelayedErc20L1L3Bridger to do this)
+        // relay the second step (use the RelayedErc20L1L3Bridger to do this)
         const l1SignerAddr = await setup.l1Signer.getAddress()
         const relayTx = await RelayedErc20L1L3Bridger.relayDeposit(
           {
@@ -362,21 +362,21 @@ describe('L1 to L3 Bridging', () => {
         await relayTx.wait()
 
         // make sure we get FUNDS_DEPOSITED_ON_L2 and the relay tx receipt
-        const statusAfterLeg2 = await l1l3Bridger.getDepositStatus(
+        const statusAfterStep2 = await l1l3Bridger.getDepositStatus(
           depositReceipt,
           l2JsonRpcProvider,
           setup.l3Signer.provider!
         )
-        expect(statusAfterLeg2.bridgeToL2.status).to.eq(
+        expect(statusAfterStep2.bridgeToL2.status).to.eq(
           L1ToL2MessageStatus.REDEEMED
         )
-        expect(statusAfterLeg2.retryableL2ForwarderCall.status).to.eq(
+        expect(statusAfterStep2.retryableL2ForwarderCall.status).to.eq(
           L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
         )
-        expect(statusAfterLeg2.l2ForwarderCall?.transactionHash).to.eq(
+        expect(statusAfterStep2.l2ForwarderCall?.transactionHash).to.eq(
           relayTx.hash
         )
-        expect(statusAfterLeg2.bridgeToL3.status).to.eq(
+        expect(statusAfterStep2.bridgeToL3.status).to.eq(
           L1ToL2MessageStatus.NOT_YET_CREATED
         )
 
@@ -390,19 +390,19 @@ describe('L1 to L3 Bridging', () => {
           return status.completed
         }, 1000)
 
-        const statusAfterLeg3 = await l1l3Bridger.getDepositStatus(
+        const statusAfterStep3 = await l1l3Bridger.getDepositStatus(
           depositReceipt,
           l2JsonRpcProvider,
           setup.l3Signer.provider!
         )
-        expect(statusAfterLeg3.completed).to.be.true
-        expect(statusAfterLeg3.retryableL2ForwarderCall.status).to.eq(
+        expect(statusAfterStep3.completed).to.be.true
+        expect(statusAfterStep3.retryableL2ForwarderCall.status).to.eq(
           L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
         )
-        expect(statusAfterLeg3.l2ForwarderCall?.transactionHash).to.eq(
+        expect(statusAfterStep3.l2ForwarderCall?.transactionHash).to.eq(
           relayTx.hash
         )
-        expect(statusAfterLeg3.bridgeToL3.status).to.eq(
+        expect(statusAfterStep3.bridgeToL3.status).to.eq(
           L1ToL2MessageStatus.REDEEMED
         )
       })
@@ -447,7 +447,7 @@ describe('L1 to L3 Bridging', () => {
 
         const depositReceipt = await depositResult.tx.wait()
 
-        // wait until first leg finishes
+        // wait until first step finishes
         await poll(async () => {
           const status = await l1l3Bridger.getDepositStatus(
             depositReceipt,
@@ -485,7 +485,7 @@ describe('L1 to L3 Bridging', () => {
           )
         ).to.be.not.undefined
 
-        // wait for third leg to finish
+        // wait for third step to finish
         await poll(async () => {
           const status = await l1l3Bridger.getDepositStatus(
             depositReceipt,

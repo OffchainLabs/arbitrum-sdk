@@ -172,7 +172,7 @@ type BaseErc20DepositStatus = {
 }
 
 /**
- * When using the L1Teleporter the second leg is a retryable tx, so this type includes the status of that tx as well as the base type's `l2ForwarderCall`.
+ * When using the L1Teleporter the second step is a retryable tx, so this type includes the status of that tx as well as the base type's `l2ForwarderCall`.
  * This is because the retryable could possibly be frontrun and the teleportation will still succeed.
  */
 export type Erc20DepositStatus = BaseErc20DepositStatus & {
@@ -529,50 +529,50 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     await this._checkL3Network(l3Provider)
 
     const l1l2Messages = await depositTxReceipt.getL1ToL2Messages(l2Provider)
-    const firstLegRedeem = await l1l2Messages[0].getSuccessfulRedeem()
+    const firstStepRedeem = await l1l2Messages[0].getSuccessfulRedeem()
 
-    if (firstLegRedeem.status !== L1ToL2MessageStatus.REDEEMED) {
+    if (firstStepRedeem.status !== L1ToL2MessageStatus.REDEEMED) {
       return {
-        bridgeToL2: firstLegRedeem,
+        bridgeToL2: firstStepRedeem,
         l2ForwarderCall: undefined,
         bridgeToL3: { status: L1ToL2MessageStatus.NOT_YET_CREATED },
         completed: false,
       }
     }
 
-    // see if there are any calls to the l2 forwarder after the first leg redeem
+    // see if there are any calls to the l2 forwarder after the first step redeem
     const bridgedToL3Event = await this._findBridgedToL3Event(
       this.getRecipientFromParentBridgeTx(depositTxReceipt),
-      firstLegRedeem.l2TxReceipt.blockNumber,
+      firstStepRedeem.l2TxReceipt.blockNumber,
       l2Provider
     )
 
-    // second leg has not completed
+    // second step has not completed
     if (!bridgedToL3Event) {
       return {
-        bridgeToL2: firstLegRedeem,
+        bridgeToL2: firstStepRedeem,
         l2ForwarderCall: undefined,
         bridgeToL3: { status: L1ToL2MessageStatus.NOT_YET_CREATED },
         completed: false,
       }
     }
 
-    // second leg has completed
-    const secondLegTxReceipt = new L1ContractCallTransactionReceipt(
+    // second step has completed
+    const secondStepTxReceipt = new L1ContractCallTransactionReceipt(
       await l2Provider.getTransactionReceipt(bridgedToL3Event.transactionHash)
     )
 
-    const thirdLegMessage = (
-      await secondLegTxReceipt.getL1ToL2Messages(l3Provider)
+    const thirdStepMessage = (
+      await secondStepTxReceipt.getL1ToL2Messages(l3Provider)
     )[0]
 
-    const thirdLegRedeem = await thirdLegMessage.getSuccessfulRedeem()
+    const thirdStepRedeem = await thirdStepMessage.getSuccessfulRedeem()
 
     return {
-      bridgeToL2: firstLegRedeem,
-      l2ForwarderCall: secondLegTxReceipt,
-      bridgeToL3: thirdLegRedeem,
-      completed: thirdLegRedeem.status === L1ToL2MessageStatus.REDEEMED,
+      bridgeToL2: firstStepRedeem,
+      l2ForwarderCall: secondStepTxReceipt,
+      bridgeToL3: thirdStepRedeem,
+      completed: thirdStepRedeem.status === L1ToL2MessageStatus.REDEEMED,
     }
   }
 
@@ -797,13 +797,13 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
       l3Provider
     )
 
-    const secondLegRetryableRedeem = await (
+    const secondStepRetryableRedeem = await (
       await depositTxReceipt.getL1ToL2Messages(l2Provider)
     )[1].getSuccessfulRedeem()
 
     return {
       ...baseStatus,
-      retryableL2ForwarderCall: secondLegRetryableRedeem,
+      retryableL2ForwarderCall: secondStepRetryableRedeem,
     }
   }
 }
