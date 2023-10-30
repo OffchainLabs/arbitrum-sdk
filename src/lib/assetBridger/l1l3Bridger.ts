@@ -336,10 +336,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     erc20L1Address: string,
     l1Provider: Provider
   ): Promise<string> {
-    return this.l2Erc20Bridger.getL2ERC20Address(
-      erc20L1Address,
-      l1Provider
-    )
+    return this.l2Erc20Bridger.getL2ERC20Address(erc20L1Address, l1Provider)
   }
 
   /**
@@ -653,7 +650,10 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
   public async getApproveTokenRequest(
     params: TokenApproveParams
   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data'>>> {
-    return this._getApproveTokenRequest(params, this.teleporterAddresses.l1Teleporter)
+    return this._getApproveTokenRequest(
+      params,
+      this.teleporterAddresses.l1Teleporter
+    )
   }
 
   /**
@@ -791,7 +791,10 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     params: TokenApproveParams,
     l1Provider: Provider
   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data'>>> {
-    return this._getApproveTokenRequest(params, await this.getL1L2GatewayAddress(params.erc20L1Address, l1Provider))
+    return this._getApproveTokenRequest(
+      params,
+      await this.getL1L2GatewayAddress(params.erc20L1Address, l1Provider)
+    )
   }
 
   /**
@@ -801,7 +804,9 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     params: TokenApproveParams,
     l1Signer: Signer
   ): Promise<ethers.ContractTransaction> {
-    return l1Signer.sendTransaction(await this.getApproveTokenRequest(params, l1Signer.provider!))
+    return l1Signer.sendTransaction(
+      await this.getApproveTokenRequest(params, l1Signer.provider!)
+    )
   }
 
   /**
