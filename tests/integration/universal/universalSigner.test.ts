@@ -2,25 +2,14 @@ import { StaticJsonRpcProvider } from '@ethersproject/providers'
 import { expect } from 'chai'
 import 'dotenv/config'
 import { parseEther } from 'ethers/lib/utils'
-import {
-  createPublicClient,
-  createWalletClient,
-  custom,
-  defineChain,
-  http,
-} from 'viem'
+import { createPublicClient, createWalletClient, defineChain, http } from 'viem'
 import { config, testSetup } from '../../../scripts/testSetup'
-import {
-  EthBridger,
-  addDefaultLocalNetwork,
-  enableExperimentalFeatures,
-} from '../../../src'
+import { EthBridger, enableExperimentalFeatures } from '../../../src'
 // fetch-polyfill.js
 import fetch, { Headers, Request, Response } from 'node-fetch'
-import { fundL1 } from '../testHelpers'
 import { privateKeyToAccount } from 'viem/accounts'
 import { arbitrumGoerli, mainnet } from 'viem/chains'
-import { Wallet } from 'ethers'
+import { fundL1, fundL2 } from '../testHelpers'
 import { transformUniversalSignerToEthersV5Signer } from '../../../src/lib/utils/universal/signerTransforms'
 // import { Signerish } from '../../../src/lib/assetBridger/ethBridger'
 
@@ -47,26 +36,42 @@ export const arbLocal = {
     },
   },
 }
-const defaultUrl = config.arbUrl
+const arbRpcUrl = config.arbUrl
+
+export const ethLocal = {
+  ...mainnet,
+  id: 1337,
+  rpcUrls: {
+    default: {
+      http: ['http://127.0.0.1:8545'],
+    },
+    public: {
+      http: ['http://127.0.0.1:8545'],
+    },
+  },
+}
+const ethRpcUrl = config.ethUrl
 
 // addDefaultLocalNetwork()
 enableExperimentalFeatures()
 
 describe('universal signer', async () => {
   let testState: any
-  let chain: any
+  let arbChain: any
+  let ethChain: any
   before('init', async () => {
     testState = await testSetup()
-    chain = defineChain(arbLocal)
+    arbChain = defineChain(arbLocal)
+    ethChain = defineChain(ethLocal)
   })
 
   it('should get the same addresses with viem', async () => {
     const pk = testState.l2Signer._signingKey().privateKey as `0x${string}`
     const account = privateKeyToAccount(pk)
     const walletClient = createWalletClient({
-      transport: http(defaultUrl),
+      transport: http(arbRpcUrl),
       account,
-      chain,
+      chain: arbChain,
     })
 
     const viemAddresses = await walletClient.getAddresses()
@@ -83,7 +88,7 @@ describe('universal signer', async () => {
 
   // it('should get the same signer with viem', async () => {
   //   const walletClient = createWalletClient({
-  //     transport: http(defaultUrl),
+  //     transport: http(arbRpcUrl),
   //     chain,
   //   })
   //   const signer1 = await transformUniversalSignerToEthersV5Signer(walletClient)
@@ -93,33 +98,56 @@ describe('universal signer', async () => {
   // })
 
   it('should convert viem wallet client to ethers-v5 signer', async () => {
+    const { ethBridger, l1Signer, l2Signer } = testState
     const pk = testState.l2Signer._signingKey().privateKey as `0x${string}`
-    const walletClient = createWalletClient({
+    const arbWalletClient = createWalletClient({
       account: privateKeyToAccount(pk),
-      transport: http(defaultUrl),
-      chain,
+      transport: http(arbRpcUrl),
+      chain: arbChain,
     })
-    const ethersV5Provider = new StaticJsonRpcProvider(
-      walletClient.transport.url,
+    const ethWalletClient = createWalletClient({
+      account: privateKeyToAccount(pk),
+      transport: http(ethRpcUrl),
+      chain: ethChain,
+    })
+    const ethProvider = new StaticJsonRpcProvider(
+      ethWalletClient.transport.url,
       testState.l2Network.chainID
     )
-    const l1Signer = testState.seed.connect(ethersV5Provider)
+    const arbProvider = new StaticJsonRpcProvider(
+      ethWalletClient.transport.url,
+      testState.l2Network.chainID
+    )
 
-    await fundL1(l1Signer)
+    const ethArbSigner = await transformUniversalSignerToEthersV5Signer(
+      ethWalletClient
+    )
+    const viemArbSigner = await transformUniversalSignerToEthersV5Signer(
+      arbWalletClient
+    )
 
-    const publicClient = createPublicClient({
-      transport: http(defaultUrl),
-      chain,
+    // await fundL1(l1Signer)
+    // const l2Signer = testState.seed.connect(arbProvider)
+
+    // await fundL2(l2Signer)
+
+    const arbPublicClient = createPublicClient({
+      transport: http(arbRpcUrl),
+      chain: arbChain,
     })
-    const viemEthBridger = await EthBridger.fromProvider(publicClient)
+    const ethPublicClient = createPublicClient({
+      transport: http(ethRpcUrl),
+      chain: ethChain,
+    })
+    const viemEthBridger = await EthBridger.fromProvider(arbPublicClient)
     const viemTxResponse = await viemEthBridger.deposit({
       amount: parseEther('0.000001'),
-      l1Signer: walletClient as any,
+      l1Signer: ethWalletClient as any,
     })
     console.log('viemTxResponse', viemTxResponse)
 
-    const ethersBridger = await EthBridger.fromProvider(ethersV5Provider)
-    const ethersDepositTxResponse = await ethersBridger.deposit({
+    // const ethersBridger = await EthBridger.fromProvider(arbProvider)
+    const ethersDepositTxResponse = await ethBridger.deposit({
       amount: parseEther('0.000001'),
       l1Signer, // should accept a `WalletClient`
     })
