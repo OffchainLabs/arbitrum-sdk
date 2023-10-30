@@ -359,16 +359,11 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
   /**
    * Given an L1 token's address, get the address of the token's L1 <-> L2 gateway on L1
    */
-  public async getL1L2GatewayAddress(
+  public getL1L2GatewayAddress(
     erc20L1Address: string,
     l1Provider: Provider
   ): Promise<string> {
-    await this._checkL1Network(l1Provider)
-
-    return await L1GatewayRouter__factory.connect(
-      this.l2Network.tokenBridge.l1GatewayRouter,
-      l1Provider
-    ).getGateway(erc20L1Address)
+    return this.l2Erc20Bridger.getL1GatewayAddress(erc20L1Address, l1Provider)
   }
 
   /**
@@ -379,15 +374,8 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     l1Provider: Provider,
     l2Provider: Provider
   ): Promise<string> {
-    await this._checkL1Network(l1Provider)
-    await this._checkL2Network(l2Provider)
-
     const l2Token = await this.getL2ERC20Address(erc20L1Address, l1Provider)
-
-    return await L1GatewayRouter__factory.connect(
-      this.l3Network.tokenBridge.l1GatewayRouter, // note: this is the L2 <-> L3 gateway router on L2
-      l2Provider
-    ).getGateway(l2Token)
+    return this.l3Erc20Bridger.getL1GatewayAddress(l2Token, l2Provider)
   }
 
   /**
@@ -460,13 +448,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     l1TokenAddress: string,
     l1Provider: Provider
   ): Promise<boolean> {
-    await this._checkL1Network(l1Provider)
-
-    return this._tokenIsDisabled(
-      l1TokenAddress,
-      this.l2Network.tokenBridge.l1GatewayRouter,
-      l1Provider
-    )
+    return this.l2Erc20Bridger.l1TokenIsDisabled(l1TokenAddress, l1Provider)
   }
 
   /**
@@ -476,13 +458,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     l2TokenAddress: string,
     l2Provider: Provider
   ): Promise<boolean> {
-    await this._checkL2Network(l2Provider)
-
-    return this._tokenIsDisabled(
-      l2TokenAddress,
-      this.l3Network.tokenBridge.l1GatewayRouter,
-      l2Provider
-    )
+    return this.l3Erc20Bridger.l1TokenIsDisabled(l2TokenAddress, l2Provider)
   }
 
   /**
@@ -579,25 +555,6 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
   }
 
   /**
-   * Whether the token is disabled on the router given a token address and router address
-   */
-  private async _tokenIsDisabled(
-    tokenAddress: string,
-    gatewayRouterAddress: string,
-    provider: Provider
-  ): Promise<boolean> {
-    // assumes provider has been checked
-    const gatewayRouter = L2GatewayRouter__factory.connect(
-      gatewayRouterAddress,
-      provider
-    )
-
-    return (
-      (await gatewayRouter.l1TokenToGateway(tokenAddress)) === DISABLED_GATEWAY
-    )
-  }
-
-  /**
    * Given a ERC20 deposit request parameters, return the gas params with default values if not provided
    */
   protected async _populateGasParams(
@@ -667,6 +624,22 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
 
     return events[0]
   }
+
+  protected async _getApproveTokenRequest(
+    params: TokenApproveParams,
+    spender: string
+  ) {
+    const iErc20Interface = ERC20__factory.createInterface()
+    const data = iErc20Interface.encodeFunctionData('approve', [
+      spender,
+      params.amount || ethers.constants.MaxUint256,
+    ])
+
+    return {
+      to: params.erc20L1Address,
+      data,
+    }
+  }
 }
 
 /**
@@ -680,16 +653,7 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
   public async getApproveTokenRequest(
     params: TokenApproveParams
   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data'>>> {
-    const iErc20Interface = ERC20__factory.createInterface()
-    const data = iErc20Interface.encodeFunctionData('approve', [
-      this.teleporterAddresses.l1Teleporter,
-      params.amount || ethers.constants.MaxUint256,
-    ])
-
-    return {
-      to: params.erc20L1Address,
-      data,
-    }
+    return this._getApproveTokenRequest(params, this.teleporterAddresses.l1Teleporter)
   }
 
   /**
@@ -827,10 +791,7 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     params: TokenApproveParams,
     l1Provider: Provider
   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data'>>> {
-    return this.l2Erc20Bridger.getApproveTokenRequest({
-      ...params,
-      l1Provider,
-    })
+    return this._getApproveTokenRequest(params, await this.getL1L2GatewayAddress(params.erc20L1Address, l1Provider))
   }
 
   /**
@@ -840,10 +801,7 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     params: TokenApproveParams,
     l1Signer: Signer
   ): Promise<ethers.ContractTransaction> {
-    return this.l2Erc20Bridger.approveToken({
-      ...params,
-      l1Signer,
-    })
+    return l1Signer.sendTransaction(await this.getApproveTokenRequest(params, l1Signer.provider!))
   }
 
   /**
