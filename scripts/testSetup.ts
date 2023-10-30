@@ -271,7 +271,7 @@ export const setupNetworks = async (
   addCustomChain({
     customParentChain: {
       ...l2Network,
-      partnerChainIDs: [l3Network.chainID]
+      partnerChainIDs: [l3Network.chainID],
     },
     customChain: l3Network,
   })
@@ -376,7 +376,7 @@ export const testSetup = async (): Promise<{
       addCustomChain({
         customParentChain: {
           ...l2Network,
-          partnerChainIDs: [l3Network.chainID]
+          partnerChainIDs: [l3Network.chainID],
         },
         customChain: l3Network,
       })
