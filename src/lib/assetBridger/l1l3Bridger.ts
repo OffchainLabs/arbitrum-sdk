@@ -500,19 +500,16 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
   public getRecipientFromParentBridgeTx(
     depositTxReceipt: L1ContractCallTransactionReceipt
   ) {
+    const iface = L1GatewayRouter__factory.createInterface()
     const topic0 =
-      L1GatewayRouter__factory.createInterface().getEventTopic('TransferRouted')
+      iface.getEventTopic('TransferRouted')
     const log = depositTxReceipt.logs.find(x => x.topics[0] === topic0)
 
     if (!log) {
       throw new ArbSdkError(`Could not find TransferRouted event in tx receipt`)
     }
 
-    // topic 3 is "_userTo"
-    const bytes32UserTo = log.topics[3]
-
-    // parse address
-    return ethers.utils.getAddress(ethers.utils.hexDataSlice(bytes32UserTo, 12))
+    return iface.parseLog(log).args._userTo
   }
 
   /**
