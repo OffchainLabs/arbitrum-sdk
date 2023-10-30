@@ -333,7 +333,10 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     erc20L1Address: string,
     l1Provider: Provider
   ): Promise<string> {
-    return new Erc20Bridger(this.l2Network).getL2ERC20Address(erc20L1Address, l1Provider)
+    return new Erc20Bridger(this.l2Network).getL2ERC20Address(
+      erc20L1Address,
+      l1Provider
+    )
   }
 
   /**
@@ -351,7 +354,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
   }
 
   /**
-   * Given an L1 token's address, get the address of the token's L1 <-> L2 gateway on L1 
+   * Given an L1 token's address, get the address of the token's L1 <-> L2 gateway on L1
    */
   public async getL1L2GatewayAddress(
     erc20L1Address: string,
@@ -501,8 +504,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     depositTxReceipt: L1ContractCallTransactionReceipt
   ) {
     const iface = L1GatewayRouter__factory.createInterface()
-    const topic0 =
-      iface.getEventTopic('TransferRouted')
+    const topic0 = iface.getEventTopic('TransferRouted')
     const log = depositTxReceipt.logs.find(x => x.topics[0] === topic0)
 
     if (!log) {
