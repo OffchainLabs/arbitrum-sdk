@@ -305,6 +305,9 @@ class BaseL1L3Bridger {
 class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
   public readonly teleporterAddresses: TeleporterAddresses
 
+  protected readonly l2Erc20Bridger = new Erc20Bridger(this.l2Network)
+  protected readonly l3Erc20Bridger = new Erc20Bridger(this.l3Network)
+
   // todo: tune these
   public readonly defaultRetryableGasParams: ManualRetryableGasParams = {
     l2ForwarderFactoryGasLimit: BigNumber.from(1_000_000),
@@ -333,7 +336,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     erc20L1Address: string,
     l1Provider: Provider
   ): Promise<string> {
-    return new Erc20Bridger(this.l2Network).getL2ERC20Address(
+    return this.l2Erc20Bridger.getL2ERC20Address(
       erc20L1Address,
       l1Provider
     )
@@ -347,7 +350,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     l1Provider: Provider,
     l2Provider: Provider
   ): Promise<string> {
-    return new Erc20Bridger(this.l3Network).getL2ERC20Address(
+    return this.l3Erc20Bridger.getL2ERC20Address(
       await this.getL2ERC20Address(erc20L1Address, l1Provider),
       l2Provider
     )
@@ -824,7 +827,7 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     params: TokenApproveParams,
     l1Provider: Provider
   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data'>>> {
-    return new Erc20Bridger(this.l2Network).getApproveTokenRequest({
+    return this.l2Erc20Bridger.getApproveTokenRequest({
       ...params,
       l1Provider,
     })
@@ -837,7 +840,7 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     params: TokenApproveParams,
     l1Signer: Signer
   ): Promise<ethers.ContractTransaction> {
-    return new Erc20Bridger(this.l2Network).approveToken({
+    return this.l2Erc20Bridger.approveToken({
       ...params,
       l1Signer,
     })
@@ -921,11 +924,10 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
       excessFeeRefundAddress: l2ForwarderAddress,
     }
 
-    const erc20Bridger = new Erc20Bridger(this.l2Network)
     const submissionCostBefore = (
-      await erc20Bridger.getDepositRequest(baseDepositRequestParams)
+      await this.l2Erc20Bridger.getDepositRequest(baseDepositRequestParams)
     ).retryableData.maxSubmissionCost
-    const tokenBridgeRequest = await erc20Bridger.getDepositRequest({
+    const tokenBridgeRequest = await this.l2Erc20Bridger.getDepositRequest({
       ...baseDepositRequestParams,
       retryableGasOverrides: {
         // we need to INCREASE submission cost by extraValue
