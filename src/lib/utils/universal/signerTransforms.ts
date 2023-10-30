@@ -1,22 +1,14 @@
-import { JsonRpcSigner, Web3Provider } from '@ethersproject/providers'
 import { Signer } from '@ethersproject/abstract-signer'
-import {
-  PublicClient,
-  TransactionRequest,
-  WalletClient,
-  createPublicClient,
-  http,
-} from 'viem'
+import { JsonRpcSigner, Web3Provider } from '@ethersproject/providers'
+import { PublicClient, WalletClient, createPublicClient, http } from 'viem'
 import { Signerish } from '../../assetBridger/ethBridger'
-import { signMessage } from 'viem/dist/types/actions/wallet/signMessage'
-import { BlockTag, TransactionResponse } from 'ethers-v6'
-import { Deferrable } from 'ethers/lib/utils'
 
 class ViemSigner extends Signer {
   private walletClient: WalletClient
   private publicClient: PublicClient
   private _index: number
   private _address: string
+
   _legacySignMessage() {
     throw new Error('Method not implemented.')
   }
@@ -39,12 +31,13 @@ class ViemSigner extends Signer {
   }
 
   async getAddress(): Promise<string> {
-    const addresses = await this.walletClient.getAddresses()
-    return addresses[0] // Assume the first address is the desired address
+    const account = await this.walletClient.account
+    return account?.address as string
   }
 
   async signMessage(message: any): Promise<string> {
-    return this.walletClient.signMessage(message)
+    // return this.walletClient.signMessage(message)
+    throw new Error('Method not implemented.')
   }
 
   async signTransaction(transaction: any): Promise<any> {
@@ -55,20 +48,30 @@ class ViemSigner extends Signer {
     return this.walletClient
   }
 
-  async sendTransaction(transaction: Deferrable<TransactionRequest>) {
+  async sendTransaction(transaction: any) {
     const gasEstimate = await this.publicClient.estimateGas({
       ...(this.walletClient as any),
       ...transaction,
     })
+
+    // const request = await this.walletClient.prepareTransactionRequest({
+    //   ...(transaction as any),
+    //   ...this.walletClient,
+    // })
     const hash = await this.walletClient.sendTransaction(transaction as any)
     const blockNumber = ((await this.publicClient.getBlockNumber()) ??
       null) as any
-    const transactionReceipt = await this.publicClient.getTransactionReceipt({
-      hash,
-    })
-    const confirmations = (await this.publicClient.getTransactionConfirmations({
-      transactionReceipt,
-    })) as any
+    const transactionReceipt =
+      await this.publicClient.waitForTransactionReceipt({
+        hash,
+      })
+    const confirmations = parseInt(
+      (
+        await this.publicClient.getTransactionConfirmations({
+          transactionReceipt,
+        })
+      ).toString()
+    )
     const nonce = await this.publicClient.getTransactionCount({
       address: (await this.getAddress()) as `0x${string}`,
     })
@@ -85,7 +88,7 @@ class ViemSigner extends Signer {
       ...transaction,
       blockNumber,
       gasLimit: gasEstimate,
-      chainId: this.publicClient.getChainId(),
+      chainId: await this.publicClient.getChainId(),
       // data,
       // value,
       // chainId,

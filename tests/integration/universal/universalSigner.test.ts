@@ -98,47 +98,22 @@ describe('universal signer', async () => {
   // })
 
   it('should convert viem wallet client to ethers-v5 signer', async () => {
-    const { ethBridger, l1Signer, l2Signer } = testState
-    const pk = testState.l2Signer._signingKey().privateKey as `0x${string}`
-    const arbWalletClient = createWalletClient({
-      account: privateKeyToAccount(pk),
-      transport: http(arbRpcUrl),
-      chain: arbChain,
-    })
+    const { ethBridger, l1Signer } = testState
+    const pk = l1Signer._signingKey().privateKey as `0x${string}`
+
+    await fundL1(l1Signer)
+
     const ethWalletClient = createWalletClient({
       account: privateKeyToAccount(pk),
       transport: http(ethRpcUrl),
       chain: ethChain,
     })
-    const ethProvider = new StaticJsonRpcProvider(
-      ethWalletClient.transport.url,
-      testState.l2Network.chainID
-    )
-    const arbProvider = new StaticJsonRpcProvider(
-      ethWalletClient.transport.url,
-      testState.l2Network.chainID
-    )
-
-    const ethArbSigner = await transformUniversalSignerToEthersV5Signer(
-      ethWalletClient
-    )
-    const viemArbSigner = await transformUniversalSignerToEthersV5Signer(
-      arbWalletClient
-    )
-
-    // await fundL1(l1Signer)
-    // const l2Signer = testState.seed.connect(arbProvider)
-
-    // await fundL2(l2Signer)
 
     const arbPublicClient = createPublicClient({
       transport: http(arbRpcUrl),
       chain: arbChain,
     })
-    const ethPublicClient = createPublicClient({
-      transport: http(ethRpcUrl),
-      chain: ethChain,
-    })
+
     const viemEthBridger = await EthBridger.fromProvider(arbPublicClient)
     const viemTxResponse = await viemEthBridger.deposit({
       amount: parseEther('0.000001'),
@@ -146,13 +121,18 @@ describe('universal signer', async () => {
     })
     console.log('viemTxResponse', viemTxResponse)
 
-    // const ethersBridger = await EthBridger.fromProvider(arbProvider)
-    const ethersDepositTxResponse = await ethBridger.deposit({
+    const ethersTxResponse = await ethBridger.deposit({
       amount: parseEther('0.000001'),
       l1Signer, // should accept a `WalletClient`
     })
+    console.log('ethersTxResponse', ethersTxResponse)
 
-    console.log('ethersDepositTxResponse', ethersDepositTxResponse)
-    // const ethDepositTxReceipt = await ethDepositTxResponse.wait()
+    expect(viemTxResponse.value.toString()).to.equal(
+      ethersTxResponse.value.toString()
+    )
+    expect(viemTxResponse.gasLimit.toString()).to.equal(
+      ethersTxResponse.gasLimit.toString()
+    )
+    expect(viemTxResponse.data).to.equal(ethersTxResponse.data)
   })
 })

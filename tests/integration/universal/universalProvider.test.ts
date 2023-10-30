@@ -34,7 +34,7 @@ describe('universal provider', () => {
   it('should convert viem public client to ethers-v5 provider', async () => {
     const publicClient = createPublicClient({
       transport: http(defaultUrl),
-      chain: defineChain(arbLocal),
+      chain: arbLocal,
     })
     const viemEthBridger = await EthBridger.fromProvider(publicClient)
 
