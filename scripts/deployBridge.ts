@@ -195,11 +195,15 @@ export const deployErc20AndInit = async (
     parentWethAddressOverride?: string
   ) => {
     // initialize child
-    await (await child.router.initialize(
-      parent.router.address,
-      child.standardGateway.address
-    )).wait()
-    await (await child.beaconProxyFactory.initialize(child.beacon.address)).wait()
+    await (
+      await child.router.initialize(
+        parent.router.address,
+        child.standardGateway.address
+      )
+    ).wait()
+    await (
+      await child.beaconProxyFactory.initialize(child.beacon.address)
+    ).wait()
     await (
       await child.standardGateway.initialize(
         parent.standardGateway.address,
@@ -274,14 +278,20 @@ export const deployErc20AndInit = async (
   await initializeParentChild(l1Parent, l2Child, l1InboxAddress, l1Signer)
 
   console.log('initialising L2 <-> L3')
-  await initializeParentChild(l2Parent, l3Child, l2InboxAddress, l2Signer, l2Child.weth.address)
+  await initializeParentChild(
+    l2Parent,
+    l3Child,
+    l2InboxAddress,
+    l2Signer,
+    l2Child.weth.address
+  )
 
   return {
     l1Parent,
     l2Child,
     l2Parent: {
       ...l2Parent,
-      weth: l2Child.weth
+      weth: l2Child.weth,
     },
     l3Child,
   }
