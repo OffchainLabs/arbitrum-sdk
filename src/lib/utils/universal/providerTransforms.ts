@@ -95,7 +95,7 @@ export function isHttpProvider(object: any): object is Web3BaseProvider {
   )
 }
 
-export async function publicClientToProvider(publicClient: PublicClient) {
+export function publicClientToProvider(publicClient: PublicClient) {
   const { transport, chain } = publicClient
   if (!transport) throw new Error('Missing transport')
   if (!chain) throw new Error('Missing chain')

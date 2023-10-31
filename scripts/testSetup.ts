@@ -21,6 +21,12 @@ import {
   getL2Network,
 } from '../src/lib/dataEntities/networks'
 import { deployErc20AndInit } from './deployBridge'
+import { createWalletClient, defineChain, http } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
+import { mainnet } from 'viem/chains'
+import { Signerish } from '../src/lib/assetBridger/ethBridger'
+import { walletClientToSigner } from '../src/lib/utils/universal/signerTransforms'
+import 'isomorphic-unfetch'
 
 dotenv.config()
 
@@ -188,11 +194,25 @@ export const getSigner = (provider: any, key?: string) => {
   else return provider.getSigner(0)
 }
 
+export const ethLocal = {
+  ...mainnet,
+  id: 1337,
+  rpcUrls: {
+    default: {
+      http: ['http://127.0.0.1:8545'],
+    },
+    public: {
+      http: ['http://127.0.0.1:8545'],
+    },
+  },
+}
+const ethRpcUrl = config.ethUrl
+
 export const testSetup = async (): Promise<{
   seed: Wallet
   l1Network: L1Network
   l2Network: L2Network
-  l1Signer: Signer
+  l1Signer: any
   l2Signer: Signer
   erc20Bridger: Erc20Bridger
   ethBridger: EthBridger
@@ -210,6 +230,14 @@ export const testSetup = async (): Promise<{
   const seed = Wallet.createRandom()
   const l1Signer = seed.connect(ethProvider)
   const l2Signer = seed.connect(arbProvider)
+
+  // const pk = l1Signer._signingKey().privateKey as `0x${string}`
+  // const ethWalletClient = createWalletClient({
+  //   account: privateKeyToAccount(pk),
+  //   transport: http(ethRpcUrl),
+  //   chain: defineChain(ethLocal),
+  // })
+  // const viemSigner = walletClientToSigner(ethWalletClient)
 
   let setL1Network: L1Network, setL2Network: L2Network
   try {
@@ -255,7 +283,7 @@ export const testSetup = async (): Promise<{
 
   return {
     seed,
-    l1Signer,
+    l1Signer, //: viemSigner,
     l2Signer,
     l1Network: setL1Network,
     l2Network: setL2Network,

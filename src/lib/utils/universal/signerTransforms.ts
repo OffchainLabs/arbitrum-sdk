@@ -1,13 +1,19 @@
 import { Signer } from '@ethersproject/abstract-signer'
-import { JsonRpcSigner, Web3Provider } from '@ethersproject/providers'
-import { PublicClient, WalletClient, createPublicClient, http } from 'viem'
+import {
+  JsonRpcSigner,
+  StaticJsonRpcProvider,
+  Web3Provider,
+} from '@ethersproject/providers'
+import { WalletClient, createPublicClient, hexToSignature, http } from 'viem'
 import { Signerish } from '../../assetBridger/ethBridger'
+import { publicClientToProvider } from './providerTransforms'
 
 class ViemSigner extends Signer {
-  private walletClient: WalletClient
-  private publicClient: PublicClient
+  private walletClient: any
+  private publicClient: any
   private _index: number
   private _address: string
+  public provider: StaticJsonRpcProvider
 
   _legacySignMessage() {
     throw new Error('Method not implemented.')
@@ -28,6 +34,7 @@ class ViemSigner extends Signer {
     this.walletClient = walletClient
     this._index = 0
     this._address = walletClient.account?.address ?? ''
+    this.provider = publicClientToProvider(this.publicClient)
   }
 
   async getAddress(): Promise<string> {
@@ -54,11 +61,16 @@ class ViemSigner extends Signer {
       ...transaction,
     })
 
-    // const request = await this.walletClient.prepareTransactionRequest({
-    //   ...(transaction as any),
-    //   ...this.walletClient,
-    // })
-    const hash = await this.walletClient.sendTransaction(transaction as any)
+    const request = await this.walletClient.prepareTransactionRequest({
+      ...(transaction as any),
+      ...this.walletClient,
+    })
+    const serializedTransaction = await this.walletClient.signTransaction(
+      request
+    )
+    const hash = await this.walletClient.sendRawTransaction({
+      serializedTransaction,
+    })
     const blockNumber = ((await this.publicClient.getBlockNumber()) ??
       null) as any
     const transactionReceipt =
@@ -75,23 +87,33 @@ class ViemSigner extends Signer {
     const nonce = await this.publicClient.getTransactionCount({
       address: (await this.getAddress()) as `0x${string}`,
     })
+    const { r, s, v } = hexToSignature(serializedTransaction)
 
     return {
+      accessList: transaction.accessList,
+      chainId: await this.publicClient.getChainId(),
+      confirmations,
+      data: transaction.data,
+      from: transaction.from,
+      gasLimit: gasEstimate,
+      gasPrice: transaction.gasPrice,
       hash,
+      maxFeePerGas: transactionReceipt.maxFeePerGas,
+      maxPriorityFeePerGas: transactionReceipt.maxPriorityFeePerGas,
+      nonce,
+      r,
+      s,
+      v,
+      to: transaction.to,
+      type: transaction.type,
+      value: transaction.value,
       // blockNumber: blockNumber ? blockNumber : null,
       wait: async () => {
         return this.publicClient.waitForTransactionReceipt({ hash })
       },
-      ...transactionReceipt,
-      confirmations,
-      nonce,
-      ...transaction,
       blockNumber,
-      gasLimit: gasEstimate,
-      chainId: await this.publicClient.getChainId(),
-      // data,
-      // value,
-      // chainId,
+      //@ts-ignore
+      status: transactionReceipt.success === 'success' ? 1 : 0,
     } as any
   }
 

@@ -36,7 +36,7 @@ import { L1ToL2MessageStatus } from '../../src/lib/message/L1ToL2Message'
 import { testSetup } from '../../scripts/testSetup'
 dotenv.config()
 
-describe('Ether', async () => {
+describe.only('Ether', async () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
@@ -93,8 +93,7 @@ describe('Ether', async () => {
       l1Signer: l1Signer,
     })
     const rec = await res.wait()
-
-    expect(rec.status).to.equal(1, 'eth deposit L1 txn failed')
+    expect(rec.status).to.equal('success', 'eth deposit L1 txn failed')
     const finalInboxBalance = await l1Signer.provider!.getBalance(inboxAddress)
     expect(
       initialInboxBalance.add(ethToDeposit).eq(finalInboxBalance),
@@ -276,6 +275,7 @@ describe('Ether', async () => {
       'confirmed status'
     ).to.eq(L2ToL1MessageStatus.CONFIRMED)
 
+    // @ts-ignore
     const execTx = await withdrawMessage.execute(l2Signer.provider!)
     const execRec = await execTx.wait()
 

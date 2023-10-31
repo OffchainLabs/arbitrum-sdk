@@ -1,28 +1,14 @@
-import { StaticJsonRpcProvider } from '@ethersproject/providers'
 import { expect } from 'chai'
 import 'dotenv/config'
 import { parseEther } from 'ethers/lib/utils'
 import { createPublicClient, createWalletClient, defineChain, http } from 'viem'
 import { config, testSetup } from '../../../scripts/testSetup'
 import { EthBridger, enableExperimentalFeatures } from '../../../src'
-// fetch-polyfill.js
-import fetch, { Headers, Request, Response } from 'node-fetch'
 import { privateKeyToAccount } from 'viem/accounts'
 import { arbitrumGoerli, mainnet } from 'viem/chains'
-import { fundL1, fundL2 } from '../testHelpers'
-import { transformUniversalSignerToEthersV5Signer } from '../../../src/lib/utils/universal/signerTransforms'
+import { walletClientToSigner } from '../../../src/lib/utils/universal/signerTransforms'
+import { fundL1 } from '../testHelpers'
 // import { Signerish } from '../../../src/lib/assetBridger/ethBridger'
-
-if (!globalThis.fetch) {
-  //@ts-expect-error -test
-  globalThis.fetch = fetch
-  //@ts-expect-error -test
-  globalThis.Headers = Headers
-  //@ts-expect-error -test
-  globalThis.Request = Request
-  //@ts-expect-error -test
-  globalThis.Response = Response
-}
 
 export const arbLocal = {
   ...arbitrumGoerli,
@@ -55,14 +41,27 @@ const ethRpcUrl = config.ethUrl
 // addDefaultLocalNetwork()
 enableExperimentalFeatures()
 
+type AnyObj = Record<string, any>
+
+const convertBigIntToString = (obj: AnyObj): AnyObj => {
+  for (const key in obj) {
+    if (typeof obj[key] === 'object' && obj[key] !== null) {
+      convertBigIntToString(obj[key])
+    } else if (typeof obj[key] === 'bigint') {
+      obj[key] = obj[key].toString()
+    }
+  }
+  return obj
+}
+
 describe('universal signer', async () => {
   let testState: any
   let arbChain: any
   let ethChain: any
   before('init', async () => {
     testState = await testSetup()
-    arbChain = defineChain(arbLocal)
-    ethChain = defineChain(ethLocal)
+    arbChain = arbLocal
+    ethChain = ethLocal
   })
 
   it('should get the same addresses with viem', async () => {
@@ -73,12 +72,8 @@ describe('universal signer', async () => {
       account,
       chain: arbChain,
     })
-
-    const viemAddresses = await walletClient.getAddresses()
-    console.log({ viemAddresses })
-    // TODO: not actually using the WC addresses
-    const viemAddress = account.address
-    console.log({ viemAddress })
+    const viemSigner = walletClientToSigner(walletClient)
+    const viemAddress = await viemSigner.getAddress()
 
     const l2Signer = testState.l2Signer
     const ethersAddress = await l2Signer.getAddress()
@@ -134,5 +129,8 @@ describe('universal signer', async () => {
       ethersTxResponse.gasLimit.toString()
     )
     expect(viemTxResponse.data).to.equal(ethersTxResponse.data)
+    expect(convertBigIntToString(viemTxResponse)).to.equal(
+      convertBigIntToString(ethersTxResponse)
+    )
   })
 })
