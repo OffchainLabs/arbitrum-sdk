@@ -207,7 +207,7 @@ export class EthBridger extends AssetBridger<
    * Creates a transaction request for approving the custom fee token to be spent by the Inbox on the parent chain.
    * @param params
    */
-  public getApproveFeeTokenTxRequest(
+  public getApproveFeeTokenRequest(
     params?: ApproveFeeTokenParams
   ): Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>> {
     if (this.isNativeTokenEth) {
@@ -239,7 +239,7 @@ export class EthBridger extends AssetBridger<
     }
 
     const approveFeeTokenRequest = this.isApproveFeeTokenParams(params)
-      ? this.getApproveFeeTokenTxRequest(params)
+      ? this.getApproveFeeTokenRequest(params)
       : params.txRequest
 
     return await params.l1Signer.sendTransaction({

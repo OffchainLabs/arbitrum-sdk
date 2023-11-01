@@ -74,7 +74,7 @@ describe('EthBridger (with custom fee token)', async () => {
     await fundL1CustomFeeToken(l1Signer)
 
     const approvalTx = await ethBridger.approveFeeToken({
-      txRequest: await ethBridger.getApproveFeeTokenTxRequest(),
+      txRequest: await ethBridger.getApproveFeeTokenRequest(),
       l1Signer,
     })
     await approvalTx.wait()
