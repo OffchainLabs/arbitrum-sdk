@@ -5,7 +5,7 @@ import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { ArbSdkError } from '../dataEntities/errors'
-import { getL2Network } from '../dataEntities/networks'
+import { getChildChain as getL2Network } from '../dataEntities/networks'
 import {
   RetryableData,
   RetryableDataTools,

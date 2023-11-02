@@ -22,10 +22,10 @@ import { Wallet } from '@ethersproject/wallet'
 import dotenv from 'dotenv'
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
-  L1Network,
-  L2Network,
-  getL1Network,
-  getL2Network,
+  ParentChain as L1Network,
+  ChildChain as L2Network,
+  getParentChain as getL1Network,
+  getChildChain as getL2Network,
   addCustomNetwork,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
@@ -104,7 +104,7 @@ export const getCustomNetworks = async (
     explorerUrl: '',
     isCustom: true,
     name: 'EthLocal',
-    partnerChainIDs: [l2NetworkInfo.chainId],
+    childChainIds: [l2NetworkInfo.chainId],
     isArbitrum: false,
   }
 
@@ -122,7 +122,7 @@ export const getCustomNetworks = async (
     isArbitrum: true,
     isCustom: true,
     name: 'ArbLocal',
-    partnerChainID: l1NetworkInfo.chainId,
+    parentChainId: l1NetworkInfo.chainId,
     retryableLifetimeSeconds: 7 * 24 * 60 * 60,
     nitroGenesisBlock: 0,
     nitroGenesisL1Block: 0,
@@ -171,8 +171,8 @@ export const setupNetworks = async (
   }
 
   addCustomNetwork({
-    customL1Network: l1Network,
-    customL2Network: l2Network,
+    customParentChain: l1Network,
+    customChildChain: l2Network,
   })
 
   // also register the weth gateway
@@ -244,8 +244,8 @@ export const testSetup = async (): Promise<{
         l2Network: L2Network
       }
       addCustomNetwork({
-        customL1Network: l1Network,
-        customL2Network: l2Network,
+        customParentChain: l1Network,
+        customChildChain: l2Network,
       })
       setL1Network = l1Network
       setL2Network = l2Network

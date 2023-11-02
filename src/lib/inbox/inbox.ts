@@ -28,10 +28,7 @@ import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factor
 import { IInbox__factory } from '../abi/factories/IInbox__factory'
 import { RequiredPick } from '../utils/types'
 import { MessageDeliveredEvent } from '../abi/Bridge'
-import {
-  l1Networks as parentChains,
-  L2Network as ChildChain,
-} from '../dataEntities/networks'
+import { parentChains, ChildChain } from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
 import { MultiCaller, CallInput } from '../utils/multicall'
@@ -70,10 +67,10 @@ export class InboxTools {
     this.parentChainProvider = SignerProviderUtils.getProviderOrThrow(
       this.parentChainSigner
     )
-    this.parentChain = parentChains[childChain.partnerChainID]
+    this.parentChain = parentChains[childChain.parentChainId]
     if (!this.parentChain)
       throw new ArbSdkError(
-        `ParentChainNetwork not found for chain id: ${childChain.partnerChainID}.`
+        `ParentChain not found for chain id: ${childChain.parentChainId}.`
       )
   }
 

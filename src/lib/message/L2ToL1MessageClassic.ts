@@ -40,7 +40,7 @@ import { isDefined, wait } from '../utils/lib'
 import { ArbSdkError } from '../dataEntities/errors'
 import { EventArgs } from '../dataEntities/event'
 import { L2ToL1MessageStatus } from '../dataEntities/message'
-import { getL2Network } from '../dataEntities/networks'
+import { getChildChain as getL2Network } from '../dataEntities/networks'
 
 export interface MessageBatchProofInfo {
   /**

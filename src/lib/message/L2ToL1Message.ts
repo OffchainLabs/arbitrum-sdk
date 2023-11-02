@@ -35,7 +35,7 @@ import {
 import { isDefined } from '../utils/lib'
 import { EventArgs } from '../dataEntities/event'
 import { L2ToL1MessageStatus } from '../dataEntities/message'
-import { getL2Network } from '../dataEntities/networks'
+import { getChildChain as getL2Network } from '../dataEntities/networks'
 import { ArbSdkError } from '../dataEntities/errors'
 
 export type L2ToL1TransactionEvent =

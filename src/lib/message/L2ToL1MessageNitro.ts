@@ -40,7 +40,7 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { getBlockRangesForL1Block, isArbitrumChain, wait } from '../utils/lib'
-import { getL2Network } from '../dataEntities/networks'
+import { getChildChain as getL2Network } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
 import { ArbitrumProvider } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
