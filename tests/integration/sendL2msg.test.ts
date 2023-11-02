@@ -19,7 +19,10 @@
 
 import { BigNumber, ethers, Signer } from 'ethers'
 import { InboxTools } from '../../src/lib/inbox/inbox'
-import { getL2Network, L2Network } from '../../src/lib/dataEntities/networks'
+import {
+  getChildChain as getL2Network,
+  ChildChain as L2Network,
+} from '../../src/lib/dataEntities/networks'
 import { testSetup } from '../../scripts/testSetup'
 import { greeter } from './helper/greeter'
 import { expect } from 'chai'

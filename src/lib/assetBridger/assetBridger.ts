@@ -20,7 +20,11 @@ import { ArbSdkError } from '../dataEntities/errors'
 import { L1ContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'
 
-import { l1Networks, L1Network, L2Network } from '../dataEntities/networks'
+import {
+  parentChains as l1Networks,
+  ParentChain as L1Network,
+  ChildChain as L2Network,
+} from '../dataEntities/networks'
 import {
   SignerOrProvider,
   SignerProviderUtils,
@@ -33,10 +37,10 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   public readonly l1Network: L1Network
 
   public constructor(public readonly l2Network: L2Network) {
-    this.l1Network = l1Networks[l2Network.partnerChainID]
+    this.l1Network = l1Networks[l2Network.parentChainId]
     if (!this.l1Network) {
       throw new ArbSdkError(
-        `Unknown l1 network chain id: ${l2Network.partnerChainID}`
+        `Unknown l1 network chain id: ${l2Network.parentChainId}`
       )
     }
   }

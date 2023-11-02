@@ -2,7 +2,7 @@ import { Provider } from '@ethersproject/abstract-provider'
 import { TransactionReceipt, JsonRpcProvider } from '@ethersproject/providers'
 import { ArbSdkError } from '../dataEntities/errors'
 import { ArbitrumProvider } from './arbProvider'
-import { l2Networks } from '../dataEntities/networks'
+import { childChains } from '../dataEntities/networks'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 
@@ -100,7 +100,7 @@ export async function getFirstBlockForL1Block({
   const arbProvider = new ArbitrumProvider(provider)
   const currentArbBlock = await arbProvider.getBlockNumber()
   const arbitrumChainId = (await arbProvider.getNetwork()).chainId
-  const { nitroGenesisBlock } = l2Networks[arbitrumChainId]
+  const { nitroGenesisBlock } = childChains[arbitrumChainId]
 
   async function getL1Block(forL2Block: number) {
     const { l1BlockNumber } = await arbProvider.getBlock(forL2Block)

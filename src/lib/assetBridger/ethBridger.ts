@@ -45,7 +45,7 @@ import {
 import { OmitTyped } from '../utils/types'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
-import { getL2Network } from '../dataEntities/networks'
+import { getChildChain as getL2Network } from '../dataEntities/networks'
 
 export interface EthWithdrawParams {
   /**

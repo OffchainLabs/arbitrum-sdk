@@ -34,7 +34,7 @@ import {
 import { ArbSdkError } from '../dataEntities/errors'
 import { ethers, Overrides } from 'ethers'
 import { L2TransactionReceipt, RedeemTransaction } from './L2Transaction'
-import { getL2Network } from '../../lib/dataEntities/networks'
+import { getChildChain as getL2Network } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt, isDefined } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
