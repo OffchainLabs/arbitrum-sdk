@@ -110,7 +110,8 @@ jobs:
       - name: Restore node_modules
         uses: OffchainLabs/actions/node-modules/restore@main
 
-      - uses: OffchainLabs/actions/run-nitro-test-node@main
+      - name: Set up the local node
+        uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
           no-token-bridge: true
 
