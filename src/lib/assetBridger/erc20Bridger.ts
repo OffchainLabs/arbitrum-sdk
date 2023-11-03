@@ -176,7 +176,7 @@ export class Erc20Bridger extends AssetBridger<
   public static MIN_CUSTOM_DEPOSIT_GAS_LIMIT = BigNumber.from(275000)
 
   /**
-   * In case of a chain that uses ETH as its native/fee token, this is undefined.
+   * In case of a chain that uses ETH as its native/fee token, this is either undefined or the zero address.
    * In case of a chain that uses an ERC-20 token from the parent chain as its native/fee token, this is the address of said token on the parent chain.
    */
   public readonly nativeToken?: string
@@ -195,7 +195,7 @@ export class Erc20Bridger extends AssetBridger<
    * @returns
    */
   private get isNativeTokenEth() {
-    return typeof this.nativeToken === 'undefined'
+    return !this.nativeToken || this.nativeToken === constants.AddressZero
   }
 
   /**
