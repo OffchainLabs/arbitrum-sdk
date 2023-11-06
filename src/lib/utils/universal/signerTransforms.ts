@@ -1,3 +1,7 @@
+import {
+  TransactionRequest,
+  TransactionResponse,
+} from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import {
   JsonRpcSigner,
@@ -7,6 +11,26 @@ import {
 import { WalletClient, createPublicClient, hexToSignature, http } from 'viem'
 import { Signerish } from '../../assetBridger/ethBridger'
 import { publicClientToProvider } from './providerTransforms'
+
+import { Deferrable } from 'ethers/lib/utils'
+import { BigNumber } from 'ethers'
+
+const getType = (value: number | string | null) => {
+  switch (value) {
+    case 0:
+    case 'legacy':
+      return 0
+    case 1:
+    case 'berlin':
+    case 'eip-2930':
+      return 1
+    case 2:
+    case 'london':
+    case 'eip-1559':
+      return 2
+  }
+  return null
+}
 
 class ViemSigner extends Signer {
   private walletClient: any
@@ -55,13 +79,17 @@ class ViemSigner extends Signer {
     return this.walletClient
   }
 
-  async sendTransaction(transaction: any) {
+  async sendTransaction(
+    transaction: Deferrable<TransactionRequest>
+  ): Promise<TransactionResponse> {
     const gasEstimate = await this.publicClient.estimateGas({
       ...(this.walletClient as any),
       ...transaction,
     })
 
     const request = await this.walletClient.prepareTransactionRequest({
+      confirmations: 0,
+      type: 'eip-1559',
       ...(transaction as any),
       ...this.walletClient,
     })
@@ -71,50 +99,58 @@ class ViemSigner extends Signer {
     const hash = await this.walletClient.sendRawTransaction({
       serializedTransaction,
     })
-    const blockNumber = ((await this.publicClient.getBlockNumber()) ??
-      null) as any
+
     const transactionReceipt =
       await this.publicClient.waitForTransactionReceipt({
         hash,
       })
-    const confirmations = parseInt(
-      (
-        await this.publicClient.getTransactionConfirmations({
-          transactionReceipt,
-        })
-      ).toString()
+
+    const accessList = request.accessList ?? []
+    const chainId = await this.publicClient.getChainId()
+    const confirmations = request.confirmations ?? 0
+    const data = (await transaction.data?.toString()) as string
+    const from = (await transaction.from) as string
+    const gasLimit = gasEstimate
+    const gasPrice = BigNumber.from((await request.gasPrice) ?? 0)
+    const maxFeePerGas = BigNumber.from((await transaction.maxFeePerGas) ?? 0)
+    const maxPriorityFeePerGas = BigNumber.from(
+      (await transaction.maxPriorityFeePerGas) ?? 0
     )
     const nonce = await this.publicClient.getTransactionCount({
       address: (await this.getAddress()) as `0x${string}`,
     })
-    const { r, s, v } = hexToSignature(serializedTransaction)
+    const { r, s, v: rawV } = hexToSignature(serializedTransaction)
+    const v = parseInt(rawV.toString())
+    const to = (await transaction.to) as string
+    const type = getType(transactionReceipt.type ?? 2)
+    const value = BigNumber.from(await transaction.value)
+    const wait = async () => {
+      return this.publicClient.waitForTransactionReceipt({ hash })
+    }
+    const blockNumber = ((await this.publicClient.getBlockNumber()) ??
+      null) as any
 
     return {
-      accessList: transaction.accessList,
-      chainId: await this.publicClient.getChainId(),
+      accessList,
+      chainId,
       confirmations,
-      data: transaction.data,
-      from: transaction.from,
-      gasLimit: gasEstimate,
-      gasPrice: transaction.gasPrice,
+      data,
+      from,
+      gasLimit,
+      gasPrice,
       hash,
-      maxFeePerGas: transactionReceipt.maxFeePerGas,
-      maxPriorityFeePerGas: transactionReceipt.maxPriorityFeePerGas,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
       nonce,
       r,
       s,
       v,
-      to: transaction.to,
-      type: transaction.type,
-      value: transaction.value,
-      // blockNumber: blockNumber ? blockNumber : null,
-      wait: async () => {
-        return this.publicClient.waitForTransactionReceipt({ hash })
-      },
+      to,
+      type,
+      value,
+      wait,
       blockNumber,
-      //@ts-ignore
-      status: transactionReceipt.success === 'success' ? 1 : 0,
-    } as any
+    }
   }
 
   connectUnchecked(): Signer {
