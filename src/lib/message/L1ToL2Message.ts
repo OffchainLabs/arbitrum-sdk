@@ -37,7 +37,7 @@ import {
   L2TransactionReceipt as ChainTransactionReceipt,
   RedeemTransaction,
 } from './L2Transaction'
-import { getChainNetwork } from '../../lib/dataEntities/networks'
+import { getChildChain } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt, isDefined } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
@@ -318,7 +318,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
    * @returns TransactionReceipt of the first successful redeem if exists, otherwise the current status of the message.
    */
   public async getSuccessfulRedeem(): Promise<ParentToChildMessageWaitResult> {
-    const chainNetwork = await getChainNetwork(this.chainProvider)
+    const chainNetwork = await getChildChain(this.chainProvider)
     const eventFetcher = new EventFetcher(this.chainProvider)
     const creationReceipt = await this.getRetryableCreationReceipt()
 
@@ -490,7 +490,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
     confirmations?: number,
     timeout?: number
   ): Promise<ParentToChildMessageWaitResult> {
-    const chainNetwork = await getChainNetwork(this.chainId)
+    const chainNetwork = await getChildChain(this.chainId)
 
     const chosenTimeout = isDefined(timeout)
       ? timeout
@@ -876,7 +876,7 @@ export class EthDepositMessage {
   }
 
   public async wait(confirmations?: number, timeout?: number) {
-    const chainNetwork = await getChainNetwork(this.chainChainId)
+    const chainNetwork = await getChildChain(this.chainChainId)
 
     const chosenTimeout = isDefined(timeout)
       ? timeout

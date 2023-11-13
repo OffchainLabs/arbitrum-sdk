@@ -5,7 +5,7 @@ import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { ArbSdkError } from '../dataEntities/errors'
-import { getChainNetwork } from '../dataEntities/networks'
+import { getChildChain } from '../dataEntities/networks'
 import {
   RetryableData,
   RetryableDataTools,
@@ -125,7 +125,7 @@ export class L1ToL2MessageGasEstimator {
   ): Promise<L1ToL2MessageGasParams['maxSubmissionCost']> {
     const defaultedOptions = this.applySubmissionPriceDefaults(options)
 
-    const network = await getChainNetwork(this.l2Provider)
+    const network = await getChildChain(this.l2Provider)
     const inbox = Inbox__factory.connect(network.ethBridge.inbox, l1Provider)
 
     return this.percentIncrease(

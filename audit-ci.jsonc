@@ -112,6 +112,11 @@
     // from: @arbitrum/nitro-contracts>@openzeppelin/contracts-upgradeable
     // from @arbitrum/nitro-contracts>@openzeppelin/contracts
     // We don't use ERC2771Context
-    "GHSA-g4vp-m682-qqmp"
+    "GHSA-g4vp-m682-qqmp",
+    // https://github.com/advisories/GHSA-wqq4-5wpv-mx2g
+    // Undici's cookie header not cleared on cross-origin redirect in fetch
+    // from: hardhat>undici
+    // hardhat is only used in dev
+    "GHSA-wqq4-5wpv-mx2g"
   ]
 }

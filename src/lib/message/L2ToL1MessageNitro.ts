@@ -40,7 +40,7 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { getBlockRangesForL1Block, isArbitrumChain, wait } from '../utils/lib'
-import { getChainNetwork } from '../dataEntities/networks'
+import { getChildChain } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
 import { ArbitrumProvider } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
@@ -205,7 +205,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
    * Check if this message has already been executed in the Outbox
    */
   protected async hasExecuted(l2Provider: Provider): Promise<boolean> {
-    const l2Network = await getChainNetwork(l2Provider)
+    const l2Network = await getChildChain(l2Provider)
     const outbox = Outbox__factory.connect(
       l2Network.ethBridge.outbox,
       this.l1Provider
@@ -331,7 +331,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
 
   protected async getSendProps(l2Provider: Provider) {
     if (!this.sendRootConfirmed) {
-      const l2Network = await getChainNetwork(l2Provider)
+      const l2Network = await getChildChain(l2Provider)
 
       const rollup = RollupUserLogic__factory.connect(
         l2Network.ethBridge.rollup,
@@ -409,7 +409,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
   public async getFirstExecutableBlock(
     l2Provider: Provider
   ): Promise<BigNumber | null> {
-    const l2Network = await getChainNetwork(l2Provider)
+    const l2Network = await getChildChain(l2Provider)
 
     const rollup = RollupUserLogic__factory.connect(
       l2Network.ethBridge.rollup,
@@ -526,7 +526,7 @@ export class L2ToL1MessageWriterNitro extends L2ToL1MessageReaderNitro {
       )
     }
     const proof = await this.getOutboxProof(l2Provider)
-    const l2Network = await getChainNetwork(l2Provider)
+    const l2Network = await getChildChain(l2Provider)
     const outbox = Outbox__factory.connect(
       l2Network.ethBridge.outbox,
       this.l1Signer

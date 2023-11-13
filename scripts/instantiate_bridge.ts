@@ -78,12 +78,10 @@ export const instantiateBridge = (
   }
 
   const l2Network = l2Networks[l2NetworkID]
-  const l1Network = l1Networks[l2Network.partnerChainID]
+  const l1Network = l1Networks[l2Network.parentChainId]
 
   if (!l1Network) {
-    throw new Error(
-      `Unrecognised partner chain id: ${l2Network.partnerChainID}`
-    )
+    throw new Error(`Unrecognised parent chain id: ${l2Network.parentChainId}`)
   }
 
   const l1Rpc = (() => {
