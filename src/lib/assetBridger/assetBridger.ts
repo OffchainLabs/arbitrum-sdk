@@ -22,9 +22,8 @@ import { L2ContractTransaction } from '../message/L2Transaction'
 
 import {
   parentChains as l1Networks,
-  ParentChain as L1Network,
   ChildChain as L2Network,
-  ParentChainNetwork,
+  ParentChain,
 } from '../dataEntities/networks'
 import {
   SignerOrProvider,
@@ -35,7 +34,7 @@ import {
  * Base for bridging assets from l1 to l2 and back
  */
 export abstract class AssetBridger<DepositParams, WithdrawParams> {
-  public readonly l1Network: ParentChainNetwork
+  public readonly l1Network: ParentChain
 
   public constructor(public readonly l2Network: L2Network) {
     this.l1Network = l1Networks[l2Network.parentChainId]

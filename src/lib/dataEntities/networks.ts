@@ -402,7 +402,18 @@ export const addCustomNetwork = ({
   customParentChain?: ParentChain
   customChildChain: ChildChain
 }): void => {
-  console.log({ customChildChain })
+  //@ts-expect-error - Nitro returns this value with partnerChainID
+  if (customChildChain.partnerChainID) {
+    //@ts-expect-error - Nitro returns this value with partnerChainID
+    customChildChain.parentChainId = customChildChain.partnerChainID
+  }
+
+  //@ts-expect-error - Nitro returns this value with partnerChainID
+  if (customParentChain.partnerChainIDs.length > 0) {
+    //@ts-expect-error - Nitro returns this value with partnerChainID
+    customParentChain.childChainIds = customParentChain.partnerChainIDs
+  }
+
   if (customParentChain) {
     if (parentChains[customParentChain.chainID]) {
       throw new ArbSdkError(
@@ -429,11 +440,14 @@ export const addCustomNetwork = ({
 
   childChains[customChildChain.chainID] = customChildChain
 
+  console.log({ customChildChain })
+
   const parentChainChildChain = parentChains[customChildChain.parentChainId]
   if (!parentChainChildChain)
     throw new ArbSdkError(
       `Network ${customChildChain.chainID}'s parent chain, ${customChildChain.parentChainId}, not recognized`
     )
+  console.log({ parentChainChildChain })
 
   if (!parentChainChildChain.childChainIds.includes(customChildChain.chainID)) {
     parentChainChildChain.childChainIds.push(customChildChain.chainID)
