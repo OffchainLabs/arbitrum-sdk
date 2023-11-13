@@ -409,7 +409,7 @@ export const addCustomNetwork = ({
   }
 
   //@ts-expect-error - Nitro returns this value with partnerChainID
-  if (customParentChain.partnerChainIDs.length > 0) {
+  if (customParentChain.partnerChainIDs?.length > 0) {
     //@ts-expect-error - Nitro returns this value with partnerChainID
     customParentChain.childChainIds = customParentChain.partnerChainIDs
   }
