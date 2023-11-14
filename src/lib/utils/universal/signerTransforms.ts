@@ -27,6 +27,7 @@ const getType = (value: number | string | null) => {
     case 2:
     case 'london':
     case 'eip-1559':
+    case 'eip1559':
       return 2
   }
   return null
@@ -86,12 +87,12 @@ class ViemSigner extends Signer {
       ...(this.walletClient as any),
       ...transaction,
     })
+    const { maxFeePerGas, maxPriorityFeePerGas } =
+      await this.publicClient.estimateFeesPerGas()
 
     const request = await this.walletClient.prepareTransactionRequest({
       confirmations: 0,
-      type: 'eip-1559',
       ...(transaction as any),
-      ...this.walletClient,
     })
     const serializedTransaction = await this.walletClient.signTransaction(
       request
@@ -112,10 +113,6 @@ class ViemSigner extends Signer {
     const from = (await transaction.from) as string
     const gasLimit = gasEstimate
     const gasPrice = BigNumber.from((await request.gasPrice) ?? 0)
-    const maxFeePerGas = BigNumber.from((await transaction.maxFeePerGas) ?? 0)
-    const maxPriorityFeePerGas = BigNumber.from(
-      (await transaction.maxPriorityFeePerGas) ?? 0
-    )
     const nonce = await this.publicClient.getTransactionCount({
       address: (await this.getAddress()) as `0x${string}`,
     })

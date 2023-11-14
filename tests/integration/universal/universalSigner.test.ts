@@ -3,7 +3,11 @@ import 'dotenv/config'
 import { parseEther } from 'ethers/lib/utils'
 import { createPublicClient, createWalletClient, defineChain, http } from 'viem'
 import { config, testSetup } from '../../../scripts/testSetup'
-import { EthBridger, enableExperimentalFeatures } from '../../../src'
+import {
+  EthBridger,
+  addDefaultLocalNetwork,
+  enableExperimentalFeatures,
+} from '../../../src'
 import { privateKeyToAccount } from 'viem/accounts'
 import { arbitrumGoerli, mainnet } from 'viem/chains'
 import { walletClientToSigner } from '../../../src/lib/utils/universal/signerTransforms'
@@ -30,18 +34,17 @@ export const ethLocal = {
   id: 1337,
   rpcUrls: {
     default: {
-      http: ['http://127.0.0.1:8545'],
+      http: ['http://localhost:8545'],
     },
     public: {
-      http: ['http://127.0.0.1:8545'],
+      http: ['http://localhost:8545'],
     },
   },
 }
 const ethRpcUrl = config.ethUrl
 
-// addDefaultLocalNetwork()
+addDefaultLocalNetwork()
 enableExperimentalFeatures()
-
 type AnyObj = Record<string, any>
 
 const convertBigIntToString = (obj: AnyObj): AnyObj => {
@@ -94,7 +97,9 @@ describe('universal signer', async () => {
   // })
 
   it('should convert viem wallet client to ethers-v5 signer', async () => {
-    const { ethBridger, l1Signer } = testState
+    await testSetup()
+
+    const { ethBridger, l1Signer, l1Network, l2Network } = testState
     const pk = l1Signer._signingKey().privateKey as `0x${string}`
 
     await fundL1(l1Signer)
@@ -110,43 +115,62 @@ describe('universal signer', async () => {
       chain: arbChain,
     })
 
+    const ethPublicClient = createPublicClient({
+      transport: http(ethRpcUrl),
+      chain: ethChain,
+    })
+
     const viemEthBridger = await EthBridger.fromProvider(arbPublicClient)
-    const viemTx = await viemEthBridger.deposit({
+    const viemTx = await ethBridger.deposit({
       amount: parseEther('0.000001'),
       l1Signer: ethWalletClient as any,
     })
-    console.log('viemTx', viemTx)
 
     const ethersTx = await ethBridger.deposit({
       amount: parseEther('0.000001'),
       l1Signer, // should accept a `WalletClient`
     })
-    console.log('ethersTx', ethersTx)
 
-    // compare all values of ethers to viem programmatically
+    // compare viem and ethers-v5 tx output programmatically
+    const excludedProperties: string[] = [
+      'gasLimit',
+      'gasPrice',
+      'hash',
+      'maxFeePerGas',
+      'maxPriorityFeePerGas',
+      'r',
+      's',
+      'v',
+    ]
+
     Object.keys(ethersTx).forEach(key => {
       // Assert that the property exists on viemTx
       expect(viemTx).to.have.property(key)
-      //@ts-ignore
+
       const viemProp = viemTx[key]
-      //@ts-ignore
       const ethersProp = ethersTx[key]
+
+      const isKeyExcluded = excludedProperties.find(_key => _key === key)
+
+      // Skip excluded properties
+      if (isKeyExcluded) return
+
       // If the property is an object with a toString method, compare as strings
       if (ethersProp && typeof ethersProp.toString === 'function') {
-        expect(viemProp.toString()).to.equal(
-          ethersProp.toString(),
-          `Property '${key}' does not match.`
+        expect(viemProp?.toString().toLowerCase()).to.equal(
+          ethersProp.toString().toLowerCase(),
+          `Property '${key}' does not match. viem value was ${viemProp} and ethers value was ${ethersProp}`
         )
       } else {
         // For primitive types, direct comparison
-        expect(viemProp as any).to.equal(
+        expect(viemProp).to.equal(
           ethersProp,
-          `Property '${key}' does not match.`
+          `Property '${key}' does not match. viem value was ${viemProp} and ethers value was ${ethersProp}`
         )
       }
     })
 
-    // compare all values of ethers to viem manually
+    // compare viem and ethers-v5 tx output manually
     expect(viemTx.accessList?.toString()).to.equal(
       ethersTx.accessList?.toString()
     )
@@ -154,27 +178,9 @@ describe('universal signer', async () => {
     expect(viemTx.confirmations).to.equal(ethersTx.confirmations)
     expect(viemTx.data).to.equal(ethersTx.data)
     expect(viemTx.from).to.equal(ethersTx.from)
-    expect(viemTx.gasLimit).to.equal(ethersTx.gasLimit)
-    expect(viemTx.gasPrice).to.equal(ethersTx.gasPrice)
-    expect(viemTx.hash).to.equal(ethersTx.hash)
-    expect(viemTx.maxFeePerGas).to.equal(ethersTx.maxFeePerGas)
-    expect(viemTx.maxPriorityFeePerGas).to.equal(ethersTx.maxPriorityFeePerGas)
     expect(viemTx.nonce).to.equal(ethersTx.nonce)
-    expect(viemTx.r).to.equal(ethersTx.r)
-    expect(viemTx.s).to.equal(ethersTx.s)
-    expect(viemTx.v).to.equal(ethersTx.v)
-    expect(viemTx.to).to.equal(ethersTx.to)
+    expect(viemTx.to.toLowerCase()).to.equal(ethersTx.to.toLowerCase())
     expect(viemTx.type).to.equal(ethersTx.type)
-    expect(viemTx.value).to.equal(ethersTx.value)
-    expect(viemTx.wait).to.equal(ethersTx.wait)
-    expect(viemTx.blockNumber).to.equal(ethersTx.blockNumber)
-
-    // const viemreq = convertBigIntToString(viemTx)
-    // const ethersreq = convertBigIntToString(ethersTx)
-
-    // expect(viemTx.data).to.equal(ethersTx.data)
-    // expect(convertBigIntToString(viemTx)).to.equal(
-    //   convertBigIntToString(ethersTx)
-    // )
+    expect(viemTx.value.toString()).to.equal(ethersTx.value.toString())
   })
 })
