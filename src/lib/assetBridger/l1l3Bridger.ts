@@ -1,6 +1,6 @@
 import { Provider, TransactionRequest } from '@ethersproject/abstract-provider'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { BigNumber, BigNumberish, Signer, ethers } from 'ethers'
+import { BigNumber, BigNumberish, Signer, Transaction, ethers } from 'ethers'
 import { ERC20 } from '../abi/ERC20'
 import { BridgedToL3Event } from '../abi/L2Forwarder'
 import { L2ForwarderPredictor } from '../abi/L2ForwarderPredictor'
@@ -46,6 +46,8 @@ import {
 } from '../message/L1Transaction'
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { Erc20Bridger, TokenApproveParams } from './erc20Bridger'
+import { L2ForwarderPredictor__factory } from '../abi/factories/L2ForwarderPredictor__factory'
+import { AbiCoder } from 'ethers/lib/utils'
 
 /**
  * Manual gas parameters for the L1 to L2 and L2 to L3 tickets.
@@ -215,9 +217,6 @@ export type RelayedErc20DepositRequestResult = {
   txRequest: L1ToL2TransactionRequest
   /**
    * Information required by the relayer to forward tokens from L2 to L3
-   *
-   * IMPORTANT! DO NOT LOSE THIS INFO!
-   * Once tokens are sent through the bridge, losing this information means losing the funds!
    */
   relayerInfo: RelayerInfo
 }
@@ -232,9 +231,6 @@ export type RelayedErc20DepositResult = {
   tx: L1ContractCallTransaction
   /**
    * Information required by the relayer to forward tokens from L2 to L3
-   *
-   * IMPORTANT! DO NOT LOSE THIS INFO!
-   * Once tokens are sent through the bridge, losing this information means losing the funds!
    */
   relayerInfo: RelayerInfo
 }
@@ -812,8 +808,7 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
   /**
    * Get a tx request to deposit tokens to L3. Will call the `L1GatewayRouter` directly.
    *
-   * IMPORTANT! DO NOT LOSE THE RETURNED RELAYER INFO!
-   * Once tokens are sent through the bridge, losing this information means losing the funds!
+   * Relayer info will be returned as well as appended to calldata.
    */
   public async getDepositRequest(
     params: RelayedErc20DepositRequestParams,
@@ -903,6 +898,18 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
       },
     })
 
+    // append forwarder params to calldata
+    const encodedForwarderParamsWithSelector =
+      L2ForwarderPredictor__factory.createInterface().encodeFunctionData(
+        'l2ForwarderAddress',
+        [l2ForwarderParams]
+      )
+    // strip selector and add to tx data
+    tokenBridgeRequest.txRequest.data = ethers.utils.concat([
+      tokenBridgeRequest.txRequest.data,
+      ethers.utils.hexDataSlice(encodedForwarderParamsWithSelector, 4)
+    ])
+
     return {
       relayerInfo: {
         ...l2ForwarderParams,
@@ -913,10 +920,9 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
   }
 
   /**
-   * Deposit tokens to L3. Will call the `L1GatewayRouter` directly.
-   *
-   * IMPORTANT! DO NOT LOSE THE RETURNED RELAYER INFO!
-   * Once tokens are sent through the bridge, losing this information means losing the funds!
+   * Deposit tokens to L3. Will call the `L1GatewayRouter` directly. 
+   * 
+   * Relayer info will be returned as well as appended to calldata.
    */
   public async deposit(
     params: Erc20DepositRequestParams,
@@ -950,6 +956,45 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     l3Provider: Provider
   ): Promise<RelayedErc20DepositStatus> {
     return this._getDepositStatus(depositTxReceipt, l2Provider, l3Provider)
+  }
+
+  /**
+   * Parse relayer info from a transaction. If the transaction was created using this class, then the relayer info is appended to the calldata.
+   * To determine L2 chain id, 'to' is assumed to be the L1GatewayRouter. All l2Networks are searched for the L1GatewayRouter.
+   *
+   * @param tx A Transaction, TransactionRequest, or TransactionReceipt that initiated step 1 of a relayed teleportation
+   */
+  public static parseRelayerInfoFromTx(
+    tx: Required<Pick<TransactionRequest, 'data' | 'to'>>
+  ): RelayerInfo {
+    // 'to' is the L1GatewayRouter. Go through the list of chains and find the one that matches the L1GatewayRouter
+    const chainId = Object.values(l2Networks).find(
+      network => network.tokenBridge.l1GatewayRouter === tx.to
+    )?.chainID
+
+    if (!chainId) {
+      throw new ArbSdkError(`Could not find chain id for L1GatewayRouter`)
+    }
+
+    const l2ForwarderAddressFragment = L2ForwarderPredictor__factory.createInterface().fragments.find(
+      f => f.name === 'l2ForwarderAddress'
+    )!
+
+    const l2ForwarderParamsStructLength = l2ForwarderAddressFragment.inputs[0].components.length
+
+    // get the last x words of the calldata
+    const encodedL2ForwarderParams = ethers.utils.hexDataSlice(
+      tx.data,
+      ethers.utils.hexDataLength(tx.data) - l2ForwarderParamsStructLength * 32
+    )
+
+    // parse the encoded params
+    const decodedL2ForwarderParams = new AbiCoder().decode(l2ForwarderAddressFragment.inputs, encodedL2ForwarderParams)[0] as L2ForwarderPredictor.L2ForwarderParamsStruct
+
+    return {
+      chainId,
+      ...decodedL2ForwarderParams,
+    }
   }
 
   /**

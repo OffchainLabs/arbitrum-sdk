@@ -439,7 +439,7 @@ describe('L1 to L3 Bridging', () => {
       // don't need to test rescue here i think
 
       it('happy path', async () => {
-        const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
+        const l3Recipient = ethers.utils.getAddress(ethers.utils.hexlify(ethers.utils.randomBytes(20)))
 
         const depositResult = await l1l3Bridger.deposit(
           {
@@ -453,6 +453,20 @@ describe('L1 to L3 Bridging', () => {
         )
 
         const depositReceipt = await depositResult.tx.wait()
+
+        // make sure relayer info was encoded correctly
+        const parsedRelayerInfo = RelayedErc20L1L3Bridger.parseRelayerInfoFromTx({to: depositResult.tx.to!, data: depositResult.tx.data})
+        // include a hardcoded check so that the test fails if the data format changes
+        expect(Object.keys(depositResult.relayerInfo).length).to.eq(8)
+
+        expect(depositResult.relayerInfo.chainId).to.eq(parsedRelayerInfo.chainId).to.eq(setup.l2Network.chainID)
+        expect(depositResult.relayerInfo.owner).to.eq(parsedRelayerInfo.owner)
+        expect(depositResult.relayerInfo.token).to.eq(parsedRelayerInfo.token)
+        expect(depositResult.relayerInfo.router).to.eq(parsedRelayerInfo.router)
+        expect(depositResult.relayerInfo.to).to.eq(parsedRelayerInfo.to)
+        expect(BigNumber.from(depositResult.relayerInfo.gasLimit).eq(parsedRelayerInfo.gasLimit)).to.be.true
+        expect(BigNumber.from(depositResult.relayerInfo.gasPrice).eq(parsedRelayerInfo.gasPrice)).to.be.true
+        expect(BigNumber.from(depositResult.relayerInfo.relayerPayment).eq(parsedRelayerInfo.relayerPayment)).to.be.true
 
         // wait until first step finishes
         await poll(async () => {
