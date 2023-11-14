@@ -1,6 +1,6 @@
 import { Provider, TransactionRequest } from '@ethersproject/abstract-provider'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { BigNumber, BigNumberish, Signer, Transaction, ethers } from 'ethers'
+import { BigNumber, BigNumberish, Signer, ethers } from 'ethers'
 import { ERC20 } from '../abi/ERC20'
 import { BridgedToL3Event } from '../abi/L2Forwarder'
 import { L2ForwarderPredictor } from '../abi/L2ForwarderPredictor'
@@ -10,11 +10,9 @@ import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { L1GatewayRouter__factory } from '../abi/factories/L1GatewayRouter__factory'
 import { L2ForwarderFactory__factory } from '../abi/factories/L2ForwarderFactory__factory'
 import { L2Forwarder__factory } from '../abi/factories/L2Forwarder__factory'
-import { L2GatewayRouter__factory } from '../abi/factories/L2GatewayRouter__factory'
 import { L2GatewayToken__factory } from '../abi/factories/L2GatewayToken__factory'
 import { L1Teleporter__factory } from '../abi/factories/L1Teleporter__factory'
 import { Address } from '../dataEntities/address'
-import { DISABLED_GATEWAY } from '../dataEntities/constants'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
   L1Network,
@@ -907,7 +905,7 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     // strip selector and add to tx data
     tokenBridgeRequest.txRequest.data = ethers.utils.concat([
       tokenBridgeRequest.txRequest.data,
-      ethers.utils.hexDataSlice(encodedForwarderParamsWithSelector, 4)
+      ethers.utils.hexDataSlice(encodedForwarderParamsWithSelector, 4),
     ])
 
     return {
@@ -920,8 +918,8 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
   }
 
   /**
-   * Deposit tokens to L3. Will call the `L1GatewayRouter` directly. 
-   * 
+   * Deposit tokens to L3. Will call the `L1GatewayRouter` directly.
+   *
    * Relayer info will be returned as well as appended to calldata.
    */
   public async deposit(
@@ -976,11 +974,13 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
       throw new ArbSdkError(`Could not find chain id for L1GatewayRouter`)
     }
 
-    const l2ForwarderAddressFragment = L2ForwarderPredictor__factory.createInterface().fragments.find(
-      f => f.name === 'l2ForwarderAddress'
-    )!
+    const l2ForwarderAddressFragment =
+      L2ForwarderPredictor__factory.createInterface().fragments.find(
+        f => f.name === 'l2ForwarderAddress'
+      )!
 
-    const l2ForwarderParamsStructLength = l2ForwarderAddressFragment.inputs[0].components.length
+    const l2ForwarderParamsStructLength =
+      l2ForwarderAddressFragment.inputs[0].components.length
 
     // get the last x words of the calldata
     const encodedL2ForwarderParams = ethers.utils.hexDataSlice(
@@ -989,7 +989,10 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     )
 
     // parse the encoded params
-    const decodedL2ForwarderParams = new AbiCoder().decode(l2ForwarderAddressFragment.inputs, encodedL2ForwarderParams)[0] as L2ForwarderPredictor.L2ForwarderParamsStruct
+    const decodedL2ForwarderParams = new AbiCoder().decode(
+      l2ForwarderAddressFragment.inputs,
+      encodedL2ForwarderParams
+    )[0] as L2ForwarderPredictor.L2ForwarderParamsStruct
 
     return {
       chainId,
