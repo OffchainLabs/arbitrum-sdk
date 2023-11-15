@@ -238,10 +238,16 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
 
   private async getBlockFromNodeLog(
     l2Provider: JsonRpcProvider,
-    log: FetchedEvent<NodeCreatedEvent>
+    log: FetchedEvent<NodeCreatedEvent> | undefined
   ) {
-    const parsedLog = this.parseNodeCreatedAssertion(log)
     const arbitrumProvider = new ArbitrumProvider(l2Provider)
+
+    if (!log) {
+      console.warn('No NodeCreated events found, defaulting to block 0')
+      return arbitrumProvider.getBlock(0)
+    }
+
+    const parsedLog = this.parseNodeCreatedAssertion(log)
     const l2Block = await arbitrumProvider.getBlock(
       parsedLog.afterState.blockHash
     )
@@ -302,7 +308,11 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
       }
     )
 
-    if (logs.length !== 1) throw new ArbSdkError('No NodeCreated events found')
+    if (logs.length > 1)
+      throw new ArbSdkError(
+        `Unexpected number of NodeCreated events. Expected 0 or 1, got ${logs.length}.`
+      )
+
     return await this.getBlockFromNodeLog(
       l2Provider as JsonRpcProvider,
       logs[0]
