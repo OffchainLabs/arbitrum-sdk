@@ -42,7 +42,7 @@ async function main() {
   execSync(`cp ${cwd}/hardhat-abigen.ts ${tokenBridgePath}/hardhat-abigen.ts`)
 
   console.log('building token bridge contracts')
-  execSync(`${npmExec} && ${npmExec} run build --config hardhat-abigen.ts`, {
+  execSync(`${npmExec} run build --config hardhat-abigen.ts`, {
     cwd: tokenBridgePath,
   })
 
