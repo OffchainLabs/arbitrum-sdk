@@ -114,6 +114,7 @@ jobs:
         uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
           no-token-bridge: true
+          args: --l3node
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
