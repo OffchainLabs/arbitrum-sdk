@@ -1,8 +1,8 @@
 import { config, testSetup } from '../../scripts/testSetup'
 import { Address, Erc20L1L3Bridger, L1ToL2MessageStatus } from '../../src'
 import { L2ForwarderContractsDeployer__factory } from '../../src/lib/abi/factories/L2ForwarderContractsDeployer__factory'
-import { MockToken__factory } from '../../src/lib/abi/factories/MockToken__factory'
-import { MockToken } from '../../src/lib/abi/MockToken'
+import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
+import { TestERC20 } from '../../src/lib/abi/TestERC20'
 import { L1Teleporter__factory } from '../../src/lib/abi/factories/L1Teleporter__factory'
 import { fundL1, fundL2, skipIfMainnet } from './testHelpers'
 import { BigNumber, ethers } from 'ethers'
@@ -101,7 +101,7 @@ describe('L1 to L3 Bridging', () => {
   })
 
   describe('ERC20 Bridging', () => {
-    let l1Token: MockToken
+    let l1Token: TestERC20
 
     // deploy teleporter contracts and mock token
     before(async function () {
@@ -125,13 +125,9 @@ describe('L1 to L3 Bridging', () => {
       }
 
       // deploy the mock token
-      l1Token = await new MockToken__factory(setup.l1Signer).deploy(
-        'MOCK',
-        'MOCK',
-        ethers.utils.parseEther('100'),
-        await setup.l1Signer.getAddress()
-      )
+      l1Token = await new TestERC20__factory(setup.l1Signer).deploy()
       await l1Token.deployed()
+      await (await l1Token.connect(setup.l1Signer).mint()).wait()
     })
 
     describe('BaseErc20L1L3Bridger', () => {
@@ -215,6 +211,7 @@ describe('L1 to L3 Bridging', () => {
 
     describe('Erc20L1L3Bridger', () => {
       let l1l3Bridger: Erc20L1L3Bridger
+      const amount = BigNumber.from(100)
 
       // create the bridger and approve the teleporter
       before(async () => {
@@ -261,7 +258,7 @@ describe('L1 to L3 Bridging', () => {
           {
             erc20L1Address: l1Token.address,
             to: l3Recipient,
-            amount: ethers.utils.parseEther('1'),
+            amount,
           },
           setup.l1Signer,
           setup.l2Signer.provider!,
@@ -293,7 +290,7 @@ describe('L1 to L3 Bridging', () => {
 
         const l3Balance = await l3Token.balanceOf(l3Recipient)
 
-        expect(l3Balance.eq(ethers.utils.parseEther('1'))).to.be.true
+        expect(l3Balance.eq(amount)).to.be.true
       })
 
       it('should report correct status when second step is frontran', async () => {
@@ -303,7 +300,7 @@ describe('L1 to L3 Bridging', () => {
         const depositTx = await l1l3Bridger.deposit(
           {
             erc20L1Address: l1Token.address,
-            amount: ethers.utils.parseEther('1'),
+            amount,
             overrides: {
               manualGasParams: {
                 ...l1l3Bridger.defaultRetryableGasParams,
@@ -417,6 +414,7 @@ describe('L1 to L3 Bridging', () => {
 
     describe('RelayedErc20L1L3Bridger', () => {
       let l1l3Bridger: RelayedErc20L1L3Bridger
+      const amount = BigNumber.from(200)
 
       // create the bridger and approve the teleporter
       before(async () => {
@@ -447,7 +445,7 @@ describe('L1 to L3 Bridging', () => {
           {
             erc20L1Address: l1Token.address,
             to: l3Recipient,
-            amount: ethers.utils.parseEther('1'),
+            amount,
           },
           setup.l1Signer,
           setup.l2Signer.provider!,
@@ -549,7 +547,7 @@ describe('L1 to L3 Bridging', () => {
 
         const l3Balance = await l3Token.balanceOf(l3Recipient)
 
-        if (!l3Balance.eq(ethers.utils.parseEther('1'))) {
+        if (!l3Balance.eq(amount)) {
           throw new Error('L3 balance is incorrect')
         }
       })
