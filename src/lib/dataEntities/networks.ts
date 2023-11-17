@@ -281,8 +281,8 @@ export const l2Networks: L2Networks = {
     chainID: 421614,
     confirmPeriodBlocks: 20,
     teleporterAddresses: {
-      l1Teleporter: "0x33bd25e6156BCF698B8F2Ad82005e710037403f4",
-      l2ForwarderFactory: "0xB14C63bb526Db2A49b835ca954923dE7DE3968e2",
+      l1Teleporter: '0x33bd25e6156BCF698B8F2Ad82005e710037403f4',
+      l2ForwarderFactory: '0xB14C63bb526Db2A49b835ca954923dE7DE3968e2',
     },
     ethBridge: {
       bridge: '0x38f918D0E9F1b721EDaA41302E399fa1B79333a9',
