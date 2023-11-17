@@ -11,7 +11,7 @@ async function main() {
   const cwd = process.cwd()
 
   const nitroPath = getPackagePath('@arbitrum/nitro-contracts')
-  const teleporterPath = getPackagePath('l1-l3-teleport-contracts')
+  const teleporterPath = getPackagePath('@offchainlabs/l1-l3-teleport-contracts')
   const tokenBridgePath = getPackagePath('@arbitrum/token-bridge-contracts')
 
   console.log('Compiling paths.')
@@ -34,10 +34,13 @@ async function main() {
   })
 
   console.log('building teleporter')
-  execSync(`${npmExec} && ${npmExec} run hardhat compile --config ./hardhat.config.js`, {
-    cwd: teleporterPath,
-  })
-  
+  execSync(
+    `${npmExec} run build --config ./hardhat.config.js`,
+    {
+      cwd: teleporterPath,
+    }
+  )
+
   // copy the hardhat config to the token-bridge-contracts package
   execSync(`cp ${cwd}/hardhat-abigen.ts ${tokenBridgePath}/hardhat-abigen.ts`)
 

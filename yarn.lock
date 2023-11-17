@@ -51,6 +51,18 @@
   optionalDependencies:
     "@openzeppelin/upgrades-core" "^1.24.1"
 
+"@arbitrum/token-bridge-contracts@1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@arbitrum/token-bridge-contracts/-/token-bridge-contracts-1.1.1.tgz#716af9d3a50f544b9ce4e49dfa55058d1715b728"
+  integrity sha512-4gvzydeNBIGlMHFLvO/+r8SdtKglZLKOo6bh8a+nK3pjovKUfBs4ZcpqYNkbabKWeJ9cZCOvw74VX+kJGn65xQ==
+  dependencies:
+    "@arbitrum/nitro-contracts" "^1.0.0-beta.8"
+    "@offchainlabs/upgrade-executor" "1.1.0-beta.0"
+    "@openzeppelin/contracts" "4.8.3"
+    "@openzeppelin/contracts-upgradeable" "4.8.3"
+  optionalDependencies:
+    "@openzeppelin/upgrades-core" "^1.24.1"
+
 "@babel/code-frame@7.12.11":
   version "7.12.11"
   resolved "https://registry.yarnpkg.com/@babel/code-frame/-/code-frame-7.12.11.tgz#f4ad435aa263db935b8f10f2c552d23fb716a63f"
@@ -1129,6 +1141,13 @@
   version "2.0.5"
   resolved "https://registry.yarnpkg.com/@nomiclabs/hardhat-ethers/-/hardhat-ethers-2.0.5.tgz#131b0da1b71680d5a01569f916ae878229d326d3"
   integrity sha512-A2gZAGB6kUvLx+kzM92HKuUF33F1FSe90L0TmkXkT2Hh0OKRpvWZURUSU2nghD2yC4DzfEZ3DftfeHGvZ2JTUw==
+
+"@offchainlabs/l1-l3-teleport-contracts@^0.1.0-alpha.0":
+  version "0.1.0-alpha.0"
+  resolved "https://registry.yarnpkg.com/@offchainlabs/l1-l3-teleport-contracts/-/l1-l3-teleport-contracts-0.1.0-alpha.0.tgz#1f5a841f7a40ee26a46c907b7c1f6d6d8987bd4f"
+  integrity sha512-ZTbYhDhjZciqa9cDR0Oxy1Ub4a6gE4pz5JSX83etAFNQeNQJ4jNJP9viNXHHMp7HtQhuzZkaHZdldtlYfuQa1Q==
+  dependencies:
+    "@arbitrum/token-bridge-contracts" "1.1.1"
 
 "@offchainlabs/upgrade-executor@1.1.0-beta.0":
   version "1.1.0-beta.0"
@@ -4087,13 +4106,6 @@ kleur@^3.0.3:
   version "3.0.3"
   resolved "https://registry.yarnpkg.com/kleur/-/kleur-3.0.3.tgz#a79c9ecc86ee1ce3fa6206d1216c501f147fc07e"
   integrity sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w==
-
-l1-l3-teleport-contracts@^0.1.0:
-  version "0.1.0"
-  resolved "https://registry.yarnpkg.com/l1-l3-teleport-contracts/-/l1-l3-teleport-contracts-0.1.0.tgz#912e60d715293872534b7138f6ebab56a2a70e46"
-  integrity sha512-geFG8Nxef7qX5R0r5b9WFcyZ+Ng42KfjNFhnXrkMPRF+rR5R3vs1yrndR8TpMZwNbNmoY/942I8o/127eiwrdw==
-  dependencies:
-    "@arbitrum/token-bridge-contracts" "1.1.0"
 
 level-codec@^9.0.0:
   version "9.0.2"
