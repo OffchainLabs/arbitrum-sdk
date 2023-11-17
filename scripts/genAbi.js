@@ -54,7 +54,7 @@ async function main() {
   const nitroFiles = glob(cwd, [
     `${tokenBridgePath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
     `${nitroPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
-    `${teleporterPath}/artifacts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
+    `${teleporterPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
   ])
 
   // TODO: generate files into different subfolders (ie `/nitro/*`) to avoid overwrite of contracts with the same name
