@@ -93,7 +93,7 @@ describe.only('Ether', async () => {
       l1Signer: l1Signer,
     })
     const rec = await res.wait()
-    expect(rec.status).to.equal('success', 'eth deposit L1 txn failed')
+    expect(rec.status).to.equal(1, 'eth deposit L1 txn failed')
     const finalInboxBalance = await l1Signer.provider!.getBalance(inboxAddress)
     expect(
       initialInboxBalance.add(ethToDeposit).eq(finalInboxBalance),

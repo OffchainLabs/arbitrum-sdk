@@ -91,8 +91,8 @@ class ViemSigner extends Signer {
       await this.publicClient.estimateFeesPerGas()
 
     const request = await this.walletClient.prepareTransactionRequest({
-      confirmations: 0,
-      ...(transaction as any),
+      // confirmations: 0,
+      ...transaction,
     })
     const serializedTransaction = await this.walletClient.signTransaction(
       request
@@ -122,7 +122,12 @@ class ViemSigner extends Signer {
     const type = getType(transactionReceipt.type ?? 2)
     const value = BigNumber.from(await transaction.value)
     const wait = async () => {
-      return this.publicClient.waitForTransactionReceipt({ hash })
+      const rec = await this.publicClient.waitForTransactionReceipt({ hash })
+
+      return {
+        ...rec,
+        status: 'success' === rec.status ? 1 : 0,
+      }
     }
     const blockNumber = ((await this.publicClient.getBlockNumber()) ??
       null) as any

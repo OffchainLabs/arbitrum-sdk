@@ -213,7 +213,7 @@ export class EthBridger extends AssetBridger<
     const signer = await transformUniversalSignerToEthersV5Signer(
       params.l1Signer
     )
-    // await this.checkL1Network(signer)
+    await this.checkL1Network(signer)
 
     const ethDeposit = isL1ToL2TransactionRequest(params)
       ? params

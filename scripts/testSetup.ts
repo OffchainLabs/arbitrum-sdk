@@ -228,16 +228,16 @@ export const testSetup = async (): Promise<{
   const l2Deployer = getSigner(arbProvider, config.arbKey)
 
   const seed = Wallet.createRandom()
-  const l1Signer = seed.connect(ethProvider)
+  const ethl1Signer = seed.connect(ethProvider)
   const l2Signer = seed.connect(arbProvider)
 
-  // const pk = l1Signer._signingKey().privateKey as `0x${string}`
-  // const ethWalletClient = createWalletClient({
-  //   account: privateKeyToAccount(pk),
-  //   transport: http(ethRpcUrl),
-  //   chain: defineChain(ethLocal),
-  // })
-  // const viemSigner = walletClientToSigner(ethWalletClient)
+  const pk = ethl1Signer._signingKey().privateKey as `0x${string}`
+  const ethWalletClient = createWalletClient({
+    account: privateKeyToAccount(pk),
+    transport: http(ethRpcUrl),
+    chain: ethLocal,
+  })
+  const l1Signer = walletClientToSigner(ethWalletClient)
 
   let setL1Network: L1Network, setL2Network: L2Network
   try {
@@ -283,7 +283,7 @@ export const testSetup = async (): Promise<{
 
   return {
     seed,
-    l1Signer, //: viemSigner,
+    l1Signer,
     l2Signer,
     l1Network: setL1Network,
     l2Network: setL2Network,
