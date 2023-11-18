@@ -54,7 +54,6 @@ export {
   getChain,
   getParentChain,
   addCustomNetwork,
-  addCustomChain,
   addDefaultLocalNetwork,
 } from './lib/dataEntities/networks'
 export { InboxTools } from './lib/inbox/inbox'
