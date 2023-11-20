@@ -369,7 +369,7 @@ const isOrbitChain = (network: ChainOrNetwork): network is OrbitChain => {
   return network && 'isOrbit' in network && network.isOrbit
 }
 
-const getL1Chains = () => {
+export const getL1Chains = () => {
   return Object.entries(Networks).reduce((acc, [key, value]) => {
     if (isL1Chain(value)) {
       acc[key] = value
@@ -378,7 +378,7 @@ const getL1Chains = () => {
   }, {} as L1Networks)
 }
 
-const getL2Chains = () => {
+export const getL2Chains = () => {
   return Object.entries(Networks).reduce((acc, [key, value]) => {
     if (isL2Chain(value)) {
       acc[key] = value
@@ -387,7 +387,7 @@ const getL2Chains = () => {
   }, {} as L2Networks)
 }
 
-const getParentChains = () => {
+export const getParentChains = () => {
   return Object.entries(Networks).reduce((acc, [key, value]) => {
     if (isParentChain(value)) {
       acc[key] = value
@@ -396,7 +396,7 @@ const getParentChains = () => {
   }, {} as ParentChains)
 }
 
-const getChildChains = () => {
+export const getChildChains = () => {
   return Object.entries(Networks).reduce((acc, [key, value]) => {
     if (isChildChain(value)) {
       acc[key] = value
@@ -405,7 +405,7 @@ const getChildChains = () => {
   }, {} as Chains)
 }
 
-const getOrbitChains = () => {
+export const getOrbitChains = () => {
   return Object.entries(Networks).reduce((acc, [key, value]) => {
     if (isOrbitChain(value)) {
       acc[key] = value
@@ -427,7 +427,7 @@ export const getParentOfNetwork = (chain: ChainOrNetwork) => {
   return parentChain
 }
 
-const getChildrenOfNetwork = (chain: ChainOrNetwork) => {
+export const getChildrenOfNetwork = (chain: ChainOrNetwork) => {
   if (!isParentChain(chain)) {
     return undefined
   }
