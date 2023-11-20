@@ -1,12 +1,7 @@
-import {
-  getL1Network,
-  addCustomChain,
-  getL2Network,
-  getParentChain,
-  getChain,
-} from '../../src'
+import { getL1Network, addCustomNetwork, getL2Network } from '../../src'
 
 import { expect } from 'chai'
+import { getNetwork } from '../../src/lib/dataEntities/networks'
 
 const mainnetId = 1
 const arbOneId = 42161
@@ -19,14 +14,15 @@ describe('Network', () => {
   it('Adds a custom Orbit chain', async function () {
     const arbOneNetwork = await getL2Network(arbOneId)
 
-    addCustomChain({
-      customChain: {
+    addCustomNetwork({
+      customL2Network: {
         // we partially copy Arbitrum One network because we only want to mimic a custom chain
         ...arbOneNetwork,
         chainID: mockOrbitChainId,
         partnerChainID: arbOneId,
         isArbitrum: true,
         isCustom: true,
+        isOrbit: true,
       },
     })
   })
@@ -73,46 +69,44 @@ describe('Network', () => {
     }
   })
 
-  it('Successfully fetches a parent chain with `getParentChain`', async function () {
-    const parentChain = await getParentChain(arbOneId)
+  it('Successfully fetches a parent chain with `getNetwork`', async function () {
+    const parentChain = await getNetwork(arbOneId)
     expect(parentChain.chainID, fetchErrorMessage).to.be.eq(arbOneId)
   })
 
-  it('Fails to fetch an Orbit chain with `getParentChain`', async function () {
+  it('Fails to fetch an Orbit chain with `getNetwork`', async function () {
     let parentChain
     try {
-      parentChain = await getParentChain(mockOrbitChainId)
+      parentChain = await getNetwork(mockOrbitChainId, 1)
     } catch (err) {
       // should fail
       expect(err).to.be.an('error')
       expect((err as Error).message).to.be.eq(
-        `Unrecognized ParentChain ${mockOrbitChainId}.`
+        `Unrecognized network ${mockOrbitChainId}.`
       )
     } finally {
-      expect(
-        parentChain,
-        '`getParentChain` returned a result for an Orbit chain.'
-      ).to.be.undefined
+      expect(parentChain, '`getNetwork` returned a result for an Orbit chain.')
+        .to.be.undefined
     }
   })
 
-  it('Successfully fetches an Orbit chain with `getChain`', async function () {
-    const chain = await getChain(mockOrbitChainId)
+  it('Successfully fetches an Orbit chain with `getNetwork`', async function () {
+    const chain = await getNetwork(mockOrbitChainId)
     expect(chain.chainID, fetchErrorMessage).to.be.eq(mockOrbitChainId)
   })
 
-  it('Fails to fetch a parent chain with `getChain`', async function () {
+  it('Fails to fetch a parent chain with `getNetwork`', async function () {
     let chain
     try {
-      chain = await getChain(mainnetId)
+      chain = await getNetwork(mainnetId, 2)
     } catch (err) {
       // should fail
       expect(err).to.be.an('error')
       expect((err as Error).message).to.be.eq(
-        `Unrecognized Chain ${mainnetId}.`
+        `Unrecognized network ${mainnetId}.`
       )
     } finally {
-      expect(chain, '`getChain` returned a result for a parent chain.').to.be
+      expect(chain, '`getNetwork` returned a result for a parent chain.').to.be
         .undefined
     }
   })

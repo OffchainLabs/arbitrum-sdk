@@ -26,7 +26,7 @@ import {
   L2Network,
   Chain,
   ParentChain,
-  getParentChains,
+  getParentOfNetwork,
 } from '../dataEntities/networks'
 import {
   SignerOrProvider,
@@ -43,7 +43,13 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
 
   public constructor(public readonly l2Network: L2Network | Chain) {
     this.l1Network = l1Networks[l2Network.partnerChainID]
-    this.parentChain = getParentChains()[l2Network.partnerChainID]
+    const parentChain = getParentOfNetwork(l2Network)
+    if (!parentChain) {
+      throw new ArbSdkError(
+        `Unknown parent network chain id: ${l2Network.partnerChainID}`
+      )
+    }
+    this.parentChain = parentChain
     this.l1NetworkOrParentChain = this.l1Network || this.parentChain
 
     if (!this.l1NetworkOrParentChain) {

@@ -48,6 +48,7 @@ export type ParentChain =
   | (L2Network & Required<Pick<L2Network, 'partnerChainIDs'>>)
 
 export type Chain = L2Network
+export type OrbitChain = Chain & { isOrbit: boolean }
 
 export interface Network {
   chainID: number
@@ -101,6 +102,10 @@ export interface Chains {
   [id: string]: Chain
 }
 
+export interface OrbitChains {
+  [id: string]: OrbitChain
+}
+
 const mainnetTokenBridge: TokenBridge = {
   l1GatewayRouter: '0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef',
   l2GatewayRouter: '0x5288c571Fd7aD117beA99bF60FE0846C4E84F933',
@@ -130,9 +135,9 @@ const mainnetETHBridge: EthBridge = {
   },
 }
 
-type ChainOrNetwork = L1Network | L2Network | ParentChain | Chain
+type ChainOrNetwork = L1Network | L2Network | ParentChain | Chain | OrbitChain
 
-export const CHAINS: { [key: string]: ChainOrNetwork } = {
+export const Networks: { [key: string]: ChainOrNetwork } = {
   1: {
     chainID: 1,
     name: 'Mainnet',
@@ -346,24 +351,44 @@ export const CHAINS: { [key: string]: ChainOrNetwork } = {
 }
 
 const isParentChain = (network: ChainOrNetwork): network is ParentChain => {
-  return 'partnerChainIDs' in network
+  return network && 'partnerChainIDs' in network
 }
 const isChildChain = (network: ChainOrNetwork): network is Chain => {
-  return 'partnerChainID' in network
+  return network && 'partnerChainID' in network
 }
 
-const isOrbitChain = (network: ChainOrNetwork): network is Chain => {
-  return (
-    'partnerChainID' in network &&
-    network.isCustom &&
-    !('partnerChainIDS' in network)
-    // todo: not fully implemented yet
-    // todo: should we add `isOrbit` boolean value when adding chain?
-  )
+const isL1Chain = (network: ChainOrNetwork): network is L1Network => {
+  return network && isParentChain(network) && !isChildChain(network)
 }
 
-export const getParentChains = () => {
-  return Object.entries(CHAINS).reduce((acc, [key, value]) => {
+const isL2Chain = (network: ChainOrNetwork): network is L2Network => {
+  return network && isChildChain(network) && !isOrbitChain(network)
+}
+
+const isOrbitChain = (network: ChainOrNetwork): network is OrbitChain => {
+  return network && 'isOrbit' in network && network.isOrbit
+}
+
+const getL1Chains = () => {
+  return Object.entries(Networks).reduce((acc, [key, value]) => {
+    if (isL1Chain(value)) {
+      acc[key] = value
+    }
+    return acc
+  }, {} as L1Networks)
+}
+
+const getL2Chains = () => {
+  return Object.entries(Networks).reduce((acc, [key, value]) => {
+    if (isL2Chain(value)) {
+      acc[key] = value
+    }
+    return acc
+  }, {} as L2Networks)
+}
+
+const getParentChains = () => {
+  return Object.entries(Networks).reduce((acc, [key, value]) => {
     if (isParentChain(value)) {
       acc[key] = value
     }
@@ -372,7 +397,7 @@ export const getParentChains = () => {
 }
 
 const getChildChains = () => {
-  return Object.entries(CHAINS).reduce((acc, [key, value]) => {
+  return Object.entries(Networks).reduce((acc, [key, value]) => {
     if (isChildChain(value)) {
       acc[key] = value
     }
@@ -381,21 +406,20 @@ const getChildChains = () => {
 }
 
 const getOrbitChains = () => {
-  return Object.entries(CHAINS).reduce((acc, [key, value]) => {
+  return Object.entries(Networks).reduce((acc, [key, value]) => {
     if (isOrbitChain(value)) {
       acc[key] = value
     }
     return acc
-  }, {} as Chains)
+  }, {} as OrbitChains)
 }
 
-const getParentOfNetwork = (chain: ChainOrNetwork) => {
+export const getParentOfNetwork = (chain: ChainOrNetwork) => {
   if (!isChildChain(chain)) {
     return undefined
   }
-  const parentChains = getParentChains()
-  const parentChain = parentChains[chain.partnerChainID]
-  if (!parentChain) {
+  const parentChain = Networks[chain.partnerChainID]
+  if (!parentChain || !isParentChain(parentChain)) {
     throw new ArbSdkError(
       `ParentChain ${chain.partnerChainID} not recognized for Chain ${chain.chainID}.`
     )
@@ -405,7 +429,7 @@ const getParentOfNetwork = (chain: ChainOrNetwork) => {
 
 const getChildrenOfNetwork = (chain: ChainOrNetwork) => {
   if (!isParentChain(chain)) {
-    return []
+    return undefined
   }
   const childChains = getChildChains()
   const children = Object.values(childChains).filter(
@@ -414,35 +438,12 @@ const getChildrenOfNetwork = (chain: ChainOrNetwork) => {
   return children
 }
 
-// L2 networks that are a parent chain to Orbit chains.
-function getL2ParentChains() {
-  const parentChains = getParentChains()
-  const childChains = getChildChains()
+export let l1Networks: L1Networks = getL1Chains()
+export let l2Networks: L2Networks = getL2Chains()
 
-  const parentChildChains: typeof CHAINS = {}
-
-  for (const key in parentChains) {
-    if (key in childChains) {
-      parentChildChains[key] = parentChains[key]
-    }
-  }
-
-  return parentChildChains
-}
-
-export let l1Networks: L1Networks = getParentChains() as L1Networks
-export let l2Networks: L2Networks = getChildChains() as L2Networks
-
-const addNetwork = (network: ChainOrNetwork) => {
-  CHAINS[network.chainID] = network
-
-  l1Networks = getParentChains() as L1Networks
-  l2Networks = getChildChains() as L2Networks
-}
-
-const getNetwork = async (
+export const getNetwork = async (
   signerOrProviderOrChainID: SignerOrProvider | number,
-  layer: 1 | 2
+  layer?: 1 | 2
 ) => {
   const chainID = await (async () => {
     if (typeof signerOrProviderOrChainID === 'number') {
@@ -457,11 +458,14 @@ const getNetwork = async (
   })()
 
   let network
-  if (layer === 1) {
-    network = CHAINS[chainID]
+  if (!layer) {
+    network = Networks[chainID]
+  } else if (layer === 1) {
+    network = l1Networks[chainID]
   } else {
-    network = CHAINS[chainID]
+    network = l2Networks[chainID]
   }
+
   if (network) {
     return network
   } else {
@@ -477,66 +481,7 @@ export const getL1Network = (
 export const getL2Network = (
   signerOrProviderOrChainID: SignerOrProvider | number
 ): Promise<L2Network> => {
-  let l2Network
-  try {
-    l2Network = getNetwork(signerOrProviderOrChainID, 2) as Promise<L2Network>
-  } catch {
-    l2Network = getChain(signerOrProviderOrChainID) as Promise<Chain>
-  }
-  return l2Network
-}
-
-const getParentChainOrChain = async (
-  signerOrProviderOrChainID: SignerOrProvider | number,
-  type: 'ParentChain' | 'Chain'
-) => {
-  const chainID = await (async () => {
-    if (typeof signerOrProviderOrChainID === 'number') {
-      return signerOrProviderOrChainID
-    }
-    const provider = SignerProviderUtils.getProviderOrThrow(
-      signerOrProviderOrChainID
-    )
-
-    const { chainId } = await provider.getNetwork()
-    return chainId
-  })()
-
-  const chain = CHAINS[chainID]
-
-  if (!chain) {
-    throw new ArbSdkError(`Unrecognized ${type} ${chainID}.`)
-  }
-
-  return chain
-}
-
-/**
- * Returns a chain that is associated with at least one child chain
- * @param signerOrProviderOrChainID
- * @returns Chain that is associated with at least one child chain
- */
-export const getParentChain = async (
-  signerOrProviderOrChainID: SignerOrProvider | number
-): Promise<ParentChain> => {
-  return getParentChainOrChain(
-    signerOrProviderOrChainID,
-    'ParentChain'
-  ) as Promise<ParentChain>
-}
-
-/**
- * Returns a chain that is associated with a parent chain
- * @param signerOrProviderOrChainID
- * @returns Chain that is associated with a parent chain
- */
-export const getChain = async (
-  signerOrProviderOrChainID: SignerOrProvider | number
-): Promise<Chain> => {
-  return getParentChainOrChain(
-    signerOrProviderOrChainID,
-    'Chain'
-  ) as Promise<Chain>
+  return getNetwork(signerOrProviderOrChainID, 2) as Promise<L2Network>
 }
 
 /**
@@ -570,6 +515,35 @@ export const getEthBridgeInformation = async (
   }
 }
 
+const addNetwork = (network: ChainOrNetwork) => {
+  Networks[network.chainID] = network
+  if (isParentChain(network)) {
+    const children = getChildrenOfNetwork(network)
+    children?.forEach(child => {
+      if (child) {
+        child.partnerChainID = network.chainID
+      }
+    })
+  }
+
+  if (isChildChain(network)) {
+    const parent = Networks[network.partnerChainID]
+    if (parent) {
+      parent.partnerChainIDs = [
+        ...(parent.partnerChainIDs ?? []),
+        network.chainID,
+      ]
+    } else {
+      throw new ArbSdkError(
+        `Network ${network.chainID}'s partner network, ${network.partnerChainID}, not recognized`
+      )
+    }
+  }
+
+  l1Networks = getL1Chains()
+  l2Networks = getL2Chains()
+}
+
 /**
  * Adds custom L1 and L2 networks. These networks will be returned in `getL1Network` and `getL2Network`.
  * @param customL1Network
@@ -580,10 +554,10 @@ export const addCustomNetwork = ({
   customL2Network,
 }: {
   customL1Network?: L1Network
-  customL2Network: L2Network
+  customL2Network: L2Network | OrbitChain
 }): void => {
   if (customL1Network) {
-    if (CHAINS[customL1Network.chainID]) {
+    if (l1Networks[customL1Network.chainID]) {
       throw new ArbSdkError(
         `Network ${customL1Network.chainID} already included`
       )
@@ -605,19 +579,6 @@ export const addCustomNetwork = ({
   }
 
   addNetwork(customL2Network)
-
-  const l1PartnerChain = getParentOfNetwork(customL2Network)
-  if (!l1PartnerChain)
-    throw new ArbSdkError(
-      `Network ${customL2Network.chainID}'s partner network, ${customL2Network.partnerChainID}, not recognized`
-    )
-
-  if (
-    isParentChain(l1PartnerChain) &&
-    !l1PartnerChain.partnerChainIDs.includes(customL2Network.chainID)
-  ) {
-    l1PartnerChain?.partnerChainIDs.push(customL2Network.chainID)
-  }
 }
 
 /**
