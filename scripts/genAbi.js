@@ -11,7 +11,9 @@ async function main() {
   const cwd = process.cwd()
 
   const nitroPath = getPackagePath('@arbitrum/nitro-contracts')
-  const teleporterPath = getPackagePath('l1-l3-teleport-contracts')
+  const teleporterPath = getPackagePath(
+    '@offchainlabs/l1-l3-teleport-contracts'
+  )
   const tokenBridgePath = getPackagePath('@arbitrum/token-bridge-contracts')
 
   console.log('Compiling paths.')
@@ -34,15 +36,15 @@ async function main() {
   })
 
   console.log('building teleporter')
-  execSync(`${npmExec} && ${npmExec} run hardhat compile --config ./hardhat.config.js`, {
+  execSync(`${npmExec} run build --config ./hardhat.config.js`, {
     cwd: teleporterPath,
   })
-  
+
   // copy the hardhat config to the token-bridge-contracts package
   execSync(`cp ${cwd}/hardhat-abigen.ts ${tokenBridgePath}/hardhat-abigen.ts`)
 
   console.log('building token bridge contracts')
-  execSync(`${npmExec} && ${npmExec} run build --config hardhat-abigen.ts`, {
+  execSync(`${npmExec} run build --config hardhat-abigen.ts`, {
     cwd: tokenBridgePath,
   })
 
@@ -51,7 +53,7 @@ async function main() {
   const nitroFiles = glob(cwd, [
     `${tokenBridgePath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
     `${nitroPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
-    `${teleporterPath}/artifacts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
+    `${teleporterPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
   ])
 
   // TODO: generate files into different subfolders (ie `/nitro/*`) to avoid overwrite of contracts with the same name
