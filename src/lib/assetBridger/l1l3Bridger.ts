@@ -308,7 +308,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     l2ForwarderFactoryGasLimit: BigNumber.from(500_000), // measured: 357,751 L2 Gas
     l1l2TokenBridgeGasLimit: BigNumber.from(700_000), // measured: 531,744 L2 Gas
     l2l3TokenBridgeGasLimit: BigNumber.from(700_000), // measured: 531,756 L2 Gas
-    l1l2TokenBridgeRetryableSize: BigNumber.from(1000), // measured: 740. includes variable length information like token symbol (todo: verify this statement)
+    l1l2TokenBridgeRetryableSize: BigNumber.from(1000), // measured: 740. includes variable length information like token symbol
     l2l3TokenBridgeRetryableSize: BigNumber.from(1000), // measured: 740. includes variable length information like token symbol
   } as const
 
