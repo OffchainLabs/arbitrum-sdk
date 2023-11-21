@@ -46,6 +46,8 @@ import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { Erc20Bridger, TokenApproveParams } from './erc20Bridger'
 import { L2ForwarderPredictor__factory } from '../abi/factories/L2ForwarderPredictor__factory'
 import { AbiCoder } from 'ethers/lib/utils'
+import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
+import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 /**
  * Manual gas parameters for the L1 to L2 and L2 to L3 tickets.
@@ -302,13 +304,12 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
   protected readonly l2Erc20Bridger = new Erc20Bridger(this.l2Network)
   protected readonly l3Erc20Bridger = new Erc20Bridger(this.l3Network)
 
-  // todo: tune these
   public readonly defaultRetryableGasParams: ManualRetryableGasParams = {
-    l2ForwarderFactoryGasLimit: BigNumber.from(1_000_000),
-    l1l2TokenBridgeGasLimit: BigNumber.from(1_000_000),
-    l2l3TokenBridgeGasLimit: BigNumber.from(1_000_000),
-    l1l2TokenBridgeRetryableSize: BigNumber.from(1000),
-    l2l3TokenBridgeRetryableSize: BigNumber.from(1000),
+    l2ForwarderFactoryGasLimit: BigNumber.from(500_000), // measured: 357,751 L2 Gas
+    l1l2TokenBridgeGasLimit: BigNumber.from(700_000), // measured: 531,744 L2 Gas
+    l2l3TokenBridgeGasLimit: BigNumber.from(700_000), // measured: 531,756 L2 Gas
+    l1l2TokenBridgeRetryableSize: BigNumber.from(1000), // measured: 740. includes variable length information like token symbol
+    l2l3TokenBridgeRetryableSize: BigNumber.from(1000), // measured: 740. includes variable length information like token symbol
   } as const
 
   public constructor(public readonly l3Network: L2Network) {
@@ -827,9 +828,9 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
 
     const relayerPayment = this._percentIncrease(
       params.overrides?.relayerPayment?.base ||
-        BigNumber.from(populatedGasParams.l2ForwarderFactoryGasLimit).mul(
-          populatedGasParams.l2GasPrice
-        ),
+        BigNumber.from(populatedGasParams.l2ForwarderFactoryGasLimit)
+          .add(await this._estimateL1GasForL2ForwarderCall(l2Provider))
+          .mul(populatedGasParams.l2GasPrice),
       params.overrides?.relayerPayment?.percentIncrease ||
         this.defaultRelayerPaymentPercentIncrease
     )
@@ -1032,6 +1033,39 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
     )
 
     return l2ForwarderFactory.callForwarder(relayerInfo)
+  }
+
+  private async _estimateL1GasForL2ForwarderCall(l2Provider: Provider) {
+    const nodeInterface = NodeInterface__factory.connect(
+      NODE_INTERFACE_ADDRESS,
+      l2Provider
+    )
+
+    // generate some fake calldata with random values
+    const r = (n: number) => ethers.utils.hexlify(ethers.utils.randomBytes(n))
+    const params: L2ForwarderPredictor.L2ForwarderParamsStruct = {
+      owner: r(20),
+      token: r(20),
+      router: r(20),
+      to: r(20),
+      gasLimit: r(32),
+      gasPrice: r(32),
+      relayerPayment: r(32),
+    }
+
+    const txData =
+      L2ForwarderFactory__factory.createInterface().encodeFunctionData(
+        'callForwarder',
+        [params]
+      )
+
+    return (
+      await nodeInterface.callStatic.gasEstimateL1Component(
+        this.l2Network.teleporterAddresses!.l2ForwarderFactory,
+        false,
+        txData
+      )
+    ).gasEstimateForL1
   }
 }
 
