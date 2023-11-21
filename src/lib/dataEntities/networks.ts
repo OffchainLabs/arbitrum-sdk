@@ -48,7 +48,7 @@ export type ParentChain =
   | (L2Network & Required<Pick<L2Network, 'partnerChainIDs'>>)
 
 export type Chain = L2Network
-export type OrbitChain = Chain & { isOrbit: boolean }
+export type OrbitChain = L2Network & { isOrbit: true }
 
 export interface Network {
   chainID: number
