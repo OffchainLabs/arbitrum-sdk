@@ -427,7 +427,7 @@ export const getParentForNetwork = (chain: ChainOrNetwork) => {
   return parentChain
 }
 
-export const getChildrenOfNetwork = (chain: ChainOrNetwork) => {
+export const getChildrenForNetwork = (chain: ChainOrNetwork) => {
   if (!isParentChain(chain)) {
     return undefined
   }
