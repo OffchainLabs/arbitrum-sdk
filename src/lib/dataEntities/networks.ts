@@ -21,6 +21,14 @@ import { ArbSdkError } from '../dataEntities/errors'
 import { SEVEN_DAYS_IN_SECONDS } from './constants'
 import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__factory'
 
+export interface Network {
+  chainID: number
+  name: string
+  explorerUrl: string
+  gif?: string
+  isCustom: boolean
+}
+
 export interface L1Network extends Network {
   partnerChainIDs: number[]
   blockTime: number //seconds
@@ -47,16 +55,10 @@ export type ParentChain =
   | L1Network
   | (L2Network & Required<Pick<L2Network, 'partnerChainIDs'>>)
 
-export type Chain = L2Network
 export type OrbitChain = L2Network & { isOrbit: true }
+export type ChildChain = L2Network | OrbitChain
 
-export interface Network {
-  chainID: number
-  name: string
-  explorerUrl: string
-  gif?: string
-  isCustom: boolean
-}
+type Chain = L1Network | L2Network | ParentChain | ChildChain | OrbitChain
 
 export interface TokenBridge {
   l1GatewayRouter: string
@@ -97,9 +99,8 @@ export interface L2Networks {
 export interface ParentChains {
   [id: string]: ParentChain
 }
-
-export interface Chains {
-  [id: string]: Chain
+export interface ChildChains {
+  [id: string]: ChildChain
 }
 
 export interface OrbitChains {
@@ -135,9 +136,7 @@ const mainnetETHBridge: EthBridge = {
   },
 }
 
-type ChainOrNetwork = L1Network | L2Network | ParentChain | Chain | OrbitChain
-
-export const Networks: { [key: string]: ChainOrNetwork } = {
+export const Networks: { [key: string]: Chain } = {
   1: {
     chainID: 1,
     name: 'Mainnet',
@@ -350,23 +349,23 @@ export const Networks: { [key: string]: ChainOrNetwork } = {
   },
 }
 
-const isParentChain = (network: ChainOrNetwork): network is ParentChain => {
-  return network && 'partnerChainIDs' in network
+const isParentChain = (chain: Chain): chain is ParentChain => {
+  return chain && 'partnerChainIDs' in chain
 }
-const isChildChain = (network: ChainOrNetwork): network is Chain => {
-  return network && 'partnerChainID' in network
-}
-
-const isL1Chain = (network: ChainOrNetwork): network is L1Network => {
-  return network && isParentChain(network) && !isChildChain(network)
+const isChildChain = (chain: Chain): chain is ChildChain => {
+  return chain && 'partnerChainID' in chain
 }
 
-const isL2Chain = (network: ChainOrNetwork): network is L2Network => {
-  return network && isChildChain(network) && !isOrbitChain(network)
+const isL1Chain = (chain: Chain): chain is L1Network => {
+  return chain && isParentChain(chain) && !isChildChain(chain)
 }
 
-const isOrbitChain = (network: ChainOrNetwork): network is OrbitChain => {
-  return network && 'isOrbit' in network && network.isOrbit
+const isL2Chain = (chain: Chain): chain is L2Network => {
+  return chain && isChildChain(chain) && !isOrbitChain(chain)
+}
+
+const isOrbitChain = (chain: Chain): chain is OrbitChain => {
+  return chain && 'isOrbit' in chain && chain.isOrbit
 }
 
 export const getL1Chains = () => {
@@ -402,7 +401,7 @@ export const getChildChains = () => {
       acc[key] = value
     }
     return acc
-  }, {} as Chains)
+  }, {} as ChildChains)
 }
 
 export const getOrbitChains = () => {
@@ -414,7 +413,7 @@ export const getOrbitChains = () => {
   }, {} as OrbitChains)
 }
 
-export const getParentForNetwork = (chain: ChainOrNetwork) => {
+export const getParentForNetwork = (chain: Chain) => {
   if (!isChildChain(chain)) {
     return undefined
   }
@@ -427,7 +426,7 @@ export const getParentForNetwork = (chain: ChainOrNetwork) => {
   return parentChain
 }
 
-export const getChildrenForNetwork = (chain: ChainOrNetwork) => {
+export const getChildrenForNetwork = (chain: Chain) => {
   if (!isParentChain(chain)) {
     return undefined
   }
@@ -515,10 +514,10 @@ export const getEthBridgeInformation = async (
   }
 }
 
-const addNetwork = (network: ChainOrNetwork) => {
+const addNetwork = (network: Chain) => {
   Networks[network.chainID] = network
   if (isParentChain(network)) {
-    const children = getChildrenOfNetwork(network)
+    const children = getChildrenForNetwork(network)
     children?.forEach(child => {
       if (child) {
         child.partnerChainID = network.chainID

@@ -47,8 +47,6 @@ export {
   L2Networks,
   L1Network,
   L2Network,
-  Chain,
-  ParentChain,
   getL1Network,
   getL2Network,
   addCustomNetwork,
