@@ -414,7 +414,7 @@ export const getOrbitChains = () => {
   }, {} as OrbitChains)
 }
 
-export const getParentOfNetwork = (chain: ChainOrNetwork) => {
+export const getParentForNetwork = (chain: ChainOrNetwork) => {
   if (!isChildChain(chain)) {
     return undefined
   }
