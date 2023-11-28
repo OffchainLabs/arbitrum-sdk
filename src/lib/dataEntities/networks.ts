@@ -136,7 +136,7 @@ const mainnetETHBridge: EthBridge = {
   },
 }
 
-export const Networks: { [key: string]: Chain } = {
+export const Networks: Record<string, Chain> = {
   1: {
     chainID: 1,
     name: 'Mainnet',
@@ -352,6 +352,7 @@ export const Networks: { [key: string]: Chain } = {
 const isParentChain = (chain: Chain): chain is ParentChain => {
   return chain && 'partnerChainIDs' in chain
 }
+
 const isChildChain = (chain: Chain): chain is ChildChain => {
   return chain && 'partnerChainID' in chain
 }
@@ -368,50 +369,31 @@ const isOrbitChain = (chain: Chain): chain is OrbitChain => {
   return chain && 'isOrbit' in chain && chain.isOrbit
 }
 
-export const getL1Chains = () => {
-  return Object.entries(Networks).reduce((acc, [key, value]) => {
-    if (isL1Chain(value)) {
-      acc[key] = value
-    }
-    return acc
-  }, {} as L1Networks)
+/**
+ * Builds an object that is a list of chains filtered by the provided predicate function indexed by their chain id
+ * @param filterFn - A predicate function to determine if a chain should be included.
+ * @return An object with only the filtered chains.
+ */
+const getChainsByType = <T extends typeof Networks>(
+  filterFn: (chain: Chain) => boolean
+): T => {
+  return Object.entries(Networks).reduce<typeof Networks>(
+    (accumulator, [chainId, chainData]) => {
+      if (filterFn(chainData)) {
+        accumulator[chainId] = chainData
+      }
+      return accumulator
+    },
+    {}
+  ) as T
 }
 
-export const getL2Chains = () => {
-  return Object.entries(Networks).reduce((acc, [key, value]) => {
-    if (isL2Chain(value)) {
-      acc[key] = value
-    }
-    return acc
-  }, {} as L2Networks)
-}
-
-export const getParentChains = () => {
-  return Object.entries(Networks).reduce((acc, [key, value]) => {
-    if (isParentChain(value)) {
-      acc[key] = value
-    }
-    return acc
-  }, {} as ParentChains)
-}
-
-export const getChildChains = () => {
-  return Object.entries(Networks).reduce((acc, [key, value]) => {
-    if (isChildChain(value)) {
-      acc[key] = value
-    }
-    return acc
-  }, {} as ChildChains)
-}
-
-export const getOrbitChains = () => {
-  return Object.entries(Networks).reduce((acc, [key, value]) => {
-    if (isOrbitChain(value)) {
-      acc[key] = value
-    }
-    return acc
-  }, {} as OrbitChains)
-}
+export const getL1Chains = () => getChainsByType<L1Networks>(isL1Chain)
+export const getL2Chains = () => getChainsByType<L2Networks>(isL2Chain)
+export const getParentChains = () =>
+  getChainsByType<ParentChains>(isParentChain)
+export const getChildChains = () => getChainsByType<ChildChains>(isChildChain)
+export const getOrbitChains = () => getChainsByType<OrbitChains>(isOrbitChain)
 
 export const getParentForNetwork = (chain: Chain) => {
   if (!isChildChain(chain)) {
