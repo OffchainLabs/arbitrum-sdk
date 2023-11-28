@@ -91,13 +91,13 @@ class ViemSigner extends Signer {
       await this.publicClient.estimateFeesPerGas()
 
     const request = await this.walletClient.prepareTransactionRequest({
-      // confirmations: 0,
+      confirmations: 10,
       ...transaction,
     })
     const serializedTransaction = await this.walletClient.signTransaction(
       request
     )
-    const hash = await this.walletClient.sendRawTransaction({
+    const hash = await this.publicClient.sendRawTransaction({
       serializedTransaction,
     })
 

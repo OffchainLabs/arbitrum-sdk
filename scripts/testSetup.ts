@@ -213,6 +213,7 @@ export const testSetup = async (): Promise<{
   l1Network: L1Network
   l2Network: L2Network
   l1Signer: any
+  ethl1Signer: Signer
   l2Signer: Signer
   erc20Bridger: Erc20Bridger
   ethBridger: EthBridger
@@ -284,6 +285,7 @@ export const testSetup = async (): Promise<{
   return {
     seed,
     l1Signer,
+    ethl1Signer,
     l2Signer,
     l1Network: setL1Network,
     l2Network: setL2Network,
