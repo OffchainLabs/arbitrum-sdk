@@ -36,7 +36,7 @@ import { L1ToL2MessageStatus } from '../../src/lib/message/L1ToL2Message'
 import { testSetup } from '../../scripts/testSetup'
 dotenv.config()
 
-describe.only('Ether', async () => {
+describe('Ether', async () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })

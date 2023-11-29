@@ -71,6 +71,7 @@ import { OmitTyped, RequiredPick } from '../utils/types'
 import { RetryableDataTools } from '../dataEntities/retryableData'
 import { EventArgs } from '../dataEntities/event'
 import { L1ToL2MessageGasParams } from '../message/L1ToL2MessageCreator'
+import { transformUniversalSignerToEthersV5Signer } from '../utils/universal/signerTransforms'
 
 export interface TokenApproveParams {
   /**
@@ -609,7 +610,9 @@ export class Erc20Bridger extends AssetBridger<
   public async deposit(
     params: Erc20DepositParams | L1ToL2TxReqAndSignerProvider
   ): Promise<L1ContractCallTransaction> {
-    const signer = params.l1Signer as any
+    const signer = await transformUniversalSignerToEthersV5Signer(
+      params.l1Signer
+    )
     await this.checkL1Network(signer)
 
     // Although the types prevent should alert callers that value is not

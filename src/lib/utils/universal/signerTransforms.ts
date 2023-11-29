@@ -1,6 +1,8 @@
 import {
   TransactionRequest,
   TransactionResponse,
+  TransactionReceipt,
+  Log,
 } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import {
@@ -8,12 +10,19 @@ import {
   StaticJsonRpcProvider,
   Web3Provider,
 } from '@ethersproject/providers'
-import { WalletClient, createPublicClient, hexToSignature, http } from 'viem'
+import {
+  PublicClient,
+  type WalletClient,
+  createPublicClient,
+  hexToSignature,
+  http,
+  Log as ViemLog,
+} from 'viem'
 import { Signerish } from '../../assetBridger/ethBridger'
 import { publicClientToProvider } from './providerTransforms'
 
 import { Deferrable } from 'ethers/lib/utils'
-import { BigNumber } from 'ethers'
+import { BigNumber, Wallet } from 'ethers'
 
 const getType = (value: number | string | null) => {
   switch (value) {
@@ -30,7 +39,21 @@ const getType = (value: number | string | null) => {
     case 'eip1559':
       return 2
   }
-  return null
+  return 2
+}
+
+const convertViemLogToEthersLog = (log: ViemLog): Log => {
+  return {
+    address: log.address,
+    blockHash: log.blockHash as string,
+    blockNumber: Number(log.blockNumber),
+    data: log.data,
+    logIndex: Number(log.logIndex),
+    removed: log.removed,
+    topics: log.topics,
+    transactionHash: log.transactionHash as string,
+    transactionIndex: Number(log.transactionIndex),
+  }
 }
 
 class ViemSigner extends Signer {
@@ -89,11 +112,25 @@ class ViemSigner extends Signer {
     })
     const { maxFeePerGas, maxPriorityFeePerGas } =
       await this.publicClient.estimateFeesPerGas()
-
-    const request = await this.walletClient.prepareTransactionRequest({
-      confirmations: 10,
-      ...transaction,
+    const valueInBigInt = BigInt(transaction?.value?.toString() || 0)
+    const nonce = await this.publicClient.getTransactionCount({
+      address: (await this.getAddress()) as `0x${string}`,
     })
+    const requestData = {
+      ...transaction,
+      value: valueInBigInt,
+      to: transaction.to as `0x${string}`,
+      nonce,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
+      from: (await this.getAddress()) as `0x${string}`,
+      // account: (await this.getAddress()) as `0x${string}`,
+      chain: this.walletClient.chain,
+      data: transaction.data as `0x${string}`,
+    }
+    const request = await this.walletClient.prepareTransactionRequest(
+      requestData
+    )
     const serializedTransaction = await this.walletClient.signTransaction(
       request
     )
@@ -108,31 +145,41 @@ class ViemSigner extends Signer {
 
     const accessList = request.accessList ?? []
     const chainId = await this.publicClient.getChainId()
-    const confirmations = request.confirmations ?? 0
+    const confirmations = 8
     const data = (await transaction.data?.toString()) as string
-    const from = (await transaction.from) as string
-    const gasLimit = gasEstimate
+    const from = (await requestData.from) as string
+    const gasLimit = BigNumber.from(gasEstimate)
     const gasPrice = BigNumber.from((await request.gasPrice) ?? 0)
-    const nonce = await this.publicClient.getTransactionCount({
-      address: (await this.getAddress()) as `0x${string}`,
-    })
+
     const { r, s, v: rawV } = hexToSignature(serializedTransaction)
     const v = parseInt(rawV.toString())
     const to = (await transaction.to) as string
     const type = getType(transactionReceipt.type ?? 2)
-    const value = BigNumber.from(await transaction.value)
-    const wait = async () => {
+    const value = BigNumber.from(valueInBigInt ?? 0)
+    const wait = async (): Promise<TransactionReceipt> => {
       const rec = await this.publicClient.waitForTransactionReceipt({ hash })
 
       return {
         ...rec,
+        gasUsed: BigNumber.from(rec.gasUsed),
+        blockNumber: Number(rec.blockNumber),
+        cumulativeGasUsed: BigNumber.from(rec.cumulativeGasUsed),
+        effectiveGasPrice: BigNumber.from(rec.effectiveGasPrice),
+        type,
         status: 'success' === rec.status ? 1 : 0,
+        confirmations,
+        byzantium: false,
+        to: (rec.to as string) ?? '',
+        contractAddress: (rec.contractAddress as string) ?? '',
+        logs: rec.logs.map(convertViemLogToEthersLog),
+        logsBloom: rec.logsBloom ?? '',
+        transactionHash: rec.transactionHash ?? '',
       }
     }
     const blockNumber = ((await this.publicClient.getBlockNumber()) ??
       null) as any
 
-    return {
+    const tx = {
       accessList,
       chainId,
       confirmations,
@@ -141,8 +188,8 @@ class ViemSigner extends Signer {
       gasLimit,
       gasPrice,
       hash,
-      maxFeePerGas,
-      maxPriorityFeePerGas,
+      maxFeePerGas: BigNumber.from(maxFeePerGas),
+      maxPriorityFeePerGas: BigNumber.from(maxPriorityFeePerGas),
       nonce,
       r,
       s,
@@ -153,6 +200,7 @@ class ViemSigner extends Signer {
       wait,
       blockNumber,
     }
+    return tx
   }
 
   connectUnchecked(): Signer {
