@@ -124,7 +124,6 @@ class ViemSigner extends Signer {
       maxFeePerGas,
       maxPriorityFeePerGas,
       from: (await this.getAddress()) as `0x${string}`,
-      // account: (await this.getAddress()) as `0x${string}`,
       chain: this.walletClient.chain,
       data: transaction.data as `0x${string}`,
     }

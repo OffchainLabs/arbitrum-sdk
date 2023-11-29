@@ -53,8 +53,7 @@ import {
 } from '../utils/universal/providerTransforms'
 import { experimentalFeaturesEnabled } from '../utils/globalConfig'
 import { transformUniversalSignerToEthersV5Signer } from '../utils/universal/signerTransforms'
-import { WalletClient } from 'viem'
-// import type { WalletClient } from 'viem'
+import type { WalletClient } from 'viem'
 
 export interface EthWithdrawParams {
   /**

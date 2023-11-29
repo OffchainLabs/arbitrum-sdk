@@ -36,6 +36,7 @@ const deployBehindProxy = async <
   await proxy.deployed()
   console.log(factory['contractName'], proxy.address)
 
+  //@ts-ignore
   return instance.attach(proxy.address)
 }
 

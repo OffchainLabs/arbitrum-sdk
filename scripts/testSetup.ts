@@ -21,10 +21,9 @@ import {
   getL2Network,
 } from '../src/lib/dataEntities/networks'
 import { deployErc20AndInit } from './deployBridge'
-import { createWalletClient, defineChain, http } from 'viem'
+import { createWalletClient, http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { mainnet } from 'viem/chains'
-import { Signerish } from '../src/lib/assetBridger/ethBridger'
 import { walletClientToSigner } from '../src/lib/utils/universal/signerTransforms'
 import 'isomorphic-unfetch'
 
