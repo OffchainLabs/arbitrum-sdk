@@ -395,27 +395,8 @@ const getChainsByType = <T extends typeof Networks>(
   ) as T
 }
 
-export const getL1Chains = () => getChainsByType<L1Networks>(isL1Chain)
-export const getL2Chains = () => getChainsByType<L2Networks>(isL2Chain)
-export const getParentChains = () =>
-  getChainsByType<ParentChains>(isParentChain)
-export const getChildChains = () => getChainsByType<ChildChains>(isChildChain)
-export const getOrbitChains = () => getChainsByType<OrbitChains>(isOrbitChain)
+const getParentChains = () => getChainsByType<ParentChains>(isParentChain)
 
-export const getParentForNetwork = (chain: Chain) => {
-  if (!isChildChain(chain)) {
-    return undefined
-  }
-  const parentChain = Networks[chain.partnerChainID]
-  if (!parentChain || !isParentChain(parentChain)) {
-    throw new ArbSdkError(
-      `ParentChain ${chain.partnerChainID} not recognized for Chain ${chain.chainID}.`
-    )
-  }
-  return parentChain
-}
-
-export const getChildrenForNetwork = (chain: Chain) => {
   if (!isParentChain(chain)) {
     return undefined
   }
@@ -449,7 +430,7 @@ export const getNetwork = async (
   if (!layer) {
     network = Networks[chainID]
   } else if (layer === 1) {
-    network = l1Networks[chainID]
+    network = getParentChains()[chainID]
   } else {
     network = l2Networks[chainID]
   }

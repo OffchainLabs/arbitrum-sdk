@@ -5,6 +5,7 @@ import { getNetwork } from '../../src/lib/dataEntities/networks'
 
 const mainnetId = 1
 const arbOneId = 42161
+const arbNovaId = 42170
 const mockOrbitChainId = 99999999
 
 describe('Network', () => {
@@ -36,15 +37,15 @@ describe('Network', () => {
     expect(network.chainID, fetchErrorMessage).to.be.eq(mainnetId)
   })
 
-  it('fails to fetch an L2 network with `getL1Network`', async function () {
+  it('fails to fetch an L2 network that is not a parent with `getL1Network`', async function () {
     let network
     try {
-      network = await getL1Network(arbOneId)
+      network = await getL1Network(arbNovaId)
     } catch (err) {
       // should fail
       expect(err).to.be.an('error')
       expect((err as Error).message).to.be.eq(
-        `Unrecognized network ${arbOneId}.`
+        `Unrecognized network ${arbNovaId}.`
       )
     } finally {
       expect(network, '`getL1Network` returned a result for an L2 network.').to
