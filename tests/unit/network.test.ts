@@ -11,10 +11,10 @@ describe('Network', () => {
   const fetchErrorMessage =
     'Network fetched successfully but the chain ID is invalid.'
 
-  it('Adds a custom Orbit chain', async function () {
+  it('adds a custom Orbit chain', async function () {
     const arbOneNetwork = await getL2Network(arbOneId)
 
-    addCustomNetwork({
+    const mockCustomNetwork = {
       customL2Network: {
         // we partially copy Arbitrum One network because we only want to mimic a custom chain
         ...arbOneNetwork,
@@ -24,15 +24,19 @@ describe('Network', () => {
         isCustom: true,
         isOrbit: true,
       },
-    })
+    } as const
+
+    addCustomNetwork(mockCustomNetwork)
+
+    expect(await getNetwork(mockOrbitChainId)).to.be.ok
   })
 
-  it('Successfully fetches an L1 network with `getL1Network`', async function () {
+  it('successfully fetches an L1 network with `getL1Network`', async function () {
     const network = await getL1Network(mainnetId)
     expect(network.chainID, fetchErrorMessage).to.be.eq(mainnetId)
   })
 
-  it('Fails to fetch an L2 network with `getL1Network`', async function () {
+  it('fails to fetch an L2 network with `getL1Network`', async function () {
     let network
     try {
       network = await getL1Network(arbOneId)
@@ -48,12 +52,12 @@ describe('Network', () => {
     }
   })
 
-  it('Successfully fetches an L2 network with `getL2Network`', async function () {
+  it('successfully fetches an L2 network with `getL2Network`', async function () {
     const network = await getL2Network(arbOneId)
     expect(network.chainID, fetchErrorMessage).to.be.eq(arbOneId)
   })
 
-  it('Fails to fetch an L1 network with `getL2Network`', async function () {
+  it('fails to fetch an L1 network with `getL2Network`', async function () {
     let network
     try {
       network = await getL2Network(mainnetId)
@@ -69,12 +73,12 @@ describe('Network', () => {
     }
   })
 
-  it('Successfully fetches a parent chain with `getNetwork`', async function () {
+  it('successfully fetches a parent chain with `getNetwork`', async function () {
     const parentChain = await getNetwork(arbOneId)
     expect(parentChain.chainID, fetchErrorMessage).to.be.eq(arbOneId)
   })
 
-  it('Fails to fetch an Orbit chain with `getNetwork`', async function () {
+  it('fails to fetch an Orbit chain with `getNetwork` because it is in the wrong layer', async function () {
     let parentChain
     try {
       parentChain = await getNetwork(mockOrbitChainId, 1)
@@ -90,12 +94,12 @@ describe('Network', () => {
     }
   })
 
-  it('Successfully fetches an Orbit chain with `getNetwork`', async function () {
+  it('successfully fetches an Orbit chain with `getNetwork`', async function () {
     const chain = await getNetwork(mockOrbitChainId)
     expect(chain.chainID, fetchErrorMessage).to.be.eq(mockOrbitChainId)
   })
 
-  it('Fails to fetch a parent chain with `getNetwork`', async function () {
+  it('fails to fetch a parent chain with `getNetwork` because it is the wrong layer', async function () {
     let chain
     try {
       chain = await getNetwork(mainnetId, 2)

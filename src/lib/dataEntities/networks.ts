@@ -350,7 +350,12 @@ export const Networks: Record<string, Chain> = {
 }
 
 const isParentChain = (chain: Chain): chain is ParentChain => {
-  return chain && 'partnerChainIDs' in chain
+  return (
+    chain &&
+    'partnerChainIDs' in chain &&
+    !!chain.partnerChainIDs &&
+    chain.partnerChainIDs.length > 0
+  )
 }
 
 const isChildChain = (chain: Chain): chain is ChildChain => {
