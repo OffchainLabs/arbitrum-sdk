@@ -349,6 +349,7 @@ export const Networks: Record<string, Chain> = {
   },
 }
 
+/** Determines if a chain is a parent of *any* other chain. */
 const isParentChain = (chain: Chain): chain is ParentChain => {
   return (
     chain &&
@@ -358,6 +359,7 @@ const isParentChain = (chain: Chain): chain is ParentChain => {
   )
 }
 
+/** Determines if a chain is a child of *any* other chain. */
 const isChildChain = (chain: Chain): chain is ChildChain => {
   return chain && 'partnerChainID' in chain
 }
