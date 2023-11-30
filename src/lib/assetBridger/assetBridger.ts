@@ -24,7 +24,6 @@ import {
   l1Networks,
   L1Network,
   L2Network,
-  ParentChain,
   getParentForNetwork,
 } from '../dataEntities/networks'
 import {
@@ -37,8 +36,6 @@ import {
  */
 export abstract class AssetBridger<DepositParams, WithdrawParams> {
   public readonly l1Network: L1Network
-  public readonly parentChain: ParentChain
-  private readonly l1NetworkOrParentChain: L1Network | ParentChain
 
   public constructor(public readonly l2Network: L2Network) {
     this.l1Network = l1Networks[l2Network.partnerChainID]
@@ -48,10 +45,10 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
         `Unknown parent network chain id: ${l2Network.partnerChainID}`
       )
     }
-    this.parentChain = parentChain
-    this.l1NetworkOrParentChain = this.l1Network || this.parentChain
 
-    if (!this.l1NetworkOrParentChain) {
+    const l1NetworkOrParentChain = this.l1Network || parentChain
+
+    if (!l1NetworkOrParentChain) {
       throw new ArbSdkError(
         `Unknown parent network chain id: ${l2Network.partnerChainID}`
       )
@@ -63,10 +60,7 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    * @param sop
    */
   protected async checkL1Network(sop: SignerOrProvider): Promise<void> {
-    await SignerProviderUtils.checkNetworkMatches(
-      sop,
-      this.l1NetworkOrParentChain.chainID
-    )
+    await SignerProviderUtils.checkNetworkMatches(sop, this.l1Network.chainID)
   }
 
   /**
