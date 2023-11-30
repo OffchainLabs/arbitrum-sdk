@@ -136,7 +136,7 @@ const mainnetETHBridge: EthBridge = {
   },
 }
 
-export const Networks: Record<string, Chain> = {
+export const networks: Record<string, Chain> = {
   1: {
     chainID: 1,
     name: 'Mainnet',
@@ -381,10 +381,10 @@ const isOrbitChain = (chain: Chain): chain is OrbitChain => {
  * @param filterFn - A predicate function to determine if a chain should be included.
  * @return An object with only the filtered chains.
  */
-const getChainsByType = <T extends typeof Networks>(
+const getChainsByType = <T extends typeof networks>(
   filterFn: (chain: Chain) => boolean
 ): T => {
-  return Object.entries(Networks).reduce<typeof Networks>(
+  return Object.entries(networks).reduce<typeof networks>(
     (accumulator, [chainId, chainData]) => {
       if (filterFn(chainData)) {
         accumulator[chainId] = chainData
@@ -445,7 +445,7 @@ export const getNetwork = async (
 
   let network
   if (!layer) {
-    network = Networks[chainID]
+    network = networks[chainID]
   } else if (layer === 1) {
     network = getParentChains()[chainID]
   } else {
@@ -502,7 +502,7 @@ export const getEthBridgeInformation = async (
 }
 
 const addNetwork = (network: Chain) => {
-  Networks[network.chainID] = network
+  networks[network.chainID] = network
   if (isParentChain(network)) {
     const children = getChildrenForNetwork(network)
     children?.forEach(child => {
@@ -513,7 +513,7 @@ const addNetwork = (network: Chain) => {
   }
 
   if (isChildChain(network)) {
-    const parent = Networks[network.partnerChainID]
+    const parent = networks[network.partnerChainID]
     if (parent) {
       parent.partnerChainIDs = [
         ...(parent.partnerChainIDs ?? []),
