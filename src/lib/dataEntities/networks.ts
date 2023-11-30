@@ -354,7 +354,7 @@ const isParentChain = (chain: Chain): chain is ParentChain => {
   return (
     chain &&
     'partnerChainIDs' in chain &&
-    Boolean(chain.partnerChainIDs) &&
+    Array.isArray(chain.partnerChainIDs) &&
     chain.partnerChainIDs.length > 0
   )
 }
