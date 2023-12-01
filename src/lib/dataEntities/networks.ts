@@ -538,9 +538,11 @@ const addNetwork = (network: Chain) => {
 export const addCustomNetwork = ({
   customL1Network,
   customL2Network,
+  customNetwork,
 }: {
   customL1Network?: L1Network
   customL2Network: L2Network | OrbitChain
+  customNetwork?: L1Network | L2Network | OrbitChain
 }): void => {
   if (customL1Network) {
     if (l1Networks[customL1Network.chainID]) {
@@ -565,6 +567,19 @@ export const addCustomNetwork = ({
   }
 
   addNetwork(customL2Network)
+
+  if (customNetwork) {
+    if (networks[customNetwork.chainID]) {
+      throw new ArbSdkError(`Network ${customNetwork.chainID} already included`)
+    }
+    if (!customNetwork.isCustom) {
+      throw new ArbSdkError(
+        `Custom network ${customNetwork.chainID} must have isCustom flag set to true`
+      )
+    }
+
+    addNetwork(customNetwork)
+  }
 }
 
 /**
