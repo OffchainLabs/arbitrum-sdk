@@ -539,11 +539,11 @@ export const addCustomNetwork = ({
   customL1Network,
   customL2Network,
   customNetwork,
-}: {
-  customL1Network?: L1Network
+}: Partial<{
+  customL1Network: L1Network
   customL2Network: L2Network | OrbitChain
-  customNetwork?: L1Network | L2Network | OrbitChain
-}): void => {
+  customNetwork: L1Network | L2Network | OrbitChain
+}>): void => {
   if (customL1Network) {
     if (l1Networks[customL1Network.chainID]) {
       throw new ArbSdkError(
@@ -558,15 +558,19 @@ export const addCustomNetwork = ({
     }
   }
 
-  if (l2Networks[customL2Network.chainID])
-    throw new ArbSdkError(`Network ${customL2Network.chainID} already included`)
-  else if (!customL2Network.isCustom) {
-    throw new ArbSdkError(
-      `Custom network ${customL2Network.chainID} must have isCustom flag set to true`
-    )
-  }
+  if (customL2Network) {
+    if (l2Networks[customL2Network.chainID])
+      throw new ArbSdkError(
+        `Network ${customL2Network.chainID} already included`
+      )
+    else if (!customL2Network.isCustom) {
+      throw new ArbSdkError(
+        `Custom network ${customL2Network.chainID} must have isCustom flag set to true`
+      )
+    }
 
-  addNetwork(customL2Network)
+    addNetwork(customL2Network)
+  }
 
   if (customNetwork) {
     if (networks[customNetwork.chainID]) {
