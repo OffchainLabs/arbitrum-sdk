@@ -392,21 +392,21 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
    * WARNING: Outbox entries are only created when the corresponding node is confirmed. Which
    * can take 1 week+, so waiting here could be a very long operation.
    * @param retryDelay
-   * @returns
+   * @returns outbox entry status (either executed or confirmed but not executed)
    */
   public async waitUntilReadyToExecute(
     l2Provider: Provider,
     retryDelay = 500
-  ): Promise<void> {
+  ): Promise<L2ToL1MessageStatus.EXECUTED | L2ToL1MessageStatus.CONFIRMED> {
     const status = await this.status(l2Provider)
     if (
       status === L2ToL1MessageStatus.CONFIRMED ||
       status === L2ToL1MessageStatus.EXECUTED
     ) {
-      return
+      return status
     } else {
       await wait(retryDelay)
-      await this.waitUntilReadyToExecute(l2Provider, retryDelay)
+      return await this.waitUntilReadyToExecute(l2Provider, retryDelay)
     }
   }
 
