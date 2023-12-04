@@ -30,12 +30,11 @@ import * as classic from './L2ToL1MessageClassic'
 import * as nitro from './L2ToL1MessageNitro'
 import {
   L2ToL1TransactionEvent as ClassicChildToParentTransactionEvent,
-  L2ToL1TransactionEvent,
   L2ToL1TxEvent as NitroChildToParentTransactionEvent,
 } from '../abi/ArbSys'
 import { isDefined } from '../utils/lib'
 import { EventArgs } from '../dataEntities/event'
-import { L2ToL1MessageStatus } from '../dataEntities/message'
+import { L2ToL1MessageStatus as ChildToParentChainMessageStatus } from '../dataEntities/message'
 import { getChildChain } from '../dataEntities/networks'
 import { ArbSdkError } from '../dataEntities/errors'
 
@@ -72,27 +71,27 @@ export class ChildToParentMessage {
    * @param {Provider} [ParentChainProvider] Optional. Used to override the Provider which is attached to `ParentChainSignerOrProvider` in case you need more control. This will be a required parameter in a future major version update.
    */
   public static fromEvent<T extends SignerOrProvider>(
-    ParentChainSignerOrProvider: T,
+    parentChainSignerOrProvider: T,
     event: ChildToParentTransactionEvent,
-    ParentChainProvider?: Provider
+    parentChainProvider?: Provider
   ): ChildToParentMessageReaderOrWriter<T>
   static fromEvent<T extends SignerOrProvider>(
-    ParentChainSignerOrProvider: T,
+    parentChainSignerOrProvider: T,
     event: ChildToParentTransactionEvent,
-    ParentChainProvider?: Provider
+    parentChainProvider?: Provider
   ): ChildToParentMessageReader | ChildToParentMessageWriter {
-    return SignerProviderUtils.isSigner(ParentChainSignerOrProvider)
+    return SignerProviderUtils.isSigner(parentChainSignerOrProvider)
       ? new ChildToParentMessageWriter(
-          ParentChainSignerOrProvider,
+          parentChainSignerOrProvider,
           event,
-          ParentChainProvider
+          parentChainProvider
         )
-      : new ChildToParentMessageReader(ParentChainSignerOrProvider, event)
+      : new ChildToParentMessageReader(parentChainSignerOrProvider, event)
   }
 
   /**
    * Get event logs for ChildToParent transactions.
-   * @param ChainProvider
+   * @param childChainProvider
    * @param filter Block range filter
    * @param position The batchnumber indexed field was removed in nitro and a position indexed field was added.
    * For pre-nitro events the value passed in here will be used to find events with the same batchnumber.
@@ -105,14 +104,14 @@ export class ChildToParentMessage {
    * @returns Any classic and nitro events that match the provided filters.
    */
   public static async getChildToParentEvents(
-    ChainProvider: Provider,
+    childChainProvider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     position?: BigNumber,
     destination?: string,
     hash?: BigNumber,
     indexInBatch?: BigNumber
-  ): Promise<(L2ToL1TransactionEvent & { transactionHash: string })[]> {
-    const l2Network = await getChildChain(l2Provider)
+  ): Promise<(ChildToParentTransactionEvent & { transactionHash: string })[]> {
+    const childChain = await getChildChain(childChainProvider)
 
     const inClassicRange = (blockTag: BlockTag, nitroGenBlock: number) => {
       if (typeof blockTag === 'string') {
@@ -155,17 +154,14 @@ export class ChildToParentMessage {
 
     // only fetch nitro events after the genesis block
     const classicFilter = {
-      fromBlock: inClassicRange(
-        filter.fromBlock,
-        ChainNetwork.nitroGenesisBlock
-      ),
-      toBlock: inClassicRange(filter.toBlock, ChainNetwork.nitroGenesisBlock),
+      fromBlock: inClassicRange(filter.fromBlock, childChain.nitroGenesisBlock),
+      toBlock: inClassicRange(filter.toBlock, childChain.nitroGenesisBlock),
     }
     const logQueries = []
     if (classicFilter.fromBlock !== classicFilter.toBlock) {
       logQueries.push(
         classic.L2ToL1MessageClassic.getL2ToL1Events(
-          ChainProvider,
+          childChainProvider,
           classicFilter,
           position,
           destination,
@@ -176,13 +172,13 @@ export class ChildToParentMessage {
     }
 
     const nitroFilter = {
-      fromBlock: inNitroRange(filter.fromBlock, ChainNetwork.nitroGenesisBlock),
-      toBlock: inNitroRange(filter.toBlock, ChainNetwork.nitroGenesisBlock),
+      fromBlock: inNitroRange(filter.fromBlock, childChain.nitroGenesisBlock),
+      toBlock: inNitroRange(filter.toBlock, childChain.nitroGenesisBlock),
     }
     if (nitroFilter.fromBlock !== nitroFilter.toBlock) {
       logQueries.push(
         nitro.L2ToL1MessageNitro.getL2ToL1Events(
-          ChainProvider,
+          childChainProvider,
           nitroFilter,
           position,
           destination,
@@ -203,30 +199,30 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
   private readonly nitroReader?: nitro.L2ToL1MessageReaderNitro
 
   constructor(
-    protected readonly ParentChainProvider: Provider,
+    protected readonly parentChainProvider: Provider,
     event: ChildToParentTransactionEvent
   ) {
     super()
     if (this.isClassic(event)) {
       this.classicReader = new classic.L2ToL1MessageReaderClassic(
-        ParentChainProvider,
+        parentChainProvider,
         event.batchNumber,
         event.indexInBatch
       )
     } else {
       this.nitroReader = new nitro.L2ToL1MessageReaderNitro(
-        ParentChainProvider,
+        parentChainProvider,
         event
       )
     }
   }
 
   public async getOutboxProof(
-    ChainProvider: Provider
+    chainProvider: Provider
   ): Promise<classic.MessageBatchProofInfo | null | string[]> {
     if (this.nitroReader) {
-      return await this.nitroReader.getOutboxProof(ChainProvider)
-    } else return await this.classicReader!.tryGetProof(ChainProvider)
+      return await this.nitroReader.getOutboxProof(chainProvider)
+    } else return await this.classicReader!.tryGetProof(chainProvider)
   }
 
   /**
@@ -235,11 +231,11 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
    * @returns
    */
   public async status(
-    ChainProvider: Provider
-  ): Promise<ChildToParentMessageStatus> {
+    chainProvider: Provider
+  ): Promise<ChildToParentChainMessageStatus> {
     // can we create an ChildToParentmessage here, we need to - the constructor is what we need
-    if (this.nitroReader) return await this.nitroReader.status(ChainProvider)
-    else return await this.classicReader!.status(ChainProvider)
+    if (this.nitroReader) return await this.nitroReader.status(chainProvider)
+    else return await this.classicReader!.status(chainProvider)
   }
 
   /**
@@ -250,14 +246,14 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
    * @returns
    */
   public async waitUntilReadyToExecute(
-    ChainProvider: Provider,
+    chainProvider: Provider,
     retryDelay = 500
   ): Promise<void> {
     if (this.nitroReader)
-      return this.nitroReader.waitUntilReadyToExecute(ChainProvider, retryDelay)
+      return this.nitroReader.waitUntilReadyToExecute(chainProvider, retryDelay)
     else
       return this.classicReader!.waitUntilOutboxEntryCreated(
-        ChainProvider,
+        chainProvider,
         retryDelay
       )
   }
@@ -265,15 +261,15 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
   /**
    * Estimates the ParentChain block number in which this Chain to ParentChain tx will be available for execution.
    * If the message can or already has been executed, this returns null
-   * @param ChainProvider
+   * @param chainProvider
    * @returns expected ParentChain block number where the Chain to ParentChain message will be executable. Returns null if the message can or already has been executed
    */
   public async getFirstExecutableBlock(
-    ChainProvider: Provider
+    chainProvider: Provider
   ): Promise<BigNumber | null> {
     if (this.nitroReader)
-      return this.nitroReader.getFirstExecutableBlock(ChainProvider)
-    else return this.classicReader!.getFirstExecutableBlock(ChainProvider)
+      return this.nitroReader.getFirstExecutableBlock(chainProvider)
+    else return this.classicReader!.getFirstExecutableBlock(chainProvider)
   }
 }
 
@@ -292,24 +288,24 @@ export class ChildToParentMessageWriter extends ChildToParentMessageReader {
    * @param {Provider} [ParentChainProvider] Optional. Used to override the Provider which is attached to `ParentChainSigner` in case you need more control. This will be a required parameter in a future major version update.
    */
   constructor(
-    ParentChainSigner: Signer,
+    parentChainSigner: Signer,
     event: ChildToParentTransactionEvent,
-    ParentChainProvider?: Provider
+    parentChainProvider?: Provider
   ) {
-    super(ParentChainProvider ?? ParentChainSigner.provider!, event)
+    super(parentChainProvider ?? parentChainSigner.provider!, event)
 
     if (this.isClassic(event)) {
       this.classicWriter = new classic.L2ToL1MessageWriterClassic(
-        ParentChainSigner,
+        parentChainSigner,
         event.batchNumber,
         event.indexInBatch,
-        ParentChainProvider
+        parentChainProvider
       )
     } else {
       this.nitroWriter = new nitro.L2ToL1MessageWriterNitro(
-        ParentChainSigner,
+        parentChainSigner,
         event,
-        ParentChainProvider
+        parentChainProvider
       )
     }
   }
@@ -321,11 +317,11 @@ export class ChildToParentMessageWriter extends ChildToParentMessageReader {
    * @returns
    */
   public async execute(
-    ChainProvider: Provider,
+    chainProvider: Provider,
     overrides?: Overrides
   ): Promise<ContractTransaction> {
     if (this.nitroWriter)
-      return this.nitroWriter.execute(ChainProvider, overrides)
-    else return await this.classicWriter!.execute(ChainProvider, overrides)
+      return this.nitroWriter.execute(chainProvider, overrides)
+    else return await this.classicWriter!.execute(chainProvider, overrides)
   }
 }
