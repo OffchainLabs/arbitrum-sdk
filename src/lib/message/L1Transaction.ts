@@ -21,13 +21,13 @@ import { Log, Provider } from '@ethersproject/abstract-provider'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
 import {
-  L1ToL2Message,
-  L1ToL2MessageReaderOrWriter,
-  L1ToL2MessageReader,
-  L1ToL2MessageReaderClassic,
-  L1ToL2MessageWriter,
-  L1ToL2MessageStatus,
-  L1ToL2MessageWaitResult,
+  ParentToChildMessage as L1ToL2Message,
+  ParentToChildMessageReaderOrWriter as L1ToL2MessageReaderOrWriter,
+  ParentToChildMessageReader as L1ToL2MessageReader,
+  ParentToChildMessageReaderClassic as L1ToL2MessageReaderClassic,
+  ParentToChildMessageWriter as L1ToL2MessageWriter,
+  ParentToChildMessageStatus as L1ToL2MessageStatus,
+  ParentToChildMessageWaitResult as L1ToL2MessageWaitResult,
   EthDepositMessage,
   EthDepositMessageWaitResult,
 } from './L1ToL2Message'
@@ -46,7 +46,7 @@ import { MessageDeliveredEvent } from '../abi/Bridge'
 import { EventArgs, parseTypedLogs } from '../dataEntities/event'
 import { isDefined } from '../utils/lib'
 import { SubmitRetryableMessageDataParser } from './messageDataParser'
-import { getChildChain as getL2Network } from '../dataEntities/networks'
+import { getChildChain } from '../dataEntities/networks'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
@@ -106,7 +106,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     l2SignerOrProvider: T
   ): Promise<boolean> {
     const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
-    const network = await getL2Network(provider)
+    const network = await getChildChain(provider)
     return this.blockNumber < network.nitroGenesisL1Block
   }
 
@@ -207,7 +207,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
   public async getL1ToL2MessagesClassic(
     l2Provider: Provider
   ): Promise<L1ToL2MessageReaderClassic[]> {
-    const network = await getL2Network(l2Provider)
+    const network = await getChildChain(l2Provider)
     const chainID = network.chainID.toString()
     const isClassic = await this.isClassic(l2Provider)
 
@@ -243,7 +243,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     l2SignerOrProvider: T
   ): Promise<L1ToL2MessageReader[] | L1ToL2MessageWriter[]> {
     const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
-    const network = await getL2Network(provider)
+    const network = await getChildChain(provider)
     const chainID = network.chainID.toString()
     const isClassic = await this.isClassic(provider)
 
@@ -372,7 +372,7 @@ export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
 
     return {
       complete: isDefined(res),
-      l2TxReceipt: res,
+      chainTxReceipt: res,
       message,
     }
   }

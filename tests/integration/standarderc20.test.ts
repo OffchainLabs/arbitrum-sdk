@@ -105,7 +105,7 @@ describe('standard ERC20', () => {
     expect(retryRec.status, 'tx didnt fail').to.eq(expectedStatus)
     expect(await message.status(), 'message status').to.eq(
       expectedStatus === 0
-        ? L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+        ? L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN
         : L1ToL2MessageStatus.REDEEMED
     )
   }
@@ -117,7 +117,7 @@ describe('standard ERC20', () => {
       testState.erc20Bridger,
       testState.l1Signer,
       testState.l2Signer,
-      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       GatewayType.STANDARD,
       {
         gasLimit: { base: BigNumber.from(0) },
@@ -135,7 +135,7 @@ describe('standard ERC20', () => {
       testState.erc20Bridger,
       testState.l1Signer,
       testState.l2Signer,
-      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       GatewayType.STANDARD,
       {
         gasLimit: { base: BigNumber.from(5) },
@@ -155,7 +155,7 @@ describe('standard ERC20', () => {
       testState.erc20Bridger,
       testState.l1Signer,
       testState.l2Signer,
-      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       GatewayType.STANDARD,
       {
         gasLimit: { base: BigNumber.from(21000) },
@@ -187,7 +187,7 @@ describe('standard ERC20', () => {
       testState.erc20Bridger,
       testState.l1Signer,
       testState.l2Signer,
-      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       GatewayType.STANDARD,
       {
         gasLimit: { base: BigNumber.from(5) },

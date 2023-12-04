@@ -32,7 +32,7 @@ import {
 import { L2ToL1Message } from '../../src/lib/message/L2ToL1Message'
 import { L2ToL1MessageStatus } from '../../src/lib/dataEntities/message'
 import { L2TransactionReceipt } from '../../src/lib/message/L2Transaction'
-import { L1ToL2MessageStatus } from '../../src/lib/message/L1ToL2Message'
+import { ParentToChildMessageStatus as L1ToL2MessageStatus } from '../../src/lib/message/L1ToL2Message'
 import { testSetup } from '../../scripts/testSetup'
 dotenv.config()
 
@@ -113,11 +113,11 @@ describe('Ether', async () => {
       ethToDeposit.toString()
     )
 
-    prettyLog('l2TxHash: ' + waitResult.message.l2DepositTxHash)
-    prettyLog('l2 transaction found!')
+    prettyLog('chainTxHash: ' + waitResult.message.chainDepositTxHash)
+    prettyLog('chain transaction found!')
     expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
-    expect(waitResult.l2TxReceipt).to.exist
-    expect(waitResult.l2TxReceipt).to.not.be.null
+    expect(waitResult.chainTxReceipt).to.exist
+    expect(waitResult.chainTxReceipt).to.not.be.null
 
     const testWalletL2EthBalance = await l2Signer.getBalance()
     expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(

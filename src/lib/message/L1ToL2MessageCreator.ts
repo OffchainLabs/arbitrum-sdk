@@ -7,7 +7,7 @@ import {
 } from './L1ToL2MessageGasEstimator'
 import { L1ContractTransaction, L1TransactionReceipt } from './L1Transaction'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
-import { getChildChain as getL2Network } from '../dataEntities/networks'
+import { getChildChain } from '../dataEntities/networks'
 import { PayableOverrides } from '@ethersproject/contracts'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
@@ -96,7 +96,7 @@ export class L1ToL2MessageCreator {
       options
     )
 
-    const l2Network = await getL2Network(l2Provider)
+    const l2Network = await getChildChain(l2Provider)
     const inboxInterface = Inbox__factory.createInterface()
     const functionData = inboxInterface.encodeFunctionData(
       'createRetryableTicket',
