@@ -20,8 +20,8 @@
 import { BigNumber, ethers, Signer } from 'ethers'
 import { InboxTools } from '../../src/lib/inbox/inbox'
 import {
-  getChainNetwork as getL2Network,
-  ChainNetwork as L2Network,
+  getChildChain as getL2Network,
+  ChildChain as L2Network,
 } from '../../src/lib/dataEntities/networks'
 import { testSetup } from '../../scripts/testSetup'
 import { greeter } from './helper/greeter'
@@ -36,9 +36,9 @@ const sendSignedTx = async (testState: any, info?: any) => {
     ...info,
     value: BigNumber.from(0),
   }
-  const signedTx = await inbox.signChainTx(message, l2Deployer)
+  const signedTx = await inbox.signChildChainTx(message, l2Deployer)
 
-  const l1Tx = await inbox.sendChainSignedTx(signedTx)
+  const l1Tx = await inbox.sendChildChainSignedTx(signedTx)
   return {
     signedMsg: signedTx,
     l1TransactionReceipt: await l1Tx?.wait(),

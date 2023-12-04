@@ -18,8 +18,8 @@
 
 import { Logger, LogLevel } from '@ethersproject/logger'
 Logger.setLogLevel(LogLevel.ERROR)
-import { L2ToL1Message as ChildToParentMessage } from '../../src'
-import { getChainNetwork as getL2Network } from '../../src/lib/dataEntities/networks'
+import { ChildToParentMessage } from '../../src'
+import { getChildChain as getL2Network } from '../../src/lib/dataEntities/networks'
 import { providers } from 'ethers'
 import { anything, deepEqual, instance, mock, verify, when } from 'ts-mockito'
 

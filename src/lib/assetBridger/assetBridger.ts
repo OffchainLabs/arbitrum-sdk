@@ -21,9 +21,9 @@ import { L1ContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'
 
 import {
-  parentChainNetworks,
-  ParentChainNetwork,
-  ChainNetwork,
+  parentChains as l1Networks,
+  ChildChain as L2Network,
+  ParentChain,
 } from '../dataEntities/networks'
 import {
   SignerOrProvider,
@@ -34,13 +34,13 @@ import {
  * Base for bridging assets from l1 to l2 and back
  */
 export abstract class AssetBridger<DepositParams, WithdrawParams> {
-  public readonly l1Network: ParentChainNetwork
+  public readonly l1Network: ParentChain
 
-  public constructor(public readonly l2Network: ChainNetwork) {
-    this.l1Network = parentChainNetworks[l2Network.partnerChainID]
+  public constructor(public readonly l2Network: L2Network) {
+    this.l1Network = l1Networks[l2Network.parentChainId]
     if (!this.l1Network) {
       throw new ArbSdkError(
-        `Unknown l1 network chain id: ${l2Network.partnerChainID}`
+        `Unknown l1 network chain id: ${l2Network.parentChainId}`
       )
     }
   }

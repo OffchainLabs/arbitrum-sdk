@@ -45,7 +45,7 @@ import {
   L1ToL2MessageGasEstimator,
 } from '../message/L1ToL2MessageGasEstimator'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
-import { ChainNetwork, getChainNetwork } from '../dataEntities/networks'
+import { ChildChain, getChildChain } from '../dataEntities/networks'
 import { ArbSdkError, MissingProviderArbSdkError } from '../dataEntities/errors'
 import { DISABLED_GATEWAY } from '../dataEntities/constants'
 import { EventFetcher } from '../utils/eventFetcher'
@@ -178,7 +178,7 @@ export class Erc20Bridger extends AssetBridger<
   /**
    * Bridger for moving ERC20 tokens back and forth between L1 to L2
    */
-  public constructor(l2Network: ChainNetwork) {
+  public constructor(l2Network: ChildChain) {
     super(l2Network)
   }
 
@@ -188,7 +188,7 @@ export class Erc20Bridger extends AssetBridger<
    * @returns
    */
   public static async fromProvider(l2Provider: Provider) {
-    return new Erc20Bridger(await getChainNetwork(l2Provider))
+    return new Erc20Bridger(await getChildChain(l2Provider))
   }
 
   /**
