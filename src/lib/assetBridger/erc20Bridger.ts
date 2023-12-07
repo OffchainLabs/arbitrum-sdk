@@ -614,6 +614,7 @@ export class Erc20Bridger extends AssetBridger<
       params.l1Signer
     )
     await this.checkL1Network(signer)
+    console.log({ params })
 
     // Although the types prevent should alert callers that value is not
     // a valid override, it is possible that they pass it in anyway as it's a common override
@@ -754,15 +755,16 @@ export class AdminErc20Bridger extends Erc20Bridger {
     l1Signer: Signer,
     l2Provider: Provider
   ): Promise<L1ContractTransaction> {
-    if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
+    const signer = await transformUniversalSignerToEthersV5Signer(l1Signer)
+    if (!SignerProviderUtils.signerHasProvider(signer)) {
       throw new MissingProviderArbSdkError('l1Signer')
     }
-    await this.checkL1Network(l1Signer)
+    await this.checkL1Network(signer)
     await this.checkL2Network(l2Provider)
 
-    const l1SenderAddress = await l1Signer.getAddress()
+    const l1SenderAddress = await signer.getAddress()
 
-    const l1Token = ICustomToken__factory.connect(l1TokenAddress, l1Signer)
+    const l1Token = ICustomToken__factory.connect(l1TokenAddress, signer)
     const l2Token = IArbToken__factory.connect(l2TokenAddress, l2Provider)
 
     // sanity checks
@@ -780,7 +782,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
       maxSubmissionCost: BigNumber
       gasLimit: BigNumber
     }
-    const from = await l1Signer.getAddress()
+    const from = await signer.getAddress()
     const encodeFuncData = (
       setTokenGas: GasParams,
       setGatewayGas: GasParams,
@@ -821,7 +823,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
       }
     }
 
-    const l1Provider = l1Signer.provider!
+    const l1Provider = signer.provider!
     const gEstimator = new L1ToL2MessageGasEstimator(l2Provider)
     const setTokenEstimates2 = await gEstimator.populateFunctionParams(
       (params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>) =>
@@ -855,7 +857,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
       l1Provider
     )
 
-    const registerTx = await l1Signer.sendTransaction({
+    const registerTx = await signer.sendTransaction({
       to: l1Token.address,
       data: setGatewayEstimates2.data,
       value: setGatewayEstimates2.value,

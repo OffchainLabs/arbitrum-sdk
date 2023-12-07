@@ -106,10 +106,10 @@ class ViemSigner extends Signer {
   async sendTransaction(
     transaction: Deferrable<TransactionRequest>
   ): Promise<TransactionResponse> {
-    const gasEstimate = await this.publicClient.estimateGas({
-      ...(this.walletClient as any),
-      ...transaction,
-    })
+    // const gasEstimate = await this.publicClient.estimateGas({
+    //   ...(this.walletClient as any),
+    //   ...transaction,
+    // })
     const { maxFeePerGas, maxPriorityFeePerGas } =
       await this.publicClient.estimateFeesPerGas()
     const valueInBigInt = BigInt(transaction?.value?.toString() || 0)
@@ -137,27 +137,21 @@ class ViemSigner extends Signer {
       serializedTransaction,
     })
 
-    const transactionReceipt =
-      await this.publicClient.waitForTransactionReceipt({
-        hash,
-      })
-
     const accessList = request.accessList ?? []
     const chainId = await this.publicClient.getChainId()
     const confirmations = 8
     const data = (await transaction.data?.toString()) as string
     const from = (await requestData.from) as string
-    const gasLimit = BigNumber.from(gasEstimate)
+    const gasLimit = BigNumber.from(transaction.gasLimit ?? 0)
     const gasPrice = BigNumber.from((await request.gasPrice) ?? 0)
 
     const { r, s, v: rawV } = hexToSignature(serializedTransaction)
     const v = parseInt(rawV.toString())
     const to = (await transaction.to) as string
-    const type = getType(transactionReceipt.type ?? 2)
+    const type = getType((await transaction.type) ?? 2)
     const value = BigNumber.from(valueInBigInt ?? 0)
     const wait = async (): Promise<TransactionReceipt> => {
       const rec = await this.publicClient.waitForTransactionReceipt({ hash })
-
       return {
         ...rec,
         gasUsed: BigNumber.from(rec.gasUsed),
