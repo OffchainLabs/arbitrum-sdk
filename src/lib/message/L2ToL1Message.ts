@@ -218,11 +218,11 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
   }
 
   public async getOutboxProof(
-    chainProvider: Provider
+    childChainProvider: Provider
   ): Promise<classic.MessageBatchProofInfo | null | string[]> {
     if (this.nitroReader) {
-      return await this.nitroReader.getOutboxProof(chainProvider)
-    } else return await this.classicReader!.tryGetProof(chainProvider)
+      return await this.nitroReader.getOutboxProof(childChainProvider)
+    } else return await this.classicReader!.tryGetProof(childChainProvider)
   }
 
   /**
@@ -231,11 +231,12 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
    * @returns
    */
   public async status(
-    chainProvider: Provider
+    childChainProvider: Provider
   ): Promise<ChildToParentChainMessageStatus> {
     // can we create an ChildToParentmessage here, we need to - the constructor is what we need
-    if (this.nitroReader) return await this.nitroReader.status(chainProvider)
-    else return await this.classicReader!.status(chainProvider)
+    if (this.nitroReader)
+      return await this.nitroReader.status(childChainProvider)
+    else return await this.classicReader!.status(childChainProvider)
   }
 
   /**
@@ -246,14 +247,17 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
    * @returns
    */
   public async waitUntilReadyToExecute(
-    chainProvider: Provider,
+    childChainProvider: Provider,
     retryDelay = 500
   ): Promise<void> {
     if (this.nitroReader)
-      return this.nitroReader.waitUntilReadyToExecute(chainProvider, retryDelay)
+      return this.nitroReader.waitUntilReadyToExecute(
+        childChainProvider,
+        retryDelay
+      )
     else
       return this.classicReader!.waitUntilOutboxEntryCreated(
-        chainProvider,
+        childChainProvider,
         retryDelay
       )
   }
@@ -261,15 +265,15 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
   /**
    * Estimates the ParentChain block number in which this Chain to ParentChain tx will be available for execution.
    * If the message can or already has been executed, this returns null
-   * @param chainProvider
+   * @param childChainProvider
    * @returns expected ParentChain block number where the Chain to ParentChain message will be executable. Returns null if the message can or already has been executed
    */
   public async getFirstExecutableBlock(
-    chainProvider: Provider
+    childChainProvider: Provider
   ): Promise<BigNumber | null> {
     if (this.nitroReader)
-      return this.nitroReader.getFirstExecutableBlock(chainProvider)
-    else return this.classicReader!.getFirstExecutableBlock(chainProvider)
+      return this.nitroReader.getFirstExecutableBlock(childChainProvider)
+    else return this.classicReader!.getFirstExecutableBlock(childChainProvider)
   }
 }
 
@@ -317,11 +321,11 @@ export class ChildToParentMessageWriter extends ChildToParentMessageReader {
    * @returns
    */
   public async execute(
-    chainProvider: Provider,
+    childChainProvider: Provider,
     overrides?: Overrides
   ): Promise<ContractTransaction> {
     if (this.nitroWriter)
-      return this.nitroWriter.execute(chainProvider, overrides)
-    else return await this.classicWriter!.execute(chainProvider, overrides)
+      return this.nitroWriter.execute(childChainProvider, overrides)
+    else return await this.classicWriter!.execute(childChainProvider, overrides)
   }
 }
