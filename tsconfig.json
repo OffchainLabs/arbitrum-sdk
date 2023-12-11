@@ -14,17 +14,7 @@
     "noImplicitThis": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "experimentalDecorators": true,
-    "skipLibCheck": true,
+    "experimentalDecorators": true
   },
-  "include": [
-    "./**/*.ts",
-    "./**/*.d.ts",
-    "./**/*.js"
-  ],
-  "exclude": [
-    "node_modules",
-    "node_modules/abitype/**",
-    "node_modules/viem/**"
-  ]
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.js"]
 }
