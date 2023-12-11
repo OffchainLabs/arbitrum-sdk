@@ -3,7 +3,7 @@
     "target": "ES2017",
     "module": "commonjs",
     "declaration": true,
-    "rootDir": ".",
+    "rootDir": "./src",
     "outDir": "./dist",
     "strict": true,
     "allowJs": true,
@@ -18,9 +18,9 @@
     "skipLibCheck": true,
   },
   "include": [
-    "src/**/*.ts",
-    "src/**/*.d.ts",
-    "src/**/*.js"
+    "./**/*.ts",
+    "./**/*.d.ts",
+    "./**/*.js"
   ],
   "exclude": [
     "node_modules",

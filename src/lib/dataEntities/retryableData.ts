@@ -1,8 +1,7 @@
 import { Interface } from '@ethersproject/abi'
-import { BigNumber, ethers } from 'ethers'
+import { BigNumber } from 'ethers'
+import { BaseError, TransactionExecutionError } from 'viem'
 import { isDefined } from '../utils/lib'
-import { ErrorType } from 'viem/_types/errors/utils'
-import { decodeErrorResult } from 'viem'
 // TODO: add typechain support
 const errorInterface = new Interface([
   'error RetryableData(address from, address to, uint256 l2CallValue, uint256 deposit, uint256 maxSubmissionCost, address excessFeeRefundAddress, address callValueRefundAddress, uint256 gasLimit, uint256 maxFeePerGas, bytes data)',
@@ -107,52 +106,18 @@ export class RetryableDataTools {
     }
   }
 
-  private static extractValuesFromViemError(inputString: string) {
-    const fromRegex = /from:\s*(0x[a-fA-F0-9]+)/
-    const toRegex = /to:\s*(0x[a-fA-F0-9]+)/
-    const valueRegex = /value:\s*([\d\.]+ ETH)/
-    const dataRegex = /data:\s*(0x[a-fA-F0-9]+)/
-
-    return {
-      from: inputString.match(fromRegex)?.[1] || null,
-      to: inputString.match(toRegex)?.[1] || null,
-      value: inputString.match(valueRegex)?.[1] || null,
-      data: inputString.match(dataRegex)?.[1] || null,
-    }
-  }
-
   /**
    * Try to parse a retryable data struct from the supplied ethersjs error, or any explicitly supplied error data
    * @param ethersJsErrorOrData
    * @returns
    */
   public static tryParseError(
-    ethersJsErrorOrData: Error | { errorData: string } | string | ErrorType,
-    abi?: any
+    ethersJsErrorOrData: Error | { errorData: string } | string | ViemError
   ): RetryableData | null {
-    if (
-      typeof ethersJsErrorOrData !== 'string' &&
-      'version' in ethersJsErrorOrData &&
-      typeof ethersJsErrorOrData.version === 'string' &&
-      ethersJsErrorOrData.version.includes('viem')
-    ) {
-      const parsed = this.extractValuesFromViemError(
-        //@ts-ignore - viem
-        ethersJsErrorOrData.message
-      )
-
-      // const value = decodeErrorResult({
-      //   abi: abi,
-      //   data: parsed.data as `0x${string}`,
-      // })
-      // @ts-ignore - viem
-      const val = errorInterface.parseError(parsed.data)
-        .args as unknown as RetryableData
-      return val
-      // { errorName: 'InvalidTokenError', args: ['sold out'] }
-      // console.log(value)
-      // // @ts-ignore - viem
-      // return ethersJsErrorOrData
+    if (isViemError(ethersJsErrorOrData)) {
+      return errorInterface.parseError(
+        ethersJsErrorOrData.cause.cause.cause.data
+      ).args as unknown as RetryableData
     }
     const errorData =
       typeof ethersJsErrorOrData === 'string'
@@ -162,3 +127,19 @@ export class RetryableDataTools {
     return errorInterface.parseError(errorData).args as unknown as RetryableData
   }
 }
+
+interface ViemError extends BaseError {
+  cause: {
+    cause: {
+      cause: {
+        data: string
+      }
+    }
+  }
+}
+
+const isViemError = (err: any): err is ViemError =>
+  typeof err !== 'string' &&
+  'version' in err &&
+  typeof err.version === 'string' &&
+  err.version.includes('viem')

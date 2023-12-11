@@ -79,30 +79,27 @@ describe('Ether', async () => {
   })
 
   it('deposits ether', async () => {
-    const { ethBridger, l1Signer, l2Signer, ethl1Signer } = await testSetup()
-    const _l1Signer = l1Signer
-    await fundL1(_l1Signer)
-    const l1account = await _l1Signer.getAddress()
-    const l1balance = await _l1Signer.provider!.getBalance(l1account)
-    prettyLog('l1 balance: ' + l1balance.toString())
+    const { ethBridger, l1Signer, l2Signer } = await testSetup()
+
+    await fundL1(l1Signer)
     const inboxAddress = ethBridger.l2Network.ethBridge.inbox
 
-    const initialInboxBalance = await _l1Signer.provider!.getBalance(
+    const initialInboxBalance = await l1Signer.provider!.getBalance(
       inboxAddress
     )
     const ethToDeposit = parseEther('0.0002')
     const res = await ethBridger.deposit({
       amount: ethToDeposit,
-      l1Signer: _l1Signer,
+      l1Signer: l1Signer,
     })
     const rec = await res.wait()
+
     expect(rec.status).to.equal(1, 'eth deposit L1 txn failed')
-    const finalInboxBalance = await _l1Signer.provider!.getBalance(inboxAddress)
-    const amountExpected = initialInboxBalance.add(ethToDeposit).toString()
-    // expect(initialInboxBalance.add(ethToDeposit).toString()).to.eq(
-    //   finalInboxBalance.toString(),
-    //   'balance failed to update after eth deposit'
-    // )
+    const finalInboxBalance = await l1Signer.provider!.getBalance(inboxAddress)
+    expect(
+      initialInboxBalance.add(ethToDeposit).eq(finalInboxBalance),
+      'balance failed to update after eth deposit'
+    )
 
     const waitResult = await rec.waitForL2(l2Signer.provider!)
 
@@ -112,9 +109,9 @@ describe('Ether', async () => {
 
     const walletAddress = await l1Signer.getAddress()
     expect(l1ToL2Message.to).to.eq(walletAddress, 'message inputs value error')
-    // expect(l1ToL2Message.value.toString(), 'message inputs value error').to.eq(
-    //   ethToDeposit.toString()
-    // )
+    expect(l1ToL2Message.value.toString(), 'message inputs value error').to.eq(
+      ethToDeposit.toString()
+    )
 
     prettyLog('l2TxHash: ' + waitResult.message.l2DepositTxHash)
     prettyLog('l2 transaction found!')

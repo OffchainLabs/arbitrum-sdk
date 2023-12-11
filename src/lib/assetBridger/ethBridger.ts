@@ -17,7 +17,6 @@
 'use strict'
 
 import { Signer } from '@ethersproject/abstract-signer'
-// import { JsonRpcSigner } from '@ethersproject/providers'
 import { Provider } from '@ethersproject/abstract-provider'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
 import { BigNumber } from 'ethers'
@@ -51,7 +50,6 @@ import {
   Providerish,
   transformUniversalProviderToEthersV5Provider,
 } from '../utils/universal/providerTransforms'
-import { experimentalFeaturesEnabled } from '../utils/globalConfig'
 import { transformUniversalSignerToEthersV5Signer } from '../utils/universal/signerTransforms'
 import type { WalletClient } from 'viem'
 
@@ -162,13 +160,10 @@ export class EthBridger extends AssetBridger<
     if (l2Provider instanceof Provider) {
       return new EthBridger(await getL2Network(l2Provider))
     }
-    if (experimentalFeaturesEnabled()) {
-      const ethersV5Provider =
-        await transformUniversalProviderToEthersV5Provider(l2Provider)
-      return new EthBridger(await getL2Network(ethersV5Provider))
-    } else {
-      throw new MissingProviderArbSdkError('l2Provider')
-    }
+    const ethersV5Provider = await transformUniversalProviderToEthersV5Provider(
+      l2Provider
+    )
+    return new EthBridger(await getL2Network(ethersV5Provider))
   }
 
   /**

@@ -34,7 +34,6 @@ export const config = {
   ethUrl: process.env['ETH_URL'] as string,
   arbKey: process.env['ARB_KEY'] as string,
   ethKey: process.env['ETH_KEY'] as string,
-  experimentalFeaturesEnabled: process.env['EXPERIMENTAL_FEATURES'] === 'true',
 }
 
 function getDeploymentData(): string {
@@ -209,6 +208,7 @@ const ethRpcUrl = config.ethUrl
 
 export const testSetup = async (): Promise<{
   seed: Wallet
+  pk: any
   l1Network: L1Network
   l2Network: L2Network
   l1Signer: any
@@ -283,6 +283,7 @@ export const testSetup = async (): Promise<{
 
   return {
     seed,
+    pk,
     l1Signer,
     ethl1Signer,
     l2Signer,

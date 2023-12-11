@@ -6,16 +6,11 @@ import { createPublicClient, defineChain, http } from 'viem'
 import { arbitrumGoerli } from 'viem/chains'
 import Web3 from 'web3'
 import { config } from '../../../scripts/testSetup'
-import {
-  EthBridger,
-  addDefaultLocalNetwork,
-  enableExperimentalFeatures,
-} from '../../../src'
+import { EthBridger, addDefaultLocalNetwork } from '../../../src'
 
 const defaultUrl = config.arbUrl
 
 addDefaultLocalNetwork()
-enableExperimentalFeatures()
 
 export const arbLocal = {
   ...arbitrumGoerli,

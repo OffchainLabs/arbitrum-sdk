@@ -328,8 +328,6 @@ export class L1TransactionReceipt implements TransactionReceipt {
    * Replaces the wait function with one that returns an L1ContractCallTransactionReceipt
    * @param contractTransaction
    * @returns
-   * 
-    
    */
   public static monkeyPatchContractCallWait = (
     contractTransaction: ContractTransaction

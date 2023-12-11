@@ -57,8 +57,8 @@ const convertViemLogToEthersLog = (log: ViemLog): Log => {
 }
 
 class ViemSigner extends Signer {
-  private walletClient: any
-  private publicClient: any
+  private walletClient: WalletClient
+  private publicClient: PublicClient
   private _index: number
   private _address: string
   public provider: StaticJsonRpcProvider
@@ -90,26 +90,21 @@ class ViemSigner extends Signer {
     return account?.address as string
   }
 
-  async signMessage(message: any): Promise<string> {
-    // return this.walletClient.signMessage(message)
+  async signMessage(): Promise<string> {
     throw new Error('Method not implemented.')
   }
 
-  async signTransaction(transaction: any): Promise<any> {
-    return this.walletClient
+  async signTransaction(): Promise<any> {
+    throw new Error('Method not implemented.')
   }
 
-  connect(provider: any): any {
-    return this.walletClient
+  connect(): any {
+    throw new Error('Method not implemented.')
   }
 
   async sendTransaction(
     transaction: Deferrable<TransactionRequest>
   ): Promise<TransactionResponse> {
-    // const gasEstimate = await this.publicClient.estimateGas({
-    //   ...(this.walletClient as any),
-    //   ...transaction,
-    // })
     const { maxFeePerGas, maxPriorityFeePerGas } =
       await this.publicClient.estimateFeesPerGas()
     const valueInBigInt = BigInt(transaction?.value?.toString() || 0)
@@ -126,8 +121,11 @@ class ViemSigner extends Signer {
       from: (await this.getAddress()) as `0x${string}`,
       chain: this.walletClient.chain,
       data: transaction.data as `0x${string}`,
+      // gasLimit: transaction.gasLimit,
     }
     const request = await this.walletClient.prepareTransactionRequest(
+      // @ts-expect-error - missing account value should be hoisted
+      // https://viem.sh/docs/actions/wallet/prepareTransactionRequest.html#account-hoisting
       requestData
     )
     const serializedTransaction = await this.walletClient.signTransaction(
@@ -151,7 +149,14 @@ class ViemSigner extends Signer {
     const type = getType((await transaction.type) ?? 2)
     const value = BigNumber.from(valueInBigInt ?? 0)
     const wait = async (): Promise<TransactionReceipt> => {
-      const rec = await this.publicClient.waitForTransactionReceipt({ hash })
+      const rec = await this.publicClient.waitForTransactionReceipt({
+        hash,
+      })
+      // const confirmations = await this.publicClient.getTransactionConfirmations(
+      //   {
+      //     transactionReceipt: rec,
+      //   }
+      // )
       return {
         ...rec,
         gasUsed: BigNumber.from(rec.gasUsed),
@@ -160,7 +165,7 @@ class ViemSigner extends Signer {
         effectiveGasPrice: BigNumber.from(rec.effectiveGasPrice),
         type,
         status: 'success' === rec.status ? 1 : 0,
-        confirmations,
+        confirmations: Number(confirmations),
         byzantium: false,
         to: (rec.to as string) ?? '',
         contractAddress: (rec.contractAddress as string) ?? '',
@@ -171,11 +176,14 @@ class ViemSigner extends Signer {
     }
     const blockNumber = ((await this.publicClient.getBlockNumber()) ??
       null) as any
+    // const confirmations = await this.publicClient.getTransactionConfirmations({
+    //   hash,
+    // })
 
     const tx = {
       accessList,
       chainId,
-      confirmations,
+      confirmations: Number(confirmations),
       data,
       from,
       gasLimit,

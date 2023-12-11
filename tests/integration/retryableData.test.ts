@@ -29,7 +29,7 @@ import { Inbox__factory } from '../../src/lib/abi/factories/Inbox__factory'
 import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
 const depositAmount = BigNumber.from(100)
 
-describe.only('RevertData', () => {
+describe('RevertData', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
@@ -120,8 +120,8 @@ describe.only('RevertData', () => {
     await testRetryableDataParsing('callStatic')
   })
 
-  it.only('is the same as what we estimate in erc20Bridger', async () => {
-    const { erc20Bridger, l1Signer, ethl1Signer, l2Signer } = await testSetup()
+  it('is the same as what we estimate in erc20Bridger', async () => {
+    const { erc20Bridger, l1Signer, l2Signer } = await testSetup()
     await fundL1(l1Signer, parseEther('2'))
 
     const deployErc20 = new TestERC20__factory().connect(l1Signer)
@@ -174,10 +174,7 @@ describe.only('RevertData', () => {
       assert.fail('Expected estimateGas to fail')
     } catch (err) {
       const typedErr = err as Error
-      const parsed = RetryableDataTools.tryParseError(
-        typedErr,
-        TestERC20__factory.abi
-      )
+      const parsed = RetryableDataTools.tryParseError(typedErr)
       if (!parsed) throw err
 
       expect(parsed.callValueRefundAddress, 'callValueRefundAddress').to.eq(

@@ -614,7 +614,6 @@ export class Erc20Bridger extends AssetBridger<
       params.l1Signer
     )
     await this.checkL1Network(signer)
-    console.log({ params })
 
     // Although the types prevent should alert callers that value is not
     // a valid override, it is possible that they pass it in anyway as it's a common override
