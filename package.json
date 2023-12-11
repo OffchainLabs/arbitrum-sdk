@@ -26,7 +26,7 @@
     "gen:network": "ts-node ./scripts/genNetwork.ts",
     "prepublishOnly": "yarn build && yarn format",
     "preversion": "yarn lint",
-    "build": "rm -rf dist && tsc -p tsconfig.json",
+    "build": "./scripts/builder",
     "watch": "tsc --watch",
     "test": "mocha",
     "test:coverage": "nyc mocha",
