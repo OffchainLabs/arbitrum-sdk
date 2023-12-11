@@ -32,7 +32,7 @@ import {
 import { ChildToParentMessage } from '../../src/lib/message/L2ToL1Message'
 import { L2ToL1MessageStatus } from '../../src/lib/dataEntities/message'
 import { L2TransactionReceipt } from '../../src/lib/message/L2Transaction'
-import { ParentToChildMessageStatus as L1ToL2MessageStatus } from '../../src/lib/message/L1ToL2Message'
+import { ParentToChildMessageStatus } from '../../src/lib/message/L1ToL2Message'
 import { testSetup } from '../../scripts/testSetup'
 dotenv.config()
 
@@ -166,7 +166,7 @@ describe('Ether', async () => {
 
     const retryableTicketResult = await l1ToL2Message.waitForStatus()
     expect(retryableTicketResult.status).to.eq(
-      L1ToL2MessageStatus.REDEEMED,
+      ParentToChildMessageStatus.REDEEMED,
       'Retryable ticket not redeemed'
     )
 
