@@ -11,7 +11,7 @@ import {
   Web3Provider,
 } from '@ethersproject/providers'
 import {
-  PublicClient,
+  type PublicClient,
   type WalletClient,
   createPublicClient,
   hexToSignature,
@@ -22,7 +22,7 @@ import { Signerish } from '../../assetBridger/ethBridger'
 import { publicClientToProvider } from './providerTransforms'
 
 import { Deferrable } from 'ethers/lib/utils'
-import { BigNumber, Wallet } from 'ethers'
+import { BigNumber } from 'ethers'
 
 const getType = (value: number | string | null) => {
   switch (value) {
@@ -121,7 +121,6 @@ class ViemSigner extends Signer {
       from: (await this.getAddress()) as `0x${string}`,
       chain: this.walletClient.chain,
       data: transaction.data as `0x${string}`,
-      // gasLimit: transaction.gasLimit,
     }
     const request = await this.walletClient.prepareTransactionRequest(
       // @ts-expect-error - missing account value should be hoisted
@@ -137,7 +136,6 @@ class ViemSigner extends Signer {
 
     const accessList = request.accessList ?? []
     const chainId = await this.publicClient.getChainId()
-    const confirmations = 8
     const data = (await transaction.data?.toString()) as string
     const from = (await requestData.from) as string
     const gasLimit = BigNumber.from(transaction.gasLimit ?? 0)
@@ -152,11 +150,7 @@ class ViemSigner extends Signer {
       const rec = await this.publicClient.waitForTransactionReceipt({
         hash,
       })
-      // const confirmations = await this.publicClient.getTransactionConfirmations(
-      //   {
-      //     transactionReceipt: rec,
-      //   }
-      // )
+
       return {
         ...rec,
         gasUsed: BigNumber.from(rec.gasUsed),
@@ -176,9 +170,9 @@ class ViemSigner extends Signer {
     }
     const blockNumber = ((await this.publicClient.getBlockNumber()) ??
       null) as any
-    // const confirmations = await this.publicClient.getTransactionConfirmations({
-    //   hash,
-    // })
+    const confirmations = await this.publicClient.getTransactionConfirmations({
+      hash,
+    })
 
     const tx = {
       accessList,

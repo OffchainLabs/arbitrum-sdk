@@ -56,8 +56,7 @@ const convertBigIntToString = (obj: AnyObj): AnyObj => {
 
 describe('universal signer', async () => {
   it('should get the same addresses with viem', async () => {
-    const { l2Signer, seed, pk } = await testSetup()
-    // const pk = seed.privateKey as `0x${string}`
+    const { l2Signer, pk } = await testSetup()
     const account = privateKeyToAccount(pk)
     const walletClient = createWalletClient({
       transport: http(arbRpcUrl),
@@ -73,7 +72,7 @@ describe('universal signer', async () => {
   })
 
   it('should convert viem wallet client to ethers-v5 signer', async () => {
-    const { ethBridger, ethl1Signer, l1Signer } = (await testSetup()) as any
+    const { ethBridger, ethersL1Signer, l1Signer } = (await testSetup()) as any
 
     await fundL1(l1Signer)
 
@@ -84,7 +83,7 @@ describe('universal signer', async () => {
 
     const ethersTx = await ethBridger.deposit({
       amount: parseEther('0.000001'),
-      l1Signer: ethl1Signer as any,
+      l1Signer: ethersL1Signer as any,
     })
 
     const excludedProperties: string[] = [

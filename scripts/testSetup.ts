@@ -34,6 +34,8 @@ export const config = {
   ethUrl: process.env['ETH_URL'] as string,
   arbKey: process.env['ARB_KEY'] as string,
   ethKey: process.env['ETH_KEY'] as string,
+  shouldUseViemSigner:
+    (process.env['SHOULD_USE_VIEM_SIGNER'] as string) === '1',
 }
 
 function getDeploymentData(): string {
@@ -212,7 +214,7 @@ export const testSetup = async (): Promise<{
   l1Network: L1Network
   l2Network: L2Network
   l1Signer: any
-  ethl1Signer: Signer
+  ethersL1Signer: Signer
   l2Signer: Signer
   erc20Bridger: Erc20Bridger
   ethBridger: EthBridger
@@ -228,16 +230,18 @@ export const testSetup = async (): Promise<{
   const l2Deployer = getSigner(arbProvider, config.arbKey)
 
   const seed = Wallet.createRandom()
-  const ethl1Signer = seed.connect(ethProvider)
+  const ethersL1Signer = seed.connect(ethProvider)
   const l2Signer = seed.connect(arbProvider)
 
-  const pk = ethl1Signer._signingKey().privateKey as `0x${string}`
+  const pk = ethersL1Signer._signingKey().privateKey as `0x${string}`
   const ethWalletClient = createWalletClient({
     account: privateKeyToAccount(pk),
     transport: http(ethRpcUrl),
     chain: ethLocal,
   })
-  const l1Signer = walletClientToSigner(ethWalletClient)
+  const l1Signer = config.shouldUseViemSigner
+    ? walletClientToSigner(ethWalletClient)
+    : ethersL1Signer
 
   let setL1Network: L1Network, setL2Network: L2Network
   try {
@@ -285,7 +289,7 @@ export const testSetup = async (): Promise<{
     seed,
     pk,
     l1Signer,
-    ethl1Signer,
+    ethersL1Signer,
     l2Signer,
     l1Network: setL1Network,
     l2Network: setL2Network,

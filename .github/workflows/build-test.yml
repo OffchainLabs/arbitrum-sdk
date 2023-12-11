@@ -99,6 +99,11 @@ jobs:
     name: Test (Integration)
     runs-on: ubuntu-latest
     needs: install
+    strategy:
+      matrix:
+        viem_signer: ['0', '1']
+    env:
+      SHOULD_USE_VIEM_SIGNER: ${{ matrix.viem_signer }}
     steps:
       - uses: actions/setup-node@v3
         with:
