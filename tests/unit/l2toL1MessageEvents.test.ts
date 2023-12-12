@@ -18,16 +18,16 @@
 
 import { Logger, LogLevel } from '@ethersproject/logger'
 Logger.setLogLevel(LogLevel.ERROR)
-import { L2ToL1Message } from '../../src'
+import { ChildToParentMessage } from '../../src/lib/message/L2ToL1Message'
 import { getChildChain as getL2Network } from '../../src/lib/dataEntities/networks'
 import { providers } from 'ethers'
 import { anything, deepEqual, instance, mock, verify, when } from 'ts-mockito'
 
-describe('L2ToL1Message events', () => {
-  // L2ToL1Transaction
+describe('ChildToParentMessage events', () => {
+  // ChildToParentTransaction
   const classicTopic =
     '0x5baaa87db386365b5c161be377bc3d8e317e8d98d71a3ca7ed7d555340c8f767'
-  // L2ToL1Tx
+  // ChildToParentTx
   const nitroTopic =
     '0x3e7aafa77dbf186b7fd488006beff893744caa3c4f6f299e8a709fa2087374fc'
 
@@ -59,7 +59,7 @@ describe('L2ToL1Message events', () => {
     const fromBlock = 0
     const toBlock = 1000
 
-    await L2ToL1Message.getL2ToL1Events(l2Provider, {
+    await ChildToParentMessage.getChildToParentEvents(l2Provider, {
       fromBlock: fromBlock,
       toBlock: toBlock,
     })
@@ -82,7 +82,7 @@ describe('L2ToL1Message events', () => {
     const fromBlock = l2Network.nitroGenesisBlock
     const toBlock = l2Network.nitroGenesisBlock + 500
 
-    await L2ToL1Message.getL2ToL1Events(l2Provider, {
+    await ChildToParentMessage.getChildToParentEvents(l2Provider, {
       fromBlock: fromBlock,
       toBlock: toBlock,
     })
@@ -105,7 +105,7 @@ describe('L2ToL1Message events', () => {
     const fromBlock = 0
     const toBlock = l2Network.nitroGenesisBlock + 500
 
-    await L2ToL1Message.getL2ToL1Events(l2Provider, {
+    await ChildToParentMessage.getChildToParentEvents(l2Provider, {
       fromBlock: fromBlock,
       toBlock: toBlock,
     })
@@ -138,7 +138,7 @@ describe('L2ToL1Message events', () => {
     const fromBlock = 'earliest'
     const toBlock = 'latest'
 
-    await L2ToL1Message.getL2ToL1Events(l2Provider, {
+    await ChildToParentMessage.getChildToParentEvents(l2Provider, {
       fromBlock: fromBlock,
       toBlock: toBlock,
     })
@@ -171,7 +171,7 @@ describe('L2ToL1Message events', () => {
     const fromBlock = l2Network.nitroGenesisBlock + 2
     const toBlock = 'latest'
 
-    await L2ToL1Message.getL2ToL1Events(l2Provider, {
+    await ChildToParentMessage.getChildToParentEvents(l2Provider, {
       fromBlock: fromBlock,
       toBlock: toBlock,
     })
@@ -194,7 +194,7 @@ describe('L2ToL1Message events', () => {
     const fromBlock = 'earliest'
     const toBlock = 'latest'
 
-    await L2ToL1Message.getL2ToL1Events(l2Provider, {
+    await ChildToParentMessage.getChildToParentEvents(l2Provider, {
       fromBlock: fromBlock,
       toBlock: toBlock,
     })
