@@ -96,12 +96,16 @@ jobs:
         run: CI=true yarn test:unit
 
   test-integration:
-    name: Test (Integration)
+    name: Test (Integration) - ${{ matrix.description }}
     runs-on: ubuntu-latest
     needs: install
     strategy:
       matrix:
-        viem_signer: ['0', '1']
+        include:
+          - viem_signer: '0'
+            description: 'Ethers v5'
+          - viem_signer: '1'
+            description: 'Viem'
     env:
       SHOULD_USE_VIEM_SIGNER: ${{ matrix.viem_signer }}
     steps:
