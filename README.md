@@ -104,7 +104,7 @@ As part of normal operation the Arbitrum sequencer will send messages into the r
 
 ### Run Integration tests
 
-1. First, make sure you have a Nitro node running. Check out the nitro repo, and run the following command `./test-node.bash --init --no-blockscout`
+1. First, make sure you have a Nitro test-node running. Follow the instructions [here](https://docs.arbitrum.io/node-running/how-tos/local-dev-node).
 
 2. After the node has started up (that could take up to 20-30 mins), run `yarn gen:network`.
 
