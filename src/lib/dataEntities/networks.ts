@@ -429,7 +429,7 @@ export let l2Networks: L2Networks = getL2Chains()
 
 export const getNetwork = async (
   signerOrProviderOrChainID: SignerOrProvider | number,
-  layer?: 1 | 2
+  layer: 1 | 2
 ) => {
   const chainID = await (async () => {
     if (typeof signerOrProviderOrChainID === 'number') {
@@ -444,12 +444,10 @@ export const getNetwork = async (
   })()
 
   let network
-  if (!layer) {
-    network = networks[chainID]
-  } else if (layer === 1) {
+  if (layer === 1) {
     network = getParentChains()[chainID]
   } else {
-    network = l2Networks[chainID]
+    network = getChildChains()[chainID]
   }
 
   if (network) {
@@ -538,10 +536,15 @@ const addNetwork = (network: Chain) => {
 export const addCustomNetwork = ({
   customL1Network,
   customL2Network,
-}: {
-  customL1Network?: L1Network
-  customL2Network: L2Network | OrbitChain
-}): void => {
+}:
+  | {
+      customL1Network?: L1Network
+      customL2Network: L2Network
+    }
+  | {
+      customL1Network?: L2Network
+      customL2Network: OrbitChain
+    }): void => {
   if (customL1Network) {
     if (l1Networks[customL1Network.chainID]) {
       throw new ArbSdkError(
