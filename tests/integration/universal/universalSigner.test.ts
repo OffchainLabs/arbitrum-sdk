@@ -40,7 +40,9 @@ const ethRpcUrl = config.ethUrl
 
 try {
   addDefaultLocalNetwork()
-} catch (e) {}
+} catch (e) {
+  console.log('default local network already added')
+}
 type AnyObj = Record<string, any>
 
 const convertBigIntToString = (obj: AnyObj): AnyObj => {
