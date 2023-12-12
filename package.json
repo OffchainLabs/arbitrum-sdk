@@ -90,7 +90,7 @@
     "typedoc": "^0.24.6",
     "typedoc-plugin-markdown": "^3.15.3",
     "typescript": "^5.3.2",
-    "viem": "^1.0.5",
+    "viem": "^1.19.13",
     "web3": "^4.0.1",
     "yargs": "^17.3.1"
   },
