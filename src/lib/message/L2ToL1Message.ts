@@ -177,7 +177,7 @@ export class ChildToParentMessage {
     }
     if (nitroFilter.fromBlock !== nitroFilter.toBlock) {
       logQueries.push(
-        nitro.L2ToL1MessageNitro.getL2ToL1Events(
+        nitro.ChildToParentChainMessageNitro.getChildToParentChainEvents(
           childChainProvider,
           nitroFilter,
           position,
@@ -210,7 +210,7 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
         event.indexInBatch
       )
     } else {
-      this.nitroReader = new nitro.L2ToL1MessageReaderNitro(
+      this.nitroReader = new nitro.ChildToParentChainMessageReaderNitro(
         parentChainProvider,
         event
       )
@@ -306,7 +306,7 @@ export class ChildToParentMessageWriter extends ChildToParentMessageReader {
         parentChainProvider
       )
     } else {
-      this.nitroWriter = new nitro.L2ToL1MessageWriterNitro(
+      this.nitroWriter = new nitro.ChildToParentChainMessageWriterNitro(
         parentChainSigner,
         event,
         parentChainProvider
