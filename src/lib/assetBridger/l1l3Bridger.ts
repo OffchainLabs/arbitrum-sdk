@@ -190,11 +190,11 @@ export type EthDepositStatus = {
   /**
    * Status + redemption tx receipt of the retryable ticket to L2
    */
-  l2RetryableStatus: L1ToL2MessageWaitResult
+  l2Retryable: L1ToL2MessageWaitResult
   /**
    * Status + redemption tx receipt of the retryable ticket to L3
    */
-  l3RetryableStatus: L1ToL2MessageWaitResult
+  l3Retryable: L1ToL2MessageWaitResult
   /**
    * Whether the teleportation has completed
    */
@@ -746,6 +746,30 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
    * Get the status of a deposit given an L1 tx receipt. See `Erc20DepositStatus` interface for more info on the return type.
    *
    * Note: This function does not verify that the tx is actually a deposit tx.
+   * 
+   * @return Information regarding each step of the deposit 
+   * and `Erc20DepositStatus.completed` which indicates whether the deposit has fully completed.
+   * 
+   * If `Erc20DepositStatus.bridgeToL2.status` is `L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2`,
+   * then the first step has failed (the token bridge to L2).
+   * The first retryable to L2 must be manually redeemed before proceeding.
+   * 
+   * If `Erc20DepositStatus.l2ForwarderCall` is `undefined` 
+   * AND `Erc20DepositStatus.retryableL2ForwarderCall.status` is `L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2`,
+   * then the second step has failed (the call to the `L2Forwarder` contract). 
+   * The second retryable to L2 must be manually redeemed or the `L2Forwarder` must be called manually before proceeding.
+   * Note that if the `L2Forwarder` is called manually, then the second retryable to L2 will remain unredeemed.
+   * 
+   * It is possible that the second retryable to L2 is not redeemed but `Erc20DepositStatus.l2ForwarderCall` is defined.
+   * In this case the teleportation flow can proceed but the second retryable to L2 will remain unredeemed.
+   * 
+   * If the call to the `L2Forwarder` cannot succeed (due to bad parameters for example), 
+   * then the forwarder's owner can call `L2Forwarder.rescue` to recover the funds.
+   * The owner of the `L2Forwarder` is the signer's aliased address by default.
+   * 
+   * If `Erc20DepositStatus.bridgeToL3.status` is `L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2`,
+   * then the third step has failed (the token bridge to L3).
+   * The retryable to L3 must be manually redeemed.
    */
   public async getDepositStatus(
     depositTxReceipt: L1ContractCallTransactionReceipt,
@@ -806,6 +830,9 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
 
   /**
    * Get a tx request to deposit tokens to L3. Will call the `L1GatewayRouter` directly.
+   * 
+   * It is important to specify `params.overrides.l2ForwarderOwner` if signer is not an EOA.
+   * Failure to set an appropriate owner could result in loss of funds.
    *
    * Relayer info will be returned as well as appended to calldata.
    */
@@ -948,6 +975,25 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
    * Get the status of a deposit given an L1 tx receipt and relayer info.
    *
    * Note: This function does not verify that the tx is actually a deposit tx.
+   * 
+   * @return Information regarding each step of the deposit 
+   * and `Erc20DepositStatus.completed` which indicates whether the deposit has fully completed.
+   * 
+   * If `Erc20DepositStatus.bridgeToL2.status` is `L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2`,
+   * then the first step has failed (the token bridge to L2).
+   * The first retryable to L2 must be manually redeemed before proceeding.
+   * 
+   * If `Erc20DepositStatus.l2ForwarderCall` is `undefined`,
+   * then the second step has not yet been executed (the call to the `L2Forwarder` contract).
+   * The `L2Forwarder` must be called before proceeding.
+   * 
+   * If the call to the `L2Forwarder` cannot succeed (due to bad parameters for example), 
+   * then the forwarder's owner can call `L2Forwarder.rescue` to recover the funds.
+   * The owner of the `L2Forwarder` is the signer's address by default.
+   * 
+   * If `Erc20DepositStatus.bridgeToL3.status` is `L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2`,
+   * then the third step has failed (the token bridge to L3).
+   * the third retryable to L3 must be manually redeemed.
    */
   public getDepositStatus(
     depositTxReceipt: L1ContractCallTransactionReceipt,
@@ -1145,6 +1191,17 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
 
   /**
    * Get the status of a deposit given an L1 tx receipt. Does not check if the tx is actually a deposit tx.
+   * 
+   * @return Information regarding each step of the deposit 
+   * and `EthDepositStatus.completed` which indicates whether the deposit has fully completed.
+   * 
+   * If `EthDepositStatus.l2Retryable.status` is `L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2`,
+   * then the first step has failed (creating an ETH deposit retryable to L3).
+   * The retryable to L2 must be manually redeemed before proceeding.
+   * 
+   * If `EthDepositStatus.l3Retryable.status` is `L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2`,
+   * then the second step has failed (depositing ETH to L3 via retryable).
+   * The retryable to L3 must be manually redeemed.
    */
   public async getDepositStatus(
     l1TxReceipt: L1EthDepositTransactionReceipt,
@@ -1160,8 +1217,8 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
 
     if (l1l2Redeem.status != L1ToL2MessageStatus.REDEEMED) {
       return {
-        l2RetryableStatus: l1l2Redeem,
-        l3RetryableStatus: { status: L1ToL2MessageStatus.NOT_YET_CREATED },
+        l2Retryable: l1l2Redeem,
+        l3Retryable: { status: L1ToL2MessageStatus.NOT_YET_CREATED },
         completed: false,
       }
     }
@@ -1179,8 +1236,8 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
     const l2l3Redeem = await l2l3Message.getSuccessfulRedeem()
 
     return {
-      l2RetryableStatus: l1l2Redeem,
-      l3RetryableStatus: l2l3Redeem,
+      l2Retryable: l1l2Redeem,
+      l3Retryable: l2l3Redeem,
       completed: l2l3Redeem.status === L1ToL2MessageStatus.REDEEMED,
     }
   }
