@@ -291,7 +291,7 @@ export class L1ToL2MessageGasEstimator {
     retryable: RetryableData
     data: BytesLike
     to: string
-    value: BigNumber
+    value: BigNumberish
   }> {
     // get function data that should trigger a retryable data error
     const {
