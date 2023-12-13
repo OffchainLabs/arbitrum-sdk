@@ -179,8 +179,10 @@ export const deployErc20AndInit = async (
   const l2 = await deployErc20L2(l2Signer)
 
   console.log('initialising L2')
-  await l2.router.initialize(l1.router.address, l2.standardGateway.address)
-  await l2.beaconProxyFactory.initialize(l2.beacon.address)
+  await (
+    await l2.router.initialize(l1.router.address, l2.standardGateway.address)
+  ).wait()
+  await (await l2.beaconProxyFactory.initialize(l2.beacon.address)).wait()
   await (
     await l2.standardGateway.initialize(
       l1.standardGateway.address,
