@@ -30,12 +30,13 @@ import * as classic from './L2ToL1MessageClassic'
 import * as nitro from './L2ToL1MessageNitro'
 import {
   L2ToL1TransactionEvent as ClassicChildToParentTransactionEvent,
+  L2ToL1TransactionEvent,
   L2ToL1TxEvent as NitroChildToParentTransactionEvent,
 } from '../abi/ArbSys'
 import { isDefined } from '../utils/lib'
 import { EventArgs } from '../dataEntities/event'
-import { L2ToL1MessageStatus as ChildToParentMessageStatus } from '../dataEntities/message'
-import { getChainNetwork } from '../dataEntities/networks'
+import { L2ToL1MessageStatus } from '../dataEntities/message'
+import { getChildChain } from '../dataEntities/networks'
 import { ArbSdkError } from '../dataEntities/errors'
 
 export type ChildToParentTransactionEvent =
@@ -110,8 +111,8 @@ export class ChildToParentMessage {
     destination?: string,
     hash?: BigNumber,
     indexInBatch?: BigNumber
-  ): Promise<(ChildToParentTransactionEvent & { transactionHash: string })[]> {
-    const ChainNetwork = await getChainNetwork(ChainProvider)
+  ): Promise<(L2ToL1TransactionEvent & { transactionHash: string })[]> {
+    const l2Network = await getChildChain(l2Provider)
 
     const inClassicRange = (blockTag: BlockTag, nitroGenBlock: number) => {
       if (typeof blockTag === 'string') {

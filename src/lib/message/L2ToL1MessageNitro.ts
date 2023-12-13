@@ -40,7 +40,7 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { getBlockRangesForL1Block, isArbitrumChain, wait } from '../utils/lib'
-import { getChainNetwork } from '../dataEntities/networks'
+import { getChildChain } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
 import { ArbitrumProvider } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
@@ -218,7 +218,7 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
    * Check if this message has already been executed in the Outbox
    */
   protected async hasExecuted(l2Provider: Provider): Promise<boolean> {
-    const l2Network = await getChainNetwork(l2Provider)
+    const l2Network = await getChildChain(l2Provider)
     const outbox = Outbox__factory.connect(
       l2Network.ethBridge.outbox,
       this.l1Provider
@@ -253,10 +253,16 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
 
   private async getBlockFromNodeLog(
     l2Provider: JsonRpcProvider,
-    log: FetchedEvent<NodeCreatedEvent>
+    log: FetchedEvent<NodeCreatedEvent> | undefined
   ) {
-    const parsedLog = this.parseNodeCreatedAssertion(log)
     const arbitrumProvider = new ArbitrumProvider(l2Provider)
+
+    if (!log) {
+      console.warn('No NodeCreated events found, defaulting to block 0')
+      return arbitrumProvider.getBlock(0)
+    }
+
+    const parsedLog = this.parseNodeCreatedAssertion(log)
     const l2Block = await arbitrumProvider.getBlock(
       parsedLog.afterState.blockHash
     )
@@ -317,7 +323,11 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
       }
     )
 
-    if (logs.length !== 1) throw new ArbSdkError('No NodeCreated events found')
+    if (logs.length > 1)
+      throw new ArbSdkError(
+        `Unexpected number of NodeCreated events. Expected 0 or 1, got ${logs.length}.`
+      )
+
     return await this.getBlockFromNodeLog(
       l2Provider as JsonRpcProvider,
       logs[0]
@@ -346,7 +356,7 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
 
   protected async getSendProps(l2Provider: Provider) {
     if (!this.sendRootConfirmed) {
-      const l2Network = await getChainNetwork(l2Provider)
+      const l2Network = await getChildChain(l2Provider)
 
       const rollup = RollupUserLogic__factory.connect(
         l2Network.ethBridge.rollup,
@@ -424,7 +434,7 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
   public async getFirstExecutableBlock(
     l2Provider: Provider
   ): Promise<BigNumber | null> {
-    const l2Network = await getChainNetwork(l2Provider)
+    const l2Network = await getChildChain(l2Provider)
 
     const rollup = RollupUserLogic__factory.connect(
       l2Network.ethBridge.rollup,
@@ -541,7 +551,7 @@ export class ChildToParentChainMessageWriterNitro extends ChildToParentChainMess
       )
     }
     const proof = await this.getOutboxProof(l2Provider)
-    const l2Network = await getChainNetwork(l2Provider)
+    const l2Network = await getChildChain(l2Provider)
     const outbox = Outbox__factory.connect(
       l2Network.ethBridge.outbox,
       this.l1Signer

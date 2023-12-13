@@ -40,7 +40,7 @@ import { isDefined, wait } from '../utils/lib'
 import { ArbSdkError } from '../dataEntities/errors'
 import { EventArgs } from '../dataEntities/event'
 import { L2ToL1MessageStatus } from '../dataEntities/message'
-import { getChainNetwork } from '../dataEntities/networks'
+import { getChildChain } from '../dataEntities/networks'
 
 export interface MessageBatchProofInfo {
   /**
@@ -205,7 +205,7 @@ export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
    */
   protected async getOutboxAddress(l2Provider: Provider, batchNumber: number) {
     if (!isDefined(this.outboxAddress)) {
-      const l2Network = await getChainNetwork(l2Provider)
+      const l2Network = await getChildChain(l2Provider)
 
       // find the outbox where the activation batch number of the next outbox
       // is greater than the supplied batch
