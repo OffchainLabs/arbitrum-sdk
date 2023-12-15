@@ -397,8 +397,8 @@ const getChainsByType = <T extends typeof networks>(
 
 const getL1Chains = () => getChainsByType<L1Networks>(isL1Chain)
 const getL2Chains = () => getChainsByType<L2Networks>(isL2Chain)
-const getChildChains = () => getChainsByType<ChildChains>(isChildChain)
 const getParentChains = () => getChainsByType<ParentChains>(isParentChain)
+const getChildChains = () => getChainsByType<ChildChains>(isChildChain)
 
 export const getParentForNetwork = (chain: Chain) => {
   if (!isChildChain(chain)) {
@@ -645,3 +645,20 @@ export const isL1Network = (
   }
   return network.partnerChainIDs.length > 0
 }
+
+const createNetworkStateHandler = () => {
+  const initialState = JSON.parse(JSON.stringify(networks))
+
+  return {
+    resetNetworksToDefault: () => {
+      Object.keys(networks).forEach(key => delete networks[key])
+      Object.assign(networks, JSON.parse(JSON.stringify(initialState)))
+      l1Networks = getL1Chains()
+      l2Networks = getL2Chains()
+    },
+  }
+}
+
+const { resetNetworksToDefault } = createNetworkStateHandler()
+
+export { resetNetworksToDefault }
