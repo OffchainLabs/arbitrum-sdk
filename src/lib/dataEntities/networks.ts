@@ -41,6 +41,7 @@ export interface L2Network extends Network {
   ethBridge: EthBridge
   partnerChainID: number
   isArbitrum: true
+  isOrbit?: boolean
   confirmPeriodBlocks: number
   retryableLifetimeSeconds: number
   nitroGenesisBlock: number
@@ -55,10 +56,9 @@ export type ParentChain =
   | L1Network
   | (L2Network & Required<Pick<L2Network, 'partnerChainIDs'>>)
 
-export type OrbitChain = L2Network & { isOrbit: true }
-export type ChildChain = L2Network | OrbitChain
+export type ChildChain = L2Network
 
-type Chain = L1Network | L2Network | ParentChain | ChildChain | OrbitChain
+type Chain = L1Network | L2Network | ParentChain | ChildChain
 
 export interface TokenBridge {
   l1GatewayRouter: string
@@ -104,7 +104,7 @@ export interface ChildChains {
 }
 
 export interface OrbitChains {
-  [id: string]: OrbitChain
+  [id: string]: L2Network & { isOrbit: true }
 }
 
 const mainnetTokenBridge: TokenBridge = {
@@ -372,8 +372,8 @@ const isL2Chain = (chain: Chain): chain is L2Network => {
   return chain && isChildChain(chain) && !isOrbitChain(chain)
 }
 
-const isOrbitChain = (chain: Chain): chain is OrbitChain => {
-  return chain && 'isOrbit' in chain && chain.isOrbit
+const isOrbitChain = (chain: any): chain is L2Network & { isOrbit: true } => {
+  return chain && typeof chain.isOrbit !== 'undefined' && chain.isOrbit
 }
 
 /**
@@ -543,7 +543,7 @@ export const addCustomNetwork = ({
     }
   | {
       customL1Network?: L2Network
-      customL2Network: OrbitChain
+      customL2Network: L2Network & { isOrbit: true }
     }): void => {
   if (customL1Network) {
     if (l1Networks[customL1Network.chainID]) {
