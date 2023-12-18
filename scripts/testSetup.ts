@@ -27,7 +27,6 @@ import {
   getL1Network,
   getL2Network,
   addCustomNetwork,
-  addCustomChain,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
@@ -242,6 +241,7 @@ export const setupNetworks = async (
       l2WethGateway: tokenBridgeContracts.l2Child.wethGateway.address,
     },
   }
+
   const l3Network: L2Network = {
     ...coreL3Network,
     tokenBridge: {
@@ -268,12 +268,9 @@ export const setupNetworks = async (
     customL2Network: l2Network,
   })
 
-  addCustomChain({
-    customParentChain: {
-      ...l2Network,
-      partnerChainIDs: [l3Network.chainID],
-    },
-    customChain: l3Network,
+  addCustomNetwork({
+    customL1Network: { ...l2Network, partnerChainIDs: [l3Network.chainID] },
+    customL2Network: { ...l3Network, isOrbit: true },
   })
 
   // also register the weth gateway
@@ -373,12 +370,9 @@ export const testSetup = async (): Promise<{
         customL1Network: l1Network,
         customL2Network: l2Network,
       })
-      addCustomChain({
-        customParentChain: {
-          ...l2Network,
-          partnerChainIDs: [l3Network.chainID],
-        },
-        customChain: l3Network,
+      addCustomNetwork({
+        customL1Network: { ...l2Network, partnerChainIDs: [l3Network.chainID] },
+        customL2Network: { ...l3Network, isOrbit: true },
       })
       setL1Network = l1Network
       setL2Network = l2Network
