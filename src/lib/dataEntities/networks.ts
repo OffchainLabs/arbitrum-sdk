@@ -412,6 +412,9 @@ export const getParentForNetwork = (chain: Chain) => {
       `ParentChain ${chain.partnerChainID} not recognized for Chain ${chain.chainID}.`
     )
   }
+  if (isL2Chain(parentChain)) {
+    return parentChain as L2Network
+  }
   return parentChain
 }
 
