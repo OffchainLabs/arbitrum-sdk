@@ -103,7 +103,7 @@ export class InboxTools {
     const diff = block.timestamp - blockTimestamp
     if (diff < 0) return block
 
-    const blockTime = this.l1NetworkIsArbitrum ? 12 : 0.25
+    const blockTime = this.l1NetworkIsArbitrum ? 0.25 : 12
 
     // we take a long average block time of 14s
     // and always move at least 10 blocks
