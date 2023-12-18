@@ -47,14 +47,9 @@ export {
   L2Networks,
   L1Network,
   L2Network,
-  Chain,
-  ParentChain,
   getL1Network,
   getL2Network,
-  getChain,
-  getParentChain,
   addCustomNetwork,
-  addCustomChain,
   addDefaultLocalNetwork,
 } from './lib/dataEntities/networks'
 export { InboxTools } from './lib/inbox/inbox'
