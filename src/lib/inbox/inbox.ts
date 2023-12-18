@@ -28,7 +28,12 @@ import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factor
 import { IInbox__factory } from '../abi/factories/IInbox__factory'
 import { RequiredPick } from '../utils/types'
 import { MessageDeliveredEvent } from '../abi/Bridge'
-import { l1Networks, L2Network } from '../dataEntities/networks'
+import {
+  L1Network,
+  l1Networks,
+  L2Network,
+  l2Networks,
+} from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
 import { MultiCaller, CallInput } from '../utils/multicall'
@@ -57,15 +62,25 @@ type RequiredTransactionRequestType = RequiredPick<
  * Tools for interacting with the inbox and bridge contracts
  */
 export class InboxTools {
-  private readonly l1Provider
-  private readonly l1Network
+  // by L1 we really mean "parent chain", the misnomer will be fixed in the next major version
+  private readonly l1Provider: Provider
+  private readonly l1Network: L1Network | L2Network
+  private readonly l1NetworkIsArbitrum: boolean
 
   constructor(
     private readonly l1Signer: Signer,
     private readonly l2Network: L2Network
   ) {
     this.l1Provider = SignerProviderUtils.getProviderOrThrow(this.l1Signer)
-    this.l1Network = l1Networks[l2Network.partnerChainID]
+
+    if (l2Network.isOrbit) {
+      this.l1Network = l2Networks[l2Network.partnerChainID]
+      this.l1NetworkIsArbitrum = true
+    } else {
+      this.l1Network = l1Networks[l2Network.partnerChainID]
+      this.l1NetworkIsArbitrum = false
+    }
+
     if (!this.l1Network)
       throw new ArbSdkError(
         `L1Network not found for chain id: ${l2Network.partnerChainID}.`
@@ -88,9 +103,11 @@ export class InboxTools {
     const diff = block.timestamp - blockTimestamp
     if (diff < 0) return block
 
+    const blockTime = this.l1NetworkIsArbitrum ? 12 : 0.25
+
     // we take a long average block time of 14s
     // and always move at least 10 blocks
-    const diffBlocks = Math.max(Math.ceil(diff / this.l1Network.blockTime), 10)
+    const diffBlocks = Math.max(Math.ceil(diff / blockTime), 10)
 
     return await this.findFirstBlockBelow(
       blockNumber - diffBlocks,
