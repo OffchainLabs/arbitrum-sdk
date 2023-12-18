@@ -52,6 +52,8 @@ export interface L2Network extends Network {
   depositTimeout: number
 }
 
+//TODO: simplify
+
 export type ParentChain =
   | L1Network
   | (L2Network & Required<Pick<L2Network, 'partnerChainIDs'>>)
@@ -402,7 +404,7 @@ const getChildChains = () => getChainsByType<ChildChains>(isChildChain)
 
 export const getParentForNetwork = (chain: Chain) => {
   if (!isChildChain(chain)) {
-    return undefined
+    throw new ArbSdkError(`Chain ${chain.chainID} is not a child chain.`)
   }
   const parentChain = networks[chain.partnerChainID]
   if (!parentChain || !isParentChain(parentChain)) {
@@ -565,6 +567,11 @@ export const addCustomNetwork = ({
     throw new ArbSdkError(
       `Custom network ${customL2Network.chainID} must have isCustom flag set to true`
     )
+  } else if (
+    customL2Network.isOrbit &&
+    !isL2Chain(networks[customL2Network.partnerChainID])
+  ) {
+    throw new ArbSdkError('Orbit chains must be paired with an L2 chain')
   }
 
   addNetwork(customL2Network)

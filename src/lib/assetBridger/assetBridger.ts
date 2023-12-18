@@ -16,12 +16,10 @@
 /* eslint-env node */
 'use strict'
 
-import { ArbSdkError } from '../dataEntities/errors'
 import { L1ContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'
 
 import {
-  l1Networks,
   L1Network,
   L2Network,
   getParentForNetwork,
@@ -38,21 +36,7 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   public readonly l1Network: L1Network
 
   public constructor(public readonly l2Network: L2Network) {
-    this.l1Network = l1Networks[l2Network.partnerChainID]
-    const parentChain = getParentForNetwork(l2Network)
-    if (!parentChain) {
-      throw new ArbSdkError(
-        `Unknown parent network chain id: ${l2Network.partnerChainID}`
-      )
-    }
-
-    const l1NetworkOrParentChain = this.l1Network || parentChain
-
-    if (!l1NetworkOrParentChain) {
-      throw new ArbSdkError(
-        `Unknown parent network chain id: ${l2Network.partnerChainID}`
-      )
-    }
+    this.l1Network = getParentForNetwork(l2Network) as L1Network
   }
 
   /**
