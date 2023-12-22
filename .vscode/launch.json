@@ -45,7 +45,7 @@
         "test:integration"
       ],
       "skipFiles": [
-        "<node_internals>/**"
+        "<node_internals>/**",
       ]
     },
     {

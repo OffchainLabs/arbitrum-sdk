@@ -1,30 +1,46 @@
-;('use strict')
+/*
+ * Copyright 2021, Offchain Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+/* eslint-env node */
+'use strict'
 
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { Wallet } from '@ethersproject/wallet'
 
-import { execSync } from 'child_process'
 import dotenv from 'dotenv'
-import { Signer } from 'ethers'
-import * as fs from 'fs'
-import * as path from 'path'
-import { Erc20Bridger, EthBridger, InboxTools } from '../src'
-import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
-import { RollupAdminLogic__factory } from '../src/lib/abi/factories/RollupAdminLogic__factory'
-import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
-import { ArbSdkError } from '../src/lib/dataEntities/errors'
+import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
   L1Network,
   L2Network,
-  addCustomNetwork,
   getL1Network,
   getL2Network,
+  addCustomNetwork,
 } from '../src/lib/dataEntities/networks'
+import { Signer } from 'ethers'
+import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
+import { execSync } from 'child_process'
+import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
+import { RollupAdminLogic__factory } from '../src/lib/abi/factories/RollupAdminLogic__factory'
 import { deployErc20AndInit } from './deployBridge'
+import * as path from 'path'
+import * as fs from 'fs'
+import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import { createWalletClient, http } from 'viem'
-import { privateKeyToAccount } from 'viem/accounts'
 import { mainnet } from 'viem/chains'
-import { walletClientToSigner } from '../src/lib/utils/universal/signerTransforms'
+import { privateKeyToAccount } from 'viem/accounts'
+import { createViemSigner } from '../src/lib/utils/universal/signerTransforms'
 import 'isomorphic-unfetch'
 
 dotenv.config()
@@ -240,7 +256,7 @@ export const testSetup = async (): Promise<{
     chain: ethLocal,
   })
   const l1Signer = config.shouldUseViemSigner
-    ? walletClientToSigner(ethWalletClient)
+    ? createViemSigner(ethWalletClient)
     : ethersL1Signer
 
   let setL1Network: L1Network, setL2Network: L2Network

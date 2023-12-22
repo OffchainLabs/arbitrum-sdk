@@ -62,4 +62,6 @@ export {
   RetryableDataTools,
 } from './lib/dataEntities/retryableData'
 
+export { createViemSigner } from './lib/utils/universal/signerTransforms'
+
 export { Address } from './lib/dataEntities/address'

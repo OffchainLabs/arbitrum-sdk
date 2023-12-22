@@ -1,62 +1,24 @@
 import {
+  Log,
+  TransactionReceipt,
   TransactionRequest,
   TransactionResponse,
-  TransactionReceipt,
-  Log,
 } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
+import { StaticJsonRpcProvider } from '@ethersproject/providers'
 import {
-  JsonRpcSigner,
-  StaticJsonRpcProvider,
-  Web3Provider,
-} from '@ethersproject/providers'
-import {
+  Log as ViemLog,
+  createPublicClient,
+  http,
   type PublicClient,
   type WalletClient,
-  createPublicClient,
-  hexToSignature,
-  http,
-  Log as ViemLog,
 } from 'viem'
-import { Signerish } from '../../assetBridger/ethBridger'
 import { publicClientToProvider } from './providerTransforms'
 
-import { Deferrable } from 'ethers/lib/utils'
 import { BigNumber } from 'ethers'
+import { Deferrable } from 'ethers/lib/utils'
 
-const getType = (value: number | string | null) => {
-  switch (value) {
-    case 0:
-    case 'legacy':
-      return 0
-    case 1:
-    case 'berlin':
-    case 'eip-2930':
-      return 1
-    case 2:
-    case 'london':
-    case 'eip-1559':
-    case 'eip1559':
-      return 2
-  }
-  return 2
-}
-
-const convertViemLogToEthersLog = (log: ViemLog): Log => {
-  return {
-    address: log.address,
-    blockHash: log.blockHash as string,
-    blockNumber: Number(log.blockNumber),
-    data: log.data,
-    logIndex: Number(log.logIndex),
-    removed: log.removed,
-    topics: log.topics,
-    transactionHash: log.transactionHash as string,
-    transactionIndex: Number(log.transactionIndex),
-  }
-}
-
-class ViemSigner extends Signer {
+export class ViemSigner extends Signer {
   private walletClient: WalletClient
   private publicClient: PublicClient
   private _index: number
@@ -127,13 +89,12 @@ class ViemSigner extends Signer {
       // https://viem.sh/docs/actions/wallet/prepareTransactionRequest.html#account-hoisting
       requestData
     )
-    const serializedTransaction = await this.walletClient.signTransaction(
-      request
-    )
-    const hash = await this.publicClient.sendRawTransaction({
-      serializedTransaction,
+    const hash = await this.walletClient.sendTransaction({
+      ...request,
     })
-
+    const serializedTransaction = await this.publicClient.getTransaction({
+      hash,
+    })
     const accessList = request.accessList ?? []
     const chainId = await this.publicClient.getChainId()
     const data = (await transaction.data?.toString()) as string
@@ -141,7 +102,7 @@ class ViemSigner extends Signer {
     const gasLimit = BigNumber.from(transaction.gasLimit ?? 0)
     const gasPrice = BigNumber.from((await request.gasPrice) ?? 0)
 
-    const { r, s, v: rawV } = hexToSignature(serializedTransaction)
+    const { r, s, v: rawV } = serializedTransaction
     const v = parseInt(rawV.toString())
     const to = (await transaction.to) as string
     const type = getType((await transaction.type) ?? 2)
@@ -206,35 +167,11 @@ class ViemSigner extends Signer {
   }
 }
 
-export function walletClientToSigner(walletClient: WalletClient) {
-  const { account, chain, transport } = walletClient
-  // @ts-expect-error - private key
-  if (account?.source === 'privateKey') {
+export const createViemSigner = (walletClient: WalletClient) => {
+  if (isWalletClient(walletClient)) {
     return new ViemSigner(walletClient)
   }
-  const network = {
-    chainId: chain?.id,
-    name: chain?.name,
-    ensAddress: chain?.contracts?.ensRegistry?.address,
-  }
-
-  //@ts-ignore
-  const provider = new Web3Provider(transport, network)
-  const signer = provider.getSigner(account?.address)
-  return signer
-}
-
-export const transformEthersSignerToPublicClient = async (
-  signer: JsonRpcSigner
-) => {
-  const url = signer.provider.connection.url
-  if (typeof url === 'string') {
-    const publicClient = createPublicClient({
-      transport: http(url),
-    })
-    return publicClient
-  }
-  throw new Error('Invalid provider')
+  throw new Error('Invalid wallet client')
 }
 
 export function isWalletClient(object: any): object is WalletClient {
@@ -245,16 +182,38 @@ export function isWalletClient(object: any): object is WalletClient {
     'transport' in object &&
     object.transport !== null &&
     typeof object.transport === 'object' &&
-    'url' in object.transport &&
-    typeof object.transport.url === 'string'
+    object.type === 'walletClient'
   )
 }
 
-export const transformUniversalSignerToEthersV5Signer = async (
-  signer: Signerish
-): Promise<Signer> => {
-  if (isWalletClient(signer)) {
-    return walletClientToSigner(signer)
+const getType = (value: number | string | null) => {
+  switch (value) {
+    case 0:
+    case 'legacy':
+      return 0
+    case 1:
+    case 'berlin':
+    case 'eip-2930':
+      return 1
+    case 2:
+    case 'london':
+    case 'eip-1559':
+    case 'eip1559':
+      return 2
   }
-  return signer as JsonRpcSigner
+  return 2
+}
+
+const convertViemLogToEthersLog = (log: ViemLog): Log => {
+  return {
+    address: log.address,
+    blockHash: log.blockHash as string,
+    blockNumber: Number(log.blockNumber),
+    data: log.data,
+    logIndex: Number(log.logIndex),
+    removed: log.removed,
+    topics: log.topics,
+    transactionHash: log.transactionHash as string,
+    transactionIndex: Number(log.transactionIndex),
+  }
 }

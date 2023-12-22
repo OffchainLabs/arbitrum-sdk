@@ -50,8 +50,6 @@ import {
   Providerish,
   transformUniversalProviderToEthersV5Provider,
 } from '../utils/universal/providerTransforms'
-import { transformUniversalSignerToEthersV5Signer } from '../utils/universal/signerTransforms'
-import type { WalletClient } from 'viem'
 
 export interface EthWithdrawParams {
   /**
@@ -76,7 +74,7 @@ export type EthDepositParams = {
   /**
    * The L1 provider or signer
    */
-  l1Signer: Signerish
+  l1Signer: Signer
   /**
    * The amount of ETH or tokens to be deposited
    */
@@ -87,19 +85,7 @@ export type EthDepositParams = {
   overrides?: PayableOverrides
 }
 
-export type EthDepositToParams = {
-  /**
-   * The L1 provider or signer
-   */
-  l1Signer: Signer
-  /**
-   * The amount of ETH or tokens to be deposited
-   */
-  amount: BigNumber
-  /**
-   * Transaction overrides
-   */
-  overrides?: PayableOverrides
+export type EthDepositToParams = EthDepositParams & {
   /**
    * An L2 provider
    */
@@ -113,7 +99,6 @@ export type EthDepositToParams = {
    */
   retryableGasOverrides?: GasOverrides
 }
-export type Signerish = Signer | WalletClient
 
 export type L1ToL2TxReqAndSigner = L1ToL2TransactionRequest & {
   l1Signer: Signer
@@ -204,19 +189,16 @@ export class EthBridger extends AssetBridger<
   public async deposit(
     params: EthDepositParams | L1ToL2TxReqAndSigner
   ): Promise<L1EthDepositTransaction> {
-    const signer = await transformUniversalSignerToEthersV5Signer(
-      params.l1Signer
-    )
-    await this.checkL1Network(signer)
+    await this.checkL1Network(params.l1Signer)
 
     const ethDeposit = isL1ToL2TransactionRequest(params)
       ? params
       : await this.getDepositRequest({
           ...params,
-          from: await signer.getAddress(),
+          from: await params.l1Signer.getAddress(),
         })
 
-    const tx = await signer.sendTransaction({
+    const tx = await params.l1Signer.sendTransaction({
       ...ethDeposit.txRequest,
       ...params.overrides,
     })
