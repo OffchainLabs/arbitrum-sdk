@@ -11,6 +11,9 @@ jobs:
   install:
     name: 'Install'
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
     steps:
       - uses: actions/setup-node@v3
         with:
@@ -19,12 +22,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
     needs: install
     permissions:
       checks: write # https://github.com/mikepenz/action-junit-report/issues/23#issuecomment-1412597753
@@ -33,6 +44,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
 
       - name: Restore node_modules
         uses: OffchainLabs/actions/node-modules/restore@main
@@ -66,10 +82,18 @@ jobs:
   audit:
     name: Audit
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
     needs: install
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
 
       - name: Restore node_modules
         uses: OffchainLabs/actions/node-modules/restore@main
@@ -79,10 +103,18 @@ jobs:
   test-unit:
     name: Test (Unit)
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
     needs: install
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
 
       - name: Restore node_modules
         uses: OffchainLabs/actions/node-modules/restore@main
@@ -98,6 +130,9 @@ jobs:
   test-integration:
     name: Test (Integration) - ${{ matrix.description }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
     needs: install
     strategy:
       matrix:
@@ -115,6 +150,11 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
 
       - name: Restore node_modules
         uses: OffchainLabs/actions/node-modules/restore@main

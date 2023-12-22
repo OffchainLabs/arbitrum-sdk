@@ -117,6 +117,12 @@
     // Undici's cookie header not cleared on cross-origin redirect in fetch
     // from: hardhat>undici
     // hardhat is only used in dev
-    "GHSA-wqq4-5wpv-mx2g"
+    "GHSA-wqq4-5wpv-mx2g",
+    // https://github.com/advisories/GHSA-wf5p-g6vw-rhxx
+    // axios inadvertently reveals the confidential XSRF-TOKEN stored in cookies
+    // we don't use cookies with axios in the sdk
+    // from: @arbitrum/nitro-contracts>sol2uml>axios
+    // from: axios
+    "GHSA-wf5p-g6vw-rhxx"
   ]
 }
