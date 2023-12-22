@@ -1,59 +1,17 @@
 import { expect } from 'chai'
 import 'dotenv/config'
 import { parseEther } from 'ethers/lib/utils'
-import { createPublicClient, createWalletClient, defineChain, http } from 'viem'
-import { config, testSetup } from '../../../scripts/testSetup'
-import { EthBridger, addDefaultLocalNetwork } from '../../../src'
+import { createWalletClient, http } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { arbitrumGoerli, mainnet } from 'viem/chains'
-import { walletClientToSigner } from '../../../src/lib/utils/universal/signerTransforms'
+import { config, testSetup } from '../../../scripts/testSetup'
+import { addDefaultLocalNetwork, createViemSigner } from '../../../src'
 import { fundL1 } from '../testHelpers'
-import { BigNumber } from 'ethers'
-
-export const arbLocal = {
-  ...arbitrumGoerli,
-  id: 412346,
-  rpcUrls: {
-    default: {
-      http: ['http://127.0.0.1:8547'],
-    },
-    public: {
-      http: ['http://127.0.0.1:8547'],
-    },
-  },
-}
-const arbRpcUrl = config.arbUrl
-
-export const ethLocal = {
-  ...mainnet,
-  id: 1337,
-  rpcUrls: {
-    default: {
-      http: ['http://localhost:8545'],
-    },
-    public: {
-      http: ['http://localhost:8545'],
-    },
-  },
-}
-const ethRpcUrl = config.ethUrl
+import { arbLocal } from './universalProvider.test'
 
 try {
   addDefaultLocalNetwork()
 } catch (e) {
   console.log('default local network already added')
-}
-type AnyObj = Record<string, any>
-
-const convertBigIntToString = (obj: AnyObj): AnyObj => {
-  for (const key in obj) {
-    if (typeof obj[key] === 'object' && obj[key] !== null) {
-      convertBigIntToString(obj[key])
-    } else if (typeof obj[key] === 'bigint') {
-      obj[key] = BigNumber.from(obj[key])
-    }
-  }
-  return obj
 }
 
 describe('universal signer', async () => {
@@ -61,11 +19,11 @@ describe('universal signer', async () => {
     const { l2Signer, pk } = await testSetup()
     const account = privateKeyToAccount(pk)
     const walletClient = createWalletClient({
-      transport: http(arbRpcUrl),
+      transport: http(config.arbUrl),
       account,
       chain: arbLocal,
     })
-    const viemSigner = walletClientToSigner(walletClient)
+    const viemSigner = createViemSigner(walletClient)
     const viemAddress = await viemSigner.getAddress()
 
     const ethersAddress = await l2Signer.getAddress()
@@ -134,10 +92,8 @@ describe('universal signer', async () => {
       ethersTx.accessList?.toString()
     )
     expect(viemTx.chainId).to.equal(ethersTx.chainId)
-    // expect(viemTx.confirmations).to.equal(ethersTx.confirmations)
     expect(viemTx.data).to.equal(ethersTx.data)
     expect(viemTx.from).to.equal(ethersTx.from)
-    // expect(viemTx.nonce).to.equal(ethersTx.nonce)
     expect(viemTx.to.toLowerCase()).to.equal(ethersTx.to.toLowerCase())
     expect(viemTx.type).to.equal(ethersTx.type)
     expect(viemTx.value.toString()).to.equal(ethersTx.value.toString())

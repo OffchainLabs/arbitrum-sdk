@@ -15,10 +15,6 @@ jobs:
       matrix:
         node-version: [16, 18, 20]
     steps:
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 16
-
       - name: Checkout
         uses: actions/checkout@v3
 
@@ -133,21 +129,15 @@ jobs:
     strategy:
       matrix:
         node-version: [16, 18, 20]
-    needs: install
-    strategy:
-      matrix:
         include:
           - viem_signer: '0'
             description: 'Ethers v5'
           - viem_signer: '1'
             description: 'Viem'
+    needs: install
     env:
       SHOULD_USE_VIEM_SIGNER: ${{ matrix.viem_signer }}
     steps:
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 16
-
       - name: Checkout
         uses: actions/checkout@v3
 

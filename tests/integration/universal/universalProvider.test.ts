@@ -1,8 +1,8 @@
-import { expect } from 'chai'
 import 'dotenv/config'
+import { expect } from 'chai'
 import { providers } from 'ethers'
 import { JsonRpcProvider } from 'ethers-v6'
-import { createPublicClient, defineChain, http } from 'viem'
+import { createPublicClient, http } from 'viem'
 import { arbitrumGoerli } from 'viem/chains'
 import Web3 from 'web3'
 import { config } from '../../../scripts/testSetup'
@@ -17,10 +17,10 @@ export const arbLocal = {
   id: 412346,
   rpcUrls: {
     default: {
-      http: ['http://127.0.0.1:8547'],
+      http: [config.arbUrl],
     },
     public: {
-      http: ['http://127.0.0.1:8547'],
+      http: [config.arbUrl],
     },
   },
 }

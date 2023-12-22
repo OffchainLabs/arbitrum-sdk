@@ -16,6 +16,7 @@
 /* eslint-env node */
 'use strict'
 
+import 'isomorphic-unfetch'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { Wallet } from '@ethersproject/wallet'
 
@@ -41,7 +42,6 @@ import { createWalletClient, http } from 'viem'
 import { mainnet } from 'viem/chains'
 import { privateKeyToAccount } from 'viem/accounts'
 import { createViemSigner } from '../src/lib/utils/universal/signerTransforms'
-import 'isomorphic-unfetch'
 
 dotenv.config()
 
@@ -215,21 +215,20 @@ export const ethLocal = {
   id: 1337,
   rpcUrls: {
     default: {
-      http: ['http://127.0.0.1:8545'],
+      http: [config.ethUrl],
     },
     public: {
-      http: ['http://127.0.0.1:8545'],
+      http: [config.ethUrl],
     },
   },
 }
-const ethRpcUrl = config.ethUrl
 
 export const testSetup = async (): Promise<{
   seed: Wallet
   pk: any
   l1Network: L1Network
   l2Network: L2Network
-  l1Signer: any
+  l1Signer: Signer
   ethersL1Signer: Signer
   l2Signer: Signer
   erc20Bridger: Erc20Bridger
@@ -252,8 +251,19 @@ export const testSetup = async (): Promise<{
   const pk = ethersL1Signer._signingKey().privateKey as `0x${string}`
   const ethWalletClient = createWalletClient({
     account: privateKeyToAccount(pk),
-    transport: http(ethRpcUrl),
-    chain: ethLocal,
+    transport: http(config.ethUrl),
+    chain: {
+      ...mainnet,
+      id: 1337,
+      rpcUrls: {
+        default: {
+          http: [config.ethUrl],
+        },
+        public: {
+          http: [config.ethUrl],
+        },
+      },
+    },
   })
   const l1Signer = config.shouldUseViemSigner
     ? createViemSigner(ethWalletClient)

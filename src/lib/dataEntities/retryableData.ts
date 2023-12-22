@@ -1,6 +1,6 @@
 import { Interface } from '@ethersproject/abi'
 import { BigNumber } from 'ethers'
-import { BaseError, TransactionExecutionError } from 'viem'
+import { BaseError } from 'viem'
 import { isDefined } from '../utils/lib'
 // TODO: add typechain support
 const errorInterface = new Interface([

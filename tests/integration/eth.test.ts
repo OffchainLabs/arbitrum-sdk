@@ -276,7 +276,6 @@ describe('Ether', async () => {
       'confirmed status'
     ).to.eq(L2ToL1MessageStatus.CONFIRMED)
 
-    // @ts-ignore
     const execTx = await withdrawMessage.execute(l2Signer.provider!)
     const execRec = await execTx.wait()
 
