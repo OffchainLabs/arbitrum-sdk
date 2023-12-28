@@ -115,7 +115,6 @@ jobs:
         with:
           no-token-bridge: true
           l3-node: true
-          nitro-testnode-ref: more-traffic
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
