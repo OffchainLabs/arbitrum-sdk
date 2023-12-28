@@ -737,8 +737,18 @@ export class Erc20L1L3Bridger extends BaseErc20L1L3Bridger {
       l3Provider
     )
 
+    return this.executeDepositRequest(txRequest, l1Signer)
+  }
+
+  /**
+   * Execute a deposit request to L3 through the L1Teleporter contract.
+   */
+  public async executeDepositRequest(
+    depositRequest: Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>,
+    l1Signer: Signer
+  ): Promise<L1ContractCallTransaction> {
     return L1TransactionReceipt.monkeyPatchContractCallWait(
-      await l1Signer.sendTransaction(txRequest)
+      await l1Signer.sendTransaction(depositRequest)
     )
   }
 
@@ -963,6 +973,18 @@ export class RelayedErc20L1L3Bridger extends BaseErc20L1L3Bridger {
       l3Provider
     )
 
+    return this.executeDepositRequest(depositRequest, l1Signer)
+  }
+
+  /**
+   * Execute the result of `getDepositRequest` to deposit tokens to L3. Will call the `L1GatewayRouter` directly.
+   *
+   * Relayer info will be returned as well as appended to calldata.
+   */
+  public async executeDepositRequest(
+    depositRequest: RelayedErc20DepositRequestResult,
+    l1Signer: Signer
+  ): Promise<RelayedErc20DepositResult> {
     return {
       tx: L1TransactionReceipt.monkeyPatchContractCallWait(
         await l1Signer.sendTransaction(depositRequest.txRequest.txRequest)
@@ -1176,7 +1198,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
     l1Signer: Signer,
     l2Provider: Provider,
     l3Provider: Provider
-  ): Promise<L1EthDepositTransaction> {
+  ): Promise<L1ContractCallTransaction> {
     const txRequest = await this.getDepositRequest(
       params,
       l1Signer,
@@ -1184,8 +1206,18 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
       l3Provider
     )
 
-    return L1TransactionReceipt.monkeyPatchEthDepositWait(
-      await l1Signer.sendTransaction(txRequest.txRequest)
+    return this.executeDepositRequest(txRequest, l1Signer)
+  }
+
+  /**
+   * Execute a deposit request to L3 via a double retryable ticket
+   */
+  public async executeDepositRequest(
+    depositRequest: L1ToL2TransactionRequest,
+    l1Signer: Signer
+  ): Promise<L1ContractCallTransaction> {
+    return L1TransactionReceipt.monkeyPatchContractCallWait(
+      await l1Signer.sendTransaction(depositRequest.txRequest)
     )
   }
 
