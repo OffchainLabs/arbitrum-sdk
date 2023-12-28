@@ -1236,7 +1236,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
    * The retryable to L3 must be manually redeemed.
    */
   public async getDepositStatus(
-    l1TxReceipt: L1EthDepositTransactionReceipt,
+    l1TxReceipt: L1ContractCallTransactionReceipt,
     l2Provider: Provider,
     l3Provider: Provider
   ): Promise<EthDepositStatus> {
