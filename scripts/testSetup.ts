@@ -28,7 +28,7 @@ import {
   getL2Network,
   addCustomNetwork,
 } from '../src/lib/dataEntities/networks'
-import { Signer } from 'ethers'
+import { Signer, providers } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { execSync } from 'child_process'
 import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
@@ -66,23 +66,30 @@ function getDeploymentData(): string {
   throw new Error('nitro-testnode sequencer not found')
 }
 
-export const getCustomNetworks = async (
-  l1Url: string,
-  l2Url: string
-): Promise<{
-  l1Network: L1Network
-  l2Network: Omit<L2Network, 'tokenBridge'>
-}> => {
-  const l1Provider = new JsonRpcProvider(l1Url)
-  const l2Provider = new JsonRpcProvider(l2Url)
-  const deploymentData = getDeploymentData()
-  const parsedDeploymentData = JSON.parse(deploymentData) as {
+function getL3DeploymentData(): string {
+  const dockerNames = ['nitro-testnode-l3node-1']
+  for (const dockerName of dockerNames) {
+    try {
+      return execSync(
+        'docker exec ' + dockerName + ' cat /config/l3deployment.json'
+      ).toString()
+    } catch {
+      // empty on purpose
+    }
+  }
+  throw new Error('nitro-testnode sequencer not found')
+}
+
+async function createL2Network(
+  parsedDeploymentData: {
     bridge: string
     inbox: string
     ['sequencer-inbox']: string
     rollup: string
-  }
-
+  },
+  l1Provider: providers.Provider,
+  l2Provider: providers.Provider
+) {
   const rollup = RollupAdminLogic__factory.connect(
     parsedDeploymentData.rollup,
     l1Provider
@@ -97,16 +104,6 @@ export const getCustomNetworks = async (
 
   const l1NetworkInfo = await l1Provider.getNetwork()
   const l2NetworkInfo = await l2Provider.getNetwork()
-
-  const l1Network: L1Network = {
-    blockTime: 10,
-    chainID: l1NetworkInfo.chainId,
-    explorerUrl: '',
-    isCustom: true,
-    name: 'EthLocal',
-    partnerChainIDs: [l2NetworkInfo.chainId],
-    isArbitrum: false,
-  }
 
   const l2Network: Omit<L2Network, 'tokenBridge'> = {
     chainID: l2NetworkInfo.chainId,
@@ -128,6 +125,89 @@ export const getCustomNetworks = async (
     nitroGenesisL1Block: 0,
     depositTimeout: 900000,
   }
+
+  return l2Network
+}
+
+export const getCustomNetworks = async (
+  l1Url: string,
+  l2Url: string
+): Promise<
+  | {
+      l1Network: L1Network
+      l2Network: Omit<L2Network, 'tokenBridge'>
+    }
+  | {
+      l1Network: Omit<L2Network, 'tokenBridge'>
+      l2Network: Omit<L2Network, 'tokenBridge'> & { isOrbit: true }
+    }
+> => {
+  const l2Deployment = getDeploymentData()
+  console.log({ l2Deployment })
+
+  const l3Deployment = getL3DeploymentData()
+  console.log({ l3Deployment })
+
+  const l1Provider = new JsonRpcProvider('http://127.0.0.1:8545')
+  const l2Provider = new JsonRpcProvider('http://127.0.0.1:8547')
+  const l3Provider = new JsonRpcProvider('http://127.0.0.1:3347')
+
+  const deploymentData = getDeploymentData()
+  const parsedDeploymentData = JSON.parse(deploymentData) as {
+    bridge: string
+    inbox: string
+    ['sequencer-inbox']: string
+    rollup: string
+  }
+
+  const parsedL3DeploymentData = JSON.parse(l3Deployment) as {
+    bridge: string
+    inbox: string
+    ['sequencer-inbox']: string
+    rollup: string
+  }
+
+  const l1NetworkInfo = await l1Provider.getNetwork()
+  const l2NetworkInfo = await l2Provider.getNetwork()
+
+  const l1NetworkReal: L1Network = {
+    blockTime: 10,
+    chainID: l1NetworkInfo.chainId,
+    explorerUrl: '',
+    isCustom: true,
+    name: 'EthLocal',
+    partnerChainIDs: [l2NetworkInfo.chainId],
+    isArbitrum: false,
+  }
+
+  // const l1Network: L1Network = {
+  //   blockTime: 10,
+  //   chainID: l1NetworkInfo.chainId,
+  //   explorerUrl: '',
+  //   isCustom: true,
+  //   name: 'EthLocal',
+  //   partnerChainIDs: [l2NetworkInfo.chainId],
+  //   isArbitrum: false,
+  // }
+
+  const l1Network: Omit<L2Network, 'tokenBridge'> = await createL2Network(
+    parsedDeploymentData,
+    l1Provider,
+    l2Provider
+  )
+
+  addCustomNetwork({
+    //@ts-ignore
+    customL1Network: l1NetworkReal,
+    // @ts-ignore
+    customL2Network: l1Network,
+  })
+
+  const l2Network: Omit<L2Network, 'tokenBridge'> & { isOrbit: true } = {
+    ...(await createL2Network(parsedL3DeploymentData, l2Provider, l3Provider)),
+    isOrbit: true,
+  }
+
   return {
     l1Network,
     l2Network,
@@ -171,6 +251,7 @@ export const setupNetworks = async (
   }
 
   addCustomNetwork({
+    //@ts-ignore
     customL1Network: l1Network,
     customL2Network: l2Network,
   })
@@ -257,6 +338,7 @@ export const testSetup = async (): Promise<{
         config.ethUrl,
         config.arbUrl
       )
+      // @ts-ignore
       setL1Network = l1Network
       setL2Network = l2Network
     }

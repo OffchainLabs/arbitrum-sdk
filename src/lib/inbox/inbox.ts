@@ -58,18 +58,18 @@ type RequiredTransactionRequestType = RequiredPick<
  */
 export class InboxTools {
   private readonly l1Provider
-  private readonly l1Network
+  // private readonly l1Network
 
   constructor(
     private readonly l1Signer: Signer,
     private readonly l2Network: L2Network
   ) {
     this.l1Provider = SignerProviderUtils.getProviderOrThrow(this.l1Signer)
-    this.l1Network = l1Networks[l2Network.partnerChainID]
-    if (!this.l1Network)
-      throw new ArbSdkError(
-        `L1Network not found for chain id: ${l2Network.partnerChainID}.`
-      )
+    // this.l1Network = l1Networks[l2Network.partnerChainID]
+    // if (!this.l1Network)
+    //   throw new ArbSdkError(
+    //     `L1Network not found for chain id: ${l2Network.partnerChainID}.`
+    //   )
   }
 
   /**
@@ -90,7 +90,7 @@ export class InboxTools {
 
     // we take a long average block time of 14s
     // and always move at least 10 blocks
-    const diffBlocks = Math.max(Math.ceil(diff / this.l1Network.blockTime), 10)
+    const diffBlocks = Math.max(Math.ceil(diff / 0.25), 10)
 
     return await this.findFirstBlockBelow(
       blockNumber - diffBlocks,
