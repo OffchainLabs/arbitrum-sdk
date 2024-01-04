@@ -907,7 +907,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     const eventFetcher = new EventFetcher(l2Provider)
     return (
       await eventFetcher.getEvents(
-        L1GatewayRouter__factory,
+        L2GatewayRouter__factory,
         t => t.filters.GatewaySet(),
         { ...filter, address: l2GatewayRouterAddress }
       )
