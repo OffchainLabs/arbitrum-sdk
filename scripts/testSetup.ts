@@ -27,8 +27,11 @@ import {
   getL1Network,
   getL2Network,
   addCustomNetwork,
+  isL1Chain,
+  isL2Chain,
+  isOrbitChain,
 } from '../src/lib/dataEntities/networks'
-import { Signer } from 'ethers'
+import { Signer, providers } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { execSync } from 'child_process'
 import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
@@ -40,11 +43,27 @@ import { ArbSdkError } from '../src/lib/dataEntities/errors'
 
 dotenv.config()
 
-export const config = {
-  arbUrl: process.env['ARB_URL'] as string,
-  ethUrl: process.env['ETH_URL'] as string,
-  arbKey: process.env['ARB_KEY'] as string,
-  ethKey: process.env['ETH_KEY'] as string,
+const isTestingOrbitChains = process.env.ORBIT_TEST === '1'
+
+export const config = isTestingOrbitChains
+  ? {
+      arbUrl: process.env['ORBIT_URL'] as string,
+      ethUrl: process.env['ARB_URL'] as string,
+      arbKey: process.env['ORBIT_KEY'] as string,
+      ethKey: process.env['ARB_KEY'] as string,
+    }
+  : {
+      arbUrl: process.env['ARB_URL'] as string,
+      ethUrl: process.env['ETH_URL'] as string,
+      arbKey: process.env['ARB_KEY'] as string,
+      ethKey: process.env['ETH_KEY'] as string,
+    }
+
+type DeploymentData = {
+  bridge: string
+  inbox: string
+  ['sequencer-inbox']: string
+  rollup: string
 }
 
 function getDeploymentData(): string {
@@ -66,22 +85,31 @@ function getDeploymentData(): string {
   throw new Error('nitro-testnode sequencer not found')
 }
 
+function getL3DeploymentData() {
+  const dockerNames = ['nitro-testnode-l3node-1']
+  for (const dockerName of dockerNames) {
+    try {
+      return execSync(
+        'docker exec ' + dockerName + ' cat /config/l3deployment.json'
+      ).toString()
+    } catch {
+      // empty on purpose
+    }
+  }
+  throw new Error('nitro-testnode sequencer not found')
+}
+
 export const getCustomNetworks = async (
   l1Url: string,
   l2Url: string
 ): Promise<{
   l1Network: L1Network
-  l2Network: Omit<L2Network, 'tokenBridge'>
+  l2Network: L2Network
 }> => {
   const l1Provider = new JsonRpcProvider(l1Url)
   const l2Provider = new JsonRpcProvider(l2Url)
   const deploymentData = getDeploymentData()
-  const parsedDeploymentData = JSON.parse(deploymentData) as {
-    bridge: string
-    inbox: string
-    ['sequencer-inbox']: string
-    rollup: string
-  }
+  const parsedDeploymentData = JSON.parse(deploymentData) as DeploymentData
 
   const rollup = RollupAdminLogic__factory.connect(
     parsedDeploymentData.rollup,
@@ -108,7 +136,7 @@ export const getCustomNetworks = async (
     isArbitrum: false,
   }
 
-  const l2Network: Omit<L2Network, 'tokenBridge'> = {
+  const l2Network: L2Network = {
     chainID: l2NetworkInfo.chainId,
     confirmPeriodBlocks: confirmPeriodBlocks.toNumber(),
     ethBridge: {
@@ -127,11 +155,137 @@ export const getCustomNetworks = async (
     nitroGenesisBlock: 0,
     nitroGenesisL1Block: 0,
     depositTimeout: 900000,
+    tokenBridge: {
+      l1CustomGateway: '',
+      l1ERC20Gateway: '',
+      l1GatewayRouter: '',
+      l1MultiCall: '',
+      l1ProxyAdmin: '',
+      l1Weth: '',
+      l1WethGateway: '',
+      l2CustomGateway: '',
+      l2ERC20Gateway: '',
+      l2GatewayRouter: '',
+      l2Multicall: '',
+      l2ProxyAdmin: '',
+      l2Weth: '',
+      l2WethGateway: '',
+    },
   }
   return {
     l1Network,
     l2Network,
   }
+}
+
+const setupOrbitNetworks = async (): Promise<{
+  l1Network: L2Network
+  l2Network: L2Network & { isOrbit: true }
+}> => {
+  const l1Provider = new JsonRpcProvider(process.env['ETH_URL'])
+  const l2Provider = new JsonRpcProvider(process.env['ARB_URL'])
+  const l3Provider = new JsonRpcProvider(process.env['ORBIT_URL'])
+
+  const deploymentData = getDeploymentData()
+  const parsedDeploymentData = JSON.parse(deploymentData) as DeploymentData
+
+  const l1NetworkInfo = await l1Provider.getNetwork()
+  const l2NetworkInfo = await l2Provider.getNetwork()
+
+  const l1Network: L1Network = {
+    blockTime: 10,
+    chainID: l1NetworkInfo.chainId,
+    explorerUrl: '',
+    isCustom: true,
+    name: 'EthLocal',
+    partnerChainIDs: [l2NetworkInfo.chainId],
+    isArbitrum: false,
+  }
+
+  const l2Network = await getCustomOrbitNetwork(
+    parsedDeploymentData,
+    l1Provider,
+    l2Provider
+  )
+
+  addCustomNetwork({
+    customL1Network: l1Network,
+    customL2Network: l2Network,
+  })
+
+  const l3DeploymentData = getL3DeploymentData()
+  const parsedL3DeploymentData = JSON.parse(l3DeploymentData) as DeploymentData
+  const l3Network = (await getCustomOrbitNetwork(
+    parsedL3DeploymentData,
+    l2Provider,
+    l3Provider,
+    true
+  )) as L2Network & { isOrbit: true }
+
+  return {
+    l1Network: l2Network,
+    l2Network: l3Network,
+  }
+}
+
+async function getCustomOrbitNetwork(
+  deploymentData: DeploymentData,
+  l1Provider: providers.Provider,
+  l2Provider: providers.Provider,
+  isOrbit = false
+) {
+  const rollup = RollupAdminLogic__factory.connect(
+    deploymentData.rollup,
+    l1Provider
+  )
+  const confirmPeriodBlocks = await rollup.confirmPeriodBlocks()
+
+  const bridge = Bridge__factory.connect(deploymentData.bridge, l1Provider)
+  const outboxAddr = await bridge.allowedOutboxList(0)
+
+  const l1NetworkInfo = await l1Provider.getNetwork()
+  const l2NetworkInfo = await l2Provider.getNetwork()
+
+  const l2Network: L2Network = {
+    chainID: l2NetworkInfo.chainId,
+    confirmPeriodBlocks: confirmPeriodBlocks.toNumber(),
+    ethBridge: {
+      bridge: deploymentData.bridge,
+      inbox: deploymentData.inbox,
+      outbox: outboxAddr,
+      rollup: deploymentData.rollup,
+      sequencerInbox: deploymentData['sequencer-inbox'],
+    },
+    explorerUrl: '',
+    isArbitrum: true,
+    isCustom: true,
+    name: 'ArbLocal',
+    partnerChainID: l1NetworkInfo.chainId,
+    retryableLifetimeSeconds: 7 * 24 * 60 * 60,
+    nitroGenesisBlock: 0,
+    nitroGenesisL1Block: 0,
+    depositTimeout: 900000,
+    tokenBridge: {
+      l1CustomGateway: '',
+      l1ERC20Gateway: '',
+      l1GatewayRouter: '',
+      l1MultiCall: '',
+      l1ProxyAdmin: '',
+      l1Weth: '',
+      l1WethGateway: '',
+      l2CustomGateway: '',
+      l2ERC20Gateway: '',
+      l2GatewayRouter: '',
+      l2Multicall: '',
+      l2ProxyAdmin: '',
+      l2Weth: '',
+      l2WethGateway: '',
+    },
+    isOrbit,
+    blockTime: 0.25,
+  }
+
+  return l2Network
 }
 
 export const setupNetworks = async (
@@ -140,16 +294,17 @@ export const setupNetworks = async (
   l1Url: string,
   l2Url: string
 ) => {
-  const { l1Network, l2Network: coreL2Network } = await getCustomNetworks(
-    l1Url,
-    l2Url
-  )
+  const { l1Network, l2Network: coreL2Network } = isTestingOrbitChains
+    ? await setupOrbitNetworks()
+    : await getCustomNetworks(l1Url, l2Url)
+
   const { l1: l1Contracts, l2: l2Contracts } = await deployErc20AndInit(
     l1Deployer,
     l2Deployer,
     coreL2Network.ethBridge.inbox
   )
-  const l2Network: L2Network = {
+
+  const l2Network: L2Network | (L2Network & { isOrbit: true }) = {
     ...coreL2Network,
     tokenBridge: {
       l1CustomGateway: l1Contracts.customGateway.address,
@@ -170,10 +325,19 @@ export const setupNetworks = async (
     },
   }
 
-  addCustomNetwork({
-    customL1Network: l1Network,
-    customL2Network: l2Network,
-  })
+  if (isL1Chain(l1Network) && isL2Chain(l2Network)) {
+    addCustomNetwork({
+      customL1Network: l1Network,
+      customL2Network: l2Network,
+    })
+  } else if (isL2Chain(l1Network) && isOrbitChain(l2Network)) {
+    addCustomNetwork({
+      customL1Network: l1Network,
+      customL2Network: l2Network,
+    })
+  } else {
+    throw new Error('Invalid network pair')
+  }
 
   // also register the weth gateway
   // we add it here rather than in deployBridge because
@@ -204,8 +368,8 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
 }
 
 export const testSetup = async (): Promise<{
-  l1Network: L1Network
-  l2Network: L2Network
+  l1Network: L1Network | L2Network
+  l2Network: L2Network | (L2Network & { isOrbit: true })
   l1Signer: Signer
   l2Signer: Signer
   erc20Bridger: Erc20Bridger
@@ -225,7 +389,8 @@ export const testSetup = async (): Promise<{
   const l1Signer = seed.connect(ethProvider)
   const l2Signer = seed.connect(arbProvider)
 
-  let setL1Network: L1Network, setL2Network: L2Network
+  let setL1Network: L1Network | L2Network,
+    setL2Network: L2Network | (L2Network & { isOrbit: true })
   try {
     const l1Network = await getL1Network(l1Deployer)
     const l2Network = await getL2Network(l2Deployer)

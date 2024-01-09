@@ -27,11 +27,11 @@ export interface Network {
   explorerUrl: string
   gif?: string
   isCustom: boolean
+  blockTime: number //seconds
 }
 
 export interface L1Network extends Network {
   partnerChainIDs: number[]
-  blockTime: number //seconds
   isArbitrum: false
 }
 
@@ -51,8 +51,6 @@ export interface L2Network extends Network {
    */
   depositTimeout: number
 }
-
-//TODO: simplify
 
 export type ParentChain =
   | L1Network
@@ -194,6 +192,7 @@ export const networks: Record<string, Chain> = {
      * (Total timeout: 30 minutes)
      */
     depositTimeout: 1800000,
+    blockTime: 0.25,
   },
   421613: {
     chainID: 421613,
@@ -234,6 +233,7 @@ export const networks: Record<string, Chain> = {
      * Wait 10 epochs there on goerli = 320 blocks. Each block is 12 seconds.
      */
     depositTimeout: 3960000,
+    blockTime: 0.25,
   },
   42170: {
     chainID: 42170,
@@ -275,6 +275,7 @@ export const networks: Record<string, Chain> = {
      * (Total timeout: 30 minutes)
      */
     depositTimeout: 1800000,
+    blockTime: 0.25,
   },
   421614: {
     chainID: 421614,
@@ -312,6 +313,7 @@ export const networks: Record<string, Chain> = {
     nitroGenesisBlock: 0,
     nitroGenesisL1Block: 0,
     depositTimeout: 1800000,
+    blockTime: 0.25,
   },
   23011913: {
     chainID: 23011913,
@@ -348,6 +350,7 @@ export const networks: Record<string, Chain> = {
     nitroGenesisBlock: 0,
     nitroGenesisL1Block: 0,
     depositTimeout: 900000,
+    blockTime: 0.25,
   },
 }
 
@@ -366,15 +369,17 @@ const isChildChain = (chain: Chain): chain is ChildChain => {
   return chain && 'partnerChainID' in chain
 }
 
-const isL1Chain = (chain: Chain): chain is L1Network => {
+export const isL1Chain = (chain: Chain): chain is L1Network => {
   return chain && isParentChain(chain) && !isChildChain(chain)
 }
 
-const isL2Chain = (chain: Chain): chain is L2Network => {
+export const isL2Chain = (chain: Chain): chain is L2Network => {
   return chain && isChildChain(chain) && !isOrbitChain(chain)
 }
 
-const isOrbitChain = (chain: any): chain is L2Network & { isOrbit: true } => {
+export const isOrbitChain = (
+  chain: any
+): chain is L2Network & { isOrbit: true } => {
   return chain && typeof chain.isOrbit !== 'undefined' && chain.isOrbit
 }
 
@@ -464,7 +469,7 @@ export const getNetwork = async (
 
 export const getL1Network = (
   signerOrProviderOrChainID: SignerOrProvider | number
-): Promise<L1Network> => {
+): Promise<L1Network | L2Network> => {
   return getNetwork(signerOrProviderOrChainID, 1) as Promise<L1Network>
 }
 export const getL2Network = (
@@ -634,6 +639,7 @@ export const addDefaultLocalNetwork = (): {
       l2Weth: '0x408Da76E87511429485C32E4Ad647DD14823Fdc4',
       l2WethGateway: '0x4A2bA922052bA54e29c5417bC979Daaf7D5Fe4f4',
     },
+    blockTime: 0.25,
   }
 
   addCustomNetwork({
