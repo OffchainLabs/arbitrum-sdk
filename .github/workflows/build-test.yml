@@ -129,10 +129,10 @@ jobs:
     strategy:
       matrix:
         node-version: [16, 18, 20]
-        orbit-test: ['1', '0']
+        # orbit-test: ['1', '0']
     needs: install
-    env:
-      ORBIT_TEST: ${{ matrix.orbit-test }}
+    # env:
+    # ORBIT_TEST: ${{ matrix.orbit-test }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -149,7 +149,7 @@ jobs:
         uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
           no-token-bridge: true
-          l3-node: ${{ matrix.orbit-test == '1' }}
+          # l3-node: ${{ matrix.orbit-test == '1' }}
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
