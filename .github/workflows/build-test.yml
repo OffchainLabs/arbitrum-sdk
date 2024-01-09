@@ -130,6 +130,25 @@ jobs:
       matrix:
         node-version: [16, 18, 20]
         orbit-test: ['1', '0']
+        include:
+          - node-version: 16
+            orbit-test: 1
+            label: 'Test (Integration) - Orbit - Node 16'
+          - node-version: 18
+            orbit-test: 1
+            label: 'Test (Integration) - Orbit - Node 18'
+          - node-version: 20
+            orbit-test: 1
+            label: 'Test (Integration) - Orbit - Node 20'
+          - node-version: 16
+            orbit-test: 0
+            label: 'Test (Integration) - No Orbit - Node 16'
+          - node-version: 18
+            orbit-test: 0
+            label: 'Test (Integration) - No Orbit - Node 18'
+          - node-version: 20
+            orbit-test: 0
+            label: 'Test (Integration) - No Orbit - Node 20'
     needs: install
     env:
       ORBIT_TEST: ${{ matrix.orbit-test }}
