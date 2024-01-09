@@ -402,31 +402,31 @@ export const testSetup = async (): Promise<{
     // the networks havent been added yet
 
     // check if theres an existing network available
-    const localNetworkFile = path.join(__dirname, '..', 'localNetwork.json')
-    if (fs.existsSync(localNetworkFile)) {
-      const { l1Network, l2Network } = JSON.parse(
-        fs.readFileSync(localNetworkFile).toString()
-      ) as {
-        l1Network: L1Network
-        l2Network: L2Network
-      }
-      addCustomNetwork({
-        customL1Network: l1Network,
-        customL2Network: l2Network,
-      })
-      setL1Network = l1Network
-      setL2Network = l2Network
-    } else {
-      // deploy a new network
-      const { l1Network, l2Network } = await setupNetworks(
-        l1Deployer,
-        l2Deployer,
-        config.ethUrl,
-        config.arbUrl
-      )
-      setL1Network = l1Network
-      setL2Network = l2Network
-    }
+    // const localNetworkFile = path.join(__dirname, '..', 'localNetwork.json')
+    // if (fs.existsSync(localNetworkFile)) {
+    //   const { l1Network, l2Network } = JSON.parse(
+    //     fs.readFileSync(localNetworkFile).toString()
+    //   ) as {
+    //     l1Network: L1Network
+    //     l2Network: L2Network
+    //   }
+    //   addCustomNetwork({
+    //     customL1Network: l1Network,
+    //     customL2Network: l2Network,
+    //   })
+    //   setL1Network = l1Network
+    //   setL2Network = l2Network
+    // } else {
+    // deploy a new network
+    const { l1Network, l2Network } = await setupNetworks(
+      l1Deployer,
+      l2Deployer,
+      config.ethUrl,
+      config.arbUrl
+    )
+    setL1Network = l1Network
+    setL2Network = l2Network
+    // }
   }
 
   const erc20Bridger = new Erc20Bridger(setL2Network)
