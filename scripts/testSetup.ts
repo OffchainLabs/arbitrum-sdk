@@ -171,7 +171,9 @@ export const getCustomNetworks = async (
       l2Weth: '',
       l2WethGateway: '',
     },
+    blockTime: 0.25,
   }
+
   return {
     l1Network,
     l2Network,
