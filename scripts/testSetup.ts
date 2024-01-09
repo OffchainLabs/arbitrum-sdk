@@ -96,7 +96,7 @@ function getL3DeploymentData() {
       // empty on purpose
     }
   }
-  throw new Error('nitro-testnode sequencer not found')
+  throw new Error('nitro-testnode-l3node sequencer not found')
 }
 
 export const getCustomNetworks = async (

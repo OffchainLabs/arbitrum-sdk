@@ -148,9 +148,9 @@ jobs:
       - name: Set up the local node
         uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
+          nitro-testnode-ref: use-tokenbridge-creator
           no-token-bridge: true
-          # l3-node: ${{ matrix.orbit-test == '1' }}
-          l3-node: true
+          l3-node: ${{ matrix.orbit-test == '1' }}
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
