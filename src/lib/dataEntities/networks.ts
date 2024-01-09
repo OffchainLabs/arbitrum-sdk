@@ -469,7 +469,7 @@ export const getNetwork = async (
 
 export const getL1Network = (
   signerOrProviderOrChainID: SignerOrProvider | number
-): Promise<L1Network | L2Network> => {
+): Promise<L1Network> => {
   return getNetwork(signerOrProviderOrChainID, 1) as Promise<L1Network>
 }
 export const getL2Network = (
