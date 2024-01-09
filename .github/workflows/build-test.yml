@@ -150,6 +150,7 @@ jobs:
         with:
           no-token-bridge: true
           # l3-node: ${{ matrix.orbit-test == '1' }}
+          l3-node: true
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
