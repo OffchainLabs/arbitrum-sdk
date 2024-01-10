@@ -27,9 +27,6 @@ import {
   getL1Network,
   getL2Network,
   addCustomNetwork,
-  isL1Chain,
-  isL2Chain,
-  isOrbitChain,
 } from '../src/lib/dataEntities/networks'
 import { Signer, providers } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
@@ -103,8 +100,8 @@ export const getCustomNetworks = async (
   l1Url: string,
   l2Url: string
 ): Promise<{
-  l1Network: L1Network
-  l2Network: L2Network
+  customL1Network: L1Network
+  customL2Network: L2Network
 }> => {
   const l1Provider = new JsonRpcProvider(l1Url)
   const l2Provider = new JsonRpcProvider(l2Url)
@@ -175,8 +172,8 @@ export const getCustomNetworks = async (
   }
 
   return {
-    l1Network,
-    l2Network,
+    customL1Network: l1Network,
+    customL2Network: l2Network,
   }
 }
 
@@ -218,8 +215,8 @@ const setupL1NetworkForOrbit = async (): Promise<{
 }
 
 const setupOrbitNetworks = async (): Promise<{
-  l1Network: L2Network
-  l2Network: L2Network & { isOrbit: true }
+  customL1Network: L2Network
+  customL2Network: L2Network & { isOrbit: true }
 }> => {
   const { l2Network, l2Provider } = await setupL1NetworkForOrbit()
   const l3Provider = new JsonRpcProvider(process.env['ORBIT_URL'])
@@ -234,8 +231,8 @@ const setupOrbitNetworks = async (): Promise<{
   )) as L2Network & { isOrbit: true }
 
   return {
-    l1Network: l2Network,
-    l2Network: l3Network,
+    customL1Network: l2Network,
+    customL2Network: l3Network,
   }
 }
 
@@ -305,18 +302,18 @@ export const setupNetworks = async (
   l1Url: string,
   l2Url: string
 ) => {
-  const { l1Network, l2Network: coreL2Network } = isTestingOrbitChains
+  const customNetworks = isTestingOrbitChains
     ? await setupOrbitNetworks()
     : await getCustomNetworks(l1Url, l2Url)
 
   const { l1: l1Contracts, l2: l2Contracts } = await deployErc20AndInit(
     l1Deployer,
     l2Deployer,
-    coreL2Network.ethBridge.inbox
+    customNetworks.customL2Network.ethBridge.inbox
   )
 
   const l2Network: L2Network | (L2Network & { isOrbit: true }) = {
-    ...coreL2Network,
+    ...customNetworks.customL2Network,
     tokenBridge: {
       l1CustomGateway: l1Contracts.customGateway.address,
       l1ERC20Gateway: l1Contracts.standardGateway.address,
@@ -336,19 +333,7 @@ export const setupNetworks = async (
     },
   }
 
-  if (isL1Chain(l1Network) && isL2Chain(l2Network)) {
-    addCustomNetwork({
-      customL1Network: l1Network,
-      customL2Network: l2Network,
-    })
-  } else if (isL2Chain(l1Network) && isOrbitChain(l2Network)) {
-    addCustomNetwork({
-      customL1Network: l1Network,
-      customL2Network: l2Network,
-    })
-  } else {
-    throw new Error('Invalid network pair')
-  }
+  addCustomNetwork(customNetworks)
 
   // also register the weth gateway
   // we add it here rather than in deployBridge because
@@ -366,8 +351,8 @@ export const setupNetworks = async (
   ).waitForL2(l2Deployer)
 
   return {
-    l1Network,
-    l2Network,
+    l1Network: customNetworks.customL1Network,
+    l2Network: customNetworks.customL2Network,
   }
 }
 
