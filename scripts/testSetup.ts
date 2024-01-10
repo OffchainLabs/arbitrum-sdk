@@ -169,6 +169,7 @@ export const getCustomNetworks = async (
       l2WethGateway: '',
     },
     blockTime: 0.25,
+    partnerChainIDs: [],
   }
 
   return {
@@ -291,6 +292,7 @@ async function getCustomOrbitNetwork(
     },
     isOrbit,
     blockTime: 0.25,
+    partnerChainIDs: [],
   }
 
   return l2Network
@@ -352,7 +354,7 @@ export const setupNetworks = async (
 
   return {
     l1Network: customNetworks.customL1Network,
-    l2Network: customNetworks.customL2Network,
+    l2Network,
   }
 }
 
