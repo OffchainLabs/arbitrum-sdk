@@ -18,7 +18,10 @@
 
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
-import { SEVEN_DAYS_IN_SECONDS } from './constants'
+import {
+  SEVEN_DAYS_IN_SECONDS,
+  ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
+} from './constants'
 import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__factory'
 
 export interface Network {
@@ -27,7 +30,13 @@ export interface Network {
   explorerUrl: string
   gif?: string
   isCustom: boolean
-  blockTime: number //seconds
+  /**
+   * Minimum possible block time for the chain (in seconds).
+   */
+  blockTime: number
+  /**
+   * Chain ids of children chains.
+   */
   partnerChainIDs: number[]
 }
 
@@ -38,6 +47,9 @@ export interface L1Network extends Network {
 export interface L2Network extends Network {
   tokenBridge: TokenBridge
   ethBridge: EthBridge
+  /**
+   * Chain id of the parent chain.
+   */
   partnerChainID: number
   isArbitrum: true
   isOrbit?: boolean
@@ -191,7 +203,7 @@ export const networks: Record<string, Chain> = {
      * (Total timeout: 30 minutes)
      */
     depositTimeout: 1800000,
-    blockTime: 0.25,
+    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
     partnerChainIDs: [],
   },
   421613: {
@@ -233,7 +245,7 @@ export const networks: Record<string, Chain> = {
      * Wait 10 epochs there on goerli = 320 blocks. Each block is 12 seconds.
      */
     depositTimeout: 3960000,
-    blockTime: 0.25,
+    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
     partnerChainIDs: [],
   },
   42170: {
@@ -276,7 +288,7 @@ export const networks: Record<string, Chain> = {
      * (Total timeout: 30 minutes)
      */
     depositTimeout: 1800000,
-    blockTime: 0.25,
+    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
     partnerChainIDs: [],
   },
   421614: {
@@ -315,7 +327,7 @@ export const networks: Record<string, Chain> = {
     nitroGenesisBlock: 0,
     nitroGenesisL1Block: 0,
     depositTimeout: 1800000,
-    blockTime: 0.25,
+    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   23011913: {
     chainID: 23011913,
@@ -352,7 +364,7 @@ export const networks: Record<string, Chain> = {
     nitroGenesisBlock: 0,
     nitroGenesisL1Block: 0,
     depositTimeout: 900000,
-    blockTime: 0.25,
+    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
     partnerChainIDs: [],
   },
 }
@@ -642,7 +654,7 @@ export const addDefaultLocalNetwork = (): {
       l2Weth: '0x408Da76E87511429485C32E4Ad647DD14823Fdc4',
       l2WethGateway: '0x4A2bA922052bA54e29c5417bC979Daaf7D5Fe4f4',
     },
-    blockTime: 0.25,
+    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
     partnerChainIDs: [],
   }
 
