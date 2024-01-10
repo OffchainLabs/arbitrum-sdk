@@ -28,15 +28,14 @@ export interface Network {
   gif?: string
   isCustom: boolean
   blockTime: number //seconds
+  partnerChainIDs: number[]
 }
 
 export interface L1Network extends Network {
-  partnerChainIDs: number[]
   isArbitrum: false
 }
 
 export interface L2Network extends Network {
-  partnerChainIDs?: number[]
   tokenBridge: TokenBridge
   ethBridge: EthBridge
   partnerChainID: number
@@ -193,6 +192,7 @@ export const networks: Record<string, Chain> = {
      */
     depositTimeout: 1800000,
     blockTime: 0.25,
+    partnerChainIDs: [],
   },
   421613: {
     chainID: 421613,
@@ -234,6 +234,7 @@ export const networks: Record<string, Chain> = {
      */
     depositTimeout: 3960000,
     blockTime: 0.25,
+    partnerChainIDs: [],
   },
   42170: {
     chainID: 42170,
@@ -276,6 +277,7 @@ export const networks: Record<string, Chain> = {
      */
     depositTimeout: 1800000,
     blockTime: 0.25,
+    partnerChainIDs: [],
   },
   421614: {
     chainID: 421614,
@@ -351,6 +353,7 @@ export const networks: Record<string, Chain> = {
     nitroGenesisL1Block: 0,
     depositTimeout: 900000,
     blockTime: 0.25,
+    partnerChainIDs: [],
   },
 }
 
@@ -469,7 +472,7 @@ export const getNetwork = async (
 
 export const getL1Network = (
   signerOrProviderOrChainID: SignerOrProvider | number
-): Promise<L1Network> => {
+): Promise<L1Network | L2Network> => {
   return getNetwork(signerOrProviderOrChainID, 1) as Promise<L1Network>
 }
 export const getL2Network = (
@@ -640,6 +643,7 @@ export const addDefaultLocalNetwork = (): {
       l2WethGateway: '0x4A2bA922052bA54e29c5417bC979Daaf7D5Fe4f4',
     },
     blockTime: 0.25,
+    partnerChainIDs: [],
   }
 
   addCustomNetwork({

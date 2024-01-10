@@ -123,7 +123,6 @@ describe('Networks', () => {
           chainID: mockL1ChainId,
           isArbitrum: false,
           isCustom: true,
-          isOrbit: false,
         },
         customL2Network: {
           ...arbOneNetwork,
