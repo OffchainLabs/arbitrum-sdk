@@ -332,7 +332,12 @@ export const setupNetworks = async (
     },
   }
 
-  addCustomNetwork(customNetworks)
+  // in case of L3, we only need to add the L3, as L1 and L2 were registered inside "setupL1NetworkForOrbit"
+  if (customNetworks.customL2Network.chainID === 333_333) {
+    addCustomNetwork({ customL2Network: customNetworks.customL2Network })
+  } else {
+    addCustomNetwork(customNetworks)
+  }
 
   // also register the weth gateway
   // we add it here rather than in deployBridge because
