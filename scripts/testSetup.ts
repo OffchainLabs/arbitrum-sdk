@@ -333,10 +333,11 @@ export const setupNetworks = async (
   }
 
   // in case of L3, we only need to add the L3, as L1 and L2 were registered inside "setupL1NetworkForOrbit"
+  // register the network with the newly deployed token bridge contracts
   if (isTestingOrbitChains) {
-    addCustomNetwork({ customL2Network: customNetworks.customL2Network })
+    addCustomNetwork({ customL2Network: l2Network })
   } else {
-    addCustomNetwork(customNetworks)
+    addCustomNetwork({ ...customNetworks, customL2Network: l2Network })
   }
 
   // also register the weth gateway
