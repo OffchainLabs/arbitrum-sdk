@@ -333,7 +333,7 @@ export const setupNetworks = async (
   }
 
   // in case of L3, we only need to add the L3, as L1 and L2 were registered inside "setupL1NetworkForOrbit"
-  if (customNetworks.customL2Network.chainID === 333_333) {
+  if (isTestingOrbitChains) {
     addCustomNetwork({ customL2Network: customNetworks.customL2Network })
   } else {
     addCustomNetwork(customNetworks)
