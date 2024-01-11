@@ -33,7 +33,6 @@ describe('Networks', () => {
           chainID: mockL2ChainId,
           isArbitrum: true,
           isCustom: true,
-          isOrbit: false,
         },
       } as const
 
@@ -51,14 +50,12 @@ describe('Networks', () => {
           chainID: mockL1ChainId,
           isArbitrum: false,
           isCustom: true,
-          isOrbit: false,
         },
         customL2Network: {
           ...arbOneNetwork,
           chainID: mockL2ChainId,
           isArbitrum: true,
           isCustom: true,
-          isOrbit: false,
         },
       } as const
 
@@ -78,7 +75,6 @@ describe('Networks', () => {
           partnerChainID: arbOneId,
           isArbitrum: true,
           isCustom: true,
-          isOrbit: true,
         },
       } as const
 
@@ -97,7 +93,6 @@ describe('Networks', () => {
           chainID: mockL2ChainId,
           isArbitrum: true,
           isCustom: true,
-          isOrbit: false,
         },
         customL2Network: {
           ...arbOneNetwork,
@@ -105,7 +100,6 @@ describe('Networks', () => {
           partnerChainID: mockL2ChainId,
           isArbitrum: true,
           isCustom: true,
-          isOrbit: true,
         },
       } as const
 
@@ -131,7 +125,6 @@ describe('Networks', () => {
           chainID: mockL2ChainId,
           isArbitrum: true,
           isCustom: true,
-          isOrbit: false,
         },
       } as const
 
@@ -144,7 +137,6 @@ describe('Networks', () => {
           partnerChainID: mockL2ChainId,
           isArbitrum: true,
           isCustom: true,
-          isOrbit: true,
         },
       } as const
 
@@ -165,7 +157,6 @@ describe('Networks', () => {
           partnerChainID: mainnetId,
           isArbitrum: true,
           isCustom: true,
-          isOrbit: true,
         },
       } as const
 
@@ -190,7 +181,6 @@ describe('Networks', () => {
           chainID: mockL1ChainId,
           isArbitrum: false,
           isCustom: true,
-          isOrbit: false,
         },
         customL2Network: {
           ...arbOneNetwork,
@@ -198,7 +188,6 @@ describe('Networks', () => {
           partnerChainID: mockL1ChainId,
           isArbitrum: true,
           isCustom: true,
-          isOrbit: true,
         },
       } as const
 
@@ -246,7 +235,6 @@ describe('Networks', () => {
           partnerChainID: arbOneId,
           isArbitrum: true,
           isCustom: true,
-          isOrbit: true,
         },
       } as const
 
@@ -304,7 +292,6 @@ describe('Networks', () => {
           partnerChainID: arbOneId,
           isArbitrum: true,
           isCustom: true,
-          isOrbit: true,
         },
       } as const
 
@@ -365,7 +352,6 @@ describe('Networks', () => {
           partnerChainID: arbOneId,
           isArbitrum: true,
           isCustom: true,
-          isOrbit: true,
         },
       } as const
 

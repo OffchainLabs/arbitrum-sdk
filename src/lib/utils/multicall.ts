@@ -24,7 +24,7 @@ import { Multicall2 } from '../abi/Multicall2'
 import { Multicall2__factory } from '../abi/factories/Multicall2__factory'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
-  isL1Network,
+  isL1Chain,
   L1Network,
   l1Networks,
   L2Network,
@@ -142,7 +142,7 @@ export class MultiCaller {
     }
 
     let multiCallAddr: string
-    if (isL1Network(network)) {
+    if (isL1Chain(network)) {
       const firstL2 = l2Networks[network.partnerChainIDs[0]]
       if (!firstL2)
         throw new ArbSdkError(

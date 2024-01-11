@@ -217,19 +217,18 @@ const setupL1NetworkForOrbit = async (): Promise<{
 
 const setupOrbitNetworks = async (): Promise<{
   customL1Network: L2Network
-  customL2Network: L2Network & { isOrbit: true }
+  customL2Network: L2Network
 }> => {
   const { l2Network, l2Provider } = await setupL1NetworkForOrbit()
   const l3Provider = new JsonRpcProvider(process.env['ORBIT_URL'])
 
   const l3DeploymentData = getL3DeploymentData()
   const parsedL3DeploymentData = JSON.parse(l3DeploymentData) as DeploymentData
-  const l3Network = (await getCustomOrbitNetwork(
+  const l3Network = await getCustomOrbitNetwork(
     parsedL3DeploymentData,
     l2Provider,
-    l3Provider,
-    true
-  )) as L2Network & { isOrbit: true }
+    l3Provider
+  )
 
   return {
     customL1Network: l2Network,
@@ -240,8 +239,7 @@ const setupOrbitNetworks = async (): Promise<{
 async function getCustomOrbitNetwork(
   deploymentData: DeploymentData,
   l1Provider: providers.Provider,
-  l2Provider: providers.Provider,
-  isOrbit = false
+  l2Provider: providers.Provider
 ) {
   const rollup = RollupAdminLogic__factory.connect(
     deploymentData.rollup,
@@ -290,7 +288,6 @@ async function getCustomOrbitNetwork(
       l2Weth: '',
       l2WethGateway: '',
     },
-    isOrbit,
     blockTime: 0.25,
     partnerChainIDs: [],
   }
@@ -314,7 +311,7 @@ export const setupNetworks = async (
     customNetworks.customL2Network.ethBridge.inbox
   )
 
-  const l2Network: L2Network | (L2Network & { isOrbit: true }) = {
+  const l2Network: L2Network = {
     ...customNetworks.customL2Network,
     tokenBridge: {
       l1CustomGateway: l1Contracts.customGateway.address,
@@ -335,7 +332,13 @@ export const setupNetworks = async (
     },
   }
 
-  addCustomNetwork(customNetworks)
+  // in case of L3, we only need to add the L3, as L1 and L2 were registered inside "setupL1NetworkForOrbit"
+  // register the network with the newly deployed token bridge contracts
+  if (isTestingOrbitChains) {
+    addCustomNetwork({ customL2Network: l2Network })
+  } else {
+    addCustomNetwork({ ...customNetworks, customL2Network: l2Network })
+  }
 
   // also register the weth gateway
   // we add it here rather than in deployBridge because
@@ -367,7 +370,7 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
 
 export const testSetup = async (): Promise<{
   l1Network: L1Network | L2Network
-  l2Network: L2Network | (L2Network & { isOrbit: true })
+  l2Network: L2Network
   l1Signer: Signer
   l2Signer: Signer
   erc20Bridger: Erc20Bridger
@@ -387,8 +390,7 @@ export const testSetup = async (): Promise<{
   const l1Signer = seed.connect(ethProvider)
   const l2Signer = seed.connect(arbProvider)
 
-  let setL1Network: L1Network | L2Network,
-    setL2Network: L2Network | (L2Network & { isOrbit: true })
+  let setL1Network: L1Network | L2Network, setL2Network: L2Network
   try {
     const l1Network = await getL1Network(l1Deployer)
     const l2Network = await getL2Network(l2Deployer)
@@ -406,14 +408,17 @@ export const testSetup = async (): Promise<{
         l1Network: L1Network
         l2Network: L2Network
       }
+
       if (isTestingOrbitChains) {
         await setupL1NetworkForOrbit()
+        addCustomNetwork({ customL2Network: l2Network })
+      } else {
+        addCustomNetwork({
+          customL1Network: l1Network,
+          customL2Network: l2Network,
+        })
       }
 
-      addCustomNetwork({
-        customL1Network: l1Network,
-        customL2Network: l2Network,
-      })
       setL1Network = l1Network
       setL2Network = l2Network
     } else {
