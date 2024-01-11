@@ -137,6 +137,9 @@ const mainnetETHBridge: EthBridge = {
   },
 }
 
+/**
+ * Storage for all networks, either L1, L2 or L3.
+ */
 export const networks: Networks = {
   1: {
     chainID: 1,
@@ -376,7 +379,7 @@ const isArbitrumChain = (chain: L1Network | L2Network): chain is L2Network => {
 /**
  * Determines if a chain is specifically an L1 chain (not L2 or L3).
  */
-const isL1Chain = (chain: L1Network | L2Network): chain is L1Network => {
+export const isL1Chain = (chain: L1Network | L2Network): chain is L1Network => {
   return !chain.isArbitrum
 }
 
@@ -520,6 +523,7 @@ export const getEthBridgeInformation = async (
 }
 
 const addNetwork = (network: L1Network | L2Network) => {
+  // store the network with the rest of the networks
   networks[network.chainID] = network
 
   // if it's a parent chain (L1 or L2), assign it as parent to all the children
@@ -663,12 +667,6 @@ export const addDefaultLocalNetwork = (): {
     l1Network: defaultLocalL1Network,
     l2Network: defaultLocalL2Network,
   }
-}
-
-export const isL1Network = (
-  network: L1Network | L2Network
-): network is L1Network => {
-  return network.partnerChainIDs.length > 0
 }
 
 const createNetworkStateHandler = () => {
