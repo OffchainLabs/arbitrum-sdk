@@ -375,27 +375,29 @@ describe('Networks', () => {
     })
   })
 
-  // todo: this could be a snapshot test
-  it('returns correct L1 networks', () => {
-    const l1NetworksEntries = Object.entries(l1Networks)
-    const l1NetworksKeys = l1NetworksEntries.map(([key]) => key)
+  describe('returns correct networks', () => {
+    // todo: this could be a snapshot test
+    it('returns correct L1 networks', () => {
+      const l1NetworksEntries = Object.entries(l1Networks)
+      const l1NetworksKeys = l1NetworksEntries.map(([key]) => key)
 
-    const expected = [1, 1338, 5, 11155111].map(id => id.toString())
+      const expected = [1, 1338, 5, 11155111].map(id => id.toString())
 
-    expect(l1NetworksKeys).to.have.length(expected.length)
-    expect(l1NetworksKeys).to.have.members(expected)
-  })
+      expect(l1NetworksKeys).to.have.length(expected.length)
+      expect(l1NetworksKeys).to.have.members(expected)
+    })
 
-  // todo: this could be a snapshot test
-  it('returns correct L2 networks', () => {
-    const l2NetworksEntries = Object.entries(l2Networks)
-    const l2NetworksKeys = l2NetworksEntries.map(([key]) => key)
+    // todo: this could be a snapshot test
+    it('returns correct L2 networks', () => {
+      const l2NetworksEntries = Object.entries(l2Networks)
+      const l2NetworksKeys = l2NetworksEntries.map(([key]) => key)
 
-    const expected = [42161, 421613, 42170, 421614, 23011913]
-      //
-      .map(id => id.toString())
+      const expected = [42161, 421613, 42170, 421614, 23011913]
+        //
+        .map(id => id.toString())
 
-    expect(l2NetworksKeys).to.have.length(expected.length)
-    expect(l2NetworksKeys).to.have.members(expected)
+      expect(l2NetworksKeys).to.have.length(expected.length)
+      expect(l2NetworksKeys).to.have.members(expected)
+    })
   })
 })
