@@ -5,29 +5,19 @@
       "type": "node",
       "request": "launch",
       "name": "Run Unit Tests",
-      "runtimeExecutable": "npm",
-      "runtimeVersion": "16.16.0",
-      "runtimeArgs": [
-        "run-script",
-        "test:unit"
-      ],
-      "skipFiles": [
-        "<node_internals>/**"
-      ]
+      "runtimeExecutable": "yarn",
+      "runtimeVersion": "18",
+      "runtimeArgs": ["test:unit"],
+      "skipFiles": ["<node_internals>/**"]
     },
     {
       "type": "node",
       "request": "launch",
       "name": "Run Integration Tests",
-      "runtimeExecutable": "npm",
-      "runtimeVersion": "16.16.0",
-      "runtimeArgs": [
-        "run-script",
-        "test:integration"
-      ],
-      "skipFiles": [
-        "<node_internals>/**"
-      ]
+      "runtimeExecutable": "yarn",
+      "runtimeVersion": "18",
+      "runtimeArgs": ["test:integration"],
+      "skipFiles": ["<node_internals>/**"]
     }
   ]
 }
