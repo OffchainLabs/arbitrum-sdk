@@ -108,8 +108,6 @@ export interface Networks {
   [id: string]: L1Network | L2Network
 }
 
-type Chain = L1Network | L2Network
-
 const mainnetTokenBridge: TokenBridge = {
   l1GatewayRouter: '0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef',
   l2GatewayRouter: '0x5288c571Fd7aD117beA99bF60FE0846C4E84F933',
@@ -139,7 +137,7 @@ const mainnetETHBridge: EthBridge = {
   },
 }
 
-export const networks: Record<string, Chain> = {
+export const networks: Networks = {
   1: {
     chainID: 1,
     name: 'Mainnet',
@@ -364,29 +362,22 @@ export const networks: Record<string, Chain> = {
 /**
  * Determines if a chain is a parent of *any* other chain. Could be an L1 or an L2 chain.
  */
-const isParentChain = (chain: Chain): boolean => {
+const isParentChain = (chain: L1Network | L2Network): boolean => {
   return chain.partnerChainIDs.length > 0
 }
 
 /**
  * Determines if a chain is an Arbitrum chain. Could be an L2 or an L3 chain.
  */
-const isArbitrumChain = (chain: Chain): chain is L2Network => {
+const isArbitrumChain = (chain: L1Network | L2Network): chain is L2Network => {
   return chain.isArbitrum
 }
 
 /**
  * Determines if a chain is specifically an L1 chain (not L2 or L3).
  */
-export const isL1Chain = (chain: Chain): chain is L1Network => {
+const isL1Chain = (chain: L1Network | L2Network): chain is L1Network => {
   return !chain.isArbitrum
-}
-
-/**
- * Determines if a chain is specifically an L2 chain (not L1 or L3).
- */
-export const isL2Chain = (chain: Chain): chain is L2Network => {
-  return isArbitrumChain(chain) && isL1Chain(networks[chain.partnerChainID])
 }
 
 /**
@@ -395,7 +386,7 @@ export const isL2Chain = (chain: Chain): chain is L2Network => {
  * @return An object with only the filtered chains.
  */
 const getChainsByType = <T extends typeof networks>(
-  filterFn: (chain: Chain) => boolean
+  filterFn: (chain: L1Network | L2Network) => boolean
 ): T => {
   return Object.entries(networks).reduce<typeof networks>(
     (accumulator, [chainId, chainData]) => {
@@ -415,12 +406,13 @@ const getParentChains = () => getChainsByType<Networks>(isParentChain)
 /**
  * Returns the parent chain for the given chain.
  */
-export const getParentForNetwork = (chain: Chain) => {
+export const getParentForNetwork = (chain: L1Network | L2Network) => {
   if (!isArbitrumChain(chain)) {
     throw new ArbSdkError(`Chain ${chain.chainID} is not an Arbitrum chain.`)
   }
 
-  const parentChain: Chain | undefined = networks[chain.partnerChainID]
+  const parentChain: L1Network | L2Network | undefined =
+    networks[chain.partnerChainID]
 
   if (!parentChain || !isParentChain(parentChain)) {
     throw new ArbSdkError(
@@ -434,7 +426,7 @@ export const getParentForNetwork = (chain: Chain) => {
 /**
  * Returns a list of children chains for the given chain.
  */
-const getChildrenForNetwork = (chain: Chain): L2Network[] => {
+const getChildrenForNetwork = (chain: L1Network | L2Network): L2Network[] => {
   const arbitrumChains = getArbitrumChains()
 
   return Object.values(arbitrumChains).filter(
@@ -527,25 +519,26 @@ export const getEthBridgeInformation = async (
   }
 }
 
-const addNetwork = (network: Chain) => {
+const addNetwork = (network: L1Network | L2Network) => {
   networks[network.chainID] = network
 
+  // if it's a parent chain (L1 or L2), assign it as parent to all the children
   if (isParentChain(network)) {
     const children = getChildrenForNetwork(network)
 
     children.forEach(child => {
-      if (child) {
-        child.partnerChainID = network.chainID
-      }
+      child.partnerChainID = network.chainID
     })
   }
 
+  // if it's an arbitrum chain, add it to the parent's list of children
   if (isArbitrumChain(network)) {
-    const parent: Chain | undefined = networks[network.partnerChainID]
+    const parent: L1Network | L2Network | undefined =
+      networks[network.partnerChainID]
 
     if (!parent) {
       throw new ArbSdkError(
-        `Network ${network.chainID}'s partner network, ${network.partnerChainID}, not recognized`
+        `Network ${network.chainID}'s parent network ${network.partnerChainID} is not recognized`
       )
     }
 
