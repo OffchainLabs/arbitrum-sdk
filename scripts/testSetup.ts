@@ -407,14 +407,17 @@ export const testSetup = async (): Promise<{
         l1Network: L1Network
         l2Network: L2Network
       }
+
       if (isTestingOrbitChains) {
         await setupL1NetworkForOrbit()
+        addCustomNetwork({ customL2Network: l2Network })
+      } else {
+        addCustomNetwork({
+          customL1Network: l1Network,
+          customL2Network: l2Network,
+        })
       }
 
-      addCustomNetwork({
-        customL1Network: l1Network,
-        customL2Network: l2Network,
-      })
       setL1Network = l1Network
       setL2Network = l2Network
     } else {
