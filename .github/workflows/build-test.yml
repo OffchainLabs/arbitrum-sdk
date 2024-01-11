@@ -11,13 +11,17 @@ jobs:
   install:
     name: 'Install'
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
     steps:
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 14
-
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
@@ -25,6 +29,9 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
     needs: install
     permissions:
       checks: write # https://github.com/mikepenz/action-junit-report/issues/23#issuecomment-1412597753
@@ -33,6 +40,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
 
       - name: Restore node_modules
         uses: OffchainLabs/actions/node-modules/restore@main
@@ -66,10 +78,18 @@ jobs:
   audit:
     name: Audit
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
     needs: install
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
 
       - name: Restore node_modules
         uses: OffchainLabs/actions/node-modules/restore@main
@@ -79,10 +99,18 @@ jobs:
   test-unit:
     name: Test (Unit)
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
     needs: install
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
 
       - name: Restore node_modules
         uses: OffchainLabs/actions/node-modules/restore@main
@@ -96,16 +124,23 @@ jobs:
         run: CI=true yarn test:unit
 
   test-integration:
-    name: Test (Integration)
+    name: Test (Integration) - ${{ matrix.orbit-test == '1' && 'Orbit' || 'No Orbit' }} - Node ${{ matrix.node-version }}
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [16, 18, 20]
+        orbit-test: ['1', '0']
     needs: install
+    env:
+      ORBIT_TEST: ${{ matrix.orbit-test }}
     steps:
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 14
-
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
 
       - name: Restore node_modules
         uses: OffchainLabs/actions/node-modules/restore@main
@@ -113,7 +148,9 @@ jobs:
       - name: Set up the local node
         uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
+          nitro-testnode-ref: use-tokenbridge-creator
           no-token-bridge: true
+          l3-node: ${{ matrix.orbit-test == '1' }}
 
       - name: Copy .env
         run: cp ./.env-sample ./.env

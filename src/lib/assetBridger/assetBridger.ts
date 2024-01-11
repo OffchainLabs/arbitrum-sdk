@@ -16,17 +16,13 @@
 /* eslint-env node */
 'use strict'
 
-import { ArbSdkError } from '../dataEntities/errors'
 import { L1ContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'
 
 import {
-  l1Networks,
   L1Network,
   L2Network,
-  Chain,
-  ParentChain,
-  parentChains,
+  getParentForNetwork,
 } from '../dataEntities/networks'
 import {
   SignerOrProvider,
@@ -34,38 +30,28 @@ import {
 } from '../dataEntities/signerOrProvider'
 
 /**
- * Base for bridging assets from l1 to l2 and back
+ * Base for bridging assets from a parent chain to a child chain and back.
  */
 export abstract class AssetBridger<DepositParams, WithdrawParams> {
-  public readonly l1Network: L1Network
-  public readonly parentChain: ParentChain
-  private readonly l1NetworkOrParentChain: L1Network | ParentChain
+  /**
+   * The parent chain. Could be an L1 or an L2.
+   */
+  public readonly l1Network: L1Network | L2Network
 
-  public constructor(public readonly l2Network: L2Network | Chain) {
-    this.l1Network = l1Networks[l2Network.partnerChainID]
-    this.parentChain = parentChains[l2Network.partnerChainID]
-    this.l1NetworkOrParentChain = this.l1Network || this.parentChain
-
-    if (!this.l1NetworkOrParentChain) {
-      throw new ArbSdkError(
-        `Unknown parent network chain id: ${l2Network.partnerChainID}`
-      )
-    }
+  public constructor(public readonly l2Network: L2Network) {
+    this.l1Network = getParentForNetwork(l2Network)
   }
 
   /**
-   * Check the signer/provider matches the L1 network or the Parent Chain, throws if not
+   * Check the signer/provider matches the parent chain, throws if not.
    * @param sop
    */
   protected async checkL1Network(sop: SignerOrProvider): Promise<void> {
-    await SignerProviderUtils.checkNetworkMatches(
-      sop,
-      this.l1NetworkOrParentChain.chainID
-    )
+    await SignerProviderUtils.checkNetworkMatches(sop, this.l1Network.chainID)
   }
 
   /**
-   * Check the signer/provider matches the l2Network, throws if not
+   * Check the signer/provider matches the child chain, throws if not.
    * @param sop
    */
   protected async checkL2Network(sop: SignerOrProvider): Promise<void> {
@@ -73,13 +59,13 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   }
 
   /**
-   * Transfer assets from L1 to L2
+   * Transfer assets from parent chain to child chain.
    * @param params
    */
   public abstract deposit(params: DepositParams): Promise<L1ContractTransaction>
 
   /**
-   * Transfer assets from L2 to L1
+   * Transfer assets from child chain to parent chain.
    * @param params
    */
   public abstract withdraw(

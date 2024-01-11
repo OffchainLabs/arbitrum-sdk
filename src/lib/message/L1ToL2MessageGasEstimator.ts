@@ -1,6 +1,6 @@
 import { Provider } from '@ethersproject/abstract-provider'
-import { BigNumber } from '@ethersproject/bignumber'
-import { constants, utils } from 'ethers'
+import { BigNumber, BigNumberish } from '@ethersproject/bignumber'
+import { BytesLike, constants, utils } from 'ethers'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
@@ -286,7 +286,13 @@ export class L1ToL2MessageGasEstimator {
     ) => L1ToL2TransactionRequest['txRequest'],
     l1Provider: Provider,
     gasOverrides?: GasOverrides
-  ) {
+  ): Promise<{
+    estimates: L1ToL2MessageGasParams
+    retryable: RetryableData
+    data: BytesLike
+    to: string
+    value: BigNumberish
+  }> {
     // get function data that should trigger a retryable data error
     const {
       data: nullData,
