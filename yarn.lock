@@ -15,17 +15,6 @@
     "@jridgewell/gen-mapping" "^0.3.0"
     "@jridgewell/trace-mapping" "^0.3.9"
 
-"@arbitrum/nitro-contracts@1.1.0-alpha.7":
-  version "1.1.0-alpha.7"
-  resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.1.0-alpha.7.tgz#5d215540bd2c820b79c9e3afd701238bb2adc9dd"
-  integrity sha512-H/wnkxg6ZVuc8wyiPSsL9T3vKE5iDhlB3TaBlAhtBFZPyyuBJBIlmDdk3PtgrzNqHrCrQloTT1kT5b9DXC21Aw==
-  dependencies:
-    "@openzeppelin/contracts" "4.5.0"
-    "@openzeppelin/contracts-upgradeable" "4.5.2"
-    patch-package "^6.4.7"
-  optionalDependencies:
-    sol2uml "2.2.0"
-
 "@arbitrum/nitro-contracts@^1.0.0-beta.8":
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.0.2.tgz#c73dce72b8f969a5909d5aaef6da80681c667475"
@@ -37,12 +26,25 @@
   optionalDependencies:
     sol2uml "2.2.0"
 
-"@arbitrum/token-bridge-contracts@1.1.0-alpha.1":
-  version "1.1.0-alpha.1"
-  resolved "https://registry.yarnpkg.com/@arbitrum/token-bridge-contracts/-/token-bridge-contracts-1.1.0-alpha.1.tgz#35ef4101445f510787352c4aea42939376ead951"
-  integrity sha512-NZiIrpozPc0ZhkEG2+RNqWdNH56qAaZau5WGhoIkazLhlRL6R/iLx2HGtcYzq0RrorD0KagDn7voX4rOumL5fQ==
+"@arbitrum/nitro-contracts@^1.1.0":
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.1.0.tgz#37ca26e026306ca9cc9fbeb183841fd8666ac7bb"
+  integrity sha512-/tLlU++IFdaD9Bn+RYzQ6+6k+0iDPuqi/cNf9kv5N1I9NAApNx1qfsIHoHMEQAvLuY+gj+raH7TAESBbzTAuuw==
+  dependencies:
+    "@offchainlabs/upgrade-executor" "1.1.0-beta.0"
+    "@openzeppelin/contracts" "4.5.0"
+    "@openzeppelin/contracts-upgradeable" "4.5.2"
+    patch-package "^6.4.7"
+  optionalDependencies:
+    sol2uml "2.2.0"
+
+"@arbitrum/token-bridge-contracts@^1.2.0":
+  version "1.2.0"
+  resolved "https://registry.yarnpkg.com/@arbitrum/token-bridge-contracts/-/token-bridge-contracts-1.2.0.tgz#b1dc02e123393848d0d8e5c167028bafa0ac8229"
+  integrity sha512-GdPn6nIlhkuacgvXZkmYLmNdmOcxVoHEfkEHtNlaBnMqS+HPXEA8keqZDesBHkQ96b9PCwwCegNEx/ZjM+Rq+g==
   dependencies:
     "@arbitrum/nitro-contracts" "^1.0.0-beta.8"
+    "@offchainlabs/upgrade-executor" "1.1.0-beta.0"
     "@openzeppelin/contracts" "4.8.3"
     "@openzeppelin/contracts-upgradeable" "4.8.3"
   optionalDependencies:
@@ -1309,10 +1311,23 @@
   resolved "https://registry.yarnpkg.com/@nomiclabs/hardhat-ethers/-/hardhat-ethers-2.0.5.tgz#131b0da1b71680d5a01569f916ae878229d326d3"
   integrity sha512-A2gZAGB6kUvLx+kzM92HKuUF33F1FSe90L0TmkXkT2Hh0OKRpvWZURUSU2nghD2yC4DzfEZ3DftfeHGvZ2JTUw==
 
+"@offchainlabs/upgrade-executor@1.1.0-beta.0":
+  version "1.1.0-beta.0"
+  resolved "https://registry.yarnpkg.com/@offchainlabs/upgrade-executor/-/upgrade-executor-1.1.0-beta.0.tgz#c4b1375176546a18aaef01a43956abfb58250e0a"
+  integrity sha512-mpn6PHjH/KDDjNX0pXHEKdyv8m6DVGQiI2nGzQn0JbM1nOSHJpWx6fvfjtH7YxHJ6zBZTcsKkqGkFKDtCfoSLw==
+  dependencies:
+    "@openzeppelin/contracts" "4.7.3"
+    "@openzeppelin/contracts-upgradeable" "4.7.3"
+
 "@openzeppelin/contracts-upgradeable@4.5.2":
   version "4.5.2"
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.5.2.tgz#90d9e47bacfd8693bfad0ac8a394645575528d05"
   integrity sha512-xgWZYaPlrEOQo3cBj97Ufiuv79SPd8Brh4GcFYhPgb6WvAq4ppz8dWKL6h+jLAK01rUqMRp/TS9AdXgAeNvCLA==
+
+"@openzeppelin/contracts-upgradeable@4.7.3":
+  version "4.7.3"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.7.3.tgz#f1d606e2827d409053f3e908ba4eb8adb1dd6995"
+  integrity sha512-+wuegAMaLcZnLCJIvrVUDzA9z/Wp93f0Dla/4jJvIhijRrPabjQbZe6fWiECLaJyfn5ci9fqf9vTw3xpQOad2A==
 
 "@openzeppelin/contracts-upgradeable@4.8.3":
   version "4.8.3"
@@ -1323,6 +1338,11 @@
   version "4.5.0"
   resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.5.0.tgz#3fd75d57de172b3743cdfc1206883f56430409cc"
   integrity sha512-fdkzKPYMjrRiPK6K4y64e6GzULR7R7RwxSigHS8DDp7aWDeoReqsQI+cxHV1UuhAqX69L1lAaWDxenfP+xiqzA==
+
+"@openzeppelin/contracts@4.7.3":
+  version "4.7.3"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.7.3.tgz#939534757a81f8d69cc854c7692805684ff3111e"
+  integrity sha512-dGRS0agJzu8ybo44pCIf3xBaPQN/65AIXNgK8+4gzKd5kbvlqyxryUYVLJv7fK98Seyd2hDZzVEHSWAh0Bt1Yw==
 
 "@openzeppelin/contracts@4.8.3":
   version "4.8.3"
