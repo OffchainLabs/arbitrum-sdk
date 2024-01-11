@@ -30,9 +30,12 @@ import {
 } from '../dataEntities/signerOrProvider'
 
 /**
- * Base for bridging assets from l1 to l2 and back
+ * Base for bridging assets from a parent chain to a child chain and back.
  */
 export abstract class AssetBridger<DepositParams, WithdrawParams> {
+  /**
+   * The parent chain. Could be an L1 or an L2.
+   */
   public readonly l1Network: L1Network | L2Network
 
   public constructor(public readonly l2Network: L2Network) {
@@ -40,7 +43,7 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   }
 
   /**
-   * Check the signer/provider matches the L1 network or the Parent Chain, throws if not
+   * Check the signer/provider matches the parent chain, throws if not.
    * @param sop
    */
   protected async checkL1Network(sop: SignerOrProvider): Promise<void> {
@@ -48,7 +51,7 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   }
 
   /**
-   * Check the signer/provider matches the l2Network, throws if not
+   * Check the signer/provider matches the child chain, throws if not.
    * @param sop
    */
   protected async checkL2Network(sop: SignerOrProvider): Promise<void> {
@@ -56,13 +59,13 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   }
 
   /**
-   * Transfer assets from L1 to L2
+   * Transfer assets from parent chain to child chain.
    * @param params
    */
   public abstract deposit(params: DepositParams): Promise<L1ContractTransaction>
 
   /**
-   * Transfer assets from L2 to L1
+   * Transfer assets from child chain to parent chain.
    * @param params
    */
   public abstract withdraw(
