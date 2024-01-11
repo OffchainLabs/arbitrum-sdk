@@ -213,7 +213,6 @@ describe('Networks', () => {
       let network
       try {
         network = await getL1Network(arbNovaId)
-        console.log({ network })
       } catch (err) {
         // should fail
         expect(err).to.be.an('error')
