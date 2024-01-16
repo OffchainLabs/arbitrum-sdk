@@ -216,10 +216,10 @@ const setupL1NetworkForOrbit = async (): Promise<{
     l2Provider
   )
 
-  addCustomNetwork({
-    customL1Network: l1Network,
-    customL2Network: l2Network,
-  })
+  // addCustomNetwork({
+  //   customL1Network: l1Network,
+  //   customL2Network: l2Network,
+  // })
 
   return { l2Network, l2Provider }
 }
@@ -324,7 +324,8 @@ export const setupNetworks = async (
   l2Deployer: Signer,
   l1Url: string,
   l2Url: string,
-  shouldSetupOrbit: boolean
+  shouldSetupOrbit: boolean,
+  l1WethOverride?: string
 ) => {
   const customNetworks = shouldSetupOrbit
     ? await setupOrbitNetworks()
@@ -333,7 +334,8 @@ export const setupNetworks = async (
   const { l1: l1Contracts, l2: l2Contracts } = await deployErc20AndInit(
     l1Deployer,
     l2Deployer,
-    customNetworks.customL2Network.ethBridge.inbox
+    customNetworks.customL2Network.ethBridge.inbox,
+    l1WethOverride
   )
 
   const l2Network: L2Network = {
@@ -344,7 +346,7 @@ export const setupNetworks = async (
       l1GatewayRouter: l1Contracts.router.address,
       l1MultiCall: l1Contracts.multicall.address,
       l1ProxyAdmin: l1Contracts.proxyAdmin.address,
-      l1Weth: l1Contracts.weth.address,
+      l1Weth: l1WethOverride || l1Contracts.weth.address,
       l1WethGateway: l1Contracts.wethGateway.address,
 
       l2CustomGateway: l2Contracts.customGateway.address,
@@ -447,18 +449,12 @@ export const testSetup = async (): Promise<{
       setL1Network = l1Network
       setL2Network = l2Network
     } else {
-      // deploy a new network
-      const { l1Network, l2Network } = await setupNetworks(
-        l1Deployer,
-        l2Deployer,
-        config.ethUrl,
-        config.arbUrl,
-        isTestingOrbitChains
-      )
+      let l1WethOverride: string | undefined
+
       if (isTestingOrbitChains) {
         //deploy l1/l2 bridge
-        const l1Url = process.env['ETH_URL']
-        const l2Url = process.env['ARB_URL']
+        const l1Url = process.env['ETH_URL']!
+        const l2Url = process.env['ARB_URL']!
         const ethProvider = new JsonRpcProvider(l1Url)
         const arbProvider = new JsonRpcProvider(l2Url)
         const l1Deployer = getSigner(ethProvider, process.env['ETH_KEY'])
@@ -466,13 +462,23 @@ export const testSetup = async (): Promise<{
         const { l2Network: arbNetwork } = await setupNetworks(
           l1Deployer,
           l2Deployer,
-          config.ethUrl,
-          config.arbUrl,
+          l1Url,
+          l2Url,
           false
         )
-        // @ts-expect-error - l1Network is a L2Network
-        l1Network.tokenBridge.l2Weth = arbNetwork.tokenBridge.l2Weth
+
+        l1WethOverride = arbNetwork.tokenBridge.l2Weth
       }
+
+      // deploy a new network
+      const { l1Network, l2Network } = await setupNetworks(
+        l1Deployer,
+        l2Deployer,
+        config.ethUrl,
+        config.arbUrl,
+        isTestingOrbitChains,
+        l1WethOverride
+      )
 
       setL1Network = l1Network
       setL2Network = l2Network
