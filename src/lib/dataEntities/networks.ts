@@ -443,9 +443,20 @@ const getChildrenForNetwork = (chain: L1Network | L2Network): L2Network[] => {
   )
 }
 
+/**
+ * Index of *only* L1 chains that have been added.
+ */
 export let l1Networks: L1Networks = getL1Chains()
+
+/**
+ * Index of all Arbitrum chains that have been added.
+ */
 export let l2Networks: L2Networks = getArbitrumChains()
 
+/**
+ * Returns the network associated with the given Signer, Provider or chain id.
+ * @note Throws if the chain is not recognized.
+ */
 export const getNetwork = async (
   signerOrProviderOrChainID: SignerOrProvider | number,
   layer: 1 | 2
@@ -478,8 +489,10 @@ export const getNetwork = async (
 }
 
 /**
- * Returns the parent chain associated with the given signer, provider or chain id. Could be an L1 chain or an Arbitrum chain.
- * Throws if the chain is not a parent chain.
+ * Returns the parent chain **(could be an L1 chain or an Arbitrum chain)** associated with the
+ * given Signer, Provider or chain id.
+ *
+ * @note Throws if the chain is not a parent chain.
  */
 export const getL1Network = (
   signerOrProviderOrChainID: SignerOrProvider | number
@@ -489,7 +502,8 @@ export const getL1Network = (
 
 /**
  * Returns the Arbitrum chain associated with the given signer, provider or chain id.
- * Throws if the chain is not an Arbitrum chain.
+ *
+ * @note Throws if the chain is not an Arbitrum chain.
  */
 export const getL2Network = (
   signerOrProviderOrChainID: SignerOrProvider | number
@@ -528,6 +542,9 @@ export const getEthBridgeInformation = async (
   }
 }
 
+/**
+ * Adds any chain to the global index of networks and updates the parent/child relationships.
+ */
 const addNetwork = (network: L1Network | L2Network) => {
   // store the network with the rest of the networks
   networks[network.chainID] = network
@@ -562,8 +579,8 @@ const addNetwork = (network: L1Network | L2Network) => {
 /**
  * Registers a pair of custom chains (parent and child). These networks will be returned in `getL1Network` and `getL2Network`, respectively.
  *
- * @param customL1Network the parent chain (could be an L1 or an L2)
- * @param customL2Network the child chain (could be an L2 or an L3)
+ * @param customL1Network the parent chain **(could be an L1 or L2 chain)**
+ * @param customL2Network the child chain **(must be an Arbitrum chain)**
  */
 export const addCustomNetwork = ({
   customL1Network,
@@ -675,6 +692,9 @@ export const addDefaultLocalNetwork = (): {
   }
 }
 
+/**
+ * Creates a function that resets the networks index to default. Useful in development.
+ */
 const createNetworkStateHandler = () => {
   const initialState = JSON.parse(JSON.stringify(networks))
 
