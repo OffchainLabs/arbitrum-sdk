@@ -323,9 +323,10 @@ export const setupNetworks = async (
   l1Deployer: Signer,
   l2Deployer: Signer,
   l1Url: string,
-  l2Url: string
+  l2Url: string,
+  shouldSetupOrbit: boolean
 ) => {
-  const customNetworks = isTestingOrbitChains
+  const customNetworks = shouldSetupOrbit
     ? await setupOrbitNetworks()
     : await getCustomNetworks(l1Url, l2Url)
 
@@ -358,7 +359,7 @@ export const setupNetworks = async (
 
   // in case of L3, we only need to add the L3, as L1 and L2 were registered inside "setupL1NetworkForOrbit"
   // register the network with the newly deployed token bridge contracts
-  if (isTestingOrbitChains) {
+  if (shouldSetupOrbit) {
     addCustomNetwork({ customL2Network: l2Network })
   } else {
     addCustomNetwork({ ...customNetworks, customL2Network: l2Network })
@@ -451,8 +452,28 @@ export const testSetup = async (): Promise<{
         l1Deployer,
         l2Deployer,
         config.ethUrl,
-        config.arbUrl
+        config.arbUrl,
+        isTestingOrbitChains
       )
+      if (isTestingOrbitChains) {
+        //deploy l1/l2 bridge
+        const l1Url = process.env['ETH_URL']
+        const l2Url = process.env['ARB_URL']
+        const ethProvider = new JsonRpcProvider(l1Url)
+        const arbProvider = new JsonRpcProvider(l2Url)
+        const l1Deployer = getSigner(ethProvider, process.env['ETH_KEY'])
+        const l2Deployer = getSigner(arbProvider, process.env['ARB_KEY'])
+        const { l2Network: arbNetwork } = await setupNetworks(
+          l1Deployer,
+          l2Deployer,
+          config.ethUrl,
+          config.arbUrl,
+          false
+        )
+        // @ts-expect-error - l1Network is a L2Network
+        l1Network.tokenBridge.l2Weth = arbNetwork.tokenBridge.l2Weth
+      }
+
       setL1Network = l1Network
       setL2Network = l2Network
     }
