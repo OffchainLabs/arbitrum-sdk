@@ -43,6 +43,11 @@ dotenv.config()
 
 const isTestingOrbitChains = process.env.ORBIT_TEST === '1'
 
+/**
+ * The RPC urls and private keys using during testing
+ *
+ * @note When the `ORBIT_TEST` env variable is `true`, we treat `ethUrl` as the L2 and `arbUrl` as the L3
+ */
 export const config = isTestingOrbitChains
   ? {
       arbUrl: process.env['ORBIT_URL'] as string,
@@ -179,6 +184,9 @@ export const getCustomNetworks = async (
   }
 }
 
+/**
+ * Adds the L1 and L2 networks (as defined in the environment) to the global network registry
+ */
 const setupL1NetworkForOrbit = async (): Promise<{
   l2Network: L2Network
   l2Provider: providers.Provider
@@ -216,6 +224,9 @@ const setupL1NetworkForOrbit = async (): Promise<{
   return { l2Network, l2Provider }
 }
 
+/**
+ * Adds the L3 network (as defined in the environment) to the global network registry
+ */
 const setupOrbitNetworks = async (): Promise<{
   customL1Network: L2Network
   customL2Network: L2Network
@@ -237,6 +248,12 @@ const setupOrbitNetworks = async (): Promise<{
   }
 }
 
+/**
+ * Builds a child network configuration object from deployment data
+ *
+ * @note `l1Provider` and `l2Provider` can be a `l2Provider` and `l3Provider` in a parent-child
+ * relationship. They will be renamed in the next major version.
+ */
 async function getCustomOrbitNetwork(
   deploymentData: DeploymentData,
   l1Provider: providers.Provider,
