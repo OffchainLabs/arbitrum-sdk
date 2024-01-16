@@ -37,6 +37,7 @@ import { deployErc20AndInit } from './deployBridge'
 import * as path from 'path'
 import * as fs from 'fs'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
+import { ARB_MINIMUM_BLOCK_TIME_IN_SECONDS } from '../src/lib/dataEntities/constants'
 
 dotenv.config()
 
@@ -168,7 +169,7 @@ export const getCustomNetworks = async (
       l2Weth: '',
       l2WethGateway: '',
     },
-    blockTime: 0.25,
+    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
     partnerChainIDs: [],
   }
 
@@ -288,7 +289,7 @@ async function getCustomOrbitNetwork(
       l2Weth: '',
       l2WethGateway: '',
     },
-    blockTime: 0.25,
+    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
     partnerChainIDs: [],
   }
 
