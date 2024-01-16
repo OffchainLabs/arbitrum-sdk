@@ -52,6 +52,7 @@ export interface L1Network extends Network {
  */
 export interface L2Network extends Network {
   tokenBridge: TokenBridge
+  teleporterAddresses?: TeleporterAddresses
   ethBridge: EthBridge
   /**
    * Chain id of the parent chain.
@@ -83,6 +84,11 @@ export interface TokenBridge {
   l2ProxyAdmin: string
   l1MultiCall: string
   l2Multicall: string
+}
+
+export interface TeleporterAddresses {
+  l1Teleporter: string
+  l2ForwarderFactory: string
 }
 
 export interface EthBridge {
