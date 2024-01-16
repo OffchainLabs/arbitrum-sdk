@@ -313,6 +313,12 @@ async function getCustomOrbitNetwork(
   return l2Network
 }
 
+/**
+ * Builds network configuration and deploys the token bridge contracts
+ *
+ * @note `l1Deployer`/`l2Deployer` and `l1Url`/`l2url` can refer to an `L2` or `L3` in a
+ * parent-child relationship. They will be renamed in the next major version.
+ */
 export const setupNetworks = async (
   l1Deployer: Signer,
   l2Deployer: Signer,
