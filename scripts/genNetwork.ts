@@ -5,7 +5,11 @@ async function main() {
   const setup = await testSetup(true)
   fs.writeFileSync(
     'localNetwork.json',
-    JSON.stringify({ l1Network: setup.l1Network, l2Network: setup.l2Network }, null, 2)
+    JSON.stringify(
+      { l1Network: setup.l1Network, l2Network: setup.l2Network },
+      null,
+      2
+    )
   )
   console.log('localnetwork.json updated')
 }

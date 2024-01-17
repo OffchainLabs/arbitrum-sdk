@@ -197,7 +197,6 @@ const getL1NetworkForOrbit = async (): Promise<{
   const deploymentData = getDeploymentData()
   const parsedDeploymentData = JSON.parse(deploymentData) as DeploymentData
 
-
   const l2Network = await getCustomOrbitNetwork(
     parsedDeploymentData,
     l1Provider,
@@ -378,7 +377,9 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
   else return provider.getSigner(0)
 }
 
-export const testSetup = async (ignoreLocalNetworkJson?: boolean): Promise<{
+export const testSetup = async (
+  ignoreLocalNetworkJson?: boolean
+): Promise<{
   l1Network: L1Network | L2Network
   l2Network: L2Network
   l1Signer: Signer
@@ -432,17 +433,16 @@ export const testSetup = async (ignoreLocalNetworkJson?: boolean): Promise<{
 
         addCustomNetwork({
           customL1Network: ethLocal,
-          customL2Network: l1Network
+          customL2Network: l1Network,
         })
-        
-        addCustomNetwork({ 
-          customL2Network: l2Network 
+
+        addCustomNetwork({
+          customL2Network: l2Network,
         })
 
         setL1Network = l1Network
         setL2Network = l2Network
-      }
-      else {
+      } else {
         const { l1Network, l2Network } = file as {
           l1Network: L1Network
           l2Network: L2Network
