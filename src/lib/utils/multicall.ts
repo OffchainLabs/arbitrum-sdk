@@ -19,7 +19,7 @@
 import { Provider } from '@ethersproject/abstract-provider'
 import { BigNumber, utils } from 'ethers'
 
-import { ERC20__factory } from '../abi/factories/ERC20__factory'
+import { ERC20Upgradeable__factory as ERC20__factory } from '../abi/factories/ERC20Upgradeable__factory'
 import { Multicall2 } from '../abi/Multicall2'
 import { Multicall2__factory } from '../abi/factories/Multicall2__factory'
 import { ArbSdkError } from '../dataEntities/errors'

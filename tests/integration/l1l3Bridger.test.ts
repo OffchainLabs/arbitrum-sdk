@@ -37,14 +37,13 @@ function poll(
 
 describe('L1 to L3 Bridging', () => {
   // let setup: Unwrap<ReturnType<typeof testSetup>>
-  const l2JsonRpcProvider = new ethers.providers.JsonRpcProvider(config.arbUrl)
-  let l1Network: L1Network
+  const l2JsonRpcProvider = new ethers.providers.JsonRpcProvider(process.env['ARB_URL'])
   let l2Network: L2Network
   let l3Network: L2Network
 
   let l1Signer: ethers.Signer
   let l2Signer: ethers.Signer
-  let l3Signer: ethers.Signer
+  let l3Provider: ethers.providers.JsonRpcProvider
 
   // setup for all test cases
   before(async function () {
@@ -55,19 +54,13 @@ describe('L1 to L3 Bridging', () => {
     l2Network = setup.l1Network as L2Network
     l3Network = setup.l2Network
 
-    console.log(networks)
-
-    // console.log(l2Network)
-    // console.log(l3Network)
-    process.exit()
-
-    l1Signer = getSigner(new ethers.providers.JsonRpcProvider(process.env['ETH_URL']), process.env['ETH_KEY'])
-    l2Signer = getSigner(new ethers.providers.JsonRpcProvider(process.env['ARB_URL']), process.env['ARB_KEY'])
-    l3Signer = getSigner(new ethers.providers.JsonRpcProvider(process.env['ORBIT_URL']), process.env['ORBIT_KEY'])
+    l1Signer = getSigner(new ethers.providers.JsonRpcProvider(process.env['ETH_URL']), ethers.utils.hexlify(ethers.utils.randomBytes(32)))
+    l2Signer = getSigner(l2JsonRpcProvider, ethers.utils.hexlify(ethers.utils.randomBytes(32)))
+    l3Provider = new ethers.providers.JsonRpcProvider(process.env["ORBIT_URL"])
 
     // fund signers on L1 and L2
-    await fundL1(l1Signer, ethers.utils.parseEther('1'))
-    await fundL2(l2Signer, ethers.utils.parseEther('1'))
+    await fundL1(l1Signer, ethers.utils.parseEther('10'))
+    await fundL2(l2Signer, ethers.utils.parseEther('10'))
   })
 
   describe('ETH Bridging', () => {
@@ -94,7 +87,7 @@ describe('L1 to L3 Bridging', () => {
           },
           l1Signer,
           l2Signer.provider!,
-          l3Signer.provider!
+          l3Provider
         )
 
         const depositReceipt = await depositTx.wait()
@@ -104,13 +97,13 @@ describe('L1 to L3 Bridging', () => {
           const status = await l1l3Bridger.getDepositStatus(
             depositReceipt,
             l2Signer.provider!,
-            l3Signer.provider!
+            l3Provider
           )
           return status.completed
         }, 1000)
 
         // check eth balances
-        const l3Balance = await l3Signer.provider!.getBalance(l3Recipient)
+        const l3Balance = await l3Provider.getBalance(l3Recipient)
         expect(l3Balance.gt(ethers.utils.parseEther('0.1'))).to.be.true
 
         const l2Balance = await l2Signer.provider!.getBalance(
@@ -162,10 +155,6 @@ describe('L1 to L3 Bridging', () => {
 
       it('getL2ERC20Address', async () => {
         // use weth to test, since we already know its addresses
-
-        console.log(l2Network.tokenBridge)
-        process.exit()
-        
         const l1Weth = l2Network.tokenBridge.l1Weth
         const l2Weth = l2Network.tokenBridge.l2Weth
         const ans = await l1l3Bridger.getL2ERC20Address(
@@ -264,7 +253,7 @@ describe('L1 to L3 Bridging', () => {
             },
             l1Signer,
             l2Signer.provider!,
-            l3Signer.provider!
+            l3Provider
           )
           throw new Error()
         } catch (e: any) {
@@ -287,7 +276,7 @@ describe('L1 to L3 Bridging', () => {
           },
           l1Signer,
           l2Signer.provider!,
-          l3Signer.provider!
+          l3Provider
         )
 
         const depositReceipt = await depositTx.wait()
@@ -297,7 +286,7 @@ describe('L1 to L3 Bridging', () => {
           const status = await l1l3Bridger.getDepositStatus(
             depositReceipt,
             l2JsonRpcProvider,
-            l3Signer.provider!
+            l3Provider
           )
           return status.completed
         }, 1000)
@@ -310,7 +299,7 @@ describe('L1 to L3 Bridging', () => {
         )
         const l3Token = l1l3Bridger.getL3TokenContract(
           l3TokenAddr,
-          l3Signer.provider!
+          l3Provider
         )
 
         const l3Balance = await l3Token.balanceOf(l3Recipient)
@@ -320,7 +309,7 @@ describe('L1 to L3 Bridging', () => {
 
       it('should report correct status when second step is frontran', async () => {
         const adjustedL3GasPrice = (
-          await l3Signer.provider!.getGasPrice()
+          await l3Provider.getGasPrice()
         ).mul(3)
         const depositTx = await l1l3Bridger.deposit(
           {
@@ -339,7 +328,7 @@ describe('L1 to L3 Bridging', () => {
           },
           l1Signer,
           l2Signer.provider!,
-          l3Signer.provider!
+          l3Provider
         )
 
         const depositReceipt = await depositTx.wait()
@@ -349,7 +338,7 @@ describe('L1 to L3 Bridging', () => {
           const status = await l1l3Bridger.getDepositStatus(
             depositReceipt,
             l2JsonRpcProvider,
-            l3Signer.provider!
+            l3Provider
           )
           return status.bridgeToL2.status === L1ToL2MessageStatus.REDEEMED
         }, 1000)
@@ -358,7 +347,7 @@ describe('L1 to L3 Bridging', () => {
         const statusAfterStep1 = await l1l3Bridger.getDepositStatus(
           depositReceipt,
           l2JsonRpcProvider,
-          l3Signer.provider!
+          l3Provider
         )
         expect(statusAfterStep1.retryableL2ForwarderCall.status).to.eq(
           L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
@@ -394,7 +383,7 @@ describe('L1 to L3 Bridging', () => {
         const statusAfterStep2 = await l1l3Bridger.getDepositStatus(
           depositReceipt,
           l2JsonRpcProvider,
-          l3Signer.provider!
+          l3Provider
         )
         expect(statusAfterStep2.bridgeToL2.status).to.eq(
           L1ToL2MessageStatus.REDEEMED
@@ -414,7 +403,7 @@ describe('L1 to L3 Bridging', () => {
           const status = await l1l3Bridger.getDepositStatus(
             depositReceipt,
             l2JsonRpcProvider,
-            l3Signer.provider!
+            l3Provider
           )
           return status.completed
         }, 1000)
@@ -422,7 +411,7 @@ describe('L1 to L3 Bridging', () => {
         const statusAfterStep3 = await l1l3Bridger.getDepositStatus(
           depositReceipt,
           l2JsonRpcProvider,
-          l3Signer.provider!
+          l3Provider
         )
         expect(statusAfterStep3.completed).to.be.true
         expect(statusAfterStep3.retryableL2ForwarderCall.status).to.eq(
@@ -474,7 +463,7 @@ describe('L1 to L3 Bridging', () => {
           },
           l1Signer,
           l2Signer.provider!,
-          l3Signer.provider!
+          l3Provider
         )
 
         const depositReceipt = await depositResult.tx.wait()
@@ -516,7 +505,7 @@ describe('L1 to L3 Bridging', () => {
           const status = await l1l3Bridger.getDepositStatus(
             depositReceipt,
             l2JsonRpcProvider,
-            l3Signer.provider!
+            l3Provider
           )
           return status.bridgeToL2.status === L1ToL2MessageStatus.REDEEMED
         }, 1000)
@@ -527,7 +516,7 @@ describe('L1 to L3 Bridging', () => {
             await l1l3Bridger.getDepositStatus(
               depositReceipt,
               l2JsonRpcProvider,
-              l3Signer.provider!
+              l3Provider
             )
           ).l2ForwarderCall
         ).to.be.undefined
@@ -545,7 +534,7 @@ describe('L1 to L3 Bridging', () => {
           await l1l3Bridger.getDepositStatus(
             depositReceipt,
             l2JsonRpcProvider,
-            l3Signer.provider!
+            l3Provider
           )
         ).to.be.not.undefined
 
@@ -554,7 +543,7 @@ describe('L1 to L3 Bridging', () => {
           const status = await l1l3Bridger.getDepositStatus(
             depositReceipt,
             l2JsonRpcProvider,
-            l3Signer.provider!
+            l3Provider
           )
           return status.completed
         }, 1000)
@@ -567,7 +556,7 @@ describe('L1 to L3 Bridging', () => {
         )
         const l3Token = l1l3Bridger.getL3TokenContract(
           l3TokenAddr,
-          l3Signer.provider!
+          l3Provider
         )
 
         const l3Balance = await l3Token.balanceOf(l3Recipient)

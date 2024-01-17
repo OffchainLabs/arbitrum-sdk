@@ -11,7 +11,10 @@ async function main() {
   const cwd = process.cwd()
 
   const nitroPath = getPackagePath('@arbitrum/nitro-contracts')
-  const peripheralsPath = getPackagePath('arb-bridge-peripherals')
+  const teleporterPath = getPackagePath(
+    '@offchainlabs/l1-l3-teleport-contracts'
+  )
+  const peripheralsPath = getPackagePath('@arbitrum/token-bridge-contracts')
 
   console.log('Compiling paths.')
 
@@ -32,9 +35,9 @@ async function main() {
     cwd: nitroPath,
   })
 
-  console.log('building peripherals')
-  execSync(`${npmExec} run hardhat:prod compile`, {
-    cwd: peripheralsPath,
+  console.log('building teleporter')
+  execSync(`${npmExec} && ${npmExec} run hardhat compile --config ./hardhat.config.js`, {
+    cwd: teleporterPath,
   })
 
   console.log('Done compiling')
@@ -42,6 +45,7 @@ async function main() {
   const nitroFiles = glob(cwd, [
     `${peripheralsPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
     `${nitroPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
+    `${teleporterPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
   ])
 
   // TODO: generate files into different subfolders (ie `/nitro/*`) to avoid overwrite of contracts with the same name

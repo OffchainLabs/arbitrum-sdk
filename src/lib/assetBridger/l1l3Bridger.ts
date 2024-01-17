@@ -1,12 +1,12 @@
 import { Provider, TransactionRequest } from '@ethersproject/abstract-provider'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { BigNumber, BigNumberish, Signer, ethers } from 'ethers'
-import { ERC20 } from '../abi/ERC20'
+import { IERC20 } from '../abi/IERC20'
 import { BridgedToL3Event } from '../abi/L2Forwarder'
 import { L2ForwarderPredictor } from '../abi/L2ForwarderPredictor'
 import { L2GatewayToken } from '../abi/L2GatewayToken'
 import { L1Teleporter } from '../abi/L1Teleporter'
-import { ERC20__factory } from '../abi/factories/ERC20__factory'
+import { IERC20__factory } from '../abi/factories/IERC20__factory'
 import { L1GatewayRouter__factory } from '../abi/factories/L1GatewayRouter__factory'
 import { L2ForwarderFactory__factory } from '../abi/factories/L2ForwarderFactory__factory'
 import { L2Forwarder__factory } from '../abi/factories/L2Forwarder__factory'
@@ -403,8 +403,8 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
    * check the underlying form of the contract bytecode to see if it's an erc20, and doesn't ensure the validity
    * of any of the underlying functions on that contract.
    */
-  public getL1TokenContract(l1TokenAddr: string, l1Provider: Provider): ERC20 {
-    return ERC20__factory.connect(l1TokenAddr, l1Provider)
+  public getL1TokenContract(l1TokenAddr: string, l1Provider: Provider): IERC20 {
+    return IERC20__factory.connect(l1TokenAddr, l1Provider)
   }
 
   /**
@@ -621,7 +621,7 @@ class BaseErc20L1L3Bridger extends BaseL1L3Bridger {
     params: TokenApproveParams,
     spender: string
   ) {
-    const iErc20Interface = ERC20__factory.createInterface()
+    const iErc20Interface = IERC20__factory.createInterface()
     const data = iErc20Interface.encodeFunctionData('approve', [
       spender,
       params.amount || ethers.constants.MaxUint256,

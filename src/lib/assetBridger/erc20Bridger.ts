@@ -31,8 +31,8 @@ import { L1GatewayRouter__factory } from '../abi/factories/L1GatewayRouter__fact
 import { L2GatewayRouter__factory } from '../abi/factories/L2GatewayRouter__factory'
 import { L1WethGateway__factory } from '../abi/factories/L1WethGateway__factory'
 import { L2ArbitrumGateway__factory } from '../abi/factories/L2ArbitrumGateway__factory'
-import { ERC20__factory } from '../abi/factories/ERC20__factory'
-import { ERC20 } from '../abi/ERC20'
+import { IERC20__factory } from '../abi/factories/IERC20__factory'
+import { IERC20 } from '../abi/IERC20'
 import { L2GatewayToken__factory } from '../abi/factories/L2GatewayToken__factory'
 import { L2GatewayToken } from '../abi/L2GatewayToken'
 import { ICustomToken__factory } from '../abi/factories/ICustomToken__factory'
@@ -242,7 +242,7 @@ export class Erc20Bridger extends AssetBridger<
       SignerProviderUtils.getProviderOrThrow(params.l1Provider)
     )
 
-    const iErc20Interface = ERC20__factory.createInterface()
+    const iErc20Interface = IERC20__factory.createInterface()
     const data = iErc20Interface.encodeFunctionData('approve', [
       gatewayAddress,
       params.amount || Erc20Bridger.MAX_APPROVAL,
@@ -403,8 +403,8 @@ export class Erc20Bridger extends AssetBridger<
    * @param l1TokenAddr
    * @returns
    */
-  public getL1TokenContract(l1Provider: Provider, l1TokenAddr: string): ERC20 {
-    return ERC20__factory.connect(l1TokenAddr, l1Provider)
+  public getL1TokenContract(l1Provider: Provider, l1TokenAddr: string): IERC20 {
+    return IERC20__factory.connect(l1TokenAddr, l1Provider)
   }
 
   /**
