@@ -18,7 +18,7 @@
 
 import { ContractReceipt } from '@ethersproject/contracts'
 
-import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
+import { ERC20Upgradeable__factory as ERC20__factory } from '../src/lib/abi/factories/ERC20Upgradeable__factory'
 import { L1ToL2MessageStatus } from '../src/lib/message/L1ToL2Message'
 import { L1TransactionReceipt } from '../src/lib/message/L1Transaction'
 import { testSetup } from '../scripts/testSetup'

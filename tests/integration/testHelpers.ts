@@ -34,7 +34,7 @@ import {
 import { L2Network } from '../../src/lib/dataEntities/networks'
 import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
 import { ArbSdkError } from '../../src/lib/dataEntities/errors'
-import { ERC20 } from '../../src/lib/abi/ERC20'
+import { ERC20Upgradeable as ERC20 } from '../../src/lib/abi/ERC20Upgradeable'
 
 export const preFundAmount = parseEther('0.1')
 

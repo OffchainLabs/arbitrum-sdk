@@ -39,7 +39,7 @@ import { L1ToL2MessageStatus, L2Network } from '../../src'
 import { Signer, constants } from 'ethers'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 import { testSetup } from '../../scripts/testSetup'
-import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
+import { ERC20Upgradeable__factory as ERC20__factory } from '../../src/lib/abi/factories/ERC20Upgradeable__factory'
 
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)

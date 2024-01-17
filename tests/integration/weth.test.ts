@@ -30,7 +30,7 @@ import {
 import { L1ToL2MessageStatus } from '../../src'
 import { Wallet } from 'ethers'
 import { testSetup } from '../../scripts/testSetup'
-import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
+import { ERC20Upgradeable__factory as ERC20__factory } from '../../src/lib/abi/factories/ERC20Upgradeable__factory'
 
 describe('WETH', async () => {
   beforeEach('skipIfMainnet', async function () {

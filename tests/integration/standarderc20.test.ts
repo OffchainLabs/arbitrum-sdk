@@ -37,7 +37,7 @@ import {
 import { Signer } from 'ethers'
 import { TestERC20 } from '../../src/lib/abi/TestERC20'
 import { testSetup } from '../../scripts/testSetup'
-import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
+import { ERC20Upgradeable__factory as ERC20__factory } from '../../src/lib/abi/factories/ERC20Upgradeable__factory'
 import {
   ARB_RETRYABLE_TX_ADDRESS,
   NODE_INTERFACE_ADDRESS,
