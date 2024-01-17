@@ -207,7 +207,7 @@ const getL1NetworkForOrbit = async (): Promise<{
 }
 
 /**
- * Gets the L3 network (as defined in the environment)
+ * Gets the L3 Orbit network and its parent network
  */
 const getOrbitNetwork = async (): Promise<{
   customL1Network: L2Network
