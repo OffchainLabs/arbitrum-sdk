@@ -29,7 +29,7 @@ import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { Outbox__factory } from '../abi/classic/factories/Outbox__factory'
 
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
-import { L2ToL1TransactionEvent } from '../abi/ArbSys'
+import { L2ToL1TransactionEvent as ChildToParentTransactionEvent } from '../abi/ArbSys'
 import { ContractTransaction, Overrides } from 'ethers'
 import { EventFetcher } from '../utils/eventFetcher'
 import {
@@ -39,7 +39,7 @@ import {
 import { isDefined, wait } from '../utils/lib'
 import { ArbSdkError } from '../dataEntities/errors'
 import { EventArgs } from '../dataEntities/event'
-import { L2ToL1MessageStatus } from '../dataEntities/message'
+import { L2ToL1MessageStatus as ChildToParentMessageStatus } from '../dataEntities/message'
 import { getChildChain } from '../dataEntities/networks'
 
 export interface MessageBatchProofInfo {
@@ -91,14 +91,17 @@ export interface MessageBatchProofInfo {
 
 /**
  * Conditional type for Signer or Provider. If T is of type Provider
- * then L2ToL1MessageReaderOrWriter<T> will be of type L2ToL1MessageReader.
- * If T is of type Signer then L2ToL1MessageReaderOrWriter<T> will be of
- * type L2ToL1MessageWriter.
+ * then ChildToParentMessageReaderOrWriter<T> will be of type ChildToParentMessageReader.
+ * If T is of type Signer then ChildToParentMessageReaderOrWriter<T> will be of
+ * type ChildToParentMessageWriter.
  */
-export type L2ToL1MessageReaderOrWriterClassic<T extends SignerOrProvider> =
-  T extends Provider ? L2ToL1MessageReaderClassic : L2ToL1MessageWriterClassic
+export type ChildToParentMessageReaderOrWriterClassic<
+  T extends SignerOrProvider
+> = T extends Provider
+  ? ChildToParentMessageReaderClassic
+  : ChildToParentMessageWriterClassic
 
-export class L2ToL1MessageClassic {
+export class ChildToParentMessageClassic {
   /**
    * The number of the batch this message is part of
    */
@@ -115,50 +118,52 @@ export class L2ToL1MessageClassic {
   }
 
   /**
-   * Instantiates a new `L2ToL1MessageWriterClassic` or `L2ToL1MessageReaderClassic` object.
+   * Instantiates a new `ChildToParentMessageWriterClassic` or `ChildToParentMessageReaderClassic` object.
    *
-   * @param {SignerOrProvider} l1SignerOrProvider Signer or provider to be used for executing or reading the L2-to-L1 message.
-   * @param {BigNumber} batchNumber The number of the batch containing the L2-to-L1 message.
-   * @param {BigNumber} indexInBatch The index of the L2-to-L1 message within the batch.
-   * @param {Provider} [l1Provider] Optional. Used to override the Provider which is attached to `l1SignerOrProvider` in case you need more control. This will be a required parameter in a future major version update.
+   * @param {SignerOrProvider} parentSignerOrProvider Signer or provider to be used for executing or reading the Child-to-Parent message.
+   * @param {BigNumber} batchNumber The number of the batch containing the Child-to-Parent message.
+   * @param {BigNumber} indexInBatch The index of the Child-to-Parent message within the batch.
+   * @param {Provider} [parentProvider] Optional. Used to override the Provider which is attached to `parentSignerOrProvider` in case you need more control. This will be a required parameter in a future major version update.
    */
   public static fromBatchNumber<T extends SignerOrProvider>(
-    l1SignerOrProvider: T,
+    parentSignerOrProvider: T,
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
-    l1Provider?: Provider
-  ): L2ToL1MessageReaderOrWriterClassic<T>
+    parentProvider?: Provider
+  ): ChildToParentMessageReaderOrWriterClassic<T>
   public static fromBatchNumber<T extends SignerOrProvider>(
-    l1SignerOrProvider: T,
+    parentSignerOrProvider: T,
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
-    l1Provider?: Provider
-  ): L2ToL1MessageReaderClassic | L2ToL1MessageWriterClassic {
-    return SignerProviderUtils.isSigner(l1SignerOrProvider)
-      ? new L2ToL1MessageWriterClassic(
-          l1SignerOrProvider,
+    parentProvider?: Provider
+  ): ChildToParentMessageReaderClassic | ChildToParentMessageWriterClassic {
+    return SignerProviderUtils.isSigner(parentSignerOrProvider)
+      ? new ChildToParentMessageWriterClassic(
+          parentSignerOrProvider,
           batchNumber,
           indexInBatch,
-          l1Provider
+          parentProvider
         )
-      : new L2ToL1MessageReaderClassic(
-          l1SignerOrProvider,
+      : new ChildToParentMessageReaderClassic(
+          parentSignerOrProvider,
           batchNumber,
           indexInBatch
         )
   }
 
-  public static async getL2ToL1Events(
-    l2Provider: Provider,
+  public static async getChildToParentEvents(
+    childProvider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     batchNumber?: BigNumber,
     destination?: string,
     uniqueId?: BigNumber,
     indexInBatch?: BigNumber
   ): Promise<
-    (EventArgs<L2ToL1TransactionEvent> & { transactionHash: string })[]
+    (EventArgs<ChildToParentTransactionEvent> & {
+      transactionHash: string
+    })[]
   > {
-    const eventFetcher = new EventFetcher(l2Provider)
+    const eventFetcher = new EventFetcher(childProvider)
     const events = (
       await eventFetcher.getEvents(
         ArbSys__factory,
@@ -180,11 +185,11 @@ export class L2ToL1MessageClassic {
 }
 
 /**
- * Provides read-only access for classic l2-to-l1-messages
+ * Provides read-only access for classic Child-to-Parent-messages
  */
-export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
+export class ChildToParentMessageReaderClassic extends ChildToParentMessageClassic {
   constructor(
-    protected readonly l1Provider: Provider,
+    protected readonly parentProvider: Provider,
     batchNumber: BigNumber,
     indexInBatch: BigNumber
   ) {
@@ -199,18 +204,21 @@ export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
 
   /**
    * Classic had 2 outboxes, we need to find the correct one for the provided batch number
-   * @param l2Provider
+   * @param  childProvider
    * @param batchNumber
    * @returns
    */
-  protected async getOutboxAddress(l2Provider: Provider, batchNumber: number) {
+  protected async getOutboxAddress(
+    childProvider: Provider,
+    batchNumber: number
+  ) {
     if (!isDefined(this.outboxAddress)) {
-      const l2Network = await getChildChain(l2Provider)
+      const childChain = await getChildChain(childProvider)
 
       // find the outbox where the activation batch number of the next outbox
       // is greater than the supplied batch
-      const outboxes = isDefined(l2Network.ethBridge.classicOutboxes)
-        ? Object.entries(l2Network.ethBridge.classicOutboxes)
+      const outboxes = isDefined(childChain.ethBridge.classicOutboxes)
+        ? Object.entries(childChain.ethBridge.classicOutboxes)
         : []
 
       const res = outboxes
@@ -233,24 +241,24 @@ export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
     return this.outboxAddress
   }
 
-  private async outboxEntryExists(l2Provider: Provider) {
+  private async outboxEntryExists(childProvider: Provider) {
     const outboxAddress = await this.getOutboxAddress(
-      l2Provider,
+      childProvider,
       this.batchNumber.toNumber()
     )
 
-    const outbox = Outbox__factory.connect(outboxAddress, this.l1Provider)
+    const outbox = Outbox__factory.connect(outboxAddress, this.parentProvider)
     return await outbox.outboxEntryExists(this.batchNumber)
   }
 
   public static async tryGetProof(
-    l2Provider: Provider,
+    childProvider: Provider,
     batchNumber: BigNumber,
     indexInBatch: BigNumber
   ): Promise<MessageBatchProofInfo | null> {
     const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
-      l2Provider
+      childProvider
     )
     try {
       return await nodeInterface.legacyLookupMessageBatchProof(
@@ -271,15 +279,15 @@ export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
 
   /**
    * Get the execution proof for this message. Returns null if the batch does not exist yet.
-   * @param l2Provider
+   * @param  childProvider
    * @returns
    */
   public async tryGetProof(
-    l2Provider: Provider
+    childProvider: Provider
   ): Promise<MessageBatchProofInfo | null> {
     if (!isDefined(this.proof)) {
-      this.proof = await L2ToL1MessageReaderClassic.tryGetProof(
-        l2Provider,
+      this.proof = await ChildToParentMessageReaderClassic.tryGetProof(
+        childProvider,
         this.batchNumber,
         this.indexInBatch
       )
@@ -290,16 +298,16 @@ export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
   /**
    * Check if given outbox message has already been executed
    */
-  public async hasExecuted(l2Provider: Provider): Promise<boolean> {
-    const proofInfo = await this.tryGetProof(l2Provider)
+  public async hasExecuted(childProvider: Provider): Promise<boolean> {
+    const proofInfo = await this.tryGetProof(childProvider)
     if (!isDefined(proofInfo)) return false
 
     const outboxAddress = await this.getOutboxAddress(
-      l2Provider,
+      childProvider,
       this.batchNumber.toNumber()
     )
 
-    const outbox = Outbox__factory.connect(outboxAddress, this.l1Provider)
+    const outbox = Outbox__factory.connect(outboxAddress, this.parentProvider)
     try {
       await outbox.callStatic.executeTransaction(
         this.batchNumber,
@@ -328,19 +336,21 @@ export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
    * @param proofInfo
    * @returns
    */
-  public async status(l2Provider: Provider): Promise<L2ToL1MessageStatus> {
+  public async status(
+    childProvider: Provider
+  ): Promise<ChildToParentMessageStatus> {
     try {
-      const messageExecuted = await this.hasExecuted(l2Provider)
+      const messageExecuted = await this.hasExecuted(childProvider)
       if (messageExecuted) {
-        return L2ToL1MessageStatus.EXECUTED
+        return ChildToParentMessageStatus.EXECUTED
       }
 
-      const outboxEntryExists = await this.outboxEntryExists(l2Provider)
+      const outboxEntryExists = await this.outboxEntryExists(childProvider)
       return outboxEntryExists
-        ? L2ToL1MessageStatus.CONFIRMED
-        : L2ToL1MessageStatus.UNCONFIRMED
+        ? ChildToParentMessageStatus.CONFIRMED
+        : ChildToParentMessageStatus.UNCONFIRMED
     } catch (e) {
-      return L2ToL1MessageStatus.UNCONFIRMED
+      return ChildToParentMessageStatus.UNCONFIRMED
     }
   }
 
@@ -352,80 +362,80 @@ export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
    * @returns
    */
   public async waitUntilOutboxEntryCreated(
-    l2Provider: Provider,
+    childProvider: Provider,
     retryDelay = 500
   ): Promise<void> {
-    const exists = await this.outboxEntryExists(l2Provider)
+    const exists = await this.outboxEntryExists(childProvider)
     if (exists) {
       return
     } else {
       await wait(retryDelay)
-      await this.waitUntilOutboxEntryCreated(l2Provider, retryDelay)
+      await this.waitUntilOutboxEntryCreated(childProvider, retryDelay)
     }
   }
 
   /**
-   * Estimates the L1 block number in which this L2 to L1 tx will be available for execution
-   * @param l2Provider
-   * @returns Always returns null for classic l2toL1 messages since they can be executed in any block now.
+   * Estimates the Parent Chain block number in which this Child-to-Parent tx will be available for execution
+   * @param  childProvider
+   * @returns Always returns null for classic chainToParentChain messages since they can be executed in any block now.
    */
   public async getFirstExecutableBlock(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    l2Provider: Provider
+    childProvider: Provider
   ): Promise<BigNumber | null> {
     return null
   }
 }
 
 /**
- * Provides read and write access for classic l2-to-l1-messages
+ * Provides read and write access for classic Child-to-Parent-messages
  */
-export class L2ToL1MessageWriterClassic extends L2ToL1MessageReaderClassic {
+export class ChildToParentMessageWriterClassic extends ChildToParentMessageReaderClassic {
   /**
-   * Instantiates a new `L2ToL1MessageWriterClassic` object.
+   * Instantiates a new `ChildToParentMessageWriterClassic` object.
    *
-   * @param {Signer} l1Signer The signer to be used for executing the L2-to-L1 message.
-   * @param {BigNumber} batchNumber The number of the batch containing the L2-to-L1 message.
-   * @param {BigNumber} indexInBatch The index of the L2-to-L1 message within the batch.
-   * @param {Provider} [l1Provider] Optional. Used to override the Provider which is attached to `l1Signer` in case you need more control. This will be a required parameter in a future major version update.
+   * @param {Signer} parentSigner The signer to be used for executing the Child-to-Parent message.
+   * @param {BigNumber} batchNumber The number of the batch containing the Child-to-Parent message.
+   * @param {BigNumber} indexInBatch The index of the Child-to-Parent message within the batch.
+   * @param {Provider} [parentProvider] Optional. Used to override the Provider which is attached to `parentSigner` in case you need more control. This will be a required parameter in a future major version update.
    */
   constructor(
-    private readonly l1Signer: Signer,
+    private readonly parentSigner: Signer,
     batchNumber: BigNumber,
     indexInBatch: BigNumber,
-    l1Provider?: Provider
+    parentProvider?: Provider
   ) {
-    super(l1Provider ?? l1Signer.provider!, batchNumber, indexInBatch)
+    super(parentProvider ?? parentSigner.provider!, batchNumber, indexInBatch)
   }
 
   /**
-   * Executes the L2ToL1Message on L1.
+   * Executes the ChildToParentMessage on Parent Chain.
    * Will throw an error if the outbox entry has not been created, which happens when the
    * corresponding assertion is confirmed.
    * @returns
    */
   public async execute(
-    l2Provider: Provider,
+    childProvider: Provider,
     overrides?: Overrides
   ): Promise<ContractTransaction> {
-    const status = await this.status(l2Provider)
-    if (status !== L2ToL1MessageStatus.CONFIRMED) {
+    const status = await this.status(childProvider)
+    if (status !== ChildToParentMessageStatus.CONFIRMED) {
       throw new ArbSdkError(
-        `Cannot execute message. Status is: ${status} but must be ${L2ToL1MessageStatus.CONFIRMED}.`
+        `Cannot execute message. Status is: ${status} but must be ${ChildToParentMessageStatus.CONFIRMED}.`
       )
     }
 
-    const proofInfo = await this.tryGetProof(l2Provider)
+    const proofInfo = await this.tryGetProof(childProvider)
     if (!isDefined(proofInfo)) {
       throw new ArbSdkError(
         `Unexpected missing proof: ${this.batchNumber.toString()} ${this.indexInBatch.toString()}}`
       )
     }
     const outboxAddress = await this.getOutboxAddress(
-      l2Provider,
+      childProvider,
       this.batchNumber.toNumber()
     )
-    const outbox = Outbox__factory.connect(outboxAddress, this.l1Signer)
+    const outbox = Outbox__factory.connect(outboxAddress, this.parentSigner)
     // We can predict and print number of missing blocks
     // if not challenged
     return await outbox.functions.executeTransaction(
