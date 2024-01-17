@@ -1,5 +1,18 @@
-import { config, getSigner, setupNetworks, testSetup } from '../../scripts/testSetup'
-import { Address, Erc20L1L3Bridger, L1Network, L1ToL2MessageStatus, L2Network, getL1Network, getL2Network } from '../../src'
+import {
+  config,
+  getSigner,
+  setupNetworks,
+  testSetup,
+} from '../../scripts/testSetup'
+import {
+  Address,
+  Erc20L1L3Bridger,
+  L1Network,
+  L1ToL2MessageStatus,
+  L2Network,
+  getL1Network,
+  getL2Network,
+} from '../../src'
 import { L2ForwarderContractsDeployer__factory } from '../../src/lib/abi/factories/L2ForwarderContractsDeployer__factory'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import { TestERC20 } from '../../src/lib/abi/TestERC20'
@@ -37,7 +50,9 @@ function poll(
 
 describe('L1 to L3 Bridging', () => {
   // let setup: Unwrap<ReturnType<typeof testSetup>>
-  const l2JsonRpcProvider = new ethers.providers.JsonRpcProvider(process.env['ARB_URL'])
+  const l2JsonRpcProvider = new ethers.providers.JsonRpcProvider(
+    process.env['ARB_URL']
+  )
   let l2Network: L2Network
   let l3Network: L2Network
 
@@ -50,13 +65,19 @@ describe('L1 to L3 Bridging', () => {
     await skipIfMainnet(this)
 
     const setup = await testSetup()
-    
+
     l2Network = setup.l1Network as L2Network
     l3Network = setup.l2Network
 
-    l1Signer = getSigner(new ethers.providers.JsonRpcProvider(process.env['ETH_URL']), ethers.utils.hexlify(ethers.utils.randomBytes(32)))
-    l2Signer = getSigner(l2JsonRpcProvider, ethers.utils.hexlify(ethers.utils.randomBytes(32)))
-    l3Provider = new ethers.providers.JsonRpcProvider(process.env["ORBIT_URL"])
+    l1Signer = getSigner(
+      new ethers.providers.JsonRpcProvider(process.env['ETH_URL']),
+      ethers.utils.hexlify(ethers.utils.randomBytes(32))
+    )
+    l2Signer = getSigner(
+      l2JsonRpcProvider,
+      ethers.utils.hexlify(ethers.utils.randomBytes(32))
+    )
+    l3Provider = new ethers.providers.JsonRpcProvider(process.env['ORBIT_URL'])
 
     // fund signers on L1 and L2
     await fundL1(l1Signer, ethers.utils.parseEther('10'))
@@ -106,9 +127,7 @@ describe('L1 to L3 Bridging', () => {
         const l3Balance = await l3Provider.getBalance(l3Recipient)
         expect(l3Balance.gt(ethers.utils.parseEther('0.1'))).to.be.true
 
-        const l2Balance = await l2Signer.provider!.getBalance(
-          l2RefundAddress
-        )
+        const l2Balance = await l2Signer.provider!.getBalance(l2RefundAddress)
         expect(l2Balance.gt(ethers.utils.parseEther('0'))).to.be.true
       })
     })
@@ -127,9 +146,10 @@ describe('L1 to L3 Bridging', () => {
       const l2ForwarderImplAddr = await l2ContractsDeployer.implementation()
       const l2ForwarderFactory = await l2ContractsDeployer.factory()
 
-      const l1Teleporter = await new L1Teleporter__factory(
-        l1Signer
-      ).deploy(l2ForwarderFactory, l2ForwarderImplAddr)
+      const l1Teleporter = await new L1Teleporter__factory(l1Signer).deploy(
+        l2ForwarderFactory,
+        l2ForwarderImplAddr
+      )
       await l1Teleporter.deployed()
 
       // set the teleporter on the l2Network
@@ -297,10 +317,7 @@ describe('L1 to L3 Bridging', () => {
           l1Signer.provider!,
           l2Signer.provider!
         )
-        const l3Token = l1l3Bridger.getL3TokenContract(
-          l3TokenAddr,
-          l3Provider
-        )
+        const l3Token = l1l3Bridger.getL3TokenContract(l3TokenAddr, l3Provider)
 
         const l3Balance = await l3Token.balanceOf(l3Recipient)
 
@@ -308,9 +325,7 @@ describe('L1 to L3 Bridging', () => {
       })
 
       it('should report correct status when second step is frontran', async () => {
-        const adjustedL3GasPrice = (
-          await l3Provider.getGasPrice()
-        ).mul(3)
+        const adjustedL3GasPrice = (await l3Provider.getGasPrice()).mul(3)
         const depositTx = await l1l3Bridger.deposit(
           {
             erc20L1Address: l1Token.address,
@@ -554,10 +569,7 @@ describe('L1 to L3 Bridging', () => {
           l1Signer.provider!,
           l2Signer.provider!
         )
-        const l3Token = l1l3Bridger.getL3TokenContract(
-          l3TokenAddr,
-          l3Provider
-        )
+        const l3Token = l1l3Bridger.getL3TokenContract(l3TokenAddr, l3Provider)
 
         const l3Balance = await l3Token.balanceOf(l3Recipient)
 

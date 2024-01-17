@@ -36,9 +36,12 @@ async function main() {
   })
 
   console.log('building teleporter')
-  execSync(`${npmExec} && ${npmExec} run hardhat compile --config ./hardhat.config.js`, {
-    cwd: teleporterPath,
-  })
+  execSync(
+    `${npmExec} && ${npmExec} run hardhat compile --config ./hardhat.config.js`,
+    {
+      cwd: teleporterPath,
+    }
+  )
 
   console.log('Done compiling')
 
