@@ -342,7 +342,7 @@ export const setupNetworks = async (
     },
   }
 
-  // in case of L3, we only need to add the L3, as L1 and L2 were registered inside "setupL1NetworkForOrbit"
+  // in case of L3, we only need to add the L3, as L1 and L2 were registered in a previous call to setupNetworks
   // register the network with the newly deployed token bridge contracts
   if (shouldSetupOrbit) {
     addCustomNetwork({ customL2Network: l2Network })
