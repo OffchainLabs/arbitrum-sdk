@@ -185,9 +185,9 @@ export const getCustomNetworks = async (
 }
 
 /**
- * Adds the L1 and L2 networks (as defined in the environment) to the global network registry
+ * Gets the parent network for an Orbit chain
  */
-const setupL1NetworkForOrbit = async (): Promise<{
+const getL1NetworkForOrbit = async (): Promise<{
   l2Network: L2Network
   l2Provider: providers.Provider
 }> => {
@@ -197,18 +197,6 @@ const setupL1NetworkForOrbit = async (): Promise<{
   const deploymentData = getDeploymentData()
   const parsedDeploymentData = JSON.parse(deploymentData) as DeploymentData
 
-  const l1NetworkInfo = await l1Provider.getNetwork()
-  const l2NetworkInfo = await l2Provider.getNetwork()
-
-  const l1Network: L1Network = {
-    blockTime: 10,
-    chainID: l1NetworkInfo.chainId,
-    explorerUrl: '',
-    isCustom: true,
-    name: 'EthLocal',
-    partnerChainIDs: [l2NetworkInfo.chainId],
-    isArbitrum: false,
-  }
 
   const l2Network = await getCustomOrbitNetwork(
     parsedDeploymentData,
@@ -216,22 +204,17 @@ const setupL1NetworkForOrbit = async (): Promise<{
     l2Provider
   )
 
-  // addCustomNetwork({
-  //   customL1Network: l1Network,
-  //   customL2Network: l2Network,
-  // })
-
   return { l2Network, l2Provider }
 }
 
 /**
- * Adds the L3 network (as defined in the environment) to the global network registry
+ * Gets the L3 network (as defined in the environment)
  */
-const setupOrbitNetworks = async (): Promise<{
+const getOrbitNetwork = async (): Promise<{
   customL1Network: L2Network
   customL2Network: L2Network
 }> => {
-  const { l2Network, l2Provider } = await setupL1NetworkForOrbit()
+  const { l2Network, l2Provider } = await getL1NetworkForOrbit()
   const l3Provider = new JsonRpcProvider(process.env['ORBIT_URL'])
 
   const l3DeploymentData = getL3DeploymentData()
@@ -328,7 +311,7 @@ export const setupNetworks = async (
   l1WethOverride?: string
 ) => {
   const customNetworks = shouldSetupOrbit
-    ? await setupOrbitNetworks()
+    ? await getOrbitNetwork()
     : await getCustomNetworks(l1Url, l2Url)
 
   const { l1: l1Contracts, l2: l2Contracts } = await deployErc20AndInit(
@@ -395,7 +378,7 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
   else return provider.getSigner(0)
 }
 
-export const testSetup = async (): Promise<{
+export const testSetup = async (ignoreLocalNetworkJson?: boolean): Promise<{
   l1Network: L1Network | L2Network
   l2Network: L2Network
   l1Signer: Signer
@@ -428,28 +411,53 @@ export const testSetup = async (): Promise<{
 
     // check if theres an existing network available
     const localNetworkFile = path.join(__dirname, '..', 'localNetwork.json')
-    if (fs.existsSync(localNetworkFile)) {
-      const { l1Network, l2Network } = JSON.parse(
-        fs.readFileSync(localNetworkFile).toString()
-      ) as {
-        l1Network: L1Network
-        l2Network: L2Network
-      }
+    if (!ignoreLocalNetworkJson && fs.existsSync(localNetworkFile)) {
+      const file = JSON.parse(fs.readFileSync(localNetworkFile).toString())
 
       if (isTestingOrbitChains) {
-        await setupL1NetworkForOrbit()
-        addCustomNetwork({ customL2Network: l2Network })
-      } else {
+        const { l1Network, l2Network } = file as {
+          l1Network: L2Network
+          l2Network: L2Network
+        }
+
+        const ethLocal: L1Network = {
+          blockTime: 10,
+          chainID: l1Network.partnerChainID,
+          explorerUrl: '',
+          isCustom: true,
+          name: 'EthLocal',
+          partnerChainIDs: [l1Network.chainID],
+          isArbitrum: false,
+        }
+
+        addCustomNetwork({
+          customL1Network: ethLocal,
+          customL2Network: l1Network
+        })
+        
+        addCustomNetwork({ 
+          customL2Network: l2Network 
+        })
+
+        setL1Network = l1Network
+        setL2Network = l2Network
+      }
+      else {
+        const { l1Network, l2Network } = file as {
+          l1Network: L1Network
+          l2Network: L2Network
+        }
+
         addCustomNetwork({
           customL1Network: l1Network,
           customL2Network: l2Network,
         })
-      }
 
-      setL1Network = l1Network
-      setL2Network = l2Network
+        setL1Network = l1Network
+        setL2Network = l2Network
+      }
     } else {
-      let l1WethOverride: string | undefined
+      let l1NetworkOverride: L2Network | undefined
 
       if (isTestingOrbitChains) {
         //deploy l1/l2 bridge
@@ -467,7 +475,7 @@ export const testSetup = async (): Promise<{
           false
         )
 
-        l1WethOverride = arbNetwork.tokenBridge.l2Weth
+        l1NetworkOverride = arbNetwork
       }
 
       // deploy a new network
@@ -477,10 +485,10 @@ export const testSetup = async (): Promise<{
         config.ethUrl,
         config.arbUrl,
         isTestingOrbitChains,
-        l1WethOverride
+        l1NetworkOverride?.tokenBridge.l2Weth
       )
 
-      setL1Network = l1Network
+      setL1Network = l1NetworkOverride || l1Network
       setL2Network = l2Network
     }
   }

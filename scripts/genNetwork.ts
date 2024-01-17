@@ -1,24 +1,11 @@
-import { ethers } from 'ethers'
-import { setupNetworks, config, getSigner } from './testSetup'
+import { testSetup } from './testSetup'
 import * as fs from 'fs'
 
 async function main() {
-  const ethProvider = new ethers.providers.JsonRpcProvider(config.ethUrl)
-  const arbProvider = new ethers.providers.JsonRpcProvider(config.arbUrl)
-
-  const ethDeployer = getSigner(ethProvider, config.ethKey)
-  const arbDeployer = getSigner(arbProvider, config.arbKey)
-
-  const { l1Network, l2Network } = await setupNetworks(
-    ethDeployer,
-    arbDeployer,
-    config.ethUrl,
-    config.arbUrl
-  )
-
+  const setup = await testSetup(true)
   fs.writeFileSync(
     'localNetwork.json',
-    JSON.stringify({ l1Network, l2Network }, null, 2)
+    JSON.stringify({ l1Network: setup.l1Network, l2Network: setup.l2Network }, null, 2)
   )
   console.log('localnetwork.json updated')
 }
