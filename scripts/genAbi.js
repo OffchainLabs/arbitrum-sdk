@@ -14,7 +14,7 @@ async function main() {
   const teleporterPath = getPackagePath(
     '@offchainlabs/l1-l3-teleport-contracts'
   )
-  const peripheralsPath = getPackagePath('@arbitrum/token-bridge-contracts')
+  const tokenBridgePath = getPackagePath('@arbitrum/token-bridge-contracts')
 
   console.log('Compiling paths.')
 
