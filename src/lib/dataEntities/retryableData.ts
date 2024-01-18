@@ -23,7 +23,7 @@ export interface RetryableData {
    */
   deposit: BigNumber
   /**
-   * The maximum cost to be paif for submitting the transaction
+   * The maximum cost to be paid for submitting the transaction
    */
   maxSubmissionCost: BigNumber
   /**

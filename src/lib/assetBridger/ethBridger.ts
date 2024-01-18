@@ -17,11 +17,12 @@
 'use strict'
 
 import { Signer } from '@ethersproject/abstract-signer'
-import { Provider } from '@ethersproject/abstract-provider'
+import { Provider, TransactionRequest } from '@ethersproject/abstract-provider'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
-import { BigNumber } from 'ethers'
+import { BigNumber, constants } from 'ethers'
 
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
+import { ERC20Inbox__factory } from '../abi/factories/ERC20Inbox__factory'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 import { AssetBridger } from './assetBridger'
@@ -45,7 +46,38 @@ import {
 import { OmitTyped } from '../utils/types'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
-import { getL2Network } from '../dataEntities/networks'
+import { L2Network, getL2Network } from '../dataEntities/networks'
+import { ERC20__factory } from '../abi/factories/ERC20__factory'
+
+export type ApproveFeeTokenParams = {
+  /**
+   * Amount to approve. Defaults to max int.
+   */
+  amount?: BigNumber
+  /**
+   * Transaction overrides
+   */
+  overrides?: PayableOverrides
+}
+
+export type ApproveFeeTokenTxRequest = {
+  /**
+   * Transaction request
+   */
+  txRequest: Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
+  /**
+   * Transaction overrides
+   */
+  overrides?: Overrides
+}
+
+export type ApproveFeeTokenParamsOrTxRequest =
+  | ApproveFeeTokenParams
+  | ApproveFeeTokenTxRequest
+
+type WithL1Signer<T extends ApproveFeeTokenParamsOrTxRequest> = T & {
+  l1Signer: Signer
+}
 
 export interface EthWithdrawParams {
   /**
@@ -133,12 +165,114 @@ export class EthBridger extends AssetBridger<
   EthWithdrawParams | L2ToL1TxReqAndSigner
 > {
   /**
+   * In case of a chain that uses ETH as its native/fee token, this is either undefined or the zero address.
+   * In case of a chain that uses an ERC-20 token from the parent chain as its native/fee token, this is the address of said token on the parent chain.
+   */
+  public readonly nativeToken?: string
+
+  public constructor(public readonly l2Network: L2Network) {
+    super(l2Network)
+
+    this.nativeToken = l2Network.nativeToken
+  }
+
+  /**
+   * Whether the chain uses ETH as its native/fee token.
+   * @returns
+   */
+  private get isNativeTokenEth() {
+    return !this.nativeToken || this.nativeToken === constants.AddressZero
+  }
+
+  /**
    * Instantiates a new EthBridger from an L2 Provider
    * @param l2Provider
    * @returns
    */
   public static async fromProvider(l2Provider: Provider) {
     return new EthBridger(await getL2Network(l2Provider))
+  }
+
+  /**
+   * Asserts that the provided argument is of type `ApproveFeeTokenParams` and not `ApproveFeeTokenTxRequest`.
+   * @param params
+   */
+  private isApproveFeeTokenParams(
+    params: ApproveFeeTokenParamsOrTxRequest
+  ): params is WithL1Signer<ApproveFeeTokenParams> {
+    return typeof (params as ApproveFeeTokenTxRequest).txRequest === 'undefined'
+  }
+
+  /**
+   * Creates a transaction request for approving the custom fee token to be spent by the Inbox on the parent chain.
+   * @param params
+   */
+  public getApproveFeeTokenRequest(
+    params?: ApproveFeeTokenParams
+  ): Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>> {
+    if (this.isNativeTokenEth) {
+      throw new Error('chain uses ETH as its native/fee token')
+    }
+
+    const erc20Interface = ERC20__factory.createInterface()
+    const data = erc20Interface.encodeFunctionData('approve', [
+      this.l2Network.ethBridge.inbox,
+      params?.amount ?? constants.MaxUint256,
+    ])
+
+    return {
+      to: this.nativeToken!,
+      data,
+      value: BigNumber.from(0),
+    }
+  }
+
+  /**
+   * Approves the custom fee token to be spent by the Inbox on the parent chain.
+   * @param params
+   */
+  public async approveFeeToken(
+    params: WithL1Signer<ApproveFeeTokenParamsOrTxRequest>
+  ) {
+    if (this.isNativeTokenEth) {
+      throw new Error('chain uses ETH as its native/fee token')
+    }
+
+    const approveFeeTokenRequest = this.isApproveFeeTokenParams(params)
+      ? this.getApproveFeeTokenRequest(params)
+      : params.txRequest
+
+    return await params.l1Signer.sendTransaction({
+      ...approveFeeTokenRequest,
+      ...params.overrides,
+    })
+  }
+
+  /**
+   * Gets the transaction data for a tx request necessary for depositing ETH or other native/fee token.
+   * @param params
+   * @returns
+   */
+  private getDepositRequestData(params: EthDepositRequestParams) {
+    if (!this.isNativeTokenEth) {
+      return (
+        ERC20Inbox__factory.createInterface() as unknown as {
+          encodeFunctionData(
+            functionFragment: 'depositERC20(uint256)',
+            values: [BigNumber]
+          ): string
+        }
+      ).encodeFunctionData('depositERC20(uint256)', [params.amount])
+    }
+
+    return (
+      Inbox__factory.createInterface() as unknown as {
+        encodeFunctionData(
+          functionFragment: 'depositEth()',
+          values?: undefined
+        ): string
+      }
+    ).encodeFunctionData('depositEth()')
   }
 
   /**
@@ -149,22 +283,11 @@ export class EthBridger extends AssetBridger<
   public async getDepositRequest(
     params: EthDepositRequestParams
   ): Promise<OmitTyped<L1ToL2TransactionRequest, 'retryableData'>> {
-    const inboxInterface = Inbox__factory.createInterface()
-
-    const functionData = (
-      inboxInterface as unknown as {
-        encodeFunctionData(
-          functionFragment: 'depositEth()',
-          values?: undefined
-        ): string
-      }
-    ).encodeFunctionData('depositEth()')
-
     return {
       txRequest: {
         to: this.l2Network.ethBridge.inbox,
-        value: params.amount,
-        data: functionData,
+        value: this.isNativeTokenEth ? params.amount : 0,
+        data: this.getDepositRequestData(params),
         from: params.from,
       },
       isValid: async () => true,

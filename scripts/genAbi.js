@@ -30,23 +30,29 @@ async function main() {
   // https://yarnpkg.com/advanced/rulebook#packages-should-never-write-inside-their-own-folder-outside-of-postinstall
   // instead of writing in postinstall in each of those packages, we should target a local folder in sdk's postinstall
 
-  console.log('building nitro')
-  execSync(`${npmExec} run hardhat:prod compile`, {
+  // copy the hardhat config to nitro-contracts
+  execSync(
+    `cp ${cwd}/hardhat.nitro-contracts-abigen.ts ${nitroPath}/hardhat-abigen.ts`
+  )
+  // copy the hardhat config to token-bridge-contracts
+  execSync(
+    `cp ${cwd}/hardhat.token-bridge-contracts-abigen.ts ${tokenBridgePath}/hardhat-abigen.ts`
+  )
+
+  console.log('building @arbitrum/nitro-contracts')
+  execSync(`${npmExec} run build --config hardhat-abigen.ts`, {
     cwd: nitroPath,
   })
 
-  console.log('building teleporter')
-  execSync(
-    `${npmExec} && ${npmExec} run hardhat compile --config ./hardhat.config.js`,
-    {
-      cwd: teleporterPath,
-    }
-  )
+  console.log('building @arbitrum/token-bridge-contracts')
+  execSync(`${npmExec} run build --config hardhat-abigen.ts`, {
+    cwd: tokenBridgePath,
+  })
 
   console.log('Done compiling')
 
   const nitroFiles = glob(cwd, [
-    `${peripheralsPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
+    `${tokenBridgePath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
     `${nitroPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
     `${teleporterPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
   ])

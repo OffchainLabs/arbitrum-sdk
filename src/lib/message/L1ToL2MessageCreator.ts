@@ -1,3 +1,4 @@
+import { constants } from 'ethers'
 import { Signer } from '@ethersproject/abstract-signer'
 import { Provider } from '@ethersproject/abstract-provider'
 
@@ -7,6 +8,7 @@ import {
 } from './L1ToL2MessageGasEstimator'
 import { L1ContractTransaction, L1TransactionReceipt } from './L1Transaction'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
+import { ERC20Inbox__factory } from '../abi/factories/ERC20Inbox__factory'
 import { getL2Network } from '../dataEntities/networks'
 import { PayableOverrides } from '@ethersproject/contracts'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
@@ -66,6 +68,46 @@ export class L1ToL2MessageCreator {
     )
   }
 
+  // todo(spsjvc): jsdoc
+  protected static getTicketCreationRequestData(
+    params: L1ToL2MessageParams,
+    estimates: Pick<RetryableData, L1ToL2GasKeys>,
+    excessFeeRefundAddress: string,
+    callValueRefundAddress: string,
+    isNativeTokenEth: boolean
+  ) {
+    if (!isNativeTokenEth) {
+      return ERC20Inbox__factory.createInterface().encodeFunctionData(
+        'createRetryableTicket',
+        [
+          params.to,
+          params.l2CallValue,
+          estimates.maxSubmissionCost,
+          excessFeeRefundAddress,
+          callValueRefundAddress,
+          estimates.gasLimit,
+          estimates.maxFeePerGas,
+          estimates.deposit, // tokenTotalFeeAmount
+          params.data,
+        ]
+      )
+    }
+
+    return Inbox__factory.createInterface().encodeFunctionData(
+      'createRetryableTicket',
+      [
+        params.to,
+        params.l2CallValue,
+        estimates.maxSubmissionCost,
+        excessFeeRefundAddress,
+        callValueRefundAddress,
+        estimates.gasLimit,
+        estimates.maxFeePerGas,
+        params.data,
+      ]
+    )
+  }
+
   /**
    * Generate a transaction request for creating a retryable ticket
    * @param params
@@ -97,26 +139,21 @@ export class L1ToL2MessageCreator {
     )
 
     const l2Network = await getL2Network(l2Provider)
-    const inboxInterface = Inbox__factory.createInterface()
-    const functionData = inboxInterface.encodeFunctionData(
-      'createRetryableTicket',
-      [
-        params.to,
-        params.l2CallValue,
-        estimates.maxSubmissionCost,
-        excessFeeRefundAddress,
-        callValueRefundAddress,
-        estimates.gasLimit,
-        estimates.maxFeePerGas,
-        params.data,
-      ]
+    const isNativeTokenEth = typeof l2Network.nativeToken === 'undefined'
+
+    const data = L1ToL2MessageCreator.getTicketCreationRequestData(
+      params,
+      estimates,
+      excessFeeRefundAddress,
+      callValueRefundAddress,
+      isNativeTokenEth
     )
 
     return {
       txRequest: {
         to: l2Network.ethBridge.inbox,
-        data: functionData,
-        value: estimates.deposit,
+        data,
+        value: isNativeTokenEth ? estimates.deposit : constants.Zero,
         from: params.from,
       },
       retryableData: {

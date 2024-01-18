@@ -21,7 +21,6 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import {
   fundL1,
-  fundL2,
   skipIfMainnet,
   depositToken,
   GatewayType,
@@ -34,7 +33,7 @@ import {
   L2Network,
   L2TransactionReceipt,
 } from '../../src'
-import { Signer } from 'ethers'
+import { Signer, constants } from 'ethers'
 import { TestERC20 } from '../../src/lib/abi/TestERC20'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
@@ -45,6 +44,13 @@ import {
 import { ArbRetryableTx__factory } from '../../src/lib/abi/factories/ArbRetryableTx__factory'
 import { NodeInterface__factory } from '../../src/lib/abi/factories/NodeInterface__factory'
 import { isDefined } from '../../src/lib/utils/lib'
+import {
+  fundL1CustomFeeToken,
+  approveL1CustomFeeToken,
+  fundL2CustomFeeToken,
+  approveL1CustomFeeTokenForErc20Deposit,
+  getNativeTokenAllowance,
+} from './custom-fee-token/customFeeTokenTestHelpers'
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
@@ -65,7 +71,9 @@ describe('standard ERC20', () => {
   before('init', async () => {
     const setup = await testSetup()
     await fundL1(setup.l1Signer)
-    await fundL2(setup.l2Signer)
+    await fundL1CustomFeeToken(setup.l1Signer)
+    await approveL1CustomFeeToken(setup.l1Signer)
+    await fundL2CustomFeeToken(setup.l2Signer)
 
     const deployErc20 = new TestERC20__factory().connect(setup.l1Signer)
     const testToken = await deployErc20.deploy()
@@ -76,7 +84,55 @@ describe('standard ERC20', () => {
     testState = { ...setup, l1Token: testToken }
   })
 
-  it('deposits erc20', async () => {
+  it('approves the thing', async () => {
+    const { l1Signer, l2Signer, erc20Bridger } = await testSetup()
+
+    await fundL1(l1Signer)
+    await fundL1CustomFeeToken(l1Signer)
+    await fundL2CustomFeeToken(l2Signer)
+
+    const gatewayAddress = await erc20Bridger.getL1GatewayAddress(
+      testState.l1Token.address,
+      l1Signer.provider!
+    )
+
+    const initialAllowance = await getNativeTokenAllowance(
+      await l1Signer.getAddress(),
+      gatewayAddress
+    )
+
+    console.log({ initialAllowance })
+
+    expect(initialAllowance.toString()).to.eq(
+      constants.Zero.toString(),
+      'initial allowance is not empty'
+    )
+
+    const tx = await erc20Bridger.approveFeeToken({
+      l1Signer: l1Signer,
+      erc20L1Address: testState.l1Token.address,
+    })
+    await tx.wait()
+
+    const finalAllowance = await getNativeTokenAllowance(
+      await l1Signer.getAddress(),
+      gatewayAddress
+    )
+
+    console.log({ finalAllowance })
+
+    expect(finalAllowance.toString()).to.eq(
+      constants.MaxUint256.toString(),
+      'initial allowance is not empty'
+    )
+  })
+
+  it.only('deposits erc20', async () => {
+    await approveL1CustomFeeTokenForErc20Deposit(
+      testState.l1Signer,
+      testState.l1Token.address
+    )
+
     await depositToken(
       depositAmount,
       testState.l1Token.address,

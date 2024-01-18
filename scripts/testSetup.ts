@@ -18,8 +18,9 @@
 
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { Wallet } from '@ethersproject/wallet'
-
+import { Provider } from '@ethersproject/abstract-provider'
 import dotenv from 'dotenv'
+
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
   L1Network,
@@ -384,6 +385,8 @@ export const testSetup = async (
   l2Network: L2Network
   l1Signer: Signer
   l2Signer: Signer
+  l1Provider: Provider
+  l2Provider: Provider
   erc20Bridger: Erc20Bridger
   ethBridger: EthBridger
   adminErc20Bridger: AdminErc20Bridger
@@ -501,6 +504,8 @@ export const testSetup = async (
   return {
     l1Signer,
     l2Signer,
+    l1Provider: ethProvider,
+    l2Provider: arbProvider,
     l1Network: setL1Network,
     l2Network: setL2Network,
     erc20Bridger,

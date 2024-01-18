@@ -25,7 +25,7 @@ import {
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
 import { MaxUint256 } from '@ethersproject/constants'
 import { ErrorCode, Logger } from '@ethersproject/logger'
-import { BigNumber, BigNumberish, ethers, BytesLike } from 'ethers'
+import { BigNumber, BigNumberish, ethers, BytesLike, constants } from 'ethers'
 
 import { L1GatewayRouter__factory } from '../abi/factories/L1GatewayRouter__factory'
 import { L2GatewayRouter__factory } from '../abi/factories/L2GatewayRouter__factory'
@@ -176,10 +176,26 @@ export class Erc20Bridger extends AssetBridger<
   public static MIN_CUSTOM_DEPOSIT_GAS_LIMIT = BigNumber.from(275000)
 
   /**
+   * In case of a chain that uses ETH as its native/fee token, this is either undefined or the zero address.
+   * In case of a chain that uses an ERC-20 token from the parent chain as its native/fee token, this is the address of said token on the parent chain.
+   */
+  public readonly nativeToken?: string
+
+  /**
    * Bridger for moving ERC20 tokens back and forth between L1 to L2
    */
   public constructor(l2Network: L2Network) {
     super(l2Network)
+
+    this.nativeToken = l2Network.nativeToken
+  }
+
+  /**
+   * Whether the chain uses ETH as its native/fee token.
+   * @returns
+   */
+  private get isNativeTokenEth() {
+    return !this.nativeToken || this.nativeToken === constants.AddressZero
   }
 
   /**
@@ -225,6 +241,47 @@ export class Erc20Bridger extends AssetBridger<
       this.l2Network.tokenBridge.l2GatewayRouter,
       l2Provider
     ).getGateway(erc20L1Address)
+  }
+
+  /**
+   * Creates a transaction request for approving the custom fee token to be spent by the relevant Gateway on the parent chain.
+   * @param params
+   */
+  public async getApproveFeeTokenRequest(
+    params: ProviderTokenApproveParams
+  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
+    if (this.isNativeTokenEth) {
+      throw new Error('chain uses ETH as its native/fee token')
+    }
+
+    const txRequest = await this.getApproveTokenRequest(params)
+    // just reuse the approve token request but direct it towards the native token contract
+    return { ...txRequest, to: this.nativeToken! }
+  }
+
+  /**
+   * Approves the custom fee token to be spent by the relevant Gateway on the parent chain.
+   * @param params
+   */
+  public async approveFeeToken(
+    params: ApproveParamsOrTxRequest
+  ): Promise<ethers.ContractTransaction> {
+    if (this.isNativeTokenEth) {
+      throw new Error('chain uses ETH as its native/fee token')
+    }
+
+    await this.checkL1Network(params.l1Signer)
+
+    const approveRequest = this.isApproveParams(params)
+      ? await this.getApproveFeeTokenRequest({
+          ...params,
+          l1Provider: SignerProviderUtils.getProviderOrThrow(params.l1Signer),
+        })
+      : params.txRequest
+    return await params.l1Signer.sendTransaction({
+      ...approveRequest,
+      ...params.overrides,
+    })
   }
 
   /**
@@ -504,6 +561,52 @@ export class Erc20Bridger extends AssetBridger<
   }
 
   /**
+   * Get the call value for the deposit transaction request
+   * @param depositParams
+   * @returns
+   */
+  private getDepositRequestCallValue(
+    depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
+  ) {
+    // the call value should be zero when paying with a custom fee token,
+    // as the fee amount is packed inside the last parameter (`data`) of the call to `outboundTransfer`
+    if (!this.isNativeTokenEth) {
+      return constants.Zero
+    }
+
+    // we dont include the l2 call value for token deposits because
+    // they either have 0 call value, or their call value is withdrawn from
+    // a contract by the gateway (weth). So in both of these cases the l2 call value
+    // is not actually deposited in the value field
+    return depositParams.gasLimit
+      .mul(depositParams.maxFeePerGas)
+      .add(depositParams.maxSubmissionCost)
+  }
+
+  // todo(spsjvc): jsdoc
+  private getDepositRequestOutboundTransferDataParam(
+    depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
+  ) {
+    if (!this.isNativeTokenEth) {
+      return defaultAbiCoder.encode(
+        ['uint256', 'bytes', 'uint256'],
+        [
+          constants.Zero,
+          '0x',
+          depositParams.gasLimit
+            .mul(depositParams.maxFeePerGas)
+            .add(depositParams.maxSubmissionCost),
+        ]
+      )
+    }
+
+    return defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [depositParams.maxSubmissionCost, '0x']
+    )
+  }
+
+  /**
    * Get the arguments for calling the deposit function
    * @param params
    * @returns
@@ -542,10 +645,6 @@ export class Erc20Bridger extends AssetBridger<
     const depositFunc = (
       depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
     ) => {
-      const innerData = defaultAbiCoder.encode(
-        ['uint256', 'bytes'],
-        [depositParams.maxSubmissionCost, '0x']
-      )
       const iGatewayRouter = L1GatewayRouter__factory.createInterface()
 
       return {
@@ -555,17 +654,11 @@ export class Erc20Bridger extends AssetBridger<
           amount,
           depositParams.gasLimit,
           depositParams.maxFeePerGas,
-          innerData,
+          this.getDepositRequestOutboundTransferDataParam(depositParams),
         ]),
         to: this.l2Network.tokenBridge.l1GatewayRouter,
         from: defaultedParams.from,
-        value: depositParams.gasLimit
-          .mul(depositParams.maxFeePerGas)
-          .add(depositParams.maxSubmissionCost),
-        // we dont include the l2 call value for token deposits because
-        // they either have 0 call value, or their call value is withdrawn from
-        // a contract by the gateway (weth). So in both of these cases the l2 call value
-        // is not actually deposited in the value field
+        value: this.getDepositRequestCallValue(depositParams),
       }
     }
 

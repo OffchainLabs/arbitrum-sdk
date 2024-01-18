@@ -1,6 +1,6 @@
 {
   "name": "@arbitrum/sdk",
-  "version": "3.2.0-beta.0",
+  "version": "3.2.0-beta.0-custom-fee-token.0",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -31,7 +31,8 @@
     "test": "mocha",
     "test:coverage": "nyc mocha",
     "test:fork": "SHOULD_FORK=1 hardhat test tests/fork/*.test.ts",
-    "test:integration": "mocha tests/integration/ --timeout 30000000 --bail",
+    "test:integration": "mocha tests/integration/ --ignore tests/integration/custom-fee-token/ --timeout 30000000 --bail",
+    "test:integration:custom-fee-token": "mocha tests/integration/custom-fee-token/ --timeout 30000000 --bail",
     "test:unit": "mocha --parallel tests/unit/ --timeout 30000 --bail",
     "test:ci": "nyc --reporter=lcovonly mocha --reporter xunit",
     "lint": "eslint .",
@@ -43,7 +44,8 @@
     "setStandard": "ts-node scripts/setStandardGateways.ts",
     "setCustom": "ts-node scripts/setArbCustomGateways.ts",
     "cancelRetryable": "ts-node scripts/cancelRetryable.ts",
-    "bridgeStandardToken": "ts-node scripts/deployStandard.ts"
+    "bridgeStandardToken": "ts-node scripts/deployStandard.ts",
+    "fund": "ts-node scripts/fundCustomFeeToken.ts"
   },
   "dependencies": {
     "@ethersproject/address": "^5.0.8",
@@ -53,8 +55,8 @@
     "ethers": "^5.1.0"
   },
   "devDependencies": {
-    "@arbitrum/nitro-contracts": "1.0.1",
-    "@arbitrum/token-bridge-contracts": "1.2.0",
+    "@arbitrum/nitro-contracts": "^1.1.0",
+    "@arbitrum/token-bridge-contracts": "^1.2.0",
     "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@offchainlabs/l1-l3-teleport-contracts": "^0.1.0-alpha.0",
     "@typechain/ethers-v5": "9.0.0",
