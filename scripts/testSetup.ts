@@ -38,11 +38,17 @@ import { deployErc20AndInit } from './deployBridge'
 import * as path from 'path'
 import * as fs from 'fs'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
+import { ARB_MINIMUM_BLOCK_TIME_IN_SECONDS } from '../src/lib/dataEntities/constants'
 
 dotenv.config()
 
 const isTestingOrbitChains = process.env.ORBIT_TEST === '1'
 
+/**
+ * The RPC urls and private keys using during testing
+ *
+ * @note When the `ORBIT_TEST` env variable is `true`, we treat `ethUrl` as the L2 and `arbUrl` as the L3
+ */
 export const config = isTestingOrbitChains
   ? {
       arbUrl: process.env['ORBIT_URL'] as string,
@@ -169,7 +175,7 @@ export const getCustomNetworks = async (
       l2Weth: '',
       l2WethGateway: '',
     },
-    blockTime: 0.25,
+    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
     partnerChainIDs: [],
   }
 
@@ -179,6 +185,9 @@ export const getCustomNetworks = async (
   }
 }
 
+/**
+ * Adds the L1 and L2 networks (as defined in the environment) to the global network registry
+ */
 const setupL1NetworkForOrbit = async (): Promise<{
   l2Network: L2Network
   l2Provider: providers.Provider
@@ -216,6 +225,9 @@ const setupL1NetworkForOrbit = async (): Promise<{
   return { l2Network, l2Provider }
 }
 
+/**
+ * Adds the L3 network (as defined in the environment) to the global network registry
+ */
 const setupOrbitNetworks = async (): Promise<{
   customL1Network: L2Network
   customL2Network: L2Network
@@ -237,6 +249,12 @@ const setupOrbitNetworks = async (): Promise<{
   }
 }
 
+/**
+ * Builds a child network configuration object from deployment data
+ *
+ * @note `l1Provider` and `l2Provider` can be a `l2Provider` and `l3Provider` in a parent-child
+ * relationship. They will be renamed in the next major version.
+ */
 async function getCustomOrbitNetwork(
   deploymentData: DeploymentData,
   l1Provider: providers.Provider,
@@ -289,13 +307,19 @@ async function getCustomOrbitNetwork(
       l2Weth: '',
       l2WethGateway: '',
     },
-    blockTime: 0.25,
+    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
     partnerChainIDs: [],
   }
 
   return l2Network
 }
 
+/**
+ * Builds network configuration and deploys the token bridge contracts
+ *
+ * @note `l1Deployer`/`l2Deployer` and `l1Url`/`l2url` can refer to an `L2` or `L3` in a
+ * parent-child relationship. They will be renamed in the next major version.
+ */
 export const setupNetworks = async (
   l1Deployer: Signer,
   l2Deployer: Signer,
