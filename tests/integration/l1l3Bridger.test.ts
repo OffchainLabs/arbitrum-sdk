@@ -19,9 +19,7 @@ import { TestERC20 } from '../../src/lib/abi/TestERC20'
 import { L1Teleporter__factory } from '../../src/lib/abi/factories/L1Teleporter__factory'
 import { fundL1, fundL2, skipIfMainnet } from './testHelpers'
 import { BigNumber, Signer, ethers } from 'ethers'
-import {
-  EthL1L3Bridger,
-} from '../../src/lib/assetBridger/l1l3Bridger'
+import { EthL1L3Bridger } from '../../src/lib/assetBridger/l1l3Bridger'
 import { expect } from 'chai'
 import { networks } from '../../src/lib/dataEntities/networks'
 
@@ -47,25 +45,27 @@ function poll(
   })
 }
 
-async function deployTeleportContracts(
-  l1Signer: Signer,
-  l2Signer: Signer
-) {
+async function deployTeleportContracts(l1Signer: Signer, l2Signer: Signer) {
   // predict the teleporter address
   const predL1Teleporter = ethers.utils.getContractAddress({
     from: await l1Signer.getAddress(),
-    nonce: await l1Signer.getTransactionCount()
+    nonce: await l1Signer.getTransactionCount(),
   })
 
-  const l2ContractsDeployer = await new L2ForwarderContractsDeployer__factory(l2Signer).deploy(new Address(predL1Teleporter).applyAlias().value)
+  const l2ContractsDeployer = await new L2ForwarderContractsDeployer__factory(
+    l2Signer
+  ).deploy(new Address(predL1Teleporter).applyAlias().value)
   await l2ContractsDeployer.deployed()
 
-  const l1Teleporter = await new L1Teleporter__factory(l1Signer).deploy(await l2ContractsDeployer.factory(), await l2ContractsDeployer.implementation())
+  const l1Teleporter = await new L1Teleporter__factory(l1Signer).deploy(
+    await l2ContractsDeployer.factory(),
+    await l2ContractsDeployer.implementation()
+  )
   await l1Teleporter.deployed()
 
   return {
     l1Teleporter,
-    l2ContractsDeployer
+    l2ContractsDeployer,
   }
 }
 
@@ -159,7 +159,8 @@ describe('L1 to L3 Bridging', () => {
 
     // deploy teleporter contracts and mock token
     before(async function () {
-      const { l2ContractsDeployer, l1Teleporter } = await deployTeleportContracts(l1Signer, l2Signer)
+      const { l2ContractsDeployer, l1Teleporter } =
+        await deployTeleportContracts(l1Signer, l2Signer)
 
       const l2ForwarderImplAddr = await l2ContractsDeployer.implementation()
       const l2ForwarderFactory = await l2ContractsDeployer.factory()
@@ -267,28 +268,24 @@ describe('L1 to L3 Bridging', () => {
       it('approves', async () => {
         // approve the teleporter
         await (
-          await l1l3Bridger.approveToken(
-            {
-              erc20L1Address: l1Token.address,
-              l1Signer
-            },
-          )
+          await l1l3Bridger.approveToken({
+            erc20L1Address: l1Token.address,
+            l1Signer,
+          })
         ).wait()
       })
 
       it('happy path', async () => {
         const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
 
-        const depositTx = await l1l3Bridger.deposit(
-          {
-            erc20L1Address: l1Token.address,
-            to: l3Recipient,
-            amount,
-            l1Signer,
-            l2Provider: l2Signer.provider!,
-            l3Provider
-          },
-        )
+        const depositTx = await l1l3Bridger.deposit({
+          erc20L1Address: l1Token.address,
+          to: l3Recipient,
+          amount,
+          l1Signer,
+          l2Provider: l2Signer.provider!,
+          l3Provider,
+        })
 
         const depositReceipt = await depositTx.wait()
 
@@ -297,11 +294,8 @@ describe('L1 to L3 Bridging', () => {
           const status = await l1l3Bridger.getDepositMessages({
             l1TransactionReceipt: depositReceipt,
             l2Provider: l2JsonRpcProvider,
-            l3Provider
+            l3Provider,
           })
-          console.log(await status.l1l2TokenBridge.status())
-          console.log(await status.l2ForwarderFactory.status())
-          console.log(await status.l2l3TokenBridge?.status())
           return status.completed
         }, 1000)
 
