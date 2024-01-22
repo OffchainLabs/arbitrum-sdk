@@ -153,7 +153,7 @@ export class L1ToL2MessageCreator {
       txRequest: {
         to: l2Network.ethBridge.inbox,
         data,
-        value: estimates.deposit,
+        value: isNativeTokenEth ? estimates.deposit : constants.Zero,
         from: params.from,
       },
       retryableData: {

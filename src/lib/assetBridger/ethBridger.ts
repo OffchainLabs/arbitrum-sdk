@@ -286,7 +286,7 @@ export class EthBridger extends AssetBridger<
     return {
       txRequest: {
         to: this.l2Network.ethBridge.inbox,
-        value: params.amount,
+        value: this.isNativeTokenEth ? params.amount : 0,
         data: this.getDepositRequestData(params),
         from: params.from,
       },
