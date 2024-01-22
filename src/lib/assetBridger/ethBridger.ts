@@ -168,21 +168,21 @@ export class EthBridger extends AssetBridger<
    * In case of a chain that uses ETH as its native/fee token, this is either undefined or the zero address.
    * In case of a chain that uses an ERC-20 token from the parent chain as its native/fee token, this is the address of said token on the parent chain.
    */
-  public readonly nativeToken?: string
+  // public readonly nativeToken?: string
 
   public constructor(public readonly l2Network: L2Network) {
     super(l2Network)
 
-    this.nativeToken = l2Network.nativeToken
+    // this.nativeToken = l2Network.nativeToken
   }
 
   /**
    * Whether the chain uses ETH as its native/fee token.
    * @returns
    */
-  private get isNativeTokenEth() {
-    return !this.nativeToken || this.nativeToken === constants.AddressZero
-  }
+  // private get isNativeTokenEth() {
+  //   return !this.nativeToken || this.nativeToken === constants.AddressZero
+  // }
 
   /**
    * Instantiates a new EthBridger from an L2 Provider
@@ -210,9 +210,9 @@ export class EthBridger extends AssetBridger<
   public getApproveFeeTokenRequest(
     params?: ApproveFeeTokenParams
   ): Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>> {
-    if (this.isNativeTokenEth) {
-      throw new Error('chain uses ETH as its native/fee token')
-    }
+    // if (this.isNativeTokenEth) {
+    //   throw new Error('chain uses ETH as its native/fee token')
+    // }
 
     const erc20Interface = ERC20__factory.createInterface()
     const data = erc20Interface.encodeFunctionData('approve', [
@@ -221,7 +221,8 @@ export class EthBridger extends AssetBridger<
     ])
 
     return {
-      to: this.nativeToken!,
+      // to: this.nativeToken!,
+      to: '',
       data,
       value: BigNumber.from(0),
     }
@@ -234,9 +235,9 @@ export class EthBridger extends AssetBridger<
   public async approveFeeToken(
     params: WithL1Signer<ApproveFeeTokenParamsOrTxRequest>
   ) {
-    if (this.isNativeTokenEth) {
-      throw new Error('chain uses ETH as its native/fee token')
-    }
+    // if (this.isNativeTokenEth) {
+    //   throw new Error('chain uses ETH as its native/fee token')
+    // }
 
     const approveFeeTokenRequest = this.isApproveFeeTokenParams(params)
       ? this.getApproveFeeTokenRequest(params)
@@ -254,16 +255,16 @@ export class EthBridger extends AssetBridger<
    * @returns
    */
   private getDepositRequestData(params: EthDepositRequestParams) {
-    if (!this.isNativeTokenEth) {
-      return (
-        ERC20Inbox__factory.createInterface() as unknown as {
-          encodeFunctionData(
-            functionFragment: 'depositERC20(uint256)',
-            values: [BigNumber]
-          ): string
-        }
-      ).encodeFunctionData('depositERC20(uint256)', [params.amount])
-    }
+    // if (!this.isNativeTokenEth) {
+    // return (
+    //   ERC20Inbox__factory.createInterface() as unknown as {
+    //     encodeFunctionData(
+    //       functionFragment: 'depositERC20(uint256)',
+    //       values: [BigNumber]
+    //     ): string
+    //   }
+    // ).encodeFunctionData('depositERC20(uint256)', [params.amount])
+    // }
 
     return (
       Inbox__factory.createInterface() as unknown as {
@@ -286,7 +287,7 @@ export class EthBridger extends AssetBridger<
     return {
       txRequest: {
         to: this.l2Network.ethBridge.inbox,
-        value: this.isNativeTokenEth ? params.amount : 0,
+        value: params.amount,
         data: this.getDepositRequestData(params),
         from: params.from,
       },

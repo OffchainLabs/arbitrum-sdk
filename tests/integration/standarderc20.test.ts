@@ -71,9 +71,9 @@ describe('standard ERC20', () => {
   before('init', async () => {
     const setup = await testSetup()
     await fundL1(setup.l1Signer)
-    await fundL1CustomFeeToken(setup.l1Signer)
-    await approveL1CustomFeeToken(setup.l1Signer)
-    await fundL2CustomFeeToken(setup.l2Signer)
+    // await fundL1CustomFeeToken(setup.l1Signer)
+    // await approveL1CustomFeeToken(setup.l1Signer)
+    // await fundL2CustomFeeToken(setup.l2Signer)
 
     const deployErc20 = new TestERC20__factory().connect(setup.l1Signer)
     const testToken = await deployErc20.deploy()
@@ -88,8 +88,8 @@ describe('standard ERC20', () => {
     const { l1Signer, l2Signer, erc20Bridger } = await testSetup()
 
     await fundL1(l1Signer)
-    await fundL1CustomFeeToken(l1Signer)
-    await fundL2CustomFeeToken(l2Signer)
+    // await fundL1CustomFeeToken(l1Signer)
+    // await fundL2CustomFeeToken(l2Signer)
 
     const gatewayAddress = await erc20Bridger.getL1GatewayAddress(
       testState.l1Token.address,
@@ -127,7 +127,7 @@ describe('standard ERC20', () => {
     )
   })
 
-  it.only('deposits erc20', async () => {
+  it('deposits erc20', async () => {
     await approveL1CustomFeeTokenForErc20Deposit(
       testState.l1Signer,
       testState.l1Token.address

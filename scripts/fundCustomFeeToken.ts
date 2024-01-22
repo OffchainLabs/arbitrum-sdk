@@ -1,7 +1,19 @@
 import { fundL1CustomFeeToken } from '../tests/integration/custom-fee-token/customFeeTokenTestHelpers'
+import { getLocalNetworksFromFile } from './testSetup'
 
 async function main() {
-  await fundL1CustomFeeToken('0x3f1Eae7D46d88F08fc2F8ed27FCb2AB183EB2d0E')
+  const localNetworks = getLocalNetworksFromFile()
+  if (!localNetworks) {
+    console.error('No local networks found')
+    //TODO: get token address from deployment somehow
+  }
+  const nativeTokenAddress = localNetworks?.l2Network.nativeToken
+  if (!nativeTokenAddress || nativeTokenAddress === undefined) {
+    console.error('No native token found')
+    return
+  }
+
+  await fundL1CustomFeeToken(nativeTokenAddress)
 }
 
 main()

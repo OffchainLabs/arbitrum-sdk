@@ -39,6 +39,13 @@ import * as path from 'path'
 import * as fs from 'fs'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import { ARB_MINIMUM_BLOCK_TIME_IN_SECONDS } from '../src/lib/dataEntities/constants'
+import {
+  fundL1CustomFeeToken,
+  approveL1CustomFeeToken,
+  isL2NetworkWithCustomFeeToken,
+  fundL2CustomFeeToken,
+} from '../tests/integration/custom-fee-token/customFeeTokenTestHelpers'
+import { fundL1, fundL2 } from '../tests/integration/testHelpers'
 
 dotenv.config()
 
@@ -427,14 +434,9 @@ export const testSetup = async (): Promise<{
     // the networks havent been added yet
 
     // check if theres an existing network available
-    const localNetworkFile = path.join(__dirname, '..', 'localNetwork.json')
-    if (fs.existsSync(localNetworkFile)) {
-      const { l1Network, l2Network } = JSON.parse(
-        fs.readFileSync(localNetworkFile).toString()
-      ) as {
-        l1Network: L1Network
-        l2Network: L2Network
-      }
+    const localNetworkFile = getLocalNetworksFromFile()
+    if (localNetworkFile) {
+      const { l1Network, l2Network } = localNetworkFile
 
       if (isTestingOrbitChains) {
         await setupL1NetworkForOrbit()
@@ -466,6 +468,18 @@ export const testSetup = async (): Promise<{
   const ethBridger = new EthBridger(setL2Network)
   const inboxTools = new InboxTools(l1Signer, setL2Network)
 
+  // const isCustomFeeToken = isL2NetworkWithCustomFeeToken()
+  // if (isCustomFeeToken) {
+  //   await fundL1(l1Signer)
+  //   await fundL2(l2Signer)
+
+  //   // await fundL1CustomFeeToken(l1Signer)
+  //   // await fundL2CustomFeeToken(l2Signer)
+
+  //   // await approveL1CustomFeeToken(l1Signer)
+  //   // await approveL2CustomFeeToken(l2Signer)
+  // }
+
   return {
     l1Signer,
     l2Signer,
@@ -479,5 +493,28 @@ export const testSetup = async (): Promise<{
     inboxTools,
     l1Deployer,
     l2Deployer,
+  }
+}
+
+export function getLocalNetworksFromFile():
+  | {
+      l1Network: L1Network
+      l2Network: L2Network
+    }
+  | undefined {
+  try {
+    const pathToLocalNetworkFile = path.join(
+      __dirname,
+      '..',
+      'localNetwork.json'
+    )
+    if (fs.existsSync(pathToLocalNetworkFile)) {
+      const localNetworksFile = fs.readFileSync(pathToLocalNetworkFile, 'utf8')
+      return JSON.parse(localNetworksFile)
+    }
+    return undefined
+  } catch (err) {
+    console.log(err)
+    return undefined
   }
 }

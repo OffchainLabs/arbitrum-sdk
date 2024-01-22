@@ -307,6 +307,7 @@ export class L1ToL2MessageGasEstimator {
 
     let retryable: RetryableData | null
     try {
+      console.log({ to: to, data: nullData, value: value, from: from })
       // get retryable data from the null call
       const res = await l1Provider.call({
         to: to,
