@@ -2,7 +2,8 @@ import { testSetup } from './testSetup'
 import * as fs from 'fs'
 
 async function main() {
-  const setup = await testSetup(true)
+  fs.rmSync('localNetwork.json', { force: true })
+  const setup = await testSetup()
   fs.writeFileSync(
     'localNetwork.json',
     JSON.stringify(

@@ -378,9 +378,7 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
   else return provider.getSigner(0)
 }
 
-export const testSetup = async (
-  ignoreLocalNetworkJson?: boolean
-): Promise<{
+export const testSetup = async (): Promise<{
   l1Network: L1Network | L2Network
   l2Network: L2Network
   l1Signer: Signer
@@ -419,24 +417,20 @@ export const testSetup = async (
       const { l1Network, l2Network } = localNetworkFile
 
       if (isTestingOrbitChains) {
-        const { l1Network, l2Network } = file as {
-          l1Network: L2Network
-          l2Network: L2Network
-        }
-
+        const _l1Network = l1Network as L2Network
         const ethLocal: L1Network = {
           blockTime: 10,
-          chainID: l1Network.partnerChainID,
+          chainID: _l1Network.partnerChainID,
           explorerUrl: '',
           isCustom: true,
           name: 'EthLocal',
-          partnerChainIDs: [l1Network.chainID],
+          partnerChainIDs: [_l1Network.chainID],
           isArbitrum: false,
         }
 
         addCustomNetwork({
           customL1Network: ethLocal,
-          customL2Network: l1Network,
+          customL2Network: _l1Network,
         })
 
         addCustomNetwork({
@@ -446,13 +440,8 @@ export const testSetup = async (
         setL1Network = l1Network
         setL2Network = l2Network
       } else {
-        const { l1Network, l2Network } = file as {
-          l1Network: L1Network
-          l2Network: L2Network
-        }
-
         addCustomNetwork({
-          customL1Network: l1Network,
+          customL1Network: l1Network as L1Network,
           customL2Network: l2Network,
         })
 
@@ -519,7 +508,7 @@ export const testSetup = async (
 
 export function getLocalNetworksFromFile():
   | {
-      l1Network: L1Network
+      l1Network: L1Network | L2Network
       l2Network: L2Network
     }
   | undefined {
