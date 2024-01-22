@@ -29,7 +29,7 @@ import {
   getL2Network,
   addCustomNetwork,
 } from '../src/lib/dataEntities/networks'
-import { Signer, providers } from 'ethers'
+import { Signer, ethers, providers } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { execSync } from 'child_process'
 import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
@@ -39,6 +39,7 @@ import * as path from 'path'
 import * as fs from 'fs'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import { ARB_MINIMUM_BLOCK_TIME_IN_SECONDS } from '../src/lib/dataEntities/constants'
+import { IERC20Bridge__factory } from '../src/lib/abi/factories/IERC20Bridge__factory'
 
 dotenv.config()
 
@@ -296,6 +297,20 @@ async function getCustomOrbitNetwork(
   return l2Network
 }
 
+const getNetworkFeeToken = async (
+  l1Provider: providers.Provider,
+  l2Network: L2Network
+): Promise<string | undefined> => {
+  const bridge = IERC20Bridge__factory.connect(
+    l2Network.ethBridge.bridge,
+    l1Provider
+  )
+  try {
+    return await bridge.nativeToken()
+  } catch (e) {
+    return undefined
+  }
+}
 /**
  * Builds network configuration and deploys the token bridge contracts
  *
@@ -314,10 +329,16 @@ export const setupNetworks = async (
     ? await getOrbitNetwork()
     : await getCustomNetworks(l1Url, l2Url)
 
+  const nativeTokenAddress = await getNetworkFeeToken(
+    l1Deployer.provider!,
+    customNetworks.customL2Network
+  )
+
   const { l1: l1Contracts, l2: l2Contracts } = await deployErc20AndInit(
     l1Deployer,
     l2Deployer,
     customNetworks.customL2Network.ethBridge.inbox,
+    nativeTokenAddress !== undefined && nativeTokenAddress !== ethers.constants.AddressZero,
     l1WethOverride
   )
 
@@ -329,17 +350,24 @@ export const setupNetworks = async (
       l1GatewayRouter: l1Contracts.router.address,
       l1MultiCall: l1Contracts.multicall.address,
       l1ProxyAdmin: l1Contracts.proxyAdmin.address,
-      l1Weth: l1WethOverride || l1Contracts.weth.address,
-      l1WethGateway: l1Contracts.wethGateway.address,
 
       l2CustomGateway: l2Contracts.customGateway.address,
       l2ERC20Gateway: l2Contracts.standardGateway.address,
       l2GatewayRouter: l2Contracts.router.address,
       l2Multicall: l2Contracts.multicall.address,
       l2ProxyAdmin: l2Contracts.proxyAdmin.address,
+    },
+    nativeToken: nativeTokenAddress,
+  }
+
+  if (l1Contracts.weth && l2Contracts.weth) {
+    l2Network.tokenBridge = {
+      ...l2Network.tokenBridge,
+      l1Weth: l1WethOverride || l1Contracts.weth.address,
+      l1WethGateway: l1Contracts.wethGateway.address,
       l2Weth: l2Contracts.weth.address,
       l2WethGateway: l2Contracts.wethGateway.address,
-    },
+    }
   }
 
   // in case of L3, we only need to add the L3, as L1 and L2 were registered in a previous call to setupNetworks
@@ -353,17 +381,19 @@ export const setupNetworks = async (
   // also register the weth gateway
   // we add it here rather than in deployBridge because
   // we have access to an adminerc20bridger
-  const adminErc20Bridger = new AdminErc20Bridger(l2Network)
-  await (
+  if (l2Network.tokenBridge.l1Weth) {
+    const adminErc20Bridger = new AdminErc20Bridger(l2Network)
     await (
-      await adminErc20Bridger.setGateways(l1Deployer, l2Deployer.provider!, [
-        {
-          gatewayAddr: l2Network.tokenBridge.l1WethGateway,
-          tokenAddr: l2Network.tokenBridge.l1Weth,
-        },
-      ])
-    ).wait()
-  ).waitForL2(l2Deployer)
+      await (
+        await adminErc20Bridger.setGateways(l1Deployer, l2Deployer.provider!, [
+          {
+            gatewayAddr: l2Network.tokenBridge.l1WethGateway,
+            tokenAddr: l2Network.tokenBridge.l1Weth,
+          },
+        ])
+      ).wait()
+    ).waitForL2(l2Deployer)
+  }
 
   return {
     l1Network: customNetworks.customL1Network,

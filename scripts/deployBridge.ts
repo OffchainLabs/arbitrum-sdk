@@ -1,5 +1,9 @@
 import { Signer, ContractFactory, constants } from 'ethers'
 
+import { L1OrbitGatewayRouter__factory } from '../src/lib/abi/factories/L1OrbitGatewayRouter__factory'
+import { L1OrbitERC20Gateway__factory } from '../src/lib/abi/factories/L1OrbitERC20Gateway__factory'
+import { L1OrbitCustomGateway__factory } from '../src/lib/abi/factories/L1OrbitCustomGateway__factory'
+
 import { L1GatewayRouter__factory } from '../src/lib/abi/factories/L1GatewayRouter__factory'
 import { L1ERC20Gateway__factory } from '../src/lib/abi/factories/L1ERC20Gateway__factory'
 import { L1CustomGateway__factory } from '../src/lib/abi/factories/L1CustomGateway__factory'
@@ -37,6 +41,47 @@ const deployBehindProxy = async <
   console.log(factory['contractName'], proxy.address)
 
   return instance.attach(proxy.address) as ReturnType<T['deploy']>
+}
+
+export const deployErc20L1CustomFee = async (deployer: Signer) => {
+  const proxyAdmin = await new ProxyAdmin__factory().connect(deployer).deploy()
+  await proxyAdmin.deployed()
+  console.log('proxyAdmin', proxyAdmin.address)
+
+  const router = await deployBehindProxy(
+    deployer,
+    new L1OrbitGatewayRouter__factory(),
+    proxyAdmin
+  )
+  await router.deployed()
+
+  const standardGateway = await deployBehindProxy(
+    deployer,
+    new L1OrbitERC20Gateway__factory(),
+    proxyAdmin
+  )
+  await standardGateway.deployed()
+
+  const customGateway = await deployBehindProxy(
+    deployer,
+    new L1OrbitCustomGateway__factory(),
+    proxyAdmin
+  )
+  await customGateway.deployed()
+
+  const multicall = await new Multicall2__factory().connect(deployer).deploy()
+  await multicall.deployed()
+  console.log('multicall', multicall.address)
+
+  return {
+    proxyAdmin,
+    router,
+    standardGateway,
+    weth: undefined,
+    wethGateway: undefined,
+    customGateway,
+    multicall,
+  }
 }
 
 export const deployErc20L1 = async (deployer: Signer) => {
@@ -90,6 +135,15 @@ export const deployErc20L1 = async (deployer: Signer) => {
     wethGateway,
     weth,
     multicall,
+  }
+}
+
+export const deployErc20L2CustomFee = async (deployer: Signer) => {
+  const l2 = await deployErc20L2(deployer)
+  return {
+    ...l2,
+    weth: undefined,
+    wethGateway: undefined,
   }
 }
 
@@ -171,13 +225,18 @@ export const deployErc20AndInit = async (
   l1Signer: Signer,
   l2Signer: Signer,
   inboxAddress: string,
+  usingCustomFeeToken: boolean,
   l1WethOverride?: string
 ) => {
   console.log('deploying l1')
-  const l1 = await deployErc20L1(l1Signer)
+  const l1 = usingCustomFeeToken
+    ? await deployErc20L1CustomFee(l1Signer)
+    : await deployErc20L1(l1Signer)
 
   console.log('deploying l2')
-  const l2 = await deployErc20L2(l2Signer)
+  const l2 = usingCustomFeeToken
+    ? await deployErc20L2CustomFee(l2Signer)
+    : await deployErc20L2(l2Signer)
 
   console.log('initialising L2')
   await (
@@ -197,23 +256,26 @@ export const deployErc20AndInit = async (
       l2.router.address
     )
   ).wait()
-  await (
-    await l2.weth.initialize(
-      'WETH',
-      'WETH',
-      18,
-      l2.wethGateway.address,
-      l1WethOverride || l1.weth.address
-    )
-  ).wait()
-  await (
-    await l2.wethGateway.initialize(
-      l1.wethGateway.address,
-      l2.router.address,
-      l1WethOverride || l1.weth.address,
-      l2.weth.address
-    )
-  ).wait()
+
+  if (l1.weth && l2.weth) {
+    await (
+      await l2.weth.initialize(
+        'WETH',
+        'WETH',
+        18,
+        l2.wethGateway.address,
+        l1WethOverride || l1.weth.address
+      )
+    ).wait()
+    await (
+      await l2.wethGateway.initialize(
+        l1.wethGateway.address,
+        l2.router.address,
+        l1WethOverride || l1.weth.address,
+        l2.weth.address
+      )
+    ).wait()
+  }
 
   console.log('initialising L1')
   await (
@@ -243,15 +305,19 @@ export const deployErc20AndInit = async (
       await l1Signer.getAddress()
     )
   ).wait()
-  await (
-    await l1.wethGateway.initialize(
-      l2.wethGateway.address,
-      l1.router.address,
-      inboxAddress,
-      l1WethOverride || l1.weth.address,
-      l2.weth.address
-    )
-  ).wait()
+  if (l1.weth && l2.weth) {
+    await (
+      await l1.wethGateway.initialize(
+        l2.wethGateway.address,
+        l1.router.address,
+        inboxAddress,
+        l1WethOverride || l1.weth.address,
+        l2.weth.address
+      )
+    ).wait()
+  } else {
+    l2.weth = undefined
+  }
 
   return { l1, l2 }
 }
