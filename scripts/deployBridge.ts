@@ -170,7 +170,8 @@ export const deployErc20L2 = async (deployer: Signer) => {
 export const deployErc20AndInit = async (
   l1Signer: Signer,
   l2Signer: Signer,
-  inboxAddress: string
+  inboxAddress: string,
+  l1WethOverride?: string
 ) => {
   console.log('deploying l1')
   const l1 = await deployErc20L1(l1Signer)
@@ -202,14 +203,14 @@ export const deployErc20AndInit = async (
       'WETH',
       18,
       l2.wethGateway.address,
-      l1.weth.address
+      l1WethOverride || l1.weth.address
     )
   ).wait()
   await (
     await l2.wethGateway.initialize(
       l1.wethGateway.address,
       l2.router.address,
-      l1.weth.address,
+      l1WethOverride || l1.weth.address,
       l2.weth.address
     )
   ).wait()
@@ -247,7 +248,7 @@ export const deployErc20AndInit = async (
       l2.wethGateway.address,
       l1.router.address,
       inboxAddress,
-      l1.weth.address,
+      l1WethOverride || l1.weth.address,
       l2.weth.address
     )
   ).wait()

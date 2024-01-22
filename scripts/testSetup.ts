@@ -186,9 +186,9 @@ export const getCustomNetworks = async (
 }
 
 /**
- * Adds the L1 and L2 networks (as defined in the environment) to the global network registry
+ * Gets the parent network for an Orbit chain
  */
-const setupL1NetworkForOrbit = async (): Promise<{
+const getL1NetworkForOrbit = async (): Promise<{
   l2Network: L2Network
   l2Provider: providers.Provider
 }> => {
@@ -198,41 +198,23 @@ const setupL1NetworkForOrbit = async (): Promise<{
   const deploymentData = getDeploymentData()
   const parsedDeploymentData = JSON.parse(deploymentData) as DeploymentData
 
-  const l1NetworkInfo = await l1Provider.getNetwork()
-  const l2NetworkInfo = await l2Provider.getNetwork()
-
-  const l1Network: L1Network = {
-    blockTime: 10,
-    chainID: l1NetworkInfo.chainId,
-    explorerUrl: '',
-    isCustom: true,
-    name: 'EthLocal',
-    partnerChainIDs: [l2NetworkInfo.chainId],
-    isArbitrum: false,
-  }
-
   const l2Network = await getCustomOrbitNetwork(
     parsedDeploymentData,
     l1Provider,
     l2Provider
   )
 
-  addCustomNetwork({
-    customL1Network: l1Network,
-    customL2Network: l2Network,
-  })
-
   return { l2Network, l2Provider }
 }
 
 /**
- * Adds the L3 network (as defined in the environment) to the global network registry
+ * Gets the L3 Orbit network and its parent network
  */
-const setupOrbitNetworks = async (): Promise<{
+const getOrbitNetwork = async (): Promise<{
   customL1Network: L2Network
   customL2Network: L2Network
 }> => {
-  const { l2Network, l2Provider } = await setupL1NetworkForOrbit()
+  const { l2Network, l2Provider } = await getL1NetworkForOrbit()
   const l3Provider = new JsonRpcProvider(process.env['ORBIT_URL'])
 
   const l3DeploymentData = getL3DeploymentData()
@@ -324,16 +306,19 @@ export const setupNetworks = async (
   l1Deployer: Signer,
   l2Deployer: Signer,
   l1Url: string,
-  l2Url: string
+  l2Url: string,
+  shouldSetupOrbit: boolean,
+  l1WethOverride?: string
 ) => {
-  const customNetworks = isTestingOrbitChains
-    ? await setupOrbitNetworks()
+  const customNetworks = shouldSetupOrbit
+    ? await getOrbitNetwork()
     : await getCustomNetworks(l1Url, l2Url)
 
   const { l1: l1Contracts, l2: l2Contracts } = await deployErc20AndInit(
     l1Deployer,
     l2Deployer,
-    customNetworks.customL2Network.ethBridge.inbox
+    customNetworks.customL2Network.ethBridge.inbox,
+    l1WethOverride
   )
 
   const l2Network: L2Network = {
@@ -344,7 +329,7 @@ export const setupNetworks = async (
       l1GatewayRouter: l1Contracts.router.address,
       l1MultiCall: l1Contracts.multicall.address,
       l1ProxyAdmin: l1Contracts.proxyAdmin.address,
-      l1Weth: l1Contracts.weth.address,
+      l1Weth: l1WethOverride || l1Contracts.weth.address,
       l1WethGateway: l1Contracts.wethGateway.address,
 
       l2CustomGateway: l2Contracts.customGateway.address,
@@ -357,9 +342,9 @@ export const setupNetworks = async (
     },
   }
 
-  // in case of L3, we only need to add the L3, as L1 and L2 were registered inside "setupL1NetworkForOrbit"
+  // in case of L3, we only need to add the L3, as L1 and L2 were registered in a previous call to setupNetworks
   // register the network with the newly deployed token bridge contracts
-  if (isTestingOrbitChains) {
+  if (shouldSetupOrbit) {
     addCustomNetwork({ customL2Network: l2Network })
   } else {
     addCustomNetwork({ ...customNetworks, customL2Network: l2Network })
@@ -393,7 +378,9 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
   else return provider.getSigner(0)
 }
 
-export const testSetup = async (): Promise<{
+export const testSetup = async (
+  ignoreLocalNetworkJson?: boolean
+): Promise<{
   l1Network: L1Network | L2Network
   l2Network: L2Network
   l1Signer: Signer
@@ -432,26 +419,79 @@ export const testSetup = async (): Promise<{
       const { l1Network, l2Network } = localNetworkFile
 
       if (isTestingOrbitChains) {
-        await setupL1NetworkForOrbit()
-        addCustomNetwork({ customL2Network: l2Network })
+        const { l1Network, l2Network } = file as {
+          l1Network: L2Network
+          l2Network: L2Network
+        }
+
+        const ethLocal: L1Network = {
+          blockTime: 10,
+          chainID: l1Network.partnerChainID,
+          explorerUrl: '',
+          isCustom: true,
+          name: 'EthLocal',
+          partnerChainIDs: [l1Network.chainID],
+          isArbitrum: false,
+        }
+
+        addCustomNetwork({
+          customL1Network: ethLocal,
+          customL2Network: l1Network,
+        })
+
+        addCustomNetwork({
+          customL2Network: l2Network,
+        })
+
+        setL1Network = l1Network
+        setL2Network = l2Network
       } else {
+        const { l1Network, l2Network } = file as {
+          l1Network: L1Network
+          l2Network: L2Network
+        }
+
         addCustomNetwork({
           customL1Network: l1Network,
           customL2Network: l2Network,
         })
+
+        setL1Network = l1Network
+        setL2Network = l2Network
+      }
+    } else {
+      let l1NetworkOverride: L2Network | undefined
+
+      if (isTestingOrbitChains) {
+        //deploy l1/l2 bridge
+        const l1Url = process.env['ETH_URL']!
+        const l2Url = process.env['ARB_URL']!
+        const ethProvider = new JsonRpcProvider(l1Url)
+        const arbProvider = new JsonRpcProvider(l2Url)
+        const l1Deployer = getSigner(ethProvider, process.env['ETH_KEY'])
+        const l2Deployer = getSigner(arbProvider, process.env['ARB_KEY'])
+        const { l2Network: arbNetwork } = await setupNetworks(
+          l1Deployer,
+          l2Deployer,
+          l1Url,
+          l2Url,
+          false
+        )
+
+        l1NetworkOverride = arbNetwork
       }
 
-      setL1Network = l1Network
-      setL2Network = l2Network
-    } else {
       // deploy a new network
       const { l1Network, l2Network } = await setupNetworks(
         l1Deployer,
         l2Deployer,
         config.ethUrl,
-        config.arbUrl
+        config.arbUrl,
+        isTestingOrbitChains,
+        l1NetworkOverride?.tokenBridge.l2Weth
       )
-      setL1Network = l1Network
+
+      setL1Network = l1NetworkOverride || l1Network
       setL2Network = l2Network
     }
   }

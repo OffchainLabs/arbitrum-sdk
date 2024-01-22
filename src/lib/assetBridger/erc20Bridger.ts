@@ -779,7 +779,7 @@ export class Erc20Bridger extends AssetBridger<
         const isWeth = await this.isWethGateway(l1GatewayAddress, l1Provider)
 
         // measured 157421 - add some padding
-        return isWeth ? BigNumber.from(180000) : BigNumber.from(160000)
+        return isWeth ? BigNumber.from(190000) : BigNumber.from(160000)
       },
     }
   }
