@@ -570,9 +570,9 @@ export class Erc20Bridger extends AssetBridger<
   ) {
     // the call value should be zero when paying with a custom fee token,
     // as the fee amount is packed inside the last parameter (`data`) of the call to `outboundTransfer`
-    // if (!this.isNativeTokenEth) {
-    //   return constants.Zero
-    // }
+    if (!this.isNativeTokenEth) {
+      return constants.Zero
+    }
 
     // we dont include the l2 call value for token deposits because
     // they either have 0 call value, or their call value is withdrawn from
