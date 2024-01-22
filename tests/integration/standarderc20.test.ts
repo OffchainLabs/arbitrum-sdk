@@ -92,48 +92,50 @@ describe.only('standard ERC20', () => {
     testState = { ...setup, l1Token: testToken }
   })
 
-  it('approves the thing', async () => {
-    const { l1Signer, l2Signer, erc20Bridger } = await testSetup()
+  if (isCustomFeeToken) {
+    it('approves the thing', async () => {
+      const { l1Signer, l2Signer, erc20Bridger } = await testSetup()
 
-    await fundL1(l1Signer)
-    await fundL1CustomFeeToken(l1Signer)
-    await fundL2CustomFeeToken(l2Signer)
+      await fundL1(l1Signer)
+      await fundL1CustomFeeToken(l1Signer)
+      await fundL2CustomFeeToken(l2Signer)
 
-    const gatewayAddress = await erc20Bridger.getL1GatewayAddress(
-      testState.l1Token.address,
-      l1Signer.provider!
-    )
+      const gatewayAddress = await erc20Bridger.getL1GatewayAddress(
+        testState.l1Token.address,
+        l1Signer.provider!
+      )
 
-    const initialAllowance = await getNativeTokenAllowance(
-      await l1Signer.getAddress(),
-      gatewayAddress
-    )
+      const initialAllowance = await getNativeTokenAllowance(
+        await l1Signer.getAddress(),
+        gatewayAddress
+      )
 
-    console.log({ initialAllowance })
+      console.log({ initialAllowance })
 
-    expect(initialAllowance.toString()).to.eq(
-      constants.Zero.toString(),
-      'initial allowance is not empty'
-    )
+      expect(initialAllowance.toString()).to.eq(
+        constants.Zero.toString(),
+        'initial allowance is not empty'
+      )
 
-    const tx = await erc20Bridger.approveFeeToken({
-      l1Signer: l1Signer,
-      erc20L1Address: testState.l1Token.address,
+      const tx = await erc20Bridger.approveFeeToken({
+        l1Signer: l1Signer,
+        erc20L1Address: testState.l1Token.address,
+      })
+      await tx.wait()
+
+      const finalAllowance = await getNativeTokenAllowance(
+        await l1Signer.getAddress(),
+        gatewayAddress
+      )
+
+      console.log({ finalAllowance })
+
+      expect(finalAllowance.toString()).to.eq(
+        constants.MaxUint256.toString(),
+        'initial allowance is not empty'
+      )
     })
-    await tx.wait()
-
-    const finalAllowance = await getNativeTokenAllowance(
-      await l1Signer.getAddress(),
-      gatewayAddress
-    )
-
-    console.log({ finalAllowance })
-
-    expect(finalAllowance.toString()).to.eq(
-      constants.MaxUint256.toString(),
-      'initial allowance is not empty'
-    )
-  })
+  }
 
   it('deposits erc20', async () => {
     if (isCustomFeeToken) {
