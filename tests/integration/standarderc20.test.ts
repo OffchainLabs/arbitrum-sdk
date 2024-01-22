@@ -58,7 +58,7 @@ const withdrawalAmount = BigNumber.from(10)
 
 const isCustomFeeToken = isL2NetworkWithCustomFeeToken()
 
-describe.only('standard ERC20', () => {
+describe('standard ERC20', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
