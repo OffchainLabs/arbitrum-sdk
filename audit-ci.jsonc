@@ -123,6 +123,16 @@
     // we don't use cookies with axios in the sdk
     // from: @arbitrum/nitro-contracts>sol2uml>axios
     // from: axios
-    "GHSA-wf5p-g6vw-rhxx"
+    "GHSA-wf5p-g6vw-rhxx",
+    // https://github.com/advisories/GHSA-jchw-25xp-jwwc
+    // When new URL() throws an error, it can be manipulated to misinterpret the hostname.
+    // An attacker could exploit this weakness to redirect traffic to a malicious site.
+    // from: hardhat>solc>follow-redirects
+    // from: @arbitrum/nitro-contracts>hardhat>solc>follow-redirects
+    // from: arb-bridge-peripherals>arb-bridge-eth>hardhat>solc>follow-redirects
+    // from: @arbitrum/nitro-contracts>sol2uml>axios>follow-redirects
+    // from: axios>follow-redirects
+    // Used only in dev.
+    "GHSA-jchw-25xp-jwwc"
   ]
 }
