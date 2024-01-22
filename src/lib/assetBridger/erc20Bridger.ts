@@ -256,7 +256,7 @@ export class Erc20Bridger extends AssetBridger<
 
     const txRequest = await this.getApproveTokenRequest(params)
     // just reuse the approve token request but direct it towards the native token contract
-    return { ...txRequest } //, to: this.nativeToken! }
+    return { ...txRequest, to: this.nativeToken! }
   }
 
   /**
