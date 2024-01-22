@@ -179,7 +179,7 @@ export class Erc20Bridger extends AssetBridger<
    * In case of a chain that uses ETH as its native/fee token, this is either undefined or the zero address.
    * In case of a chain that uses an ERC-20 token from the parent chain as its native/fee token, this is the address of said token on the parent chain.
    */
-  // public readonly nativeToken?: string
+  public readonly nativeToken?: string
 
   /**
    * Bridger for moving ERC20 tokens back and forth between L1 to L2
@@ -187,16 +187,16 @@ export class Erc20Bridger extends AssetBridger<
   public constructor(l2Network: L2Network) {
     super(l2Network)
 
-    // this.nativeToken = l2Network.nativeToken
+    this.nativeToken = l2Network.nativeToken
   }
 
   /**
    * Whether the chain uses ETH as its native/fee token.
    * @returns
    */
-  // private get isNativeTokenEth() {
-  //   return !this.nativeToken || this.nativeToken === constants.AddressZero
-  // }
+  private get isNativeTokenEth() {
+    return !this.nativeToken || this.nativeToken === constants.AddressZero
+  }
 
   /**
    * Instantiates a new Erc20Bridger from an L2 Provider
@@ -250,9 +250,9 @@ export class Erc20Bridger extends AssetBridger<
   public async getApproveFeeTokenRequest(
     params: ProviderTokenApproveParams
   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
-    // if (this.isNativeTokenEth) {
-    //   throw new Error('chain uses ETH as its native/fee token')
-    // }
+    if (this.isNativeTokenEth) {
+      throw new Error('chain uses ETH as its native/fee token')
+    }
 
     const txRequest = await this.getApproveTokenRequest(params)
     // just reuse the approve token request but direct it towards the native token contract
@@ -266,9 +266,9 @@ export class Erc20Bridger extends AssetBridger<
   public async approveFeeToken(
     params: ApproveParamsOrTxRequest
   ): Promise<ethers.ContractTransaction> {
-    // if (this.isNativeTokenEth) {
-    //   throw new Error('chain uses ETH as its native/fee token')
-    // }
+    if (this.isNativeTokenEth) {
+      throw new Error('chain uses ETH as its native/fee token')
+    }
 
     await this.checkL1Network(params.l1Signer)
 
@@ -587,18 +587,18 @@ export class Erc20Bridger extends AssetBridger<
   private getDepositRequestOutboundTransferDataParam(
     depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
   ) {
-    // if (!this.isNativeTokenEth) {
-    // return defaultAbiCoder.encode(
-    //   ['uint256', 'bytes', 'uint256'],
-    //   [
-    //     constants.Zero,
-    //     '0x',
-    //     depositParams.gasLimit
-    //       .mul(depositParams.maxFeePerGas)
-    //       .add(depositParams.maxSubmissionCost),
-    //   ]
-    // )
-    // }
+    if (!this.isNativeTokenEth) {
+      return defaultAbiCoder.encode(
+        ['uint256', 'bytes', 'uint256'],
+        [
+          constants.Zero,
+          '0x',
+          depositParams.gasLimit
+            .mul(depositParams.maxFeePerGas)
+            .add(depositParams.maxSubmissionCost),
+        ]
+      )
+    }
 
     return defaultAbiCoder.encode(
       ['uint256', 'bytes'],

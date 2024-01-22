@@ -73,25 +73,25 @@ export class L1ToL2MessageCreator {
     params: L1ToL2MessageParams,
     estimates: Pick<RetryableData, L1ToL2GasKeys>,
     excessFeeRefundAddress: string,
-    callValueRefundAddress: string
-    // isNativeTokenEth: boolean
+    callValueRefundAddress: string,
+    isNativeTokenEth: boolean
   ) {
-    // if (!isNativeTokenEth) {
-    // return ERC20Inbox__factory.createInterface().encodeFunctionData(
-    //   'createRetryableTicket',
-    //   [
-    //     params.to,
-    //     params.l2CallValue,
-    //     estimates.maxSubmissionCost,
-    //     excessFeeRefundAddress,
-    //     callValueRefundAddress,
-    //     estimates.gasLimit,
-    //     estimates.maxFeePerGas,
-    //     estimates.deposit, // tokenTotalFeeAmount
-    //     params.data,
-    //   ]
-    // )
-    // }
+    if (!isNativeTokenEth) {
+      return ERC20Inbox__factory.createInterface().encodeFunctionData(
+        'createRetryableTicket',
+        [
+          params.to,
+          params.l2CallValue,
+          estimates.maxSubmissionCost,
+          excessFeeRefundAddress,
+          callValueRefundAddress,
+          estimates.gasLimit,
+          estimates.maxFeePerGas,
+          estimates.deposit, // tokenTotalFeeAmount
+          params.data,
+        ]
+      )
+    }
 
     return Inbox__factory.createInterface().encodeFunctionData(
       'createRetryableTicket',
@@ -139,14 +139,14 @@ export class L1ToL2MessageCreator {
     )
 
     const l2Network = await getL2Network(l2Provider)
-    // const isNativeTokenEth = typeof l2Network.nativeToken === 'undefined'
+    const isNativeTokenEth = typeof l2Network.nativeToken === 'undefined'
 
     const data = L1ToL2MessageCreator.getTicketCreationRequestData(
       params,
       estimates,
       excessFeeRefundAddress,
-      callValueRefundAddress
-      // isNativeTokenEth
+      callValueRefundAddress,
+      isNativeTokenEth
     )
 
     return {

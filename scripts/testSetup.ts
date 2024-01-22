@@ -39,13 +39,6 @@ import * as path from 'path'
 import * as fs from 'fs'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import { ARB_MINIMUM_BLOCK_TIME_IN_SECONDS } from '../src/lib/dataEntities/constants'
-import {
-  fundL1CustomFeeToken,
-  approveL1CustomFeeToken,
-  isL2NetworkWithCustomFeeToken,
-  fundL2CustomFeeToken,
-} from '../tests/integration/custom-fee-token/customFeeTokenTestHelpers'
-import { fundL1, fundL2 } from '../tests/integration/testHelpers'
 
 dotenv.config()
 
@@ -467,18 +460,6 @@ export const testSetup = async (): Promise<{
   const adminErc20Bridger = new AdminErc20Bridger(setL2Network)
   const ethBridger = new EthBridger(setL2Network)
   const inboxTools = new InboxTools(l1Signer, setL2Network)
-
-  // const isCustomFeeToken = isL2NetworkWithCustomFeeToken()
-  // if (isCustomFeeToken) {
-  //   await fundL1(l1Signer)
-  //   await fundL2(l2Signer)
-
-  //   // await fundL1CustomFeeToken(l1Signer)
-  //   // await fundL2CustomFeeToken(l2Signer)
-
-  //   // await approveL1CustomFeeToken(l1Signer)
-  //   // await approveL2CustomFeeToken(l2Signer)
-  // }
 
   return {
     l1Signer,
