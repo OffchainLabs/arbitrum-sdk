@@ -130,6 +130,7 @@ jobs:
       matrix:
         node-version: [16, 18, 20]
         orbit-test: ['0', '1']
+        custom-fee: ['0']
         include:
           - orbit-test: '1'
             custom-fee: '0'
