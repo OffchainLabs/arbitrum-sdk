@@ -41,7 +41,7 @@ export async function fundL1CustomFeeToken(l1SignerOrAddress: Signer | string) {
   }
 
   const deployerWallet = new Wallet(
-    utils.sha256(utils.toUtf8Bytes('user_l1user')),
+    utils.sha256(utils.toUtf8Bytes('user_token_bridge_deployer')),
     ethProvider
   )
 
@@ -76,7 +76,7 @@ export async function approveL1CustomFeeTokenForErc20Deposit(
 
 export async function fundL2CustomFeeToken(l2Signer: Signer) {
   const deployerWallet = new Wallet(
-    utils.sha256(utils.toUtf8Bytes('user_l1user')),
+    config.arbKey,
     arbProvider
   )
 
