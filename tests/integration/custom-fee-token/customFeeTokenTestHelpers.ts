@@ -75,10 +75,7 @@ export async function approveL1CustomFeeTokenForErc20Deposit(
 }
 
 export async function fundL2CustomFeeToken(l2Signer: Signer) {
-  const deployerWallet = new Wallet(
-    config.arbKey,
-    arbProvider
-  )
+  const deployerWallet = new Wallet(config.arbKey, arbProvider)
 
   const tx = await deployerWallet.sendTransaction({
     to: await l2Signer.getAddress(),

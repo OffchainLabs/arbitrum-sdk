@@ -231,7 +231,7 @@ const deployErc20L2 = async (deployer: Signer) => {
   const noWeth = await deployErc20L2NoWeth(deployer)
   return {
     ...noWeth,
-    ...await deployL2Weth(deployer, noWeth.proxyAdmin),
+    ...(await deployL2Weth(deployer, noWeth.proxyAdmin)),
   }
 }
 
