@@ -134,12 +134,15 @@ jobs:
         custom-fee: ['0']
         include:
           - orbit-test: '1'
-            custom-fee: '0'
-            node-version: [16, 18, 20]
+            custom-fee: '1'
+            node-version: 16
           - orbit-test: '1'
             custom-fee: '1'
-            node-version: [16, 18, 20]
-           
+            node-version: 18
+          - orbit-test: '1'
+            custom-fee: '1'
+            node-version: 20
+
     needs: install
     env:
       ORBIT_TEST: ${{ matrix.orbit-test }}
