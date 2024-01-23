@@ -127,6 +127,7 @@ jobs:
     name: Test (Integration) - ${{ matrix.orbit-test == '1' && 'Orbit' || 'No Orbit' }} - Node ${{ matrix.node-version }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false # runs all tests to completion even if one fails
       matrix:
         node-version: [16, 18, 20]
         orbit-test: ['0', '1']
