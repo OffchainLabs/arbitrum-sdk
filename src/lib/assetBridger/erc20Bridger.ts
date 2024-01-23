@@ -501,8 +501,9 @@ export class Erc20Bridger extends AssetBridger<
 
     // L2 WETH contract doesn't have the l1Address method on it
     if (
+      this.l2Network.tokenBridge.l2Weth &&
       erc20L2Address.toLowerCase() ===
-      this.l2Network.tokenBridge.l2Weth.toLowerCase()
+        this.l2Network.tokenBridge.l2Weth.toLowerCase()
     ) {
       return this.l2Network.tokenBridge.l1Weth
     }
@@ -779,7 +780,7 @@ export class Erc20Bridger extends AssetBridger<
         const isWeth = await this.isWethGateway(l1GatewayAddress, l1Provider)
 
         // measured 157421 - add some padding
-        return isWeth ? BigNumber.from(180000) : BigNumber.from(160000)
+        return isWeth ? BigNumber.from(190000) : BigNumber.from(160000)
       },
     }
   }
