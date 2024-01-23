@@ -40,7 +40,7 @@ describe('WETH', async () => {
   it('deposit WETH', async () => {
     const { l2Network, l1Signer, l2Signer, erc20Bridger } = await testSetup()
 
-    const l1WethAddress = l2Network.tokenBridge.l1Weth
+    const l1WethAddress = l2Network.tokenBridge.l1Weth!
 
     const wethToWrap = parseEther('0.00001')
     const wethToDeposit = parseEther('0.0000001')
@@ -48,7 +48,7 @@ describe('WETH', async () => {
     await fundL1(l1Signer, parseEther('1'))
 
     const l2WETH = AeWETH__factory.connect(
-      l2Network.tokenBridge.l2Weth,
+      l2Network.tokenBridge.l2Weth!,
       l2Signer.provider!
     )
     expect(
@@ -80,7 +80,7 @@ describe('WETH', async () => {
     )
     const l2Token = erc20Bridger.getL2TokenContract(
       l2Signer.provider!,
-      l2Network.tokenBridge.l2Weth
+      l2Network.tokenBridge.l2Weth!
     )
     expect(l2Token.address, 'l2 weth').to.eq(l2Network.tokenBridge.l2Weth)
 
@@ -107,7 +107,7 @@ describe('WETH', async () => {
     await fundL2(l2Signer)
 
     const l2Weth = AeWETH__factory.connect(
-      l2Network.tokenBridge.l2Weth,
+      l2Network.tokenBridge.l2Weth!,
       l2Signer
     )
     const res = await l2Weth.deposit({
@@ -122,7 +122,7 @@ describe('WETH', async () => {
       gatewayType: GatewayType.WETH,
       l1Signer: l1Signer,
       l1Token: ERC20__factory.connect(
-        l2Network.tokenBridge.l1Weth,
+        l2Network.tokenBridge.l1Weth!,
         l1Signer.provider!
       ),
       l2Signer: l2Signer,
