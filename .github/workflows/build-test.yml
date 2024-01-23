@@ -124,7 +124,7 @@ jobs:
         run: CI=true yarn test:unit
 
   test-integration:
-    name: Int. Test-${{ matrix.orbit-test == '1' && 'Orbit' || 'No Orbit' }}/Node ${{ matrix.node-version }}/${{ matrix.custom-fee == '1' && 'Custom Fee' || 'No Custom Fee' }}
+    name: Test (Int.) Node ${{ matrix.node-version }}/${{ matrix.orbit-test == '1' && 'Orbit' || 'No Orbit' }}/${{ matrix.custom-fee == '1' && 'Custom Fee' || 'No Custom Fee' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false # runs all tests to completion even if one fails
