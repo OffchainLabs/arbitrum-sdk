@@ -74,30 +74,30 @@ export interface L2Network extends Network {
 }
 
 interface BaseTokenBridge {
-  l1GatewayRouter: string;
-  l2GatewayRouter: string;
-  l1ERC20Gateway: string;
-  l2ERC20Gateway: string;
-  l1CustomGateway: string;
-  l2CustomGateway: string;
-  l1ProxyAdmin: string;
-  l2ProxyAdmin: string;
-  l1MultiCall: string;
-  l2Multicall: string;
+  l1GatewayRouter: string
+  l2GatewayRouter: string
+  l1ERC20Gateway: string
+  l2ERC20Gateway: string
+  l1CustomGateway: string
+  l2CustomGateway: string
+  l1ProxyAdmin: string
+  l2ProxyAdmin: string
+  l1MultiCall: string
+  l2Multicall: string
 }
 
 interface TokenBridgeWithWeth extends BaseTokenBridge {
-  l1WethGateway: string;
-  l2WethGateway: string;
-  l1Weth: string;
-  l2Weth: string;
+  l1WethGateway: string
+  l2WethGateway: string
+  l1Weth: string
+  l2Weth: string
 }
 
 interface TokenBridgeWithoutWeth extends BaseTokenBridge {
-  l1WethGateway?: never;
-  l2WethGateway?: never;
-  l1Weth?: never;
-  l2Weth?: never;
+  l1WethGateway?: any // todo: type properly
+  l2WethGateway?: any // todo: type properly
+  l1Weth?: any // todo: type properly
+  l2Weth?: any // todo: type properly
 }
 
 export type TokenBridge = TokenBridgeWithWeth | TokenBridgeWithoutWeth
