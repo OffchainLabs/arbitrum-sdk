@@ -129,7 +129,12 @@ jobs:
     strategy:
       matrix:
         node-version: [16, 18, 20]
-        orbit-test: ['1', '0']
+        orbit-test: ['0', '1']
+        include:
+          - orbit-test: '1'
+            custom-fee: '0'
+          - orbit-test: '1'
+            custom-fee: '1'
     needs: install
     env:
       ORBIT_TEST: ${{ matrix.orbit-test }}
@@ -151,6 +156,7 @@ jobs:
           nitro-testnode-ref: use-tokenbridge-creator
           no-token-bridge: true
           l3-node: ${{ matrix.orbit-test == '1' }}
+          args: ${{ matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
@@ -164,4 +170,4 @@ jobs:
         run: yarn gen:network
 
       - name: Run integration tests
-        run: CI=true yarn test:integration
+        run: CI=true yarn test:integration${{ matrix.custom-fee == '1' && ':custom-fee-token' || '' }}
