@@ -404,7 +404,6 @@ const getChainsByType = <T extends typeof networks>(
 
 const getL1Chains = () => getChainsByType<L1Networks>(isL1Chain)
 const getArbitrumChains = () => getChainsByType<L2Networks>(isArbitrumChain)
-const getParentChains = () => getChainsByType<Networks>(isParentChain)
 
 /**
  * Returns the parent chain for the given chain.
@@ -470,7 +469,7 @@ export const getNetwork = async (
   let network: L1Network | L2Network | undefined = undefined
 
   if (layer === 1) {
-    network = getParentChains()[chainID]
+    network = getL1Chains()[chainID]
   } else {
     network = getArbitrumChains()[chainID]
   }
@@ -483,14 +482,13 @@ export const getNetwork = async (
 }
 
 /**
- * Returns the parent chain **(could be an L1 chain or an Arbitrum chain)** associated with the
- * given Signer, Provider or chain id.
+ * Returns the L1 chain associated with the given signer, provider or chain id.
  *
- * @note Throws if the chain is not a parent chain.
+ * @note Throws if the chain is not an L1 chain.
  */
 export const getL1Network = (
   signerOrProviderOrChainID: SignerOrProvider | number
-): Promise<L1Network | L2Network> => {
+): Promise<L1Network> => {
   return getNetwork(signerOrProviderOrChainID, 1) as Promise<L1Network>
 }
 
@@ -590,10 +588,7 @@ export const addCustomNetwork = ({
     }): void => {
   if (customL1Network) {
     // check the if the parent chain is in any of the lists
-    if (
-      l1Networks[customL1Network.chainID] ||
-      l2Networks[customL1Network.chainID]
-    ) {
+    if (l1Networks[customL1Network.chainID]) {
       throw new ArbSdkError(
         `Network ${customL1Network.chainID} already included`
       )
