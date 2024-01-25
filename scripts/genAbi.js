@@ -33,7 +33,7 @@ async function main() {
   })
 
   console.log('building peripherals')
-  execSync(`${npmExec} run hardhat:prod compile`, {
+  execSync(`${npmExec} run build`, {
     cwd: peripheralsPath,
   })
 
