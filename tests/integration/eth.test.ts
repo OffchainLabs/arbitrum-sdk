@@ -39,7 +39,7 @@ import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 
 dotenv.config()
 
-describe.only('Ether', async () => {
+describe('Ether', async () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
