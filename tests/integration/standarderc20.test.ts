@@ -46,9 +46,6 @@ import { ArbRetryableTx__factory } from '../../src/lib/abi/factories/ArbRetryabl
 import { NodeInterface__factory } from '../../src/lib/abi/factories/NodeInterface__factory'
 import { isDefined } from '../../src/lib/utils/lib'
 import {
-  fundL1CustomFeeToken,
-  approveL1CustomFeeToken,
-  fundL2CustomFeeToken,
   approveL1CustomFeeTokenForErc20Deposit,
   getNativeTokenAllowance,
   isL2NetworkWithCustomFeeToken,
@@ -76,13 +73,6 @@ describe('standard ERC20', () => {
     const setup = await testSetup()
     await fundL1(setup.l1Signer)
     await fundL2(setup.l2Signer)
-
-    if (isCustomFeeToken) {
-      await fundL1CustomFeeToken(setup.l1Signer)
-      await approveL1CustomFeeToken(setup.l1Signer)
-      await fundL2CustomFeeToken(setup.l2Signer)
-    }
-
     const deployErc20 = new TestERC20__factory().connect(setup.l1Signer)
     const testToken = await deployErc20.deploy()
     await testToken.deployed()
@@ -92,13 +82,9 @@ describe('standard ERC20', () => {
     testState = { ...setup, l1Token: testToken }
   })
 
-  if (isCustomFeeToken) {
+  if (isL2NetworkWithCustomFeeToken()) {
     it('approves the thing', async () => {
-      const { l1Signer, l2Signer, erc20Bridger } = await testSetup()
-
-      await fundL1(l1Signer)
-      await fundL1CustomFeeToken(l1Signer)
-      await fundL2CustomFeeToken(l2Signer)
+      const { l1Signer, erc20Bridger } = await testSetup()
 
       const gatewayAddress = await erc20Bridger.getL1GatewayAddress(
         testState.l1Token.address,
@@ -280,7 +266,7 @@ describe('standard ERC20', () => {
 
     // force the redeem to fail by submitted just a bit under the required gas
     // so it is enough to pay for L1 + L2 intrinsic gas costs
-    await redeemAndTest(waitRes.message, 0, gasComponents.gasEstimate.sub(1000))
+    await redeemAndTest(waitRes.message, 0, gasComponents.gasEstimate.sub(3000))
     await redeemAndTest(waitRes.message, 1)
   })
 
