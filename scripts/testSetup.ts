@@ -29,7 +29,7 @@ import {
   getL2Network,
   addCustomNetwork,
 } from '../src/lib/dataEntities/networks'
-import { Signer, providers } from 'ethers'
+import { Signer, ethers, providers } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { execSync } from 'child_process'
 import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
@@ -40,6 +40,8 @@ import * as fs from 'fs'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import { ARB_MINIMUM_BLOCK_TIME_IN_SECONDS } from '../src/lib/dataEntities/constants'
 import { IERC20Bridge__factory } from '../src/lib/abi/factories/IERC20Bridge__factory'
+import { approveL1CustomFeeToken, fundL1CustomFeeToken, isL2NetworkWithCustomFeeToken } from '../tests/integration/custom-fee-token/customFeeTokenTestHelpers'
+import { fundL1 } from '../tests/integration/testHelpers'
 
 dotenv.config()
 
@@ -498,6 +500,12 @@ export const testSetup = async (): Promise<{
   const adminErc20Bridger = new AdminErc20Bridger(setL2Network)
   const ethBridger = new EthBridger(setL2Network)
   const inboxTools = new InboxTools(l1Signer, setL2Network)
+
+  if (isL2NetworkWithCustomFeeToken()) {
+    await fundL1(l1Signer)
+    await fundL1CustomFeeToken(l1Signer)
+    await approveL1CustomFeeToken(l1Signer)
+  }
 
   return {
     l1Signer,
