@@ -90,5 +90,8 @@
   },
   "files": [
     "dist/**/*"
-  ]
+  ],
+  "resolutions": {
+    "lodash.pick": "https://github.com/lodash/lodash/archive/f299b52f39486275a9e6483b60a410e06520c538.tar.gz"
+  }
 }
