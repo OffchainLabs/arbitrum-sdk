@@ -29,6 +29,7 @@ import { L1ERC20Gateway__factory } from '../../src/lib/abi/factories/L1ERC20Gate
 
 import { testSetup } from '../../scripts/testSetup'
 import { randomBytes, hexlify } from 'ethers/lib/utils'
+import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 
 const expectIgnoreCase = (expected: string, actual: string) => {
   expect(expected.toLocaleLowerCase()).to.equal(actual.toLocaleLowerCase())
@@ -94,63 +95,6 @@ describe('sanity checks (read-only)', async () => {
     expect(l2Router).to.equal(l2Network.tokenBridge.l2GatewayRouter)
   })
 
-  it('weth gateways gateways public storage vars properly set', async () => {
-    const { l1Signer, l2Signer, l2Network } = await testSetup()
-
-    const l1Gateway = await L1WethGateway__factory.connect(
-      l2Network.tokenBridge.l1WethGateway!,
-      l1Signer
-    )
-    const l2Gateway = await L2WethGateway__factory.connect(
-      l2Network.tokenBridge.l2WethGateway!,
-      l2Signer
-    )
-
-    const l1Weth = await l1Gateway.l1Weth()
-    expectIgnoreCase(l1Weth, l2Network.tokenBridge.l1Weth!)
-
-    const l2Weth = await l2Gateway.l2Weth()
-    expectIgnoreCase(l2Weth, l2Network.tokenBridge.l2Weth!)
-
-    const l1GatewayCounterParty = await l1Gateway.counterpartGateway()
-    expectIgnoreCase(l1GatewayCounterParty, l2Network.tokenBridge.l2WethGateway!)
-
-    const l2GatewayCounterParty = await l2Gateway.counterpartGateway()
-    expectIgnoreCase(l2GatewayCounterParty, l2Network.tokenBridge.l1WethGateway!)
-
-    const l1Router = await l1Gateway.router()
-    expectIgnoreCase(l1Router, l2Network.tokenBridge.l1GatewayRouter)
-
-    const l2Router = await l2Gateway.router()
-    expectIgnoreCase(l2Router, l2Network.tokenBridge.l2GatewayRouter)
-  })
-
-  it('aeWETh public vars properly set', async () => {
-    const { l2Signer, l2Network } = await testSetup()
-
-    const aeWeth = AeWETH__factory.connect(
-      l2Network.tokenBridge.l2Weth!,
-      l2Signer
-    )
-
-    const l2GatewayOnAeWeth = await aeWeth.l2Gateway()
-    expectIgnoreCase(l2GatewayOnAeWeth, l2Network.tokenBridge.l2WethGateway!)
-
-    const l1AddressOnAeWeth = await aeWeth.l1Address()
-    expectIgnoreCase(l1AddressOnAeWeth, l2Network.tokenBridge.l1Weth!)
-  })
-
-  it('l1 gateway router points to right weth gateways', async () => {
-    const { adminErc20Bridger, l1Signer, l2Network } = await testSetup()
-
-    const gateway = await adminErc20Bridger.getL1GatewayAddress(
-      l2Network.tokenBridge.l1Weth!,
-      l1Signer.provider!
-    )
-
-    expect(gateway).to.equal(l2Network.tokenBridge.l1WethGateway)
-  })
-
   it('L1 and L2 implementations of calculateL2ERC20Address match', async () => {
     const { l1Signer, l2Signer, l2Network, erc20Bridger } = await testSetup()
 
@@ -168,4 +112,70 @@ describe('sanity checks (read-only)', async () => {
 
     expect(erc20L2AddressAsPerL2).to.equal(erc20L2AddressAsPerL1)
   })
+
+  // WETH tests are only relevant for networks that use WETH as the native token
+  if (!isL2NetworkWithCustomFeeToken()) {
+    it('weth gateways gateways public storage vars properly set', async () => {
+      const { l1Signer, l2Signer, l2Network } = await testSetup()
+
+      const l1Gateway = await L1WethGateway__factory.connect(
+        l2Network.tokenBridge.l1WethGateway!,
+        l1Signer
+      )
+      const l2Gateway = await L2WethGateway__factory.connect(
+        l2Network.tokenBridge.l2WethGateway!,
+        l2Signer
+      )
+
+      const l1Weth = await l1Gateway.l1Weth()
+      expectIgnoreCase(l1Weth, l2Network.tokenBridge.l1Weth!)
+
+      const l2Weth = await l2Gateway.l2Weth()
+      expectIgnoreCase(l2Weth, l2Network.tokenBridge.l2Weth!)
+
+      const l1GatewayCounterParty = await l1Gateway.counterpartGateway()
+      expectIgnoreCase(
+        l1GatewayCounterParty,
+        l2Network.tokenBridge.l2WethGateway!
+      )
+
+      const l2GatewayCounterParty = await l2Gateway.counterpartGateway()
+      expectIgnoreCase(
+        l2GatewayCounterParty,
+        l2Network.tokenBridge.l1WethGateway!
+      )
+
+      const l1Router = await l1Gateway.router()
+      expectIgnoreCase(l1Router, l2Network.tokenBridge.l1GatewayRouter)
+
+      const l2Router = await l2Gateway.router()
+      expectIgnoreCase(l2Router, l2Network.tokenBridge.l2GatewayRouter)
+    })
+
+    it('aeWETh public vars properly set', async () => {
+      const { l2Signer, l2Network } = await testSetup()
+
+      const aeWeth = AeWETH__factory.connect(
+        l2Network.tokenBridge.l2Weth!,
+        l2Signer
+      )
+
+      const l2GatewayOnAeWeth = await aeWeth.l2Gateway()
+      expectIgnoreCase(l2GatewayOnAeWeth, l2Network.tokenBridge.l2WethGateway!)
+
+      const l1AddressOnAeWeth = await aeWeth.l1Address()
+      expectIgnoreCase(l1AddressOnAeWeth, l2Network.tokenBridge.l1Weth!)
+    })
+
+    it('l1 gateway router points to right weth gateways', async () => {
+      const { adminErc20Bridger, l1Signer, l2Network } = await testSetup()
+
+      const gateway = await adminErc20Bridger.getL1GatewayAddress(
+        l2Network.tokenBridge.l1Weth!,
+        l1Signer.provider!
+      )
+
+      expect(gateway).to.equal(l2Network.tokenBridge.l1WethGateway)
+    })
+  }
 })
