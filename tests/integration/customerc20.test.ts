@@ -24,6 +24,8 @@ import { L1CustomGateway__factory } from '../../src/lib/abi/factories/L1CustomGa
 import { L1GatewayRouter__factory } from '../../src/lib/abi/factories/L1GatewayRouter__factory'
 import { L2GatewayRouter__factory } from '../../src/lib/abi/factories/L2GatewayRouter__factory'
 import { TestArbCustomToken__factory } from '../../src/lib/abi/factories/TestArbCustomToken__factory'
+import { TestOrbitCustomTokenL1 } from '../../src/lib/abi/TestOrbitCustomTokenL1'
+import { TestOrbitCustomTokenL1__factory } from '../../src/lib/abi/factories/TestOrbitCustomTokenL1__factory'
 import { TestCustomTokenL1 } from '../../src/lib/abi/TestCustomTokenL1'
 import { TestCustomTokenL1__factory } from '../../src/lib/abi/factories/TestCustomTokenL1__factory'
 
@@ -36,10 +38,14 @@ import {
   withdrawToken,
 } from './testHelpers'
 import { L1ToL2MessageStatus, L2Network } from '../../src'
-import { Signer, constants } from 'ethers'
+import { Signer, constants, ethers } from 'ethers'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
+import {
+  fundL1CustomFeeToken,
+  isL2NetworkWithCustomFeeToken,
+} from './custom-fee-token/customFeeTokenTestHelpers'
 
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
@@ -55,7 +61,7 @@ describe('Custom ERC20', () => {
     l2Signer: Signer
     adminErc20Bridger: AdminErc20Bridger
     l2Network: L2Network
-    l1CustomToken: TestCustomTokenL1
+    l1CustomToken: TestCustomTokenL1 | TestOrbitCustomTokenL1
   }
 
   before('init', async () => {
@@ -65,6 +71,10 @@ describe('Custom ERC20', () => {
     }
     await fundL1(testState.l1Signer)
     await fundL2(testState.l2Signer)
+
+    if (isL2NetworkWithCustomFeeToken()) {
+      await fundL1CustomFeeToken(testState.l1Signer)
+    }
   })
 
   it('register custom token', async () => {
@@ -114,12 +124,23 @@ const registerCustomToken = async (
   adminErc20Bridger: AdminErc20Bridger
 ) => {
   // create a custom token on L1 and L2
-  const l1CustomTokenFac = new TestCustomTokenL1__factory(l1Signer)
+  const l1CustomTokenFac = isL2NetworkWithCustomFeeToken()
+    ? new TestOrbitCustomTokenL1__factory(l1Signer)
+    : new TestCustomTokenL1__factory(l1Signer)
   const l1CustomToken = await l1CustomTokenFac.deploy(
     l2Network.tokenBridge.l1CustomGateway,
     l2Network.tokenBridge.l1GatewayRouter
   )
   await l1CustomToken.deployed()
+  const amount = ethers.utils.parseEther('1')
+
+  if (isL2NetworkWithCustomFeeToken()) {
+    const approvalTx = await ERC20__factory.connect(
+      l2Network.nativeToken!,
+      l1Signer
+    ).approve(l1CustomToken.address, amount)
+    await approvalTx.wait()
+  }
 
   const l2CustomTokenFac = new TestArbCustomToken__factory(l2Signer)
   const l2CustomToken = await l2CustomTokenFac.deploy(

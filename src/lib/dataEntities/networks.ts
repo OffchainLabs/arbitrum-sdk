@@ -74,17 +74,13 @@ export interface L2Network extends Network {
   nativeToken?: string
 }
 
-export interface TokenBridge {
+type BaseTokenBridge = {
   l1GatewayRouter: string
   l2GatewayRouter: string
   l1ERC20Gateway: string
   l2ERC20Gateway: string
   l1CustomGateway: string
   l2CustomGateway: string
-  l1WethGateway: string
-  l2WethGateway: string
-  l2Weth: string
-  l1Weth: string
   l1ProxyAdmin: string
   l2ProxyAdmin: string
   l1MultiCall: string
@@ -95,6 +91,26 @@ export interface TeleporterAddresses {
   l1Teleporter: string
   l2ForwarderFactory: string
 }
+
+export interface TeleporterAddresses {
+  l1Teleporter: string
+  l2ForwarderFactory: string
+}
+export type TokenBridge = BaseTokenBridge &
+  (
+    | {
+        l1WethGateway: string
+        l2WethGateway: string
+        l2Weth: string
+        l1Weth: string
+      }
+    | {
+        l1WethGateway?: never
+        l2WethGateway?: never
+        l2Weth?: never
+        l1Weth?: never
+      }
+  )
 
 export interface EthBridge {
   bridge: string

@@ -29,7 +29,7 @@ import {
   getL2Network,
   addCustomNetwork,
 } from '../src/lib/dataEntities/networks'
-import { Signer, providers } from 'ethers'
+import { Signer, ethers, providers } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { execSync } from 'child_process'
 import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
@@ -39,6 +39,9 @@ import * as path from 'path'
 import * as fs from 'fs'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import { ARB_MINIMUM_BLOCK_TIME_IN_SECONDS } from '../src/lib/dataEntities/constants'
+import { IERC20Bridge__factory } from '../src/lib/abi/factories/IERC20Bridge__factory'
+import { approveL1CustomFeeToken, fundL1CustomFeeToken, isL2NetworkWithCustomFeeToken } from '../tests/integration/custom-fee-token/customFeeTokenTestHelpers'
+import { fundL1 } from '../tests/integration/testHelpers'
 
 dotenv.config()
 
@@ -296,6 +299,21 @@ async function getCustomOrbitNetwork(
   return l2Network
 }
 
+export const getNetworkFeeToken = async (
+  l1Provider: providers.Provider,
+  l2Network: L2Network
+): Promise<string | undefined> => {
+  const bridge = IERC20Bridge__factory.connect(
+    l2Network.ethBridge.bridge,
+    l1Provider
+  )
+  try {
+    return await bridge.nativeToken()
+  } catch {
+    return undefined
+  }
+}
+
 /**
  * Builds network configuration and deploys the token bridge contracts
  *
@@ -314,32 +332,23 @@ export const setupNetworks = async (
     ? await getOrbitNetwork()
     : await getCustomNetworks(l1Url, l2Url)
 
-  const { l1: l1Contracts, l2: l2Contracts } = await deployErc20AndInit(
+  const nativeToken = await getNetworkFeeToken(
+    l1Deployer.provider!,
+    customNetworks.customL2Network
+  )
+
+  const tokenBridge = await deployErc20AndInit(
     l1Deployer,
     l2Deployer,
     customNetworks.customL2Network.ethBridge.inbox,
+    nativeToken !== undefined,
     l1WethOverride
   )
 
   const l2Network: L2Network = {
     ...customNetworks.customL2Network,
-    tokenBridge: {
-      l1CustomGateway: l1Contracts.customGateway.address,
-      l1ERC20Gateway: l1Contracts.standardGateway.address,
-      l1GatewayRouter: l1Contracts.router.address,
-      l1MultiCall: l1Contracts.multicall.address,
-      l1ProxyAdmin: l1Contracts.proxyAdmin.address,
-      l1Weth: l1WethOverride || l1Contracts.weth.address,
-      l1WethGateway: l1Contracts.wethGateway.address,
-
-      l2CustomGateway: l2Contracts.customGateway.address,
-      l2ERC20Gateway: l2Contracts.standardGateway.address,
-      l2GatewayRouter: l2Contracts.router.address,
-      l2Multicall: l2Contracts.multicall.address,
-      l2ProxyAdmin: l2Contracts.proxyAdmin.address,
-      l2Weth: l2Contracts.weth.address,
-      l2WethGateway: l2Contracts.wethGateway.address,
-    },
+    tokenBridge,
+    nativeToken,
   }
 
   // in case of L3, we only need to add the L3, as L1 and L2 were registered in a previous call to setupNetworks
@@ -353,17 +362,19 @@ export const setupNetworks = async (
   // also register the weth gateway
   // we add it here rather than in deployBridge because
   // we have access to an adminerc20bridger
-  const adminErc20Bridger = new AdminErc20Bridger(l2Network)
-  await (
+  if (tokenBridge.l1Weth) {
+    const adminErc20Bridger = new AdminErc20Bridger(l2Network)
     await (
-      await adminErc20Bridger.setGateways(l1Deployer, l2Deployer.provider!, [
-        {
-          gatewayAddr: l2Network.tokenBridge.l1WethGateway,
-          tokenAddr: l2Network.tokenBridge.l1Weth,
-        },
-      ])
-    ).wait()
-  ).waitForL2(l2Deployer)
+      await (
+        await adminErc20Bridger.setGateways(l1Deployer, l2Deployer.provider!, [
+          {
+            gatewayAddr: tokenBridge.l1WethGateway,
+            tokenAddr: tokenBridge.l1Weth,
+          },
+        ])
+      ).wait()
+    ).waitForL2(l2Deployer)
+  }
 
   return {
     l1Network: customNetworks.customL1Network,
@@ -378,9 +389,7 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
   else return provider.getSigner(0)
 }
 
-export const testSetup = async (
-  ignoreLocalNetworkJson?: boolean
-): Promise<{
+export const testSetup = async (): Promise<{
   l1Network: L1Network | L2Network
   l2Network: L2Network
   l1Signer: Signer
@@ -414,29 +423,25 @@ export const testSetup = async (
     // the networks havent been added yet
 
     // check if theres an existing network available
-    const localNetworkFile = path.join(__dirname, '..', 'localNetwork.json')
-    if (!ignoreLocalNetworkJson && fs.existsSync(localNetworkFile)) {
-      const file = JSON.parse(fs.readFileSync(localNetworkFile).toString())
+    const localNetworkFile = getLocalNetworksFromFile()
+    if (localNetworkFile) {
+      const { l1Network, l2Network } = localNetworkFile
 
       if (isTestingOrbitChains) {
-        const { l1Network, l2Network } = file as {
-          l1Network: L2Network
-          l2Network: L2Network
-        }
-
+        const _l1Network = l1Network as L2Network
         const ethLocal: L1Network = {
           blockTime: 10,
-          chainID: l1Network.partnerChainID,
+          chainID: _l1Network.partnerChainID,
           explorerUrl: '',
           isCustom: true,
           name: 'EthLocal',
-          partnerChainIDs: [l1Network.chainID],
+          partnerChainIDs: [_l1Network.chainID],
           isArbitrum: false,
         }
 
         addCustomNetwork({
           customL1Network: ethLocal,
-          customL2Network: l1Network,
+          customL2Network: _l1Network,
         })
 
         addCustomNetwork({
@@ -446,13 +451,8 @@ export const testSetup = async (
         setL1Network = l1Network
         setL2Network = l2Network
       } else {
-        const { l1Network, l2Network } = file as {
-          l1Network: L1Network
-          l2Network: L2Network
-        }
-
         addCustomNetwork({
-          customL1Network: l1Network,
+          customL1Network: l1Network as L1Network,
           customL2Network: l2Network,
         })
 
@@ -501,6 +501,12 @@ export const testSetup = async (
   const ethBridger = new EthBridger(setL2Network)
   const inboxTools = new InboxTools(l1Signer, setL2Network)
 
+  if (isL2NetworkWithCustomFeeToken()) {
+    await fundL1(l1Signer)
+    await fundL1CustomFeeToken(l1Signer)
+    await approveL1CustomFeeToken(l1Signer)
+  }
+
   return {
     l1Signer,
     l2Signer,
@@ -514,5 +520,28 @@ export const testSetup = async (
     inboxTools,
     l1Deployer,
     l2Deployer,
+  }
+}
+
+export function getLocalNetworksFromFile():
+  | {
+      l1Network: L1Network | L2Network
+      l2Network: L2Network
+    }
+  | undefined {
+  try {
+    const pathToLocalNetworkFile = path.join(
+      __dirname,
+      '..',
+      'localNetwork.json'
+    )
+    if (fs.existsSync(pathToLocalNetworkFile)) {
+      const localNetworksFile = fs.readFileSync(pathToLocalNetworkFile, 'utf8')
+      return JSON.parse(localNetworksFile)
+    }
+    return undefined
+  } catch (err) {
+    console.log(err)
+    return undefined
   }
 }
