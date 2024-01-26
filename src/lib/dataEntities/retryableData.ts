@@ -1,7 +1,7 @@
 import { Interface } from '@ethersproject/abi'
 import { BigNumber } from 'ethers'
+import { BaseError } from 'viem'
 import { isDefined } from '../utils/lib'
-
 // TODO: add typechain support
 const errorInterface = new Interface([
   'error RetryableData(address from, address to, uint256 l2CallValue, uint256 deposit, uint256 maxSubmissionCost, address excessFeeRefundAddress, address callValueRefundAddress, uint256 gasLimit, uint256 maxFeePerGas, bytes data)',
@@ -112,8 +112,13 @@ export class RetryableDataTools {
    * @returns
    */
   public static tryParseError(
-    ethersJsErrorOrData: Error | { errorData: string } | string
+    ethersJsErrorOrData: Error | { errorData: string } | string | ViemError
   ): RetryableData | null {
+    if (isViemError(ethersJsErrorOrData)) {
+      return errorInterface.parseError(
+        ethersJsErrorOrData.cause.cause.cause.data
+      ).args as unknown as RetryableData
+    }
     const errorData =
       typeof ethersJsErrorOrData === 'string'
         ? ethersJsErrorOrData
@@ -122,3 +127,19 @@ export class RetryableDataTools {
     return errorInterface.parseError(errorData).args as unknown as RetryableData
   }
 }
+
+interface ViemError extends BaseError {
+  cause: {
+    cause: {
+      cause: {
+        data: string
+      }
+    }
+  }
+}
+
+const isViemError = (err: any): err is ViemError =>
+  typeof err !== 'string' &&
+  'version' in err &&
+  typeof err.version === 'string' &&
+  err.version.includes('viem')

@@ -16,6 +16,7 @@
 /* eslint-env node */
 'use strict'
 
+import 'isomorphic-unfetch'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { Wallet } from '@ethersproject/wallet'
 
@@ -37,6 +38,10 @@ import { deployErc20AndInit } from './deployBridge'
 import * as path from 'path'
 import * as fs from 'fs'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
+import { createWalletClient, http } from 'viem'
+import { mainnet } from 'viem/chains'
+import { privateKeyToAccount } from 'viem/accounts'
+import { createViemSigner } from '../src/lib/utils/universal/signerTransforms'
 
 dotenv.config()
 
@@ -45,6 +50,8 @@ export const config = {
   ethUrl: process.env['ETH_URL'] as string,
   arbKey: process.env['ARB_KEY'] as string,
   ethKey: process.env['ETH_KEY'] as string,
+  shouldUseViemSigner:
+    (process.env['SHOULD_USE_VIEM_SIGNER'] as string) === '1',
 }
 
 function getDeploymentData(): string {
@@ -196,17 +203,33 @@ export const setupNetworks = async (
   }
 }
 
-export const getSigner = (provider: JsonRpcProvider, key?: string) => {
+export const getSigner = (provider: any, key?: string) => {
   if (!key && !provider)
     throw new ArbSdkError('Provide at least one of key or provider.')
   if (key) return new Wallet(key).connect(provider)
   else return provider.getSigner(0)
 }
 
+export const ethLocal = {
+  ...mainnet,
+  id: 1337,
+  rpcUrls: {
+    default: {
+      http: [config.ethUrl],
+    },
+    public: {
+      http: [config.ethUrl],
+    },
+  },
+}
+
 export const testSetup = async (): Promise<{
+  seed: Wallet
+  pk: any
   l1Network: L1Network
   l2Network: L2Network
   l1Signer: Signer
+  ethersL1Signer: Signer
   l2Signer: Signer
   erc20Bridger: Erc20Bridger
   ethBridger: EthBridger
@@ -222,8 +245,29 @@ export const testSetup = async (): Promise<{
   const l2Deployer = getSigner(arbProvider, config.arbKey)
 
   const seed = Wallet.createRandom()
-  const l1Signer = seed.connect(ethProvider)
+  const ethersL1Signer = seed.connect(ethProvider)
   const l2Signer = seed.connect(arbProvider)
+
+  const pk = ethersL1Signer._signingKey().privateKey as `0x${string}`
+  const ethWalletClient = createWalletClient({
+    account: privateKeyToAccount(pk),
+    transport: http(config.ethUrl),
+    chain: {
+      ...mainnet,
+      id: 1337,
+      rpcUrls: {
+        default: {
+          http: [config.ethUrl],
+        },
+        public: {
+          http: [config.ethUrl],
+        },
+      },
+    },
+  })
+  const l1Signer = config.shouldUseViemSigner
+    ? createViemSigner(ethWalletClient)
+    : ethersL1Signer
 
   let setL1Network: L1Network, setL2Network: L2Network
   try {
@@ -268,7 +312,10 @@ export const testSetup = async (): Promise<{
   const inboxTools = new InboxTools(l1Signer, setL2Network)
 
   return {
+    seed,
+    pk,
     l1Signer,
+    ethersL1Signer,
     l2Signer,
     l1Network: setL1Network,
     l2Network: setL2Network,

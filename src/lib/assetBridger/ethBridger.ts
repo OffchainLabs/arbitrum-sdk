@@ -46,6 +46,10 @@ import { OmitTyped } from '../utils/types'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getL2Network } from '../dataEntities/networks'
+import {
+  Providerish,
+  transformUniversalProviderToEthersV5Provider,
+} from '../utils/universal/providerTransforms'
 
 export interface EthWithdrawParams {
   /**
@@ -137,8 +141,14 @@ export class EthBridger extends AssetBridger<
    * @param l2Provider
    * @returns
    */
-  public static async fromProvider(l2Provider: Provider) {
-    return new EthBridger(await getL2Network(l2Provider))
+  public static async fromProvider(l2Provider: Provider | Providerish) {
+    if (l2Provider instanceof Provider) {
+      return new EthBridger(await getL2Network(l2Provider))
+    }
+    const ethersV5Provider = await transformUniversalProviderToEthersV5Provider(
+      l2Provider
+    )
+    return new EthBridger(await getL2Network(ethersV5Provider))
   }
 
   /**
