@@ -9,13 +9,11 @@ import {
   ethers,
 } from 'ethers'
 import { IERC20 } from '../abi/IERC20'
-import { BridgedToL3Event, L2ForwarderPredictor } from '../abi/L2Forwarder'
 import { L2GatewayToken } from '../abi/L2GatewayToken'
 import { L1Teleporter } from '../abi/L1Teleporter'
 import { IERC20__factory } from '../abi/factories/IERC20__factory'
 import { L1GatewayRouter__factory } from '../abi/factories/L1GatewayRouter__factory'
 import { L2ForwarderFactory__factory } from '../abi/factories/L2ForwarderFactory__factory'
-import { L2Forwarder__factory } from '../abi/factories/L2Forwarder__factory'
 import { L2GatewayToken__factory } from '../abi/factories/L2GatewayToken__factory'
 import { L1Teleporter__factory } from '../abi/factories/L1Teleporter__factory'
 import { Address } from '../dataEntities/address'
@@ -31,12 +29,8 @@ import {
   SignerOrProvider,
   SignerProviderUtils,
 } from '../dataEntities/signerOrProvider'
+import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
 import {
-  L1ToL2TransactionRequest,
-  isL1ToL2TransactionRequest,
-} from '../dataEntities/transactionRequest'
-import {
-  L1ToL2Message,
   L1ToL2MessageReader,
   L1ToL2MessageStatus,
   L1ToL2MessageWaitResult,
@@ -50,23 +44,12 @@ import {
 import {
   L1ContractCallTransaction,
   L1ContractCallTransactionReceipt,
-  L1EthDepositTransaction,
   L1EthDepositTransactionReceipt,
   L1TransactionReceipt,
 } from '../message/L1Transaction'
-import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
-import { ApproveParamsOrTxRequest, Erc20Bridger } from './erc20Bridger'
-import { L2ForwarderPredictor__factory } from '../abi/factories/L2ForwarderPredictor__factory'
-import { AbiCoder } from 'ethers/lib/utils'
-import {
-  ADDRESS_ALIAS_OFFSET,
-  NODE_INTERFACE_ADDRESS,
-} from '../dataEntities/constants'
-import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
+import { Erc20Bridger } from './erc20Bridger'
 import { isDefined } from '../utils/lib'
-import { L1ArbitrumGateway__factory } from '../abi/factories/L1ArbitrumGateway__factory'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
-import { L2ArbitrumGateway__factory } from '../abi/factories/L2ArbitrumGateway__factory'
 
 type PickedTransactionRequest = Required<
   Pick<TransactionRequest, 'to' | 'data' | 'value'>
@@ -320,6 +303,16 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   protected readonly l2Erc20Bridger = new Erc20Bridger(this.l2Network)
   protected readonly l3Erc20Bridger = new Erc20Bridger(this.l3Network)
 
+  /**
+   * If the L3 network has a native token, this is the address of that token on L2
+   */
+  public readonly l2FeeTokenAddress: string | undefined
+
+  /**
+   * If the L3 network has a native token, this is the address of that token on L1
+   */
+  private _l1FeeTokenAddress: string | undefined
+
   public constructor(public readonly l3Network: L2Network) {
     super(l3Network)
 
@@ -329,7 +322,31 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       )
     }
 
+    if (
+      this.l3Network.nativeToken &&
+      this.l3Network.nativeToken !== ethers.constants.AddressZero
+    ) {
+      this.l2FeeTokenAddress = this.l3Network.nativeToken
+    }
+
     this.teleporterAddresses = this.l2Network.teleporterAddresses
+  }
+
+  /**
+   * If the L3 network has a native token, return the address of that token on L1.
+   * If the L3 network uses ETH for fees, throw.
+   */
+  public async l1FeeTokenAddress(l2Provider: Provider): Promise<string> {
+    if (!this.l2FeeTokenAddress) {
+      throw new ArbSdkError(
+        `L3 network ${this.l3Network.name} uses ETH for fees`
+      )
+    }
+    this._l1FeeTokenAddress ||= await this.l2Erc20Bridger.getL1ERC20Address(
+      this.l2FeeTokenAddress,
+      l2Provider
+    )
+    return this._l1FeeTokenAddress
   }
 
   /**
@@ -648,6 +665,24 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     )
   }
 
+  protected async _getL1L2FeeTokenBridgeGasEstimates(
+    params: Erc20DepositRequestParams,
+    feeTokenAmount: BigNumber,
+    l2ForwarderAddress: string,
+    l1Provider: Provider
+  ): Promise<RetryableGasValues> {
+    const l1FeeTokenAddress = await this.l1FeeTokenAddress(params.l2Provider)
+    return this._getTokenBridgeGasEstimates(
+      l1Provider,
+      params.l2Provider,
+      l1FeeTokenAddress,
+      await this.getL1L2GatewayAddress(l1FeeTokenAddress, l1Provider),
+      this.teleporterAddresses.l1Teleporter,
+      l2ForwarderAddress,
+      feeTokenAmount
+    )
+  }
+
   protected async _getL2ForwarderFactoryGasEstimates(
     l1GasPrice: BigNumber,
     l1Provider: Provider
@@ -698,6 +733,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l1Provider: Provider
   ): Promise<L1Teleporter.RetryableGasParamsStruct> {
     const l1GasPrice = this._percentIncrease(
+      // todo: clean up
       params.retryableOverrides?.l1GasPrice?.base ||
         (await l1Provider.getGasPrice()),
       params.retryableOverrides?.l1GasPrice?.percentIncrease ||
@@ -784,15 +820,30 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         )
     )
 
+    const l1l2FeeTokenBridgeGasValues = this.l2FeeTokenAddress
+      ? await this._getL1L2FeeTokenBridgeGasEstimates(
+          params,
+          l3GasPrice
+            .mul(l2l3TokenBridgeGasValues.gasLimit)
+            .add(l2l3TokenBridgeGasValues.maxSubmissionFee),
+          l2ForwarderAddress,
+          l1Provider
+        )
+      : {
+          gasLimit: BigNumber.from(0),
+          maxSubmissionFee: BigNumber.from(0),
+        }
+
     return {
       l2GasPrice,
       l3GasPrice,
       l1l2TokenBridgeGasLimit: l1l2TokenBridgeGasValues.gasLimit,
-      l1l2FeeTokenBridgeGasLimit: BigNumber.from(0),
+      l1l2FeeTokenBridgeGasLimit: l1l2FeeTokenBridgeGasValues.gasLimit,
       l2l3TokenBridgeGasLimit: l2l3TokenBridgeGasValues.gasLimit,
       l2ForwarderFactoryGasLimit: l2ForwarderFactoryGasValues.gasLimit,
       l1l2TokenBridgeSubmissionCost: l1l2TokenBridgeGasValues.maxSubmissionFee,
-      l1l2FeeTokenBridgeSubmissionCost: BigNumber.from(0),
+      l1l2FeeTokenBridgeSubmissionCost:
+        l1l2FeeTokenBridgeGasValues.maxSubmissionFee,
       l2l3TokenBridgeSubmissionCost: l2l3TokenBridgeGasValues.maxSubmissionFee,
     }
   }

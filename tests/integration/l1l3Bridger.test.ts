@@ -191,7 +191,7 @@ describe('L1 to L3 Bridging', () => {
         const l1Weth = l2Network.tokenBridge.l1Weth
         const l2Weth = l2Network.tokenBridge.l2Weth
         const ans = await l1l3Bridger.getL2ERC20Address(
-          l1Weth,
+          l1Weth!, // todo handle undefined
           l1Signer.provider!
         )
         expect(ans).to.eq(l2Weth)
@@ -202,7 +202,7 @@ describe('L1 to L3 Bridging', () => {
         const l1Weth = l2Network.tokenBridge.l1Weth
         const l3Weth = l3Network.tokenBridge.l2Weth
         const ans = await l1l3Bridger.getL3ERC20Address(
-          l1Weth,
+          l1Weth!, // todo handle undefined
           l1Signer.provider!,
           l2Signer.provider!
         )
@@ -215,7 +215,7 @@ describe('L1 to L3 Bridging', () => {
         const l1l2WethGateway = l2Network.tokenBridge.l1WethGateway
 
         const wethAns = await l1l3Bridger.getL1L2GatewayAddress(
-          l1Weth,
+          l1Weth!, // todo handle undefined
           l1Signer.provider!
         )
 
@@ -236,7 +236,7 @@ describe('L1 to L3 Bridging', () => {
         const l2l3WethGateway = l3Network.tokenBridge.l1WethGateway
 
         const wethAns = await l1l3Bridger.getL2L3GatewayAddress(
-          l1Weth,
+          l1Weth!, // todo handle undefined
           l1Signer.provider!,
           l2Signer.provider!
         )
