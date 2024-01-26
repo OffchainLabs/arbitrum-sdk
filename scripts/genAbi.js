@@ -28,12 +28,12 @@ async function main() {
   // instead of writing in postinstall in each of those packages, we should target a local folder in sdk's postinstall
 
   console.log('building nitro')
-  execSync(`${npmExec} run hardhat:prod compile`, {
+  execSync(`${npmExec} run build`, {
     cwd: nitroPath,
   })
 
   console.log('building peripherals')
-  execSync(`${npmExec} run hardhat:prod compile`, {
+  execSync(`${npmExec} run build`, {
     cwd: peripheralsPath,
   })
 
