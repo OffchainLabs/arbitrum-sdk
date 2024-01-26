@@ -425,6 +425,7 @@ const getChainsByType = <T extends typeof networks>(
 
 const getL1Chains = () => getChainsByType<L1Networks>(isL1Network)
 const getArbitrumChains = () => getChainsByType<L2Networks>(isArbitrumNetwork)
+const getParentChains = () => getChainsByType<Networks>(isParentChain)
 
 /**
  * Returns the parent chain for the given chain.
@@ -490,7 +491,7 @@ export const getNetwork = async (
   let network: L1Network | L2Network | undefined = undefined
 
   if (layer === 1) {
-    network = getL1Chains()[chainID]
+    network = getParentChains()[chainID]
   } else {
     network = getArbitrumChains()[chainID]
   }
