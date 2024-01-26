@@ -29,7 +29,7 @@ import {
   getL2Network,
   addCustomNetwork,
 } from '../src/lib/dataEntities/networks'
-import { Signer, ethers, providers } from 'ethers'
+import { Signer, providers } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { execSync } from 'child_process'
 import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
@@ -40,7 +40,11 @@ import * as fs from 'fs'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import { ARB_MINIMUM_BLOCK_TIME_IN_SECONDS } from '../src/lib/dataEntities/constants'
 import { IERC20Bridge__factory } from '../src/lib/abi/factories/IERC20Bridge__factory'
-import { approveL1CustomFeeToken, fundL1CustomFeeToken, isL2NetworkWithCustomFeeToken } from '../tests/integration/custom-fee-token/customFeeTokenTestHelpers'
+import {
+  approveL1CustomFeeToken,
+  fundL1CustomFeeToken,
+  isL2NetworkWithCustomFeeToken,
+} from '../tests/integration/custom-fee-token/customFeeTokenTestHelpers'
 import { fundL1 } from '../tests/integration/testHelpers'
 
 dotenv.config()

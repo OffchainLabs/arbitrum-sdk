@@ -10,9 +10,9 @@ import { Erc20Bridger, EthBridger } from '../../../src'
 import { ERC20__factory } from '../../../src/lib/abi/factories/ERC20__factory'
 
 // `config` isn't initialized yet, so we have to wrap these in functions
-const ethProvider = ()=>new StaticJsonRpcProvider(config.ethUrl)
-const arbProvider = ()=>new StaticJsonRpcProvider(config.arbUrl)
-const localNetworks = ()=>getLocalNetworksFromFile()
+const ethProvider = () => new StaticJsonRpcProvider(config.ethUrl)
+const arbProvider = () => new StaticJsonRpcProvider(config.arbUrl)
+const localNetworks = () => getLocalNetworksFromFile()
 
 export function isL2NetworkWithCustomFeeToken(): boolean {
   return typeof localNetworks()?.l2Network.nativeToken !== 'undefined'
@@ -49,7 +49,7 @@ export async function fundL1CustomFeeToken(l1SignerOrAddress: Signer | string) {
   const tokenContract = ERC20__factory.connect(nativeToken, deployerWallet)
 
   const tx = await tokenContract.transfer(address, utils.parseEther('10'))
-  await tx.wait() 
+  await tx.wait()
 }
 
 export async function approveL1CustomFeeToken(l1Signer: Signer) {
@@ -61,7 +61,10 @@ export async function approveL1CustomFeeToken(l1Signer: Signer) {
 
 export async function getNativeTokenAllowance(owner: string, spender: string) {
   const nativeToken = localNetworks()?.l2Network.nativeToken
-  const nativeTokenContract = ERC20__factory.connect(nativeToken!, ethProvider())
+  const nativeTokenContract = ERC20__factory.connect(
+    nativeToken!,
+    ethProvider()
+  )
   return nativeTokenContract.allowance(owner, spender)
 }
 

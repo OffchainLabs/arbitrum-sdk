@@ -307,11 +307,11 @@ describe('Ether', async () => {
     ).to.eq(L2ToL1MessageStatus.EXECUTED)
 
     const finalRandomBalance = isL2NetworkWithCustomFeeToken()
-    ? await ERC20__factory.connect(
-        ethBridger.nativeToken!,
-        l1Signer.provider!
-      ).balanceOf(randomAddress)
-    : await l1Signer.provider!.getBalance(randomAddress)
+      ? await ERC20__factory.connect(
+          ethBridger.nativeToken!,
+          l1Signer.provider!
+        ).balanceOf(randomAddress)
+      : await l1Signer.provider!.getBalance(randomAddress)
     expect(finalRandomBalance.toString(), 'L1 final balance').to.eq(
       ethToWithdraw.toString()
     )
