@@ -65,7 +65,7 @@
     "@typescript-eslint/parser": "^5.14.0",
     "arb-bridge-peripherals": "1.0.10",
     "audit-ci": "^6.3.0",
-    "axios": "^0.21.3",
+    "axios": "^1.6.5",
     "chai": "^4.2.0",
     "chalk": "^4.1.0",
     "dotenv": "^10.0.0",
@@ -90,5 +90,8 @@
   },
   "files": [
     "dist/**/*"
-  ]
+  ],
+  "resolutions": {
+    "lodash.pick": "https://github.com/lodash/lodash/archive/refs/tags/4.17.21.tar.gz"
+  }
 }
