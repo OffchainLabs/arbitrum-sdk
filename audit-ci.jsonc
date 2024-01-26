@@ -2,41 +2,6 @@
   "$schema": "https://github.com/IBM/audit-ci/raw/main/docs/schema.json",
   "low": true,
   "allowlist": [
-    // Undici
-    ////////////
-    // https://github.com/advisories/GHSA-3cvr-822r-rqcc
-    // Undici CRLF injection
-    // Used only in hardhat, so only in dev. Even then we dont use remote requests.
-    "GHSA-3cvr-822r-rqcc",
-    // https://github.com/advisories/GHSA-pgw7-wx7w-2w33
-    // ProxyAgent vulnerable to MITM
-    // Used only in hardhat, so only in dev. Even then we dont use remote requests.
-    "GHSA-pgw7-wx7w-2w33",
-    // https://github.com/advisories/GHSA-q768-x9m6-m9qp
-    // undici before v5.8.0 vulnerable to uncleared cookies
-    // Used only in hardhat, so only in dev. Even then we dont use remote requests.
-    "GHSA-q768-x9m6-m9qp",
-    // https://github.com/advisories/GHSA-8qr4-xgw6-wmr3
-    // undici.request` vulnerable to SSRF
-    // Used only in hardhat, so only in dev. Even then we dont use remote requests.
-    "GHSA-8qr4-xgw6-wmr3",
-    // https://github.com/advisories/GHSA-f772-66g8-q5h3
-    // Nodejs ‘undici’ Vulnerable to CRLF
-    // Used only in hardhat, so only in dev. Even then we dont use remote requests.
-    "GHSA-f772-66g8-q5h3",
-    // https://github.com/advisories/GHSA-r6ch-mqf9-qc9w
-    // Nodejs ‘undici’ Vulnerable to DoS
-    // Used only in hardhat, so only in dev. Even then we dont use remote requests.
-    "GHSA-r6ch-mqf9-qc9w",
-    // https://github.com/advisories/GHSA-5r9g-qh6m-jxff
-    // Nodejs ‘undici’ Vulnerable to CRLF
-    // Used only in hardhat, so only in dev. Even then we dont use remote requests.
-    "GHSA-5r9g-qh6m-jxff",
-    // https://github.com/advisories/GHSA-j8xg-fqg3-53r7
-    // word-wrap vulnerable to Regular Expression Denial of Service
-    // Used only in eslint, so only in dev.
-    "GHSA-j8xg-fqg3-53r7",
-
     // Open Zepplin
     ////////////
     // https://github.com/advisories/GHSA-88g8-f5mf-f5rj
@@ -67,17 +32,6 @@
     // OpenZeppelin Contracts vulnerable to ECDSA signature malleability
     // We don’t use signatures for replay protection anywhere
     "GHSA-4h98-2769-gh6h",
-    // https://github.com/advisories/GHSA-xvch-5gv4-984h
-    // Minimist <=1.2.5 is vulnerable to Prototype Pollution via file index.js, function setKey() (lines 69-95).
-    // from dev dependency: typedoc-plugin-markdown>handlebars>minimist
-    // Minimist is a typedoc plugin's dependency and is never included in the sdk build
-    // Typedoc was only called by the nitro-docs repo to generate sdk docs
-    "GHSA-xvch-5gv4-984h",
-    // https://github.com/advisories/GHSA-9c47-m6qq-7p4h
-    // Prototype Pollution in JSON5 via Parse Method
-    // from: nyc>istanbul-lib-instrument>@babel/core>json5
-    // not used in ci
-    "GHSA-9c47-m6qq-7p4h",
     // https://github.com/advisories/GHSA-mx2q-35m2-x2rh
     // OpenZeppelin Contracts TransparentUpgradeableProxy clashing selector calls may not be delegated
     // from: @arbitrum/nitro-contracts>@openzeppelin/contracts-upgradeable
@@ -100,39 +54,23 @@
     // from: @arbitrum/nitro-contracts>@openzeppelin/contracts
     // We don't use Governor or GovernorCompatibilityBravo
     "GHSA-5h3x-9wvq-w4m2",
-    // https://github.com/advisories/GHSA-c2qf-rxjj-qqgw
-    // semver vulnerable to Regular Expression Denial of Service
-    // from: hardhat>semver
-    // from: @arbitrum/nitro-contracts>hardhat>semver
-    // from: arb-bridge-peripherals>arb-bridge-eth>hardhat>semver
-    // Used only in dev.
-    "GHSA-c2qf-rxjj-qqgw",
     // https://github.com/advisories/GHSA-g4vp-m682-qqmp
     // OpenZeppelin Contracts vulnerable to Improper Escaping of Output
     // from: @arbitrum/nitro-contracts>@openzeppelin/contracts-upgradeable
     // from @arbitrum/nitro-contracts>@openzeppelin/contracts
     // We don't use ERC2771Context
     "GHSA-g4vp-m682-qqmp",
-    // https://github.com/advisories/GHSA-wqq4-5wpv-mx2g
-    // Undici's cookie header not cleared on cross-origin redirect in fetch
-    // from: hardhat>undici
-    // hardhat is only used in dev
-    "GHSA-wqq4-5wpv-mx2g",
     // https://github.com/advisories/GHSA-wf5p-g6vw-rhxx
     // axios inadvertently reveals the confidential XSRF-TOKEN stored in cookies
     // we don't use cookies with axios in the sdk
     // from: @arbitrum/nitro-contracts>sol2uml>axios
     // from: axios
     "GHSA-wf5p-g6vw-rhxx",
-    // https://github.com/advisories/GHSA-jchw-25xp-jwwc
-    // When new URL() throws an error, it can be manipulated to misinterpret the hostname.
-    // An attacker could exploit this weakness to redirect traffic to a malicious site.
-    // from: hardhat>solc>follow-redirects
-    // from: @arbitrum/nitro-contracts>hardhat>solc>follow-redirects
-    // from: arb-bridge-peripherals>arb-bridge-eth>hardhat>solc>follow-redirects
-    // from: @arbitrum/nitro-contracts>sol2uml>axios>follow-redirects
-    // from: axios>follow-redirects
-    // Used only in dev.
-    "GHSA-jchw-25xp-jwwc"
+    // https://github.com/advisories/GHSA-wprv-93r4-jj2p
+    // OpenZeppelin Contracts using MerkleProof multiproofs may allow proving arbitrary leaves for specific trees
+    // we don't use oz/merkle-trees anywhere
+    // from @arbitrum/nitro-contracts>@offchainlabs/upgrade-executor>@openzeppelin/contracts-upgradeable
+    // from @arbitrum/nitro-contracts>@offchainlabs/upgrade-executor>@openzeppelin/contracts
+    "GHSA-wprv-93r4-jj2p"
   ]
 }
