@@ -31,102 +31,106 @@ import { L1ToL2MessageStatus } from '../../src'
 import { Wallet } from 'ethers'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
+import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 
-describe('WETH', async () => {
-  beforeEach('skipIfMainnet', async function () {
-    await skipIfMainnet(this)
-  })
-
-  it('deposit WETH', async () => {
-    const { l2Network, l1Signer, l2Signer, erc20Bridger } = await testSetup()
-
-    const l1WethAddress = l2Network.tokenBridge.l1Weth
-
-    const wethToWrap = parseEther('0.00001')
-    const wethToDeposit = parseEther('0.0000001')
-
-    await fundL1(l1Signer, parseEther('1'))
-
-    const l2WETH = AeWETH__factory.connect(
-      l2Network.tokenBridge.l2Weth,
-      l2Signer.provider!
-    )
-    expect(
-      (await l2WETH.balanceOf(await l2Signer.getAddress())).toString(),
-      'start balance weth'
-    ).to.eq('0')
-
-    const l1WETH = AeWETH__factory.connect(l1WethAddress, l1Signer)
-    const res = await l1WETH.deposit({
-      value: wethToWrap,
+// WETH tests are only relevant for networks that use WETH as the native token
+if (!isL2NetworkWithCustomFeeToken()) {
+  describe('WETH', async () => {
+    beforeEach('skipIfMainnet', async function () {
+      await skipIfMainnet(this)
     })
-    await res.wait()
-    await depositToken(
-      wethToDeposit,
-      l1WethAddress,
-      erc20Bridger,
-      l1Signer,
-      l2Signer,
-      L1ToL2MessageStatus.REDEEMED,
-      GatewayType.WETH
-    )
 
-    const l2WethGateway = await erc20Bridger.getL2GatewayAddress(
-      l1WethAddress,
-      l2Signer.provider!
-    )
-    expect(l2WethGateway, 'l2 weth gateway').to.eq(
-      l2Network.tokenBridge.l2WethGateway
-    )
-    const l2Token = erc20Bridger.getL2TokenContract(
-      l2Signer.provider!,
-      l2Network.tokenBridge.l2Weth
-    )
-    expect(l2Token.address, 'l2 weth').to.eq(l2Network.tokenBridge.l2Weth)
+    it('deposit WETH', async () => {
+      const { l2Network, l1Signer, l2Signer, erc20Bridger } = await testSetup()
 
-    // now try to withdraw the funds
-    await fundL2(l2Signer)
-    const l2Weth = AeWETH__factory.connect(l2Token.address, l2Signer)
-    const randomAddr = Wallet.createRandom().address
-    await (
-      await l2Weth.connect(l2Signer).withdrawTo(randomAddr, wethToDeposit)
-    ).wait()
-    const afterBalance = await l2Signer.provider!.getBalance(randomAddr)
+      const l1WethAddress = l2Network.tokenBridge.l1Weth!
 
-    expect(afterBalance.toString(), 'balance after').to.eq(
-      wethToDeposit.toString()
-    )
-  })
+      const wethToWrap = parseEther('0.00001')
+      const wethToDeposit = parseEther('0.0000001')
 
-  it('withdraw WETH', async () => {
-    const wethToWrap = parseEther('0.00001')
-    const wethToWithdraw = parseEther('0.00000001')
+      await fundL1(l1Signer, parseEther('1'))
 
-    const { l2Network, l1Signer, l2Signer, erc20Bridger } = await testSetup()
-    await fundL1(l1Signer)
-    await fundL2(l2Signer)
+      const l2WETH = AeWETH__factory.connect(
+        l2Network.tokenBridge.l2Weth!,
+        l2Signer.provider!
+      )
+      expect(
+        (await l2WETH.balanceOf(await l2Signer.getAddress())).toString(),
+        'start balance weth'
+      ).to.eq('0')
 
-    const l2Weth = AeWETH__factory.connect(
-      l2Network.tokenBridge.l2Weth,
-      l2Signer
-    )
-    const res = await l2Weth.deposit({
-      value: wethToWrap,
+      const l1WETH = AeWETH__factory.connect(l1WethAddress, l1Signer)
+      const res = await l1WETH.deposit({
+        value: wethToWrap,
+      })
+      await res.wait()
+      await depositToken(
+        wethToDeposit,
+        l1WethAddress,
+        erc20Bridger,
+        l1Signer,
+        l2Signer,
+        L1ToL2MessageStatus.REDEEMED,
+        GatewayType.WETH
+      )
+
+      const l2WethGateway = await erc20Bridger.getL2GatewayAddress(
+        l1WethAddress,
+        l2Signer.provider!
+      )
+      expect(l2WethGateway, 'l2 weth gateway').to.eq(
+        l2Network.tokenBridge.l2WethGateway
+      )
+      const l2Token = erc20Bridger.getL2TokenContract(
+        l2Signer.provider!,
+        l2Network.tokenBridge.l2Weth!
+      )
+      expect(l2Token.address, 'l2 weth').to.eq(l2Network.tokenBridge.l2Weth)
+
+      // now try to withdraw the funds
+      await fundL2(l2Signer)
+      const l2Weth = AeWETH__factory.connect(l2Token.address, l2Signer)
+      const randomAddr = Wallet.createRandom().address
+      await (
+        await l2Weth.connect(l2Signer).withdrawTo(randomAddr, wethToDeposit)
+      ).wait()
+      const afterBalance = await l2Signer.provider!.getBalance(randomAddr)
+
+      expect(afterBalance.toString(), 'balance after').to.eq(
+        wethToDeposit.toString()
+      )
     })
-    const rec = await res.wait()
-    expect(rec.status).to.equal(1, 'deposit txn failed')
 
-    await withdrawToken({
-      amount: wethToWithdraw,
-      erc20Bridger: erc20Bridger,
-      gatewayType: GatewayType.WETH,
-      l1Signer: l1Signer,
-      l1Token: ERC20__factory.connect(
-        l2Network.tokenBridge.l1Weth,
-        l1Signer.provider!
-      ),
-      l2Signer: l2Signer,
-      startBalance: wethToWrap,
+    it('withdraw WETH', async () => {
+      const wethToWrap = parseEther('0.00001')
+      const wethToWithdraw = parseEther('0.00000001')
+
+      const { l2Network, l1Signer, l2Signer, erc20Bridger } = await testSetup()
+      await fundL1(l1Signer)
+      await fundL2(l2Signer)
+
+      const l2Weth = AeWETH__factory.connect(
+        l2Network.tokenBridge.l2Weth!,
+        l2Signer
+      )
+      const res = await l2Weth.deposit({
+        value: wethToWrap,
+      })
+      const rec = await res.wait()
+      expect(rec.status).to.equal(1, 'deposit txn failed')
+
+      await withdrawToken({
+        amount: wethToWithdraw,
+        erc20Bridger: erc20Bridger,
+        gatewayType: GatewayType.WETH,
+        l1Signer: l1Signer,
+        l1Token: ERC20__factory.connect(
+          l2Network.tokenBridge.l1Weth!,
+          l1Signer.provider!
+        ),
+        l2Signer: l2Signer,
+        startBalance: wethToWrap,
+      })
     })
   })
-})
+}

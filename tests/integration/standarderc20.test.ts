@@ -25,6 +25,7 @@ import {
   depositToken,
   GatewayType,
   withdrawToken,
+  fundL2,
 } from './testHelpers'
 import {
   Erc20Bridger,
@@ -45,14 +46,14 @@ import { ArbRetryableTx__factory } from '../../src/lib/abi/factories/ArbRetryabl
 import { NodeInterface__factory } from '../../src/lib/abi/factories/NodeInterface__factory'
 import { isDefined } from '../../src/lib/utils/lib'
 import {
-  fundL1CustomFeeToken,
-  approveL1CustomFeeToken,
-  fundL2CustomFeeToken,
   approveL1CustomFeeTokenForErc20Deposit,
   getNativeTokenAllowance,
+  isL2NetworkWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
+
+const isCustomFeeToken = isL2NetworkWithCustomFeeToken()
 
 describe('standard ERC20', () => {
   beforeEach('skipIfMainnet', async function () {
@@ -71,10 +72,7 @@ describe('standard ERC20', () => {
   before('init', async () => {
     const setup = await testSetup()
     await fundL1(setup.l1Signer)
-    await fundL1CustomFeeToken(setup.l1Signer)
-    await approveL1CustomFeeToken(setup.l1Signer)
-    await fundL2CustomFeeToken(setup.l2Signer)
-
+    await fundL2(setup.l2Signer)
     const deployErc20 = new TestERC20__factory().connect(setup.l1Signer)
     const testToken = await deployErc20.deploy()
     await testToken.deployed()
@@ -84,54 +82,54 @@ describe('standard ERC20', () => {
     testState = { ...setup, l1Token: testToken }
   })
 
-  it('approves the thing', async () => {
-    const { l1Signer, l2Signer, erc20Bridger } = await testSetup()
+  if (isL2NetworkWithCustomFeeToken()) {
+    it('approves the thing', async () => {
+      const { l1Signer, erc20Bridger } = await testSetup()
 
-    await fundL1(l1Signer)
-    await fundL1CustomFeeToken(l1Signer)
-    await fundL2CustomFeeToken(l2Signer)
+      const gatewayAddress = await erc20Bridger.getL1GatewayAddress(
+        testState.l1Token.address,
+        l1Signer.provider!
+      )
 
-    const gatewayAddress = await erc20Bridger.getL1GatewayAddress(
-      testState.l1Token.address,
-      l1Signer.provider!
-    )
+      const initialAllowance = await getNativeTokenAllowance(
+        await l1Signer.getAddress(),
+        gatewayAddress
+      )
 
-    const initialAllowance = await getNativeTokenAllowance(
-      await l1Signer.getAddress(),
-      gatewayAddress
-    )
+      console.log({ initialAllowance })
 
-    console.log({ initialAllowance })
+      expect(initialAllowance.toString()).to.eq(
+        constants.Zero.toString(),
+        'initial allowance is not empty'
+      )
 
-    expect(initialAllowance.toString()).to.eq(
-      constants.Zero.toString(),
-      'initial allowance is not empty'
-    )
+      const tx = await erc20Bridger.approveFeeToken({
+        l1Signer: l1Signer,
+        erc20L1Address: testState.l1Token.address,
+      })
+      await tx.wait()
 
-    const tx = await erc20Bridger.approveFeeToken({
-      l1Signer: l1Signer,
-      erc20L1Address: testState.l1Token.address,
+      const finalAllowance = await getNativeTokenAllowance(
+        await l1Signer.getAddress(),
+        gatewayAddress
+      )
+
+      console.log({ finalAllowance })
+
+      expect(finalAllowance.toString()).to.eq(
+        constants.MaxUint256.toString(),
+        'initial allowance is not empty'
+      )
     })
-    await tx.wait()
+  }
 
-    const finalAllowance = await getNativeTokenAllowance(
-      await l1Signer.getAddress(),
-      gatewayAddress
-    )
-
-    console.log({ finalAllowance })
-
-    expect(finalAllowance.toString()).to.eq(
-      constants.MaxUint256.toString(),
-      'initial allowance is not empty'
-    )
-  })
-
-  it.only('deposits erc20', async () => {
-    await approveL1CustomFeeTokenForErc20Deposit(
-      testState.l1Signer,
-      testState.l1Token.address
-    )
+  it('deposits erc20', async () => {
+    if (isCustomFeeToken) {
+      await approveL1CustomFeeTokenForErc20Deposit(
+        testState.l1Signer,
+        testState.l1Token.address
+      )
+    }
 
     await depositToken(
       depositAmount,
@@ -268,7 +266,7 @@ describe('standard ERC20', () => {
 
     // force the redeem to fail by submitted just a bit under the required gas
     // so it is enough to pay for L1 + L2 intrinsic gas costs
-    await redeemAndTest(waitRes.message, 0, gasComponents.gasEstimate.sub(1000))
+    await redeemAndTest(waitRes.message, 0, gasComponents.gasEstimate.sub(3000))
     await redeemAndTest(waitRes.message, 1)
   })
 

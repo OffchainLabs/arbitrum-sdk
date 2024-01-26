@@ -34,6 +34,9 @@ import { L2ToL1MessageStatus } from '../../src/lib/dataEntities/message'
 import { L2TransactionReceipt } from '../../src/lib/message/L2Transaction'
 import { L1ToL2MessageStatus } from '../../src/lib/message/L1ToL2Message'
 import { testSetup } from '../../scripts/testSetup'
+import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
+import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
+
 dotenv.config()
 
 describe('Ether', async () => {
@@ -78,16 +81,19 @@ describe('Ether', async () => {
     )
   })
 
-  it('"EthBridger.approveFeeToken" throws when eth is used as native/fee token', async () => {
-    const { ethBridger, l1Signer } = await testSetup()
+  // Test should only run if we're using eth as native fee
+  if (!isL2NetworkWithCustomFeeToken()) {
+    it('"EthBridger.approveFeeToken" throws when eth is used as native/fee token', async () => {
+      const { ethBridger, l1Signer } = await testSetup()
 
-    try {
-      await ethBridger.approveFeeToken({ l1Signer })
-      expect.fail(`"EthBridger.approveFeeToken" should have thrown`)
-    } catch (error: any) {
-      expect(error.message).to.equal('chain uses ETH as its native/fee token')
-    }
-  })
+      try {
+        await ethBridger.approveFeeToken({ l1Signer })
+        expect.fail(`"EthBridger.approveFeeToken" should have thrown`)
+      } catch (error: any) {
+        expect(error.message).to.equal('chain uses ETH as its native/fee token')
+      }
+    })
+  }
 
   it('deposits ether', async () => {
     const { ethBridger, l1Signer, l2Signer } = await testSetup()
@@ -300,9 +306,12 @@ describe('Ether', async () => {
       'executed status'
     ).to.eq(L2ToL1MessageStatus.EXECUTED)
 
-    const finalRandomBalance = await l1Signer.provider!.getBalance(
-      randomAddress
-    )
+    const finalRandomBalance = isL2NetworkWithCustomFeeToken()
+    ? await ERC20__factory.connect(
+        ethBridger.nativeToken!,
+        l1Signer.provider!
+      ).balanceOf(randomAddress)
+    : await l1Signer.provider!.getBalance(randomAddress)
     expect(finalRandomBalance.toString(), 'L1 final balance').to.eq(
       ethToWithdraw.toString()
     )
