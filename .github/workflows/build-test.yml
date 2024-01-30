@@ -159,10 +159,9 @@ jobs:
         uses: OffchainLabs/actions/node-modules/restore@main
 
       - name: Set up the local node
-        uses: OffchainLabs/actions/run-nitro-test-node@main
+        uses: OffchainLabs/actions/run-nitro-test-node@ha/token-bridge-args
         with:
-          nitro-testnode-ref: use-tokenbridge-creator
-          no-token-bridge: true
+          nitro-testnode-ref: ha/l1-fee-token-and-register-weth
           l3-node: ${{ matrix.orbit-test == '1' }}
           args: ${{ matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
 

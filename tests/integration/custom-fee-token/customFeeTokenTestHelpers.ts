@@ -1,5 +1,5 @@
 import { StaticJsonRpcProvider } from '@ethersproject/providers'
-import { Signer, Wallet, utils } from 'ethers'
+import { Signer, Wallet, ethers, utils } from 'ethers'
 
 import {
   testSetup as _testSetup,
@@ -15,7 +15,8 @@ const arbProvider = () => new StaticJsonRpcProvider(config.arbUrl)
 const localNetworks = () => getLocalNetworksFromFile()
 
 export function isL2NetworkWithCustomFeeToken(): boolean {
-  return typeof localNetworks()?.l2Network.nativeToken !== 'undefined'
+  const nt = localNetworks().l2Network.nativeToken
+  return typeof nt !== 'undefined' && nt !== ethers.constants.AddressZero
 }
 
 export async function testSetup() {
@@ -29,7 +30,7 @@ export async function testSetup() {
 }
 
 export async function fundL1CustomFeeToken(l1SignerOrAddress: Signer | string) {
-  const nativeToken = localNetworks()?.l2Network.nativeToken
+  const nativeToken = localNetworks().l2Network.nativeToken
   const address =
     typeof l1SignerOrAddress === 'string'
       ? l1SignerOrAddress
@@ -60,7 +61,7 @@ export async function approveL1CustomFeeToken(l1Signer: Signer) {
 }
 
 export async function getNativeTokenAllowance(owner: string, spender: string) {
-  const nativeToken = localNetworks()?.l2Network.nativeToken
+  const nativeToken = localNetworks().l2Network.nativeToken
   const nativeTokenContract = ERC20__factory.connect(
     nativeToken!,
     ethProvider()
