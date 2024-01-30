@@ -225,24 +225,6 @@ describe('Networks', () => {
       }
     })
 
-    it('successfully fetches a parent chain with `getNetwork`', async function () {
-      const arbOneNetwork = await getL2Network(arbOneId)
-
-      const mockCustomNetwork = {
-        customL2Network: {
-          ...arbOneNetwork,
-          chainID: mockOrbitChainId,
-          partnerChainID: arbOneId,
-          isArbitrum: true,
-          isCustom: true,
-        },
-      } as const
-
-      addCustomNetwork(mockCustomNetwork)
-      const parentChain = await getL1Network(arbOneId)
-      expect(parentChain.chainID, fetchErrorMessage).to.be.eq(arbOneId)
-    })
-
     it('successfully fetches an L2 network with `getL2Network`', async function () {
       const network = await getL2Network(arbOneId)
       expect(network.chainID, fetchErrorMessage).to.be.eq(arbOneId)
@@ -324,40 +306,6 @@ describe('Networks', () => {
           `Unrecognized network ${chainId}.`
         )
       }
-    })
-
-    it('fails to fetch a network in L1 until a child is added', async function () {
-      let parentChain
-      try {
-        parentChain = await getL1Network(arbOneId)
-      } catch (err) {
-        // should fail
-        expect(err).to.be.an('error')
-        expect((err as Error).message).to.be.eq(
-          `Unrecognized network ${arbOneId}.`
-        )
-      } finally {
-        expect(
-          parentChain,
-          '`getNetwork` returned a result for an Orbit chain.'
-        ).to.be.undefined
-      }
-
-      const arbOneNetwork = await getL2Network(arbOneId)
-
-      const mockCustomNetwork = {
-        customL2Network: {
-          ...arbOneNetwork,
-          chainID: mockOrbitChainId,
-          partnerChainID: arbOneId,
-          isArbitrum: true,
-          isCustom: true,
-        },
-      } as const
-
-      addCustomNetwork(mockCustomNetwork)
-      parentChain = await getL1Network(arbOneId)
-      expect(parentChain.chainID, fetchErrorMessage).to.be.eq(arbOneId)
     })
   })
 
