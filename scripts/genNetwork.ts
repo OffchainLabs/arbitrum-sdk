@@ -18,9 +18,11 @@ function getLocalNetworksFromContainer(which: 'l1l2' | 'l2l3'): any {
   ]
   for (const dockerName of dockerNames) {
     try {
-      return JSON.parse(execSync(
-        `docker exec ${dockerName} cat /sdk-data/${which}_network.json`
-      ).toString())
+      return JSON.parse(
+        execSync(
+          `docker exec ${dockerName} cat /sdk-data/${which}_network.json`
+        ).toString()
+      )
     } catch {
       // empty on purpose
     }
@@ -33,7 +35,11 @@ function getLocalNetworksFromContainer(which: 'l1l2' | 'l2l3'): any {
  * once the script in token-bridge-contracts repo uses an sdk version with the same types and is updated to populate those fields,
  * we can remove this patchwork
  */
-async function patchNetworks(l2Network: L2Network, l3Network: L2Network | undefined, l2Provider: ethers.providers.Provider | undefined) {
+async function patchNetworks(
+  l2Network: L2Network,
+  l3Network: L2Network | undefined,
+  l2Provider: ethers.providers.Provider | undefined
+) {
   // we need to add partnerChainIDs to the L2 network
   l2Network.partnerChainIDs = l3Network ? [l3Network.chainID] : []
   l2Network.blockTime = ARB_MINIMUM_BLOCK_TIME_IN_SECONDS
@@ -43,9 +49,11 @@ async function patchNetworks(l2Network: L2Network, l3Network: L2Network | undefi
     l3Network.partnerChainIDs = []
     l3Network.blockTime = ARB_MINIMUM_BLOCK_TIME_IN_SECONDS
     try {
-      l3Network.nativeToken = await IERC20Bridge__factory.connect(l3Network.ethBridge.bridge, l2Provider).nativeToken()
-    }
-    catch (e) {
+      l3Network.nativeToken = await IERC20Bridge__factory.connect(
+        l3Network.ethBridge.bridge,
+        l2Provider
+      ).nativeToken()
+    } catch (e) {
       // l3 network doesn't have a native token
     }
   }
@@ -53,29 +61,25 @@ async function patchNetworks(l2Network: L2Network, l3Network: L2Network | undefi
 
 async function main() {
   fs.rmSync('localNetwork.json', { force: true })
-  
+
   let output = getLocalNetworksFromContainer('l1l2')
 
   if (isTestingOrbitChains) {
-    const {l2Network: l3Network} = getLocalNetworksFromContainer('l2l3')
-    await patchNetworks(output.l2Network, l3Network, new ethers.providers.JsonRpcProvider(process.env['ARB_URL']))
+    const { l2Network: l3Network } = getLocalNetworksFromContainer('l2l3')
+    await patchNetworks(
+      output.l2Network,
+      l3Network,
+      new ethers.providers.JsonRpcProvider(process.env['ARB_URL'])
+    )
     output = {
       l1Network: output.l2Network,
       l2Network: l3Network,
     }
-  }
-  else {
+  } else {
     await patchNetworks(output.l2Network, undefined, undefined)
   }
 
-  fs.writeFileSync(
-    'localNetwork.json',
-    JSON.stringify(
-      output,
-      null,
-      2
-    )
-  )
+  fs.writeFileSync('localNetwork.json', JSON.stringify(output, null, 2))
   console.log('localnetwork.json updated')
 }
 

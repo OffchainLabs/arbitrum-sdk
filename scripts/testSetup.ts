@@ -52,17 +52,17 @@ const isTestingOrbitChains = process.env.ORBIT_TEST === '1'
  */
 export const config = isTestingOrbitChains
   ? {
-    arbUrl: process.env['ORBIT_URL'] as string,
-    ethUrl: process.env['ARB_URL'] as string,
-    arbKey: process.env['ORBIT_KEY'] as string,
-    ethKey: process.env['ARB_KEY'] as string,
-  }
+      arbUrl: process.env['ORBIT_URL'] as string,
+      ethUrl: process.env['ARB_URL'] as string,
+      arbKey: process.env['ORBIT_KEY'] as string,
+      ethKey: process.env['ARB_KEY'] as string,
+    }
   : {
-    arbUrl: process.env['ARB_URL'] as string,
-    ethUrl: process.env['ETH_URL'] as string,
-    arbKey: process.env['ARB_KEY'] as string,
-    ethKey: process.env['ETH_KEY'] as string,
-  }
+      arbUrl: process.env['ARB_URL'] as string,
+      ethUrl: process.env['ETH_URL'] as string,
+      arbKey: process.env['ARB_KEY'] as string,
+      ethKey: process.env['ETH_KEY'] as string,
+    }
 
 export const getSigner = (provider: JsonRpcProvider, key?: string) => {
   if (!key && !provider)
@@ -141,7 +141,6 @@ export const testSetup = async (): Promise<{
       setL1Network = l1Network
       setL2Network = l2Network
     }
-
   }
 
   const erc20Bridger = new Erc20Bridger(setL2Network)
@@ -175,11 +174,7 @@ export function getLocalNetworksFromFile(): {
   l1Network: L1Network | L2Network
   l2Network: L2Network
 } {
-  const pathToLocalNetworkFile = path.join(
-    __dirname,
-    '..',
-    'localNetwork.json'
-  )
+  const pathToLocalNetworkFile = path.join(__dirname, '..', 'localNetwork.json')
   if (!fs.existsSync(pathToLocalNetworkFile)) {
     throw new ArbSdkError('localNetwork.json not found, must gen:network first')
   }
