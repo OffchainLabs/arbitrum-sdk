@@ -20,7 +20,7 @@ function getLocalNetworksFromContainer(which: 'l1l2' | 'l2l3'): any {
     try {
       return JSON.parse(
         execSync(
-          `docker exec ${dockerName} cat /sdk-data/${which}_network.json`
+          `docker exec ${dockerName} cat /tokenbridge-data/${which}_network.json`
         ).toString()
       )
     } catch {
