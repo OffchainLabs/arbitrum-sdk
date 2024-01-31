@@ -51,10 +51,17 @@ import { Erc20Bridger } from './erc20Bridger'
 import { isDefined } from '../utils/lib'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { OmitTyped } from '../utils/types'
+import { getAddress } from 'ethers/lib/utils'
 
 type PickedTransactionRequest = Required<
   Pick<TransactionRequest, 'to' | 'data' | 'value'>
 >
+
+export enum TeleportationType {
+  Standard,
+  OnlyFeeToken,
+  NonFeeTokenToCustomFee
+}
 
 export type TxRequestParams = {
   txRequest: PickedTransactionRequest
@@ -592,7 +599,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       l1FeeToken: l1FeeToken || ethers.constants.AddressZero,
       l1l2Router: this.l2Network.tokenBridge.l1GatewayRouter,
       l2l3RouterOrInbox:
-        params.erc20L1Address === l1FeeToken
+        l1FeeToken && getAddress(params.erc20L1Address) === getAddress(l1FeeToken)
           ? this.l3Network.ethBridge.inbox
           : this.l3Network.tokenBridge.l1GatewayRouter,
       to: params.to || from,
@@ -671,6 +678,18 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       l2ForwarderFactory: l1l2Messages[1],
       l2l3TokenBridge: l2l3Message,
       completed: (await l2l3Message?.status()) === L1ToL2MessageStatus.REDEEMED,
+    }
+  }
+
+  public teleportationType(partialTeleportParams: Pick<L1Teleporter.TeleportParamsStruct, 'l1FeeToken' | 'l1Token'>) {
+    if (partialTeleportParams.l1FeeToken === ethers.constants.AddressZero) {
+      return TeleportationType.Standard
+    }
+    else if (getAddress(partialTeleportParams.l1Token) === getAddress(partialTeleportParams.l1FeeToken)) {
+      return TeleportationType.OnlyFeeToken
+    }
+    else {
+      return TeleportationType.NonFeeTokenToCustomFee
     }
   }
 
@@ -805,8 +824,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l2ForwarderAddress: string
   }): Promise<RetryableGasValues> {
     if (
-      params.partialTeleportParams.l1FeeToken ===
-      params.partialTeleportParams.l1Token
+      this.teleportationType(params.partialTeleportParams) === TeleportationType.OnlyFeeToken
     ) {
       // we are bridging the fee token to l3, this will not go through the l2l3 token bridge, instead it's just a regular retryable
       const estimate = await new L1ToL2MessageGasEstimator(
@@ -963,17 +981,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     )
 
     let l1l2FeeTokenBridgeGasValues: RetryableGasValues
-    // todo: replace address === with a case insensitive version
     if (
-      partialTeleportParams.l1FeeToken === ethers.constants.AddressZero ||
-      partialTeleportParams.l1FeeToken === partialTeleportParams.l1Token
+      this.teleportationType(partialTeleportParams) === TeleportationType.NonFeeTokenToCustomFee
     ) {
-      // eth fee l3, or only bridging fee token. this retryable will not be created
-      l1l2FeeTokenBridgeGasValues = {
-        gasLimit: BigNumber.from(0),
-        maxSubmissionFee: BigNumber.from(0),
-      }
-    } else {
       l1l2FeeTokenBridgeGasValues = await getValuesWithOverrides(
         retryableOverrides.l1l2FeeTokenBridgeRetryableGas,
         () =>
@@ -986,6 +996,12 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
             l2Provider,
           })
       )
+    } else {
+      // eth fee l3, or only bridging fee token. this retryable will not be created
+      l1l2FeeTokenBridgeGasValues = {
+        gasLimit: BigNumber.from(0),
+        maxSubmissionFee: BigNumber.from(0),
+      }
     }
 
     const gasParams = {
