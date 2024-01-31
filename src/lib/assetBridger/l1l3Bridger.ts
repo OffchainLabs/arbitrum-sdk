@@ -67,7 +67,7 @@ type RetryableGasValues = {
 }
 
 export type DepositRequestResult = {
-  txRequest: PickedTransactionRequest,
+  txRequest: PickedTransactionRequest
   feeTokenAmount: BigNumber
 }
 
@@ -344,17 +344,19 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     try {
       await this.l1FeeTokenAddress(l2Provider)
       return true
-    }
-    catch {
+    } catch {
       return false
     }
   }
 
   /**
    * If the L3 network has a native token, return the address of that token on L1.
-   * If the L3 network uses ETH for fees, throw.
+   * If the L3 network has a native token that is not available on L1, throw.
+   * If the L3 network uses ETH for fees, return undefined.
    */
-  public async l1FeeTokenAddress(l2Provider: Provider): Promise<string | undefined> {
+  public async l1FeeTokenAddress(
+    l2Provider: Provider
+  ): Promise<string | undefined> {
     if (!this.l2FeeTokenAddress) {
       return undefined
     }
@@ -591,12 +593,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         this.defaultGasPricePercentIncrease
     )
 
-    const feeAmounts = (
-      await L1Teleporter__factory.connect(
-        this.teleporterAddresses.l1Teleporter,
-        l1Provider
-      ).determineTypeAndFees(teleportParams, l1GasPrice) // todo rename this in solidity
-    )
+    const feeAmounts = await L1Teleporter__factory.connect(
+      this.teleporterAddresses.l1Teleporter,
+      l1Provider
+    ).determineTypeAndFees(teleportParams, l1GasPrice) // todo rename this in solidity
 
     const data = L1Teleporter__factory.createInterface().encodeFunctionData(
       'teleport',
@@ -609,7 +609,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         data,
         value: feeAmounts.ethAmount,
       },
-      feeTokenAmount: feeAmounts.feeTokenAmount
+      feeTokenAmount: feeAmounts.feeTokenAmount,
     }
   }
 
@@ -732,7 +732,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l2ForwarderAddress: string,
     l1Provider: Provider
   ): Promise<RetryableGasValues> {
-    const l1FeeTokenAddress = await this._l1FeeTokenAddressOrThrow(params.l2Provider)
+    const l1FeeTokenAddress = await this._l1FeeTokenAddressOrThrow(
+      params.l2Provider
+    )
     return this._getTokenBridgeGasEstimates(
       l1Provider,
       params.l2Provider,
@@ -936,7 +938,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
   protected async _l1FeeTokenAddressOrThrow(l2Provider: Provider) {
     const ft = await this.l1FeeTokenAddress(l2Provider)
-    if (!ft) throw new Error(`L3 network ${this.l3Network.name} uses ETH for fees`)
+    if (!ft)
+      throw new Error(`L3 network ${this.l3Network.name} uses ETH for fees`)
     return ft
   }
 }

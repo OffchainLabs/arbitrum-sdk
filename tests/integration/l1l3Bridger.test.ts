@@ -122,9 +122,7 @@ describe('L1 to L3 Bridging', () => {
     // makes sure that appropriate amounts land at the right places
     it('happy path', async () => {
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
-      const l2RefundAddress = ethers.utils.hexlify(
-        ethers.utils.randomBytes(20)
-      )
+      const l2RefundAddress = ethers.utils.hexlify(ethers.utils.randomBytes(20))
 
       const depositTx = await l1l3Bridger.deposit(
         {
@@ -188,11 +186,16 @@ describe('L1 to L3 Bridging', () => {
     it('should detect an unavailable fee token', async () => {
       const networkCopy = JSON.parse(JSON.stringify(l3Network)) as L2Network
       const oldNativeToken = networkCopy.nativeToken
-      networkCopy.nativeToken = ethers.utils.hexlify(ethers.utils.randomBytes(32))
-      
+      networkCopy.nativeToken = ethers.utils.hexlify(
+        ethers.utils.randomBytes(32)
+      )
+
       let tmpBridger = new Erc20L1L3Bridger(networkCopy)
 
-      await expectPromiseToReject(tmpBridger.l1FeeTokenAddress(l2Signer.provider!), 'did not reject l1FeeTokenAddress')
+      await expectPromiseToReject(
+        tmpBridger.l1FeeTokenAddress(l2Signer.provider!),
+        'did not reject l1FeeTokenAddress'
+      )
       expect(await tmpBridger.checkSupport(l2Signer.provider!)).to.be.false
 
       networkCopy.nativeToken = oldNativeToken
@@ -207,9 +210,7 @@ describe('L1 to L3 Bridging', () => {
           throw new Error('L2 fee token address is undefined')
         }
         // make sure l2 token equals l3 native token
-        expect(
-          l1l3Bridger.l2FeeTokenAddress
-        ).to.eq(l3Network.nativeToken)
+        expect(l1l3Bridger.l2FeeTokenAddress).to.eq(l3Network.nativeToken)
         // make sure l1 token maps to l2 token
         expect(
           await new Erc20Bridger(l2Network).getL2ERC20Address(
