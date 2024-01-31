@@ -60,7 +60,7 @@ type PickedTransactionRequest = Required<
 export enum TeleportationType {
   Standard,
   OnlyFeeToken,
-  NonFeeTokenToCustomFee
+  NonFeeTokenToCustomFee,
 }
 
 export type TxRequestParams = {
@@ -599,22 +599,22 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       l1FeeToken: l1FeeToken || ethers.constants.AddressZero,
       l1l2Router: this.l2Network.tokenBridge.l1GatewayRouter,
       l2l3RouterOrInbox:
-        l1FeeToken && getAddress(params.erc20L1Address) === getAddress(l1FeeToken)
+        l1FeeToken &&
+        getAddress(params.erc20L1Address) === getAddress(l1FeeToken)
           ? this.l3Network.ethBridge.inbox
           : this.l3Network.tokenBridge.l1GatewayRouter,
       to: params.to || from,
       amount: params.amount,
     }
 
-    const { teleportParams, costs } =
-      await this._fillPartialTeleportParams(
-        partialTeleportParams,
-        from,
-        params.retryableOverrides || {},
-        l1Provider,
-        params.l2Provider,
-        params.l3Provider
-      )
+    const { teleportParams, costs } = await this._fillPartialTeleportParams(
+      partialTeleportParams,
+      from,
+      params.retryableOverrides || {},
+      l1Provider,
+      params.l2Provider,
+      params.l3Provider
+    )
 
     const data = L1Teleporter__factory.createInterface().encodeFunctionData(
       'teleport',
@@ -681,14 +681,20 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     }
   }
 
-  public teleportationType(partialTeleportParams: Pick<L1Teleporter.TeleportParamsStruct, 'l1FeeToken' | 'l1Token'>) {
+  public teleportationType(
+    partialTeleportParams: Pick<
+      L1Teleporter.TeleportParamsStruct,
+      'l1FeeToken' | 'l1Token'
+    >
+  ) {
     if (partialTeleportParams.l1FeeToken === ethers.constants.AddressZero) {
       return TeleportationType.Standard
-    }
-    else if (getAddress(partialTeleportParams.l1Token) === getAddress(partialTeleportParams.l1FeeToken)) {
+    } else if (
+      getAddress(partialTeleportParams.l1Token) ===
+      getAddress(partialTeleportParams.l1FeeToken)
+    ) {
       return TeleportationType.OnlyFeeToken
-    }
-    else {
+    } else {
       return TeleportationType.NonFeeTokenToCustomFee
     }
   }
@@ -824,7 +830,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l2ForwarderAddress: string
   }): Promise<RetryableGasValues> {
     if (
-      this.teleportationType(params.partialTeleportParams) === TeleportationType.OnlyFeeToken
+      this.teleportationType(params.partialTeleportParams) ===
+      TeleportationType.OnlyFeeToken
     ) {
       // we are bridging the fee token to l3, this will not go through the l2l3 token bridge, instead it's just a regular retryable
       const estimate = await new L1ToL2MessageGasEstimator(
@@ -982,7 +989,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
     let l1l2FeeTokenBridgeGasValues: RetryableGasValues
     if (
-      this.teleportationType(partialTeleportParams) === TeleportationType.NonFeeTokenToCustomFee
+      this.teleportationType(partialTeleportParams) ===
+      TeleportationType.NonFeeTokenToCustomFee
     ) {
       l1l2FeeTokenBridgeGasValues = await getValuesWithOverrides(
         retryableOverrides.l1l2FeeTokenBridgeRetryableGas,
@@ -1029,7 +1037,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
     return {
       teleportParams,
-      costs
+      costs,
     }
   }
 
