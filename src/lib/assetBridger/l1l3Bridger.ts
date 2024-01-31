@@ -346,6 +346,11 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       this.l2FeeTokenAddress,
       l2Provider
     )
+    if (this._l1FeeTokenAddress === ethers.constants.AddressZero) {
+      throw new ArbSdkError(
+        `L3 network ${this.l3Network.name} uses ETH for fees`
+      )
+    }
     return this._l1FeeTokenAddress
   }
 
@@ -490,6 +495,39 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     const approveRequest = isTxRequestParams(params)
       ? params.txRequest
       : await this.getApproveTokenRequest(params)
+
+    return params.l1Signer.sendTransaction({
+      ...approveRequest,
+      ...params.overrides,
+    })
+  }
+
+  public async getApproveFeeTokenRequest(params: {
+    l2Provider: Provider
+    amount?: BigNumber
+  }): Promise<PickedTransactionRequest> {
+    return this.getApproveTokenRequest({
+      erc20L1Address: await this.l1FeeTokenAddress(params.l2Provider),
+      amount: params.amount,
+    })
+  }
+
+  public async approveFeeToken(
+    params:
+      | {
+          l1Signer: Signer
+          l2Provider: Provider
+          amount?: BigNumber
+          overrides?: Overrides
+        }
+      | TxRequestParams
+  ): Promise<ethers.ContractTransaction> {
+    const approveRequest = isTxRequestParams(params)
+      ? params.txRequest
+      : await this.getApproveFeeTokenRequest({
+          l2Provider: params.l2Provider,
+          amount: params.amount,
+        })
 
     return params.l1Signer.sendTransaction({
       ...approveRequest,
@@ -774,13 +812,16 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     }
 
     // get gas price while respecting overrides
-    const applyGasPercentIncrease = async (overrides: PercentIncrease | undefined, getValue: () => Promise<BigNumber>) => {
+    const applyGasPercentIncrease = async (
+      overrides: PercentIncrease | undefined,
+      getValue: () => Promise<BigNumber>
+    ) => {
       return this._percentIncrease(
         overrides?.base || (await getValue()),
         overrides?.percentIncrease || this.defaultGasPricePercentIncrease
       )
     }
-    
+
     const l1GasPrice = await applyGasPercentIncrease(
       params.retryableOverrides?.l1GasPrice,
       () => l1Provider.getGasPrice()
@@ -864,12 +905,13 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       routerOrInbox: ethers.constants.AddressZero,
       to: ethers.constants.AddressZero,
       gasLimit: 0,
-      gasPrice: 0
+      gasPrice: 0,
     }
-    const dummyCalldata = L2ForwarderFactory__factory.createInterface().encodeFunctionData(
-      "callForwarder",
-      [struct]
-    )
+    const dummyCalldata =
+      L2ForwarderFactory__factory.createInterface().encodeFunctionData(
+        'callForwarder',
+        [struct]
+      )
     return ethers.utils.hexDataLength(dummyCalldata) - 4
   }
 }

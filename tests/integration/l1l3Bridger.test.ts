@@ -1,11 +1,5 @@
-import {
-  getSigner,
-  testSetup
-} from '../../scripts/testSetup'
-import {
-  Address,
-  Erc20L1L3Bridger, L2Network
-} from '../../src'
+import { getSigner, testSetup } from '../../scripts/testSetup'
+import { Address, Erc20Bridger, Erc20L1L3Bridger, L2Network } from '../../src'
 import { L2ForwarderContractsDeployer__factory } from '../../src/lib/abi/factories/L2ForwarderContractsDeployer__factory'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import { TestERC20 } from '../../src/lib/abi/TestERC20'
@@ -13,9 +7,24 @@ import { L1Teleporter__factory } from '../../src/lib/abi/factories/L1Teleporter_
 import { fundL1, fundL2, skipIfMainnet } from './testHelpers'
 import { BigNumber, Signer, ethers } from 'ethers'
 import { EthL1L3Bridger } from '../../src/lib/assetBridger/l1l3Bridger'
-import { expect } from 'chai'
+import { assert, expect } from 'chai'
+import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 
 type Unwrap<T> = T extends Promise<infer U> ? U : T
+
+async function expectPromiseToReject(
+  promise: Promise<any>,
+  message?: string
+): Promise<Error> {
+  let err: Error | undefined = undefined
+  try {
+    await promise
+  } catch (e: any) {
+    err = e
+  }
+  if (!err) throw new Error(message || 'Promise did not reject')
+  return err
+}
 
 function poll(
   fn: () => Promise<boolean>,
@@ -148,6 +157,8 @@ describe('L1 to L3 Bridging', () => {
 
   describe('ERC20 Bridging', () => {
     let l1Token: TestERC20
+    const amount = BigNumber.from(100)
+    let l1l3Bridger: Erc20L1L3Bridger
 
     // deploy teleporter contracts and mock token
     before(async function () {
@@ -167,142 +178,156 @@ describe('L1 to L3 Bridging', () => {
       l1Token = await new TestERC20__factory(l1Signer).deploy()
       await l1Token.deployed()
       await (await l1Token.connect(l1Signer).mint()).wait()
+
+      l1l3Bridger = new Erc20L1L3Bridger(l3Network)
     })
 
-    describe('BaseErc20L1L3Bridger', () => {
-      // use Erc20L1L3Bridger to test base class
-      let l1l3Bridger: Erc20L1L3Bridger
-
-      // create the bridger and approve the teleporter
-      before(async () => {
-        l1l3Bridger = new Erc20L1L3Bridger(l3Network)
+    if (isL2NetworkWithCustomFeeToken()) {
+      it('should properly get l2 and l1 fee token addresses', async () => {
+        if (l1l3Bridger.l2FeeTokenAddress === undefined) {
+          throw new Error('L2 fee token address is undefined')
+        }
+        // make sure l2 token maps to l3 native token
+        expect(
+          await new Erc20Bridger(l3Network).getL2ERC20Address(
+            l1l3Bridger.l2FeeTokenAddress,
+            l2Signer.provider!
+          )
+        ).to.eq(l3Network.nativeToken)
+        // make sure l1 token maps to l2 token
+        expect(
+          await new Erc20Bridger(l2Network).getL2ERC20Address(
+            await l1l3Bridger.l1FeeTokenAddress(l2Signer.provider!),
+            l1Signer.provider!
+          )
+        ).to.eq(l1l3Bridger.l2FeeTokenAddress)
       })
-
-      it('getL2ERC20Address', async () => {
-        // use weth to test, since we already know its addresses
-        const l1Weth = l2Network.tokenBridge.l1Weth
-        const l2Weth = l2Network.tokenBridge.l2Weth
-        const ans = await l1l3Bridger.getL2ERC20Address(
-          l1Weth!, // todo handle undefined
-          l1Signer.provider!
+    } else {
+      it('should not have l1 and l2 fee token addresses', async () => {
+        // make sure l2 is undefined and l1 throws
+        expect(l1l3Bridger.l2FeeTokenAddress).to.be.undefined
+        const err = await expectPromiseToReject(
+          l1l3Bridger.l1FeeTokenAddress(l2Signer.provider!),
+          'Did not throw when getting l1 fee token address'
         )
-        expect(ans).to.eq(l2Weth)
+        expect(err.message).to.eq(
+          `L3 network ${l3Network.name} uses ETH for fees`
+        )
       })
+    }
 
-      it('getL3ERC20Address', async () => {
-        // use weth to test, since we already know its addresses
-        const l1Weth = l2Network.tokenBridge.l1Weth
-        const l3Weth = l3Network.tokenBridge.l2Weth
-        const ans = await l1l3Bridger.getL3ERC20Address(
-          l1Weth!, // todo handle undefined
-          l1Signer.provider!,
-          l2Signer.provider!
-        )
-        expect(ans).to.eq(l3Weth)
-      })
-
-      it('getL1L2GatewayAddress', async () => {
-        // test weth and default gateway
-        const l1Weth = l2Network.tokenBridge.l1Weth
-        const l1l2WethGateway = l2Network.tokenBridge.l1WethGateway
-
-        const wethAns = await l1l3Bridger.getL1L2GatewayAddress(
-          l1Weth!, // todo handle undefined
-          l1Signer.provider!
-        )
-
-        expect(wethAns).to.eq(l1l2WethGateway)
-
-        // test default gateway
-        const l1l2Gateway = l2Network.tokenBridge.l1ERC20Gateway
-        const defaultAns = await l1l3Bridger.getL1L2GatewayAddress(
-          l1Token.address,
-          l1Signer.provider!
-        )
-        expect(defaultAns).to.eq(l1l2Gateway)
-      })
-
-      it('getL2L3GatewayAddress', async () => {
-        // test weth and default gateway
-        const l1Weth = l2Network.tokenBridge.l1Weth
-        const l2l3WethGateway = l3Network.tokenBridge.l1WethGateway
-
-        const wethAns = await l1l3Bridger.getL2L3GatewayAddress(
-          l1Weth!, // todo handle undefined
-          l1Signer.provider!,
-          l2Signer.provider!
-        )
-
-        expect(wethAns).to.eq(l2l3WethGateway)
-
-        // test default gateway
-        const l2l3Gateway = l3Network.tokenBridge.l1ERC20Gateway
-        const defaultAns = await l1l3Bridger.getL2L3GatewayAddress(
-          l1Token.address,
-          l1Signer.provider!,
-          l2Signer.provider!
-        )
-        expect(defaultAns).to.eq(l2l3Gateway)
-      })
-
-      // todo: disabled
+    it('getL2ERC20Address', async () => {
+      // use weth to test, since we already know its addresses
+      const l1Weth = l2Network.tokenBridge.l1Weth
+      const l2Weth = l2Network.tokenBridge.l2Weth
+      const ans = await l1l3Bridger.getL2ERC20Address(
+        l1Weth!, // todo handle undefined
+        l1Signer.provider!
+      )
+      expect(ans).to.eq(l2Weth)
     })
 
-    describe('Erc20L1L3Bridger', () => {
-      let l1l3Bridger: Erc20L1L3Bridger
-      const amount = BigNumber.from(100)
+    it('getL3ERC20Address', async () => {
+      // use weth to test, since we already know its addresses
+      const l1Weth = l2Network.tokenBridge.l1Weth
+      const l3Weth = l3Network.tokenBridge.l2Weth
+      const ans = await l1l3Bridger.getL3ERC20Address(
+        l1Weth!, // todo handle undefined
+        l1Signer.provider!,
+        l2Signer.provider!
+      )
+      expect(ans).to.eq(l3Weth)
+    })
 
-      // create the bridger and approve the teleporter
-      before(async () => {
-        l1l3Bridger = new Erc20L1L3Bridger(l3Network)
-      })
+    it('getL1L2GatewayAddress', async () => {
+      // test weth and default gateway
+      const l1Weth = l2Network.tokenBridge.l1Weth
+      const l1l2WethGateway = l2Network.tokenBridge.l1WethGateway
 
-      it('approves', async () => {
-        // approve the teleporter
-        await (
-          await l1l3Bridger.approveToken({
-            erc20L1Address: l1Token.address,
-            l1Signer,
-          })
-        ).wait()
-      })
+      const wethAns = await l1l3Bridger.getL1L2GatewayAddress(
+        l1Weth!, // todo handle undefined
+        l1Signer.provider!
+      )
 
-      it('happy path', async () => {
-        const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
+      expect(wethAns).to.eq(l1l2WethGateway)
 
-        const depositTx = await l1l3Bridger.deposit({
+      // test default gateway
+      const l1l2Gateway = l2Network.tokenBridge.l1ERC20Gateway
+      const defaultAns = await l1l3Bridger.getL1L2GatewayAddress(
+        l1Token.address,
+        l1Signer.provider!
+      )
+      expect(defaultAns).to.eq(l1l2Gateway)
+    })
+
+    it('getL2L3GatewayAddress', async () => {
+      // test weth and default gateway
+      const l1Weth = l2Network.tokenBridge.l1Weth
+      const l2l3WethGateway = l3Network.tokenBridge.l1WethGateway
+
+      const wethAns = await l1l3Bridger.getL2L3GatewayAddress(
+        l1Weth!, // todo handle undefined
+        l1Signer.provider!,
+        l2Signer.provider!
+      )
+
+      expect(wethAns).to.eq(l2l3WethGateway)
+
+      // test default gateway
+      const l2l3Gateway = l3Network.tokenBridge.l1ERC20Gateway
+      const defaultAns = await l1l3Bridger.getL2L3GatewayAddress(
+        l1Token.address,
+        l1Signer.provider!,
+        l2Signer.provider!
+      )
+      expect(defaultAns).to.eq(l2l3Gateway)
+    })
+
+    it('approves', async () => {
+      // approve the teleporter
+      await (
+        await l1l3Bridger.approveToken({
           erc20L1Address: l1Token.address,
-          to: l3Recipient,
-          amount,
           l1Signer,
-          l2Provider: l2Signer.provider!,
+        })
+      ).wait()
+    })
+
+    it('happy path', async () => {
+      const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
+
+      const depositTx = await l1l3Bridger.deposit({
+        erc20L1Address: l1Token.address,
+        to: l3Recipient,
+        amount,
+        l1Signer,
+        l2Provider: l2Signer.provider!,
+        l3Provider,
+      })
+
+      const depositReceipt = await depositTx.wait()
+
+      // poll status
+      await poll(async () => {
+        const status = await l1l3Bridger.getDepositMessages({
+          l1TransactionReceipt: depositReceipt,
+          l2Provider: l2JsonRpcProvider,
           l3Provider,
         })
+        return status.completed
+      }, 1000)
 
-        const depositReceipt = await depositTx.wait()
+      // make sure the tokens have landed in the right place
+      const l3TokenAddr = await l1l3Bridger.getL3ERC20Address(
+        l1Token.address,
+        l1Signer.provider!,
+        l2Signer.provider!
+      )
+      const l3Token = l1l3Bridger.getL3TokenContract(l3TokenAddr, l3Provider)
 
-        // poll status
-        await poll(async () => {
-          const status = await l1l3Bridger.getDepositMessages({
-            l1TransactionReceipt: depositReceipt,
-            l2Provider: l2JsonRpcProvider,
-            l3Provider,
-          })
-          return status.completed
-        }, 1000)
+      const l3Balance = await l3Token.balanceOf(l3Recipient)
 
-        // make sure the tokens have landed in the right place
-        const l3TokenAddr = await l1l3Bridger.getL3ERC20Address(
-          l1Token.address,
-          l1Signer.provider!,
-          l2Signer.provider!
-        )
-        const l3Token = l1l3Bridger.getL3TokenContract(l3TokenAddr, l3Provider)
-
-        const l3Balance = await l3Token.balanceOf(l3Recipient)
-
-        expect(l3Balance.eq(amount)).to.be.true
-      })
+      expect(l3Balance.eq(amount)).to.be.true
     })
   })
 })
