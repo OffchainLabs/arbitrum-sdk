@@ -53,6 +53,7 @@ export interface L1Network extends Network {
 export interface L2Network extends Network {
   tokenBridge: TokenBridge
   ethBridge: EthBridge
+  teleporterAddresses?: TeleporterAddresses
   /**
    * Chain id of the parent chain.
    */
@@ -71,6 +72,11 @@ export interface L2Network extends Network {
    * In case of a chain that uses an ERC-20 token from the parent chain as its native/fee token, this is the address of said token on the parent chain.
    */
   nativeToken?: string
+}
+
+export interface TeleporterAddresses {
+  l1Teleporter: string
+  l2ForwarderFactory: string
 }
 
 type BaseTokenBridge = {
