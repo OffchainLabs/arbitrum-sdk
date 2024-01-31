@@ -50,6 +50,7 @@ import {
 import { Erc20Bridger } from './erc20Bridger'
 import { isDefined } from '../utils/lib'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
+import { OmitTyped } from '../utils/types'
 
 type PickedTransactionRequest = Required<
   Pick<TransactionRequest, 'to' | 'data' | 'value'>
@@ -92,6 +93,37 @@ export type TokenApproveParams = {
   amount?: BigNumber
 }
 
+type Erc20DepositRequestRetryableOverrides = {
+  /**
+   * Optional L1 gas price override. Used to estimate submission fees.
+   */
+  l1GasPrice?: PercentIncrease
+  /**
+   * Optional L2 gas price override
+   */
+  l2GasPrice?: PercentIncrease
+  /**
+   * Optional L3 gas price override
+   */
+  l3GasPrice?: PercentIncrease
+  /**
+   * L2ForwarderFactory retryable gas override
+   */
+  l2ForwarderFactoryRetryableGas?: TeleporterRetryableGasOverride
+  /**
+   * L1 to L2 fee token bridge retryable gas override
+   */
+  l1l2FeeTokenBridgeRetryableGas?: TeleporterRetryableGasOverride
+  /**
+   * L1 to L2 token bridge retryable gas override
+   */
+  l1l2TokenBridgeRetryableGas?: TeleporterRetryableGasOverride
+  /**
+   * L2 to L3 token bridge retryable gas override
+   */
+  l2l3TokenBridgeRetryableGas?: TeleporterRetryableGasOverride
+}
+
 export type Erc20DepositRequestParams = {
   /**
    * Address of L1 token
@@ -116,36 +148,7 @@ export type Erc20DepositRequestParams = {
   /**
    * Optional overrides for retryable gas parameters
    */
-  retryableOverrides?: {
-    /**
-     * Optional L1 gas price override. Used to estimate submission fees.
-     */
-    l1GasPrice?: PercentIncrease
-    /**
-     * Optional L2 gas price override
-     */
-    l2GasPrice?: PercentIncrease
-    /**
-     * Optional L3 gas price override
-     */
-    l3GasPrice?: PercentIncrease
-    /**
-     * L2ForwarderFactory retryable gas override
-     */
-    l2ForwarderFactoryRetryableGas?: TeleporterRetryableGasOverride
-    /**
-     * L1 to L2 fee token bridge retryable gas override
-     */
-    l1l2FeeTokenBridgeRetryableGas?: TeleporterRetryableGasOverride
-    /**
-     * L1 to L2 token bridge retryable gas override
-     */
-    l1l2TokenBridgeRetryableGas?: TeleporterRetryableGasOverride
-    /**
-     * L2 to L3 token bridge retryable gas override
-     */
-    l2l3TokenBridgeRetryableGas?: TeleporterRetryableGasOverride
-  }
+  retryableOverrides?: Erc20DepositRequestRetryableOverrides
 }
 
 export type Erc20DepositMessagesParams = {
@@ -215,6 +218,10 @@ export type EthDepositStatus = {
   completed: boolean
 }
 
+function jsonCopy<T>(x: T) {
+  return JSON.parse(JSON.stringify(x)) as T
+}
+
 /**
  * Base functionality for L1 to L3 bridging.
  */
@@ -227,6 +234,8 @@ class BaseL1L3Bridger {
     BigNumber.from(200)
   public readonly defaultGasLimitPercentIncrease: BigNumber =
     BigNumber.from(100)
+  public readonly defaultSubmissionFeePercentIncrease: BigNumber =
+    BigNumber.from(300)
 
   constructor(l3Network: L2Network) {
     const l2Network = l2Networks[l3Network.partnerChainID]
@@ -574,17 +583,28 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       ? await params.l1Signer.getAddress()
       : params.from
 
-    const gasParams = await this._buildGasParams(params, from, l1Provider)
-
-    const teleportParams: L1Teleporter.TeleportParamsStruct = {
+    const partialTeleportParams: OmitTyped<
+      L1Teleporter.TeleportParamsStruct,
+      'gasParams'
+    > = {
       l1Token: params.erc20L1Address,
-      l1FeeToken: await this.l1FeeTokenAddress(params.l2Provider) || ethers.constants.AddressZero,
+      l1FeeToken:
+        (await this.l1FeeTokenAddress(params.l2Provider)) ||
+        ethers.constants.AddressZero,
       l1l2Router: this.l2Network.tokenBridge.l1GatewayRouter,
       l2l3RouterOrInbox: this.l3Network.tokenBridge.l1GatewayRouter, // todo OR INBOX
       to: params.to || from,
       amount: params.amount,
-      gasParams,
     }
+
+    const teleportParams = await this._fillPartialTeleportParams(
+      partialTeleportParams,
+      from,
+      params.retryableOverrides || {},
+      l1Provider,
+      params.l2Provider,
+      params.l3Provider
+    )
 
     const l1GasPrice = this._percentIncrease(
       params.retryableOverrides?.l1GasPrice?.base ||
@@ -663,42 +683,42 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
   // gas estimation helpers
 
-  protected async _getTokenBridgeGasEstimates(
-    parentProvider: Provider,
-    childProvider: Provider,
-    parentGasPrice: BigNumber,
-    parentErc20Address: string,
-    parentChildGatewayAddress: string,
-    from: string,
-    to: string,
+  protected async _getTokenBridgeGasEstimates(params: {
+    parentProvider: Provider
+    childProvider: Provider
+    parentGasPrice: BigNumber
+    parentErc20Address: string
+    parentChildGatewayAddress: string
+    from: string
+    to: string
     amount: BigNumber
-  ): Promise<RetryableGasValues> {
-    const gasEstimator = new L1ToL2MessageGasEstimator(childProvider)
+  }): Promise<RetryableGasValues> {
     const parentChildGateway = L1GatewayRouter__factory.connect(
-      parentChildGatewayAddress,
-      parentProvider
+      params.parentChildGatewayAddress,
+      params.parentProvider
     )
-    const childParentGateway = await parentChildGateway.counterpartGateway()
 
     const outboundCalldata = await parentChildGateway.getOutboundCalldata(
-      parentErc20Address,
-      from,
-      to,
-      amount,
+      params.parentErc20Address,
+      params.from,
+      params.to,
+      params.amount,
       '0x' // todo: might need this for custom fee tokens
     )
 
-    const estimates = await gasEstimator.estimateAll(
+    const estimates = await new L1ToL2MessageGasEstimator(
+      params.childProvider
+    ).estimateAll(
       {
-        to: childParentGateway,
+        to: await parentChildGateway.counterpartGateway(),
         data: outboundCalldata,
         from: parentChildGateway.address,
         l2CallValue: BigNumber.from(0),
-        excessFeeRefundAddress: to,
-        callValueRefundAddress: new Address(from).applyAlias().value,
+        excessFeeRefundAddress: params.to,
+        callValueRefundAddress: new Address(params.from).applyAlias().value,
       },
-      parentGasPrice,
-      parentProvider
+      params.parentGasPrice,
+      params.parentProvider
     )
 
     return {
@@ -707,44 +727,58 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     }
   }
 
-  protected async _getL1L2TokenBridgeGasEstimates(
-    params: Erc20DepositRequestParams,
-    l1GasPrice: BigNumber,
-    l2ForwarderAddress: string,
+  protected async _getL1L2TokenBridgeGasEstimates(params: {
+    partialTeleportParams: OmitTyped<
+      L1Teleporter.TeleportParamsStruct,
+      'gasParams'
+    >
+    l1GasPrice: BigNumber
+    l2ForwarderAddress: string
     l1Provider: Provider
-  ): Promise<RetryableGasValues> {
-    return this._getTokenBridgeGasEstimates(
-      l1Provider,
-      params.l2Provider,
-      l1GasPrice,
-      params.erc20L1Address,
-      await this.getL1L2GatewayAddress(params.erc20L1Address, l1Provider),
-      this.teleporterAddresses.l1Teleporter,
-      l2ForwarderAddress,
-      params.amount
-    )
+    l2Provider: Provider
+  }): Promise<RetryableGasValues> {
+    return this._getTokenBridgeGasEstimates({
+      parentProvider: params.l1Provider,
+      childProvider: params.l2Provider,
+      parentGasPrice: params.l1GasPrice,
+      parentErc20Address: params.partialTeleportParams.l1Token,
+      parentChildGatewayAddress: await this.getL1L2GatewayAddress(
+        params.partialTeleportParams.l1Token,
+        params.l1Provider
+      ),
+      from: this.teleporterAddresses.l1Teleporter,
+      to: params.l2ForwarderAddress,
+      amount: BigNumber.from(params.partialTeleportParams.amount),
+    })
   }
 
-  protected async _getL1L2FeeTokenBridgeGasEstimates(
-    params: Erc20DepositRequestParams,
-    l1GasPrice: BigNumber,
-    feeTokenAmount: BigNumber,
-    l2ForwarderAddress: string,
+  protected async _getL1L2FeeTokenBridgeGasEstimates(params: {
+    partialTeleportParams: OmitTyped<
+      L1Teleporter.TeleportParamsStruct,
+      'gasParams'
+    >
+    l1GasPrice: BigNumber
+    feeTokenAmount: BigNumber
+    l2ForwarderAddress: string
     l1Provider: Provider
-  ): Promise<RetryableGasValues> {
+    l2Provider: Provider
+  }): Promise<RetryableGasValues> {
     const l1FeeTokenAddress = await this._l1FeeTokenAddressOrThrow(
       params.l2Provider
     )
-    return this._getTokenBridgeGasEstimates(
-      l1Provider,
-      params.l2Provider,
-      l1GasPrice,
-      l1FeeTokenAddress,
-      await this.getL1L2GatewayAddress(l1FeeTokenAddress, l1Provider),
-      this.teleporterAddresses.l1Teleporter,
-      l2ForwarderAddress,
-      feeTokenAmount
-    )
+    return this._getTokenBridgeGasEstimates({
+      parentProvider: params.l1Provider,
+      childProvider: params.l2Provider,
+      parentGasPrice: params.l1GasPrice,
+      parentErc20Address: l1FeeTokenAddress,
+      parentChildGatewayAddress: await this.getL1L2GatewayAddress(
+        l1FeeTokenAddress,
+        params.l1Provider
+      ),
+      from: this.teleporterAddresses.l1Teleporter,
+      to: params.l2ForwarderAddress,
+      amount: params.feeTokenAmount,
+    })
   }
 
   protected async _getL2ForwarderFactoryGasEstimates(
@@ -766,34 +800,76 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     }
   }
 
-  protected async _getL2L3TokenBridgeGasEstimates(
-    params: Erc20DepositRequestParams,
-    l2GasPrice: BigNumber,
-    l1Provider: Provider,
-    l2ForwarderAddress: string,
-    to: string
-  ): Promise<RetryableGasValues> {
-    return this._getTokenBridgeGasEstimates(
-      params.l2Provider,
-      params.l3Provider,
-      l2GasPrice,
-      await this.getL2ERC20Address(params.erc20L1Address, l1Provider),
-      await this.getL2L3GatewayAddress(
-        params.erc20L1Address,
-        l1Provider,
+  protected async _getL2L3BridgeGasEstimates(params: {
+    partialTeleportParams: OmitTyped<
+      L1Teleporter.TeleportParamsStruct,
+      'gasParams'
+    >
+    l2GasPrice: BigNumber
+    l1Provider: Provider
+    l2Provider: Provider
+    l3Provider: Provider
+    l2ForwarderAddress: string
+  }): Promise<RetryableGasValues> {
+    if (
+      params.partialTeleportParams.l1FeeToken ===
+      params.partialTeleportParams.l1Token
+    ) {
+      // we are bridging the fee token to l3, this will not go through the l2l3 token bridge, instead it's just a regular retryable
+      const estimate = await new L1ToL2MessageGasEstimator(
+        params.l3Provider
+      ).estimateAll(
+        {
+          to: params.partialTeleportParams.to,
+          data: '0x',
+          from: params.l2ForwarderAddress,
+          // l2CallValue will be amount less the fees in reality, todo could call this twice to make sure it's the same with both amounts
+          // probably overkill
+          l2CallValue: BigNumber.from(params.partialTeleportParams.amount),
+          excessFeeRefundAddress: params.partialTeleportParams.to,
+          callValueRefundAddress: params.partialTeleportParams.to,
+        },
+        params.l2GasPrice,
         params.l2Provider
-      ),
-      l2ForwarderAddress,
-      to,
-      params.amount
-    )
+      )
+      return {
+        gasLimit: estimate.gasLimit,
+        maxSubmissionFee: estimate.maxSubmissionCost,
+      }
+    } else {
+      // we are bridging a non fee token to l3, this will go through the token bridge
+      return this._getTokenBridgeGasEstimates({
+        parentProvider: params.l2Provider,
+        childProvider: params.l3Provider,
+        parentGasPrice: params.l2GasPrice,
+        parentErc20Address: await this.getL2ERC20Address(
+          params.partialTeleportParams.l1Token,
+          params.l1Provider
+        ),
+        parentChildGatewayAddress: await this.getL2L3GatewayAddress(
+          params.partialTeleportParams.l1Token,
+          params.l1Provider,
+          params.l2Provider
+        ),
+        from: params.l2ForwarderAddress,
+        to: params.partialTeleportParams.to,
+        amount: BigNumber.from(params.partialTeleportParams.amount),
+      })
+    }
   }
 
-  protected async _buildGasParams(
-    params: Erc20DepositRequestParams,
+  protected async _fillPartialTeleportParams(
+    // todo: params objcet
+    partialTeleportParams: OmitTyped<
+      L1Teleporter.TeleportParamsStruct,
+      'gasParams'
+    >,
     l1Caller: string,
-    l1Provider: Provider
-  ): Promise<L1Teleporter.RetryableGasParamsStruct> {
+    retryableOverrides: Erc20DepositRequestRetryableOverrides,
+    l1Provider: Provider,
+    l2Provider: Provider,
+    l3Provider: Provider
+  ): Promise<L1Teleporter.TeleportParamsStruct> {
     // get gasLimit and submission cost for a retryable while respecting overrides
     const getValuesWithOverrides = async (
       overrides: TeleporterRetryableGasOverride | undefined,
@@ -814,18 +890,18 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         }
       }
 
-      const minGasLimit = overrides?.gasLimit?.min || BigNumber.from(0)
       const gasLimit = this._percentIncrease(
         base.gasLimit,
         overrides?.gasLimit?.percentIncrease ||
-          this.defaultGasPricePercentIncrease
+          this.defaultGasLimitPercentIncrease
       )
       const submissionFee = this._percentIncrease(
         base.maxSubmissionFee,
         overrides?.maxSubmissionFee?.percentIncrease ||
-          this.defaultGasPricePercentIncrease
+          this.defaultSubmissionFeePercentIncrease
       )
 
+      const minGasLimit = overrides?.gasLimit?.min || BigNumber.from(0)
       return {
         gasLimit: gasLimit.gt(minGasLimit) ? gasLimit : minGasLimit,
         maxSubmissionFee: submissionFee,
@@ -844,67 +920,80 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     }
 
     const l1GasPrice = await applyGasPercentIncrease(
-      params.retryableOverrides?.l1GasPrice,
+      retryableOverrides.l1GasPrice,
       () => l1Provider.getGasPrice()
     )
     const l2GasPrice = await applyGasPercentIncrease(
-      params.retryableOverrides?.l2GasPrice,
-      () => params.l2Provider.getGasPrice()
+      retryableOverrides.l2GasPrice,
+      () => l2Provider.getGasPrice()
     )
     const l3GasPrice = await applyGasPercentIncrease(
-      params.retryableOverrides?.l3GasPrice,
-      () => params.l3Provider.getGasPrice()
+      retryableOverrides.l3GasPrice,
+      () => l3Provider.getGasPrice()
     )
 
     const l2ForwarderAddress = await this.l2ForwarderAddress(
       new Address(l1Caller).applyAlias().value,
-      params.l2Provider
+      l2Provider
     )
 
     const l1l2TokenBridgeGasValues = await getValuesWithOverrides(
-      params.retryableOverrides?.l1l2TokenBridgeRetryableGas,
+      retryableOverrides.l1l2TokenBridgeRetryableGas,
       () =>
-        this._getL1L2TokenBridgeGasEstimates(
-          params,
+        this._getL1L2TokenBridgeGasEstimates({
+          partialTeleportParams,
           l1GasPrice,
           l2ForwarderAddress,
-          l1Provider
-        )
+          l1Provider,
+          l2Provider,
+        })
     )
 
     const l2ForwarderFactoryGasValues = await getValuesWithOverrides(
-      params.retryableOverrides?.l2ForwarderFactoryRetryableGas,
+      retryableOverrides.l2ForwarderFactoryRetryableGas,
       () => this._getL2ForwarderFactoryGasEstimates(l1GasPrice, l1Provider)
     )
 
     const l2l3TokenBridgeGasValues = await getValuesWithOverrides(
-      params.retryableOverrides?.l2l3TokenBridgeRetryableGas,
+      retryableOverrides.l2l3TokenBridgeRetryableGas,
       () =>
-        this._getL2L3TokenBridgeGasEstimates(
-          params,
+        this._getL2L3BridgeGasEstimates({
+          partialTeleportParams,
           l2GasPrice,
           l1Provider,
+          l2Provider,
+          l3Provider,
           l2ForwarderAddress,
-          params.to || l1Caller
-        )
+        })
     )
 
-    const l1l2FeeTokenBridgeGasValues = this.l2FeeTokenAddress
-      ? await this._getL1L2FeeTokenBridgeGasEstimates(
-          params,
-          l1GasPrice,
-          l3GasPrice
-            .mul(l2l3TokenBridgeGasValues.gasLimit)
-            .add(l2l3TokenBridgeGasValues.maxSubmissionFee),
-          l2ForwarderAddress,
-          l1Provider
-        )
-      : {
-          gasLimit: BigNumber.from(0),
-          maxSubmissionFee: BigNumber.from(0),
-        }
+    let l1l2FeeTokenBridgeGasValues: RetryableGasValues
+    // todo: replace address === with a case insensitive version
+    if (
+      partialTeleportParams.l1FeeToken === ethers.constants.AddressZero ||
+      partialTeleportParams.l1FeeToken === partialTeleportParams.l1Token
+    ) {
+      // eth fee l3, or only bridging fee token. this retryable will not be created
+      l1l2FeeTokenBridgeGasValues = {
+        gasLimit: BigNumber.from(0),
+        maxSubmissionFee: BigNumber.from(0),
+      }
+    } else {
+      l1l2FeeTokenBridgeGasValues = await getValuesWithOverrides(
+        retryableOverrides.l1l2FeeTokenBridgeRetryableGas,
+        () =>
+          this._getL1L2FeeTokenBridgeGasEstimates({
+            partialTeleportParams,
+            l1GasPrice,
+            feeTokenAmount: BigNumber.from(0), // todo: get this from the l2l3 bridge result
+            l2ForwarderAddress,
+            l1Provider,
+            l2Provider,
+          })
+      )
+    }
 
-    return {
+    const gasParams = {
       l2GasPrice,
       l3GasPrice,
       l1l2TokenBridgeGasLimit: l1l2TokenBridgeGasValues.gasLimit,
@@ -915,6 +1004,13 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       l1l2FeeTokenBridgeSubmissionCost:
         l1l2FeeTokenBridgeGasValues.maxSubmissionFee,
       l2l3TokenBridgeSubmissionCost: l2l3TokenBridgeGasValues.maxSubmissionFee,
+    }
+
+    const teleportParamsCopy = jsonCopy(partialTeleportParams)
+
+    return {
+      ...teleportParamsCopy,
+      gasParams,
     }
   }
 
