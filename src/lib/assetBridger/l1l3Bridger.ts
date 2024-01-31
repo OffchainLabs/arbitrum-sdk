@@ -583,40 +583,31 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       ? await params.l1Signer.getAddress()
       : params.from
 
+    const l1FeeToken = await this.l1FeeTokenAddress(params.l2Provider)
     const partialTeleportParams: OmitTyped<
       L1Teleporter.TeleportParamsStruct,
       'gasParams'
     > = {
       l1Token: params.erc20L1Address,
-      l1FeeToken:
-        (await this.l1FeeTokenAddress(params.l2Provider)) ||
-        ethers.constants.AddressZero,
+      l1FeeToken: l1FeeToken || ethers.constants.AddressZero,
       l1l2Router: this.l2Network.tokenBridge.l1GatewayRouter,
-      l2l3RouterOrInbox: this.l3Network.tokenBridge.l1GatewayRouter, // todo OR INBOX
+      l2l3RouterOrInbox:
+        params.erc20L1Address === l1FeeToken
+          ? this.l3Network.ethBridge.inbox
+          : this.l3Network.tokenBridge.l1GatewayRouter,
       to: params.to || from,
       amount: params.amount,
     }
 
-    const teleportParams = await this._fillPartialTeleportParams(
-      partialTeleportParams,
-      from,
-      params.retryableOverrides || {},
-      l1Provider,
-      params.l2Provider,
-      params.l3Provider
-    )
-
-    const l1GasPrice = this._percentIncrease(
-      params.retryableOverrides?.l1GasPrice?.base ||
-        (await l1Provider.getGasPrice()),
-      params.retryableOverrides?.l1GasPrice?.percentIncrease ||
-        this.defaultGasPricePercentIncrease
-    )
-
-    const feeAmounts = await L1Teleporter__factory.connect(
-      this.teleporterAddresses.l1Teleporter,
-      l1Provider
-    ).determineTypeAndFees(teleportParams, l1GasPrice) // todo rename this in solidity
+    const { teleportParams, costs } =
+      await this._fillPartialTeleportParams(
+        partialTeleportParams,
+        from,
+        params.retryableOverrides || {},
+        l1Provider,
+        params.l2Provider,
+        params.l3Provider
+      )
 
     const data = L1Teleporter__factory.createInterface().encodeFunctionData(
       'teleport',
@@ -627,9 +618,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       txRequest: {
         to: this.teleporterAddresses.l1Teleporter,
         data,
-        value: feeAmounts.ethAmount,
+        value: costs.ethAmount,
       },
-      feeTokenAmount: feeAmounts.feeTokenAmount,
+      feeTokenAmount: costs.feeTokenAmount,
     }
   }
 
@@ -657,6 +648,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     params: Erc20DepositMessagesParams
   ): Promise<Erc20DepositMessages> {
     // todo throw if not a teleporter receipt
+
+    // let partial
 
     const l1l2Messages = await params.l1TransactionReceipt.getL1ToL2Messages(
       params.l2Provider
@@ -869,7 +862,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l1Provider: Provider,
     l2Provider: Provider,
     l3Provider: Provider
-  ): Promise<L1Teleporter.TeleportParamsStruct> {
+  ) {
+    partialTeleportParams = jsonCopy(partialTeleportParams)
+
     // get gasLimit and submission cost for a retryable while respecting overrides
     const getValuesWithOverrides = async (
       overrides: TeleporterRetryableGasOverride | undefined,
@@ -1006,11 +1001,19 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       l2l3TokenBridgeSubmissionCost: l2l3TokenBridgeGasValues.maxSubmissionFee,
     }
 
-    const teleportParamsCopy = jsonCopy(partialTeleportParams)
+    const teleportParams = {
+      ...partialTeleportParams,
+      gasParams,
+    }
+
+    const costs = await L1Teleporter__factory.connect(
+      this.teleporterAddresses.l1Teleporter,
+      l1Provider
+    ).determineTypeAndFees(teleportParams, l1GasPrice) // todo rename this in solidity
 
     return {
-      ...teleportParamsCopy,
-      gasParams,
+      teleportParams,
+      costs
     }
   }
 
