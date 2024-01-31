@@ -66,6 +66,11 @@ type RetryableGasValues = {
   maxSubmissionFee: BigNumber
 }
 
+export type DepositRequestResult = {
+  txRequest: PickedTransactionRequest,
+  feeTokenAmount: BigNumber
+}
+
 export type TeleporterRetryableGasOverride = {
   gasLimit?: PercentIncrease & {
     /**
@@ -333,14 +338,25 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   }
 
   /**
+   * Make sure the L3 network is compatible with the L1 to L3 bridging
+   */
+  public async checkSupport(l2Provider: Provider): Promise<boolean> {
+    try {
+      await this.l1FeeTokenAddress(l2Provider)
+      return true
+    }
+    catch {
+      return false
+    }
+  }
+
+  /**
    * If the L3 network has a native token, return the address of that token on L1.
    * If the L3 network uses ETH for fees, throw.
    */
-  public async l1FeeTokenAddress(l2Provider: Provider): Promise<string> {
+  public async l1FeeTokenAddress(l2Provider: Provider): Promise<string | undefined> {
     if (!this.l2FeeTokenAddress) {
-      throw new ArbSdkError(
-        `L3 network ${this.l3Network.name} uses ETH for fees`
-      )
+      return undefined
     }
     this._l1FeeTokenAddress ||= await this.l2Erc20Bridger.getL1ERC20Address(
       this.l2FeeTokenAddress,
@@ -348,7 +364,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     )
     if (this._l1FeeTokenAddress === ethers.constants.AddressZero) {
       throw new ArbSdkError(
-        `L3 network ${this.l3Network.name} uses ETH for fees`
+        `L3 uses a custom fee token that is not available on L1. This configuration is not supported`
       )
     }
     return this._l1FeeTokenAddress
@@ -507,7 +523,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     amount?: BigNumber
   }): Promise<PickedTransactionRequest> {
     return this.getApproveTokenRequest({
-      erc20L1Address: await this.l1FeeTokenAddress(params.l2Provider),
+      erc20L1Address: await this._l1FeeTokenAddressOrThrow(params.l2Provider),
       amount: params.amount,
     })
   }
@@ -544,7 +560,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
           }
         | { l1Signer: Signer }
       )
-  ): Promise<PickedTransactionRequest> {
+  ): Promise<DepositRequestResult> {
     const l1Provider = hasL1Signer(params)
       ? params.l1Signer.provider!
       : params.l1Provider
@@ -560,9 +576,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
     const teleportParams: L1Teleporter.TeleportParamsStruct = {
       l1Token: params.erc20L1Address,
-      l1FeeToken: ethers.constants.AddressZero,
+      l1FeeToken: await this.l1FeeTokenAddress(params.l2Provider) || ethers.constants.AddressZero,
       l1l2Router: this.l2Network.tokenBridge.l1GatewayRouter,
-      l2l3RouterOrInbox: this.l3Network.tokenBridge.l1GatewayRouter,
+      l2l3RouterOrInbox: this.l3Network.tokenBridge.l1GatewayRouter, // todo OR INBOX
       to: params.to || from,
       amount: params.amount,
       gasParams,
@@ -575,12 +591,12 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         this.defaultGasPricePercentIncrease
     )
 
-    const valueRequired = (
+    const feeAmounts = (
       await L1Teleporter__factory.connect(
         this.teleporterAddresses.l1Teleporter,
         l1Provider
-      ).determineTypeAndFees(teleportParams, l1GasPrice)
-    ).ethAmount
+      ).determineTypeAndFees(teleportParams, l1GasPrice) // todo rename this in solidity
+    )
 
     const data = L1Teleporter__factory.createInterface().encodeFunctionData(
       'teleport',
@@ -588,9 +604,12 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     )
 
     return {
-      to: this.teleporterAddresses.l1Teleporter,
-      data,
-      value: valueRequired,
+      txRequest: {
+        to: this.teleporterAddresses.l1Teleporter,
+        data,
+        value: feeAmounts.ethAmount,
+      },
+      feeTokenAmount: feeAmounts.feeTokenAmount
     }
   }
 
@@ -604,7 +623,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   ): Promise<L1ContractCallTransaction> {
     const depositRequest = isTxRequestParams(params)
       ? params.txRequest
-      : await this.getDepositRequest(params)
+      : (await this.getDepositRequest(params)).txRequest
 
     const tx = await params.l1Signer.sendTransaction({
       ...depositRequest,
@@ -713,7 +732,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l2ForwarderAddress: string,
     l1Provider: Provider
   ): Promise<RetryableGasValues> {
-    const l1FeeTokenAddress = await this.l1FeeTokenAddress(params.l2Provider)
+    const l1FeeTokenAddress = await this._l1FeeTokenAddressOrThrow(params.l2Provider)
     return this._getTokenBridgeGasEstimates(
       l1Provider,
       params.l2Provider,
@@ -914,22 +933,28 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       )
     return ethers.utils.hexDataLength(dummyCalldata) - 4
   }
-}
 
-class CustomFeeTokenL1L3Bridger extends Erc20L1L3Bridger {
-  // when using custom fee token bridger, if token != fee token,
-  // you need to getDepositRequest before doing approvals, because you need to know how much fee token to approve
-  public override async getDepositRequest(
-    params: Erc20DepositRequestParams & {
-      from: string
-      l1Provider: Provider
-    }
-  ): Promise<PickedTransactionRequest & { extraFeeTokenAmount: BigNumber }> {
-    throw new Error('TODO')
+  protected async _l1FeeTokenAddressOrThrow(l2Provider: Provider) {
+    const ft = await this.l1FeeTokenAddress(l2Provider)
+    if (!ft) throw new Error(`L3 network ${this.l3Network.name} uses ETH for fees`)
+    return ft
   }
-
-  // todo: should override _buildGasParams here because it needs to also estimate the fee token bridge
 }
+
+// class CustomFeeTokenL1L3Bridger extends Erc20L1L3Bridger {
+//   // when using custom fee token bridger, if token != fee token,
+//   // you need to getDepositRequest before doing approvals, because you need to know how much fee token to approve
+//   public override async getDepositRequest(
+//     params: Erc20DepositRequestParams & {
+//       from: string
+//       l1Provider: Provider
+//     }
+//   ): Promise<PickedTransactionRequest & { extraFeeTokenAmount: BigNumber }> {
+//     throw new Error('TODO')
+//   }
+
+//   // todo: should override _buildGasParams here because it needs to also estimate the fee token bridge
+// }
 
 /**
  * Bridge ETH from L1 to L3 using a double retryable ticket

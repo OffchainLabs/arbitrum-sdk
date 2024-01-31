@@ -185,6 +185,22 @@ describe('L1 to L3 Bridging', () => {
       l1l3Bridger = new Erc20L1L3Bridger(l3Network)
     })
 
+    it('should detect an unavailable fee token', async () => {
+      const networkCopy = JSON.parse(JSON.stringify(l3Network)) as L2Network
+      const oldNativeToken = networkCopy.nativeToken
+      networkCopy.nativeToken = ethers.utils.hexlify(ethers.utils.randomBytes(32))
+      
+      let tmpBridger = new Erc20L1L3Bridger(networkCopy)
+
+      await expectPromiseToReject(tmpBridger.l1FeeTokenAddress(l2Signer.provider!), 'did not reject l1FeeTokenAddress')
+      expect(await tmpBridger.checkSupport(l2Signer.provider!)).to.be.false
+
+      networkCopy.nativeToken = oldNativeToken
+      tmpBridger = new Erc20L1L3Bridger(networkCopy)
+
+      expect(await tmpBridger.checkSupport(l2Signer.provider!)).to.be.true
+    })
+
     if (isL2NetworkWithCustomFeeToken()) {
       it('should properly get l2 and l1 fee token addresses', async () => {
         if (l1l3Bridger.l2FeeTokenAddress === undefined) {
@@ -197,7 +213,7 @@ describe('L1 to L3 Bridging', () => {
         // make sure l1 token maps to l2 token
         expect(
           await new Erc20Bridger(l2Network).getL2ERC20Address(
-            await l1l3Bridger.l1FeeTokenAddress(l2Signer.provider!),
+            (await l1l3Bridger.l1FeeTokenAddress(l2Signer.provider!))!,
             l1Signer.provider!
           )
         ).to.eq(l1l3Bridger.l2FeeTokenAddress)
