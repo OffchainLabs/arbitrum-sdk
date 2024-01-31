@@ -5,10 +5,14 @@ import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__facto
 import { TestERC20 } from '../../src/lib/abi/TestERC20'
 import { L1Teleporter__factory } from '../../src/lib/abi/factories/L1Teleporter__factory'
 import { fundL1, fundL2, skipIfMainnet } from './testHelpers'
-import { BigNumber, Signer, ethers } from 'ethers'
+import { BigNumber, Signer, Wallet, ethers, providers, utils } from 'ethers'
 import { EthL1L3Bridger } from '../../src/lib/assetBridger/l1l3Bridger'
 import { assert, expect } from 'chai'
-import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
+import {
+  fundL1CustomFeeToken,
+  isL2NetworkWithCustomFeeToken,
+} from './custom-fee-token/customFeeTokenTestHelpers'
+import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 
 type Unwrap<T> = T extends Promise<infer U> ? U : T
 
@@ -70,14 +74,36 @@ async function deployTeleportContracts(l1Signer: Signer, l2Signer: Signer) {
   }
 }
 
+async function fundActualL1CustomFeeToken(
+  l1Signer: Signer,
+  l2FeeToken: string,
+  l2Network: L2Network,
+  l2Provider: providers.Provider
+) {
+  const l1FeeToken = await new Erc20Bridger(l2Network).getL1ERC20Address(
+    l2FeeToken,
+    l2Provider
+  )
+
+  const deployerWallet = new Wallet(
+    utils.sha256(utils.toUtf8Bytes('user_token_bridge_deployer')),
+    l1Signer.provider!
+  )
+
+  const tokenContract = ERC20__factory.connect(l1FeeToken, deployerWallet)
+
+  const tx = await tokenContract.transfer(
+    await l1Signer.getAddress(),
+    utils.parseEther('10')
+  )
+  await tx.wait()
+}
+
 describe('L1 to L3 Bridging', () => {
   // If we are not testing in orbit mode, don't run any of the teleporter tests
   if (process.env.ORBIT_TEST !== '1') return
 
   // let setup: Unwrap<ReturnType<typeof testSetup>>
-  const l2JsonRpcProvider = new ethers.providers.JsonRpcProvider(
-    process.env['ARB_URL']
-  )
   let l2Network: L2Network
   let l3Network: L2Network
 
@@ -99,7 +125,7 @@ describe('L1 to L3 Bridging', () => {
       ethers.utils.hexlify(ethers.utils.randomBytes(32))
     )
     l2Signer = getSigner(
-      l2JsonRpcProvider,
+      new ethers.providers.JsonRpcProvider(process.env['ARB_URL']),
       ethers.utils.hexlify(ethers.utils.randomBytes(32))
     )
     l3Provider = new ethers.providers.JsonRpcProvider(process.env['ORBIT_URL'])
@@ -107,6 +133,15 @@ describe('L1 to L3 Bridging', () => {
     // fund signers on L1 and L2
     await fundL1(l1Signer, ethers.utils.parseEther('10'))
     await fundL2(l2Signer, ethers.utils.parseEther('10'))
+
+    if (isL2NetworkWithCustomFeeToken()) {
+      await fundActualL1CustomFeeToken(
+        l1Signer,
+        l3Network.nativeToken!,
+        l2Network,
+        l2Signer.provider!
+      )
+    }
   })
 
   describe('EthL1L3Bridger', () => {
@@ -312,16 +347,39 @@ describe('L1 to L3 Bridging', () => {
       ).wait()
     })
 
-    it('happy path', async () => {
+    it('happy path non fee token or standard', async () => {
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
 
-      const depositTx = await l1l3Bridger.deposit({
+      const depositParams = {
         erc20L1Address: l1Token.address,
         to: l3Recipient,
         amount,
         l1Signer,
         l2Provider: l2Signer.provider!,
         l3Provider,
+      }
+
+      const depositTxRequest = await l1l3Bridger.getDepositRequest(
+        depositParams
+      )
+
+      if (isL2NetworkWithCustomFeeToken()) {
+        expect(depositTxRequest.feeTokenAmount.gt('0')).to.be.true
+        // approve fee token
+        await (
+          await l1l3Bridger.approveFeeToken({
+            l1Signer,
+            l2Provider: l2Signer.provider!,
+            amount: depositTxRequest.feeTokenAmount,
+          })
+        ).wait()
+      } else {
+        expect(depositTxRequest.feeTokenAmount.eq('0'))
+      }
+
+      const depositTx = await l1l3Bridger.deposit({
+        l1Signer,
+        txRequest: depositTxRequest.txRequest,
       })
 
       const depositReceipt = await depositTx.wait()
@@ -329,8 +387,9 @@ describe('L1 to L3 Bridging', () => {
       // poll status
       await poll(async () => {
         const status = await l1l3Bridger.getDepositMessages({
-          l1TransactionReceipt: depositReceipt,
-          l2Provider: l2JsonRpcProvider,
+          txHash: depositReceipt.transactionHash,
+          l1Provider: l1Signer.provider!,
+          l2Provider: l2Signer.provider!,
           l3Provider,
         })
         return status.completed
@@ -346,7 +405,53 @@ describe('L1 to L3 Bridging', () => {
 
       const l3Balance = await l3Token.balanceOf(l3Recipient)
 
+      expect((await l3Provider.getBalance(l3Recipient)).gt('0'))
+
       expect(l3Balance.eq(amount)).to.be.true
     })
+
+    if (isL2NetworkWithCustomFeeToken()) {
+      it('happy path OnlyCustomFee', async () => {
+        const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
+        const l1FeeToken = (await l1l3Bridger.l1FeeTokenAddress(
+          l2Signer.provider!
+        ))!
+        const depositParams = {
+          erc20L1Address: l1FeeToken,
+          to: l3Recipient,
+          amount: ethers.utils.parseEther('0.1'),
+          l1Signer,
+          l2Provider: l2Signer.provider!,
+          l3Provider,
+        }
+
+        const depositTxRequest = await l1l3Bridger.getDepositRequest(
+          depositParams
+        )
+
+        await (await l1l3Bridger.approveToken(depositParams)).wait()
+
+        const depositTx = await l1l3Bridger.deposit({
+          l1Signer,
+          txRequest: depositTxRequest.txRequest,
+        })
+
+        const depositReceipt = await depositTx.wait()
+
+        // poll status
+        await poll(async () => {
+          const status = await l1l3Bridger.getDepositMessages({
+            txHash: depositReceipt.transactionHash,
+            l1Provider: l1Signer.provider!,
+            l2Provider: l2Signer.provider!,
+            l3Provider,
+          })
+          return status.completed
+        }, 1000)
+
+        // todo make this check better
+        expect((await l3Provider.getBalance(l3Recipient)).gt('0'))
+      })
+    }
   })
 })

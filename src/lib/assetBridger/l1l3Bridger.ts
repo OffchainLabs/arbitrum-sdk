@@ -1,5 +1,4 @@
 import { Provider, TransactionRequest } from '@ethersproject/abstract-provider'
-import { JsonRpcProvider } from '@ethersproject/providers'
 import {
   BigNumber,
   BigNumberish,
@@ -159,8 +158,9 @@ export type Erc20DepositRequestParams = {
 }
 
 export type Erc20DepositMessagesParams = {
-  l1TransactionReceipt: L1ContractCallTransactionReceipt
-  l2Provider: JsonRpcProvider
+  txHash: string
+  l1Provider: Provider
+  l2Provider: Provider
   l3Provider: Provider
 }
 
@@ -172,7 +172,7 @@ export type Erc20DepositMessages = {
   /**
    * L1 to L2 fee token bridge message
    */
-  l1l2FeeTokenBridge?: L1ToL2MessageReader
+  l1l2FeeTokenBridge: L1ToL2MessageReader | undefined
   /**
    * L2ForwarderFactory message
    */
@@ -180,7 +180,7 @@ export type Erc20DepositMessages = {
   /**
    * L2 to L3 token bridge message
    */
-  l2l3TokenBridge?: L1ToL2MessageReader
+  l2l3TokenBridge: L1ToL2MessageReader | undefined
   /**
    * Whether the teleportation has completed
    */
@@ -651,17 +651,54 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
+  //todo move
+  protected _decodeTeleportCalldata(
+    data: string
+  ): L1Teleporter.TeleportParamsStruct {
+    const iface = L1Teleporter__factory.createInterface()
+    const decoded = iface.parseTransaction({ data })
+    if (decoded.functionFragment.name !== 'teleport') {
+      throw new ArbSdkError(`not a teleport tx`)
+    }
+    return decoded.args[0]
+  }
+
   public async getDepositMessages(
     params: Erc20DepositMessagesParams
   ): Promise<Erc20DepositMessages> {
-    // todo throw if not a teleporter receipt
+    const tx = await params.l1Provider.getTransaction(params.txHash)
+    const teleportParams = this._decodeTeleportCalldata(tx.data)
 
-    // let partial
-
-    const l1l2Messages = await params.l1TransactionReceipt.getL1ToL2Messages(
-      params.l2Provider
+    const l1TxReceipt = new L1TransactionReceipt(
+      await params.l1Provider.getTransactionReceipt(params.txHash)
     )
-    const factoryRedeem = await l1l2Messages[1].getSuccessfulRedeem()
+    const l1l2Messages = await l1TxReceipt.getL1ToL2Messages(params.l2Provider)
+
+    let partialResult: OmitTyped<
+      Erc20DepositMessages,
+      'completed' | 'l2l3TokenBridge'
+    >
+
+    const type = this.teleportationType(teleportParams)
+    if (
+      type === TeleportationType.Standard ||
+      type === TeleportationType.OnlyFeeToken
+    ) {
+      partialResult = {
+        l1l2TokenBridge: l1l2Messages[0],
+        l2ForwarderFactory: l1l2Messages[1],
+        l1l2FeeTokenBridge: undefined,
+      }
+    } else {
+      partialResult = {
+        l1l2FeeTokenBridge: l1l2Messages[0],
+        l1l2TokenBridge: l1l2Messages[1],
+        l2ForwarderFactory: l1l2Messages[2],
+      }
+    }
+
+    const factoryRedeem =
+      await partialResult.l2ForwarderFactory.getSuccessfulRedeem()
 
     const l2l3Message =
       factoryRedeem.status === L1ToL2MessageStatus.REDEEMED
@@ -673,9 +710,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         : undefined
 
     return {
-      l1l2TokenBridge: l1l2Messages[0],
-      l1l2FeeTokenBridge: undefined,
-      l2ForwarderFactory: l1l2Messages[1],
+      ...partialResult,
       l2l3TokenBridge: l2l3Message,
       completed: (await l2l3Message?.status()) === L1ToL2MessageStatus.REDEEMED,
     }
@@ -877,7 +912,6 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   }
 
   protected async _fillPartialTeleportParams(
-    // todo: params objcet
     partialTeleportParams: OmitTyped<
       L1Teleporter.TeleportParamsStruct,
       'gasParams'
@@ -998,7 +1032,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
           this._getL1L2FeeTokenBridgeGasEstimates({
             partialTeleportParams,
             l1GasPrice,
-            feeTokenAmount: BigNumber.from(0), // todo: get this from the l2l3 bridge result
+            feeTokenAmount: l2l3TokenBridgeGasValues.gasLimit
+              .mul(l3GasPrice)
+              .add(l2l3TokenBridgeGasValues.maxSubmissionFee),
             l2ForwarderAddress,
             l1Provider,
             l2Provider,
