@@ -1049,17 +1049,17 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       }
     }
 
-    const gasParams = {
-      l2GasPrice,
-      l3GasPrice,
+    const gasParams: IL1Teleporter.RetryableGasParamsStruct = {
+      l2GasPriceBid: l2GasPrice,
+      l3GasPriceBid: l3GasPrice,
       l1l2TokenBridgeGasLimit: l1l2TokenBridgeGasValues.gasLimit,
       l1l2FeeTokenBridgeGasLimit: l1l2FeeTokenBridgeGasValues.gasLimit,
       l2l3TokenBridgeGasLimit: l2l3TokenBridgeGasValues.gasLimit,
       l2ForwarderFactoryGasLimit: l2ForwarderFactoryGasValues.gasLimit,
-      l1l2TokenBridgeSubmissionCost: l1l2TokenBridgeGasValues.maxSubmissionFee,
-      l1l2FeeTokenBridgeSubmissionCost:
+      l1l2TokenBridgeMaxSubmissionCost: l1l2TokenBridgeGasValues.maxSubmissionFee,
+      l1l2FeeTokenBridgeMaxSubmissionCost:
         l1l2FeeTokenBridgeGasValues.maxSubmissionFee,
-      l2l3TokenBridgeSubmissionCost: l2l3TokenBridgeGasValues.maxSubmissionFee,
+      l2l3TokenBridgeMaxSubmissionCost: l2l3TokenBridgeGasValues.maxSubmissionFee,
     }
 
     const teleportParams = {
@@ -1086,7 +1086,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       routerOrInbox: ethers.constants.AddressZero,
       to: ethers.constants.AddressZero,
       gasLimit: 0,
-      gasPrice: 0,
+      gasPriceBid: 0,
     }
     const dummyCalldata =
       IL2ForwarderFactory__factory.createInterface().encodeFunctionData(
