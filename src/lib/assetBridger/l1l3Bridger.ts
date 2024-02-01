@@ -1056,6 +1056,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       l1l2FeeTokenBridgeGasLimit: l1l2FeeTokenBridgeGasValues.gasLimit,
       l2l3TokenBridgeGasLimit: l2l3TokenBridgeGasValues.gasLimit,
       l2ForwarderFactoryGasLimit: l2ForwarderFactoryGasValues.gasLimit,
+      l2ForwarderFactoryMaxSubmissionCost: l2ForwarderFactoryGasValues.maxSubmissionFee,
       l1l2TokenBridgeMaxSubmissionCost: l1l2TokenBridgeGasValues.maxSubmissionFee,
       l1l2FeeTokenBridgeMaxSubmissionCost:
         l1l2FeeTokenBridgeGasValues.maxSubmissionFee,
@@ -1070,7 +1071,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     const costs = await IL1Teleporter__factory.connect(
       this.teleporterAddresses.l1Teleporter,
       l1Provider
-    ).determineTypeAndFees(teleportParams, l1GasPrice) // todo rename this in solidity
+    ).determineTypeAndFees(teleportParams)
 
     return {
       teleportParams,
