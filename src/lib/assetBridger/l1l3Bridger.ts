@@ -9,12 +9,12 @@ import {
 } from 'ethers'
 import { IERC20 } from '../abi/IERC20'
 import { L2GatewayToken } from '../abi/L2GatewayToken'
-import { L1Teleporter, L2ForwarderPredictor } from '../abi/L1Teleporter'
+import { IL1Teleporter } from '../abi/IL1Teleporter'
 import { IERC20__factory } from '../abi/factories/IERC20__factory'
 import { L1GatewayRouter__factory } from '../abi/factories/L1GatewayRouter__factory'
-import { L2ForwarderFactory__factory } from '../abi/factories/L2ForwarderFactory__factory'
+import { IL2ForwarderFactory__factory } from '../abi/factories/IL2ForwarderFactory__factory'
 import { L2GatewayToken__factory } from '../abi/factories/L2GatewayToken__factory'
-import { L1Teleporter__factory } from '../abi/factories/L1Teleporter__factory'
+import { IL1Teleporter__factory } from '../abi/factories/IL1Teleporter__factory'
 import { Address } from '../dataEntities/address'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
@@ -51,6 +51,7 @@ import { isDefined } from '../utils/lib'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { OmitTyped } from '../utils/types'
 import { getAddress } from 'ethers/lib/utils'
+import { IL2Forwarder } from '../abi/IL2Forwarder'
 
 type PickedTransactionRequest = Required<
   Pick<TransactionRequest, 'to' | 'data' | 'value'>
@@ -494,13 +495,13 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    * todo fix comment
    * Given L2Forwarder parameters, get the address of the L2Forwarder contract
    */
-  public async l2ForwarderAddress(
+  public async l2ForwarderAddress( // todo: use l1 teleporter instead of l2 forwarder factory
     l2ForwarderOwner: string,
     l2Provider: Provider
   ): Promise<string> {
     await this._checkL2Network(l2Provider)
 
-    return L2ForwarderFactory__factory.connect(
+    return IL2ForwarderFactory__factory.connect(
       this.teleporterAddresses.l2ForwarderFactory,
       l2Provider
     ).l2ForwarderAddress(l2ForwarderOwner)
@@ -592,7 +593,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
     const l1FeeToken = await this.l1FeeTokenAddress(params.l2Provider)
     const partialTeleportParams: OmitTyped<
-      L1Teleporter.TeleportParamsStruct,
+      IL1Teleporter.TeleportParamsStruct,
       'gasParams'
     > = {
       l1Token: params.erc20L1Address,
@@ -616,7 +617,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       params.l3Provider
     )
 
-    const data = L1Teleporter__factory.createInterface().encodeFunctionData(
+    const data = IL1Teleporter__factory.createInterface().encodeFunctionData(
       'teleport',
       [teleportParams]
     )
@@ -654,8 +655,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   //todo move
   protected _decodeTeleportCalldata(
     data: string
-  ): L1Teleporter.TeleportParamsStruct {
-    const iface = L1Teleporter__factory.createInterface()
+  ): IL1Teleporter.TeleportParamsStruct {
+    const iface = IL1Teleporter__factory.createInterface()
     const decoded = iface.parseTransaction({ data })
     if (decoded.functionFragment.name !== 'teleport') {
       throw new ArbSdkError(`not a teleport tx`)
@@ -718,7 +719,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
   public teleportationType(
     partialTeleportParams: Pick<
-      L1Teleporter.TeleportParamsStruct,
+      IL1Teleporter.TeleportParamsStruct,
       'l1FeeToken' | 'l1Token'
     >
   ) {
@@ -782,7 +783,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
   protected async _getL1L2TokenBridgeGasEstimates(params: {
     partialTeleportParams: OmitTyped<
-      L1Teleporter.TeleportParamsStruct,
+      IL1Teleporter.TeleportParamsStruct,
       'gasParams'
     >
     l1GasPrice: BigNumber
@@ -807,7 +808,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
   protected async _getL1L2FeeTokenBridgeGasEstimates(params: {
     partialTeleportParams: OmitTyped<
-      L1Teleporter.TeleportParamsStruct,
+      IL1Teleporter.TeleportParamsStruct,
       'gasParams'
     >
     l1GasPrice: BigNumber
@@ -855,7 +856,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
   protected async _getL2L3BridgeGasEstimates(params: {
     partialTeleportParams: OmitTyped<
-      L1Teleporter.TeleportParamsStruct,
+      IL1Teleporter.TeleportParamsStruct,
       'gasParams'
     >
     l2GasPrice: BigNumber
@@ -913,7 +914,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
   protected async _fillPartialTeleportParams(
     partialTeleportParams: OmitTyped<
-      L1Teleporter.TeleportParamsStruct,
+      IL1Teleporter.TeleportParamsStruct,
       'gasParams'
     >,
     l1Caller: string,
@@ -1037,7 +1038,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
               .add(l2l3TokenBridgeGasValues.maxSubmissionFee),
             l2ForwarderAddress,
             l1Provider,
-            l2Provider,
+            l2Provider, // todo: percent increase is being applied to submission cost twice, because gas price is being percent increased also
           })
       )
     } else {
@@ -1066,7 +1067,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       gasParams,
     }
 
-    const costs = await L1Teleporter__factory.connect(
+    const costs = await IL1Teleporter__factory.connect(
       this.teleporterAddresses.l1Teleporter,
       l1Provider
     ).determineTypeAndFees(teleportParams, l1GasPrice) // todo rename this in solidity
@@ -1078,7 +1079,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   }
 
   protected _l2ForwarderFactoryCalldataSize() {
-    const struct: L2ForwarderPredictor.L2ForwarderParamsStruct = {
+    const struct: IL2Forwarder.L2ForwarderParamsStruct = {
       owner: ethers.constants.AddressZero,
       l2Token: ethers.constants.AddressZero,
       l2FeeToken: ethers.constants.AddressZero,
@@ -1088,7 +1089,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       gasPrice: 0,
     }
     const dummyCalldata =
-      L2ForwarderFactory__factory.createInterface().encodeFunctionData(
+      IL2ForwarderFactory__factory.createInterface().encodeFunctionData(
         'callForwarder',
         [struct]
       )
@@ -1103,20 +1104,6 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   }
 }
 
-// class CustomFeeTokenL1L3Bridger extends Erc20L1L3Bridger {
-//   // when using custom fee token bridger, if token != fee token,
-//   // you need to getDepositRequest before doing approvals, because you need to know how much fee token to approve
-//   public override async getDepositRequest(
-//     params: Erc20DepositRequestParams & {
-//       from: string
-//       l1Provider: Provider
-//     }
-//   ): Promise<PickedTransactionRequest & { extraFeeTokenAmount: BigNumber }> {
-//     throw new Error('TODO')
-//   }
-
-//   // todo: should override _buildGasParams here because it needs to also estimate the fee token bridge
-// }
 
 /**
  * Bridge ETH from L1 to L3 using a double retryable ticket
