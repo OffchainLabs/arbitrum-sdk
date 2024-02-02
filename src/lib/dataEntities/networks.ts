@@ -73,34 +73,22 @@ export interface L2Network extends Network {
   nativeToken?: string
 }
 
-type BaseTokenBridge = {
+export interface TokenBridge {
   l1GatewayRouter: string
   l2GatewayRouter: string
   l1ERC20Gateway: string
   l2ERC20Gateway: string
   l1CustomGateway: string
   l2CustomGateway: string
+  l1WethGateway: string
+  l2WethGateway: string
+  l2Weth: string
+  l1Weth: string
   l1ProxyAdmin: string
   l2ProxyAdmin: string
   l1MultiCall: string
   l2Multicall: string
 }
-
-export type TokenBridge = BaseTokenBridge &
-  (
-    | {
-        l1WethGateway: string
-        l2WethGateway: string
-        l2Weth: string
-        l1Weth: string
-      }
-    | {
-        l1WethGateway?: never
-        l2WethGateway?: never
-        l2Weth?: never
-        l1Weth?: never
-      }
-  )
 
 export interface EthBridge {
   bridge: string
@@ -425,7 +413,6 @@ const getChainsByType = <T extends typeof networks>(
 
 const getL1Chains = () => getChainsByType<L1Networks>(isL1Network)
 const getArbitrumChains = () => getChainsByType<L2Networks>(isArbitrumNetwork)
-const getParentChains = () => getChainsByType<Networks>(isParentChain)
 
 /**
  * Returns the parent chain for the given chain.
@@ -491,7 +478,7 @@ export const getNetwork = async (
   let network: L1Network | L2Network | undefined = undefined
 
   if (layer === 1) {
-    network = getParentChains()[chainID]
+    network = getL1Chains()[chainID]
   } else {
     network = getArbitrumChains()[chainID]
   }
