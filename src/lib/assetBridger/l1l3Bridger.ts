@@ -242,8 +242,6 @@ class BaseL1L3Bridger {
     BigNumber.from(200)
   public readonly defaultGasLimitPercentIncrease: BigNumber =
     BigNumber.from(100)
-  public readonly defaultSubmissionFeePercentIncrease: BigNumber =
-    BigNumber.from(300)
 
   constructor(l3Network: L2Network) {
     const l2Network = l2Networks[l3Network.partnerChainID]
@@ -495,16 +493,16 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    * todo fix comment
    * Given L2Forwarder parameters, get the address of the L2Forwarder contract
    */
-  public async l2ForwarderAddress( // todo: use l1 teleporter instead of l2 forwarder factory
-    l2ForwarderOwner: string,
-    l2Provider: Provider
+  public async l2ForwarderAddress(
+    l2ForwarderParams: IL2Forwarder.L2ForwarderParamsStruct,
+    l1Provider: Provider
   ): Promise<string> {
-    await this._checkL2Network(l2Provider)
+    await this._checkL2Network(l1Provider)
 
     return IL2ForwarderFactory__factory.connect(
-      this.teleporterAddresses.l2ForwarderFactory,
-      l2Provider
-    ).l2ForwarderAddress(l2ForwarderOwner)
+      this.teleporterAddresses.l1Teleporter,
+      l1Provider
+    ).l2ForwarderAddress(l2ForwarderParams)
   }
 
   public async getApproveTokenRequest(
@@ -952,8 +950,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       )
       const submissionFee = this._percentIncrease(
         base.maxSubmissionFee,
-        overrides?.maxSubmissionFee?.percentIncrease ||
-          this.defaultSubmissionFeePercentIncrease
+        overrides?.maxSubmissionFee?.percentIncrease || BigNumber.from(0)
       )
 
       const minGasLimit = overrides?.gasLimit?.min || BigNumber.from(0)
@@ -987,9 +984,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       () => l3Provider.getGasPrice()
     )
 
-    const l2ForwarderAddress = await this.l2ForwarderAddress(
-      new Address(l1Caller).applyAlias().value,
-      l2Provider
+    const fakeRandomL2Forwarder = ethers.utils.hexlify(
+      ethers.utils.randomBytes(20)
     )
 
     const l1l2TokenBridgeGasValues = await getValuesWithOverrides(
@@ -998,7 +994,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         this._getL1L2TokenBridgeGasEstimates({
           partialTeleportParams,
           l1GasPrice,
-          l2ForwarderAddress,
+          l2ForwarderAddress: fakeRandomL2Forwarder,
           l1Provider,
           l2Provider,
         })
@@ -1018,7 +1014,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
           l1Provider,
           l2Provider,
           l3Provider,
-          l2ForwarderAddress,
+          l2ForwarderAddress: fakeRandomL2Forwarder,
         })
     )
 
@@ -1036,9 +1032,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
             feeTokenAmount: l2l3TokenBridgeGasValues.gasLimit
               .mul(l3GasPrice)
               .add(l2l3TokenBridgeGasValues.maxSubmissionFee),
-            l2ForwarderAddress,
+            l2ForwarderAddress: fakeRandomL2Forwarder,
             l1Provider,
-            l2Provider, // todo: percent increase is being applied to submission cost twice, because gas price is being percent increased also
+            l2Provider,
           })
       )
     } else {
@@ -1056,11 +1052,14 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       l1l2FeeTokenBridgeGasLimit: l1l2FeeTokenBridgeGasValues.gasLimit,
       l2l3TokenBridgeGasLimit: l2l3TokenBridgeGasValues.gasLimit,
       l2ForwarderFactoryGasLimit: l2ForwarderFactoryGasValues.gasLimit,
-      l2ForwarderFactoryMaxSubmissionCost: l2ForwarderFactoryGasValues.maxSubmissionFee,
-      l1l2TokenBridgeMaxSubmissionCost: l1l2TokenBridgeGasValues.maxSubmissionFee,
+      l2ForwarderFactoryMaxSubmissionCost:
+        l2ForwarderFactoryGasValues.maxSubmissionFee,
+      l1l2TokenBridgeMaxSubmissionCost:
+        l1l2TokenBridgeGasValues.maxSubmissionFee,
       l1l2FeeTokenBridgeMaxSubmissionCost:
         l1l2FeeTokenBridgeGasValues.maxSubmissionFee,
-      l2l3TokenBridgeMaxSubmissionCost: l2l3TokenBridgeGasValues.maxSubmissionFee,
+      l2l3TokenBridgeMaxSubmissionCost:
+        l2l3TokenBridgeGasValues.maxSubmissionFee,
     }
 
     const teleportParams = {
@@ -1104,7 +1103,6 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     return ft
   }
 }
-
 
 /**
  * Bridge ETH from L1 to L3 using a double retryable ticket

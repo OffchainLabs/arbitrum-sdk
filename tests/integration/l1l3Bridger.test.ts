@@ -64,7 +64,9 @@ async function deployTeleportContracts(l1Signer: Signer, l2Signer: Signer) {
 
   const l1Teleporter = await new L1Teleporter__factory(l1Signer).deploy(
     await l2ContractsDeployer.factory(),
-    await l2ContractsDeployer.implementation()
+    await l2ContractsDeployer.implementation(),
+    ethers.constants.AddressZero,
+    ethers.constants.AddressZero
   )
   await l1Teleporter.deployed()
 
@@ -256,15 +258,10 @@ describe('L1 to L3 Bridging', () => {
       })
     } else {
       it('should not have l1 and l2 fee token addresses', async () => {
-        // make sure l2 is undefined and l1 throws
+        // make sure l2 is undefined and l1 is also undefined
         expect(l1l3Bridger.l2FeeTokenAddress).to.be.undefined
-        const err = await expectPromiseToReject(
-          l1l3Bridger.l1FeeTokenAddress(l2Signer.provider!),
-          'Did not throw when getting l1 fee token address'
-        )
-        expect(err.message).to.eq(
-          `L3 network ${l3Network.name} uses ETH for fees`
-        )
+        expect(await l1l3Bridger.l1FeeTokenAddress(l2Signer.provider!)).to.be
+          .undefined
       })
     }
 
