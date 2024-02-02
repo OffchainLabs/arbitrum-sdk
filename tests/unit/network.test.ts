@@ -1,6 +1,5 @@
 import { expect } from 'chai'
 import {
-  getNetwork,
   resetNetworksToDefault,
   addCustomNetwork,
   getL1Network,
@@ -9,16 +8,20 @@ import {
   l2Networks,
 } from '../../src/lib/dataEntities/networks'
 
-const mainnetId = 1
-const arbOneId = 42161
-const arbNovaId = 42170
+const ethereumMainnetChainId = 1
+const arbitrumOneChainId = 42161
+const arbitrumNovaChainId = 42170
+
 const mockL1ChainId = 111111
 const mockL2ChainId = 222222
-const mockOrbitChainId = 99999999
+const mockL3ChainId = 99999999
 
-describe('Networks', () => {
+describe('Networks', async () => {
   const fetchErrorMessage =
     'Network fetched successfully but the chain ID is invalid.'
+
+  const ethereumMainnet = await getL1Network(ethereumMainnetChainId)
+  const arbitrumOne = await getL2Network(arbitrumOneChainId)
 
   beforeEach(async () => {
     resetNetworksToDefault()
@@ -26,152 +29,153 @@ describe('Networks', () => {
 
   describe('adding networks', () => {
     it('adds a custom L2 network', async function () {
-      const arbOneNetwork = await getL2Network(arbOneId)
-      const mockCustomNetwork = {
-        customL2Network: {
-          ...arbOneNetwork,
-          chainID: mockL2ChainId,
-          isArbitrum: true,
-          isCustom: true,
-        },
+      const customL2Network = {
+        ...arbitrumOne,
+        chainID: mockL2ChainId,
+        isArbitrum: true,
+        isCustom: true,
       } as const
 
-      addCustomNetwork(mockCustomNetwork)
+      addCustomNetwork({ customL2Network })
 
       expect(await getL2Network(mockL2ChainId)).to.be.ok
+
+      // assert chain was added as child
+      const l1Network = await getL1Network(customL2Network.partnerChainID)
+      expect(l1Network.partnerChainIDs).to.include(mockL2ChainId)
     })
 
     it('adds a custom L1 and L2 network', async function () {
-      const ethNetwork = await getL1Network(mainnetId)
-      const arbOneNetwork = await getL2Network(arbOneId)
-      const mockCustomNetwork = {
-        customL1Network: {
-          ...ethNetwork,
-          chainID: mockL1ChainId,
-          isArbitrum: false,
-          isCustom: true,
-        },
-        customL2Network: {
-          ...arbOneNetwork,
-          chainID: mockL2ChainId,
-          isArbitrum: true,
-          isCustom: true,
-        },
+      const customL1Network = {
+        ...ethereumMainnet,
+        chainID: mockL1ChainId,
+        isArbitrum: false,
+        isCustom: true,
       } as const
 
-      addCustomNetwork(mockCustomNetwork)
+      const customL2Network = {
+        ...arbitrumOne,
+        partnerChainID: mockL1ChainId,
+        chainID: mockL2ChainId,
+        isArbitrum: true,
+        isCustom: true,
+      } as const
+
+      addCustomNetwork({ customL1Network, customL2Network })
 
       expect(await getL1Network(mockL1ChainId)).to.be.ok
       expect(await getL2Network(mockL2ChainId)).to.be.ok
+
+      // assert chain was added as child
+      const l1Network = await getL1Network(mockL1ChainId)
+      expect(l1Network.partnerChainIDs).to.include(mockL2ChainId)
     })
 
-    it('adds a custom Orbit chain', async function () {
-      const arbOneNetwork = await getL2Network(arbOneId)
-
-      const mockCustomNetwork = {
-        customL2Network: {
-          ...arbOneNetwork,
-          chainID: mockOrbitChainId,
-          partnerChainID: arbOneId,
-          isArbitrum: true,
-          isCustom: true,
-        },
+    it('adds a custom L3 network', async function () {
+      const customL2Network = {
+        ...arbitrumOne,
+        chainID: mockL3ChainId,
+        partnerChainID: arbitrumOneChainId,
+        isArbitrum: true,
+        isCustom: true,
       } as const
 
-      addCustomNetwork(mockCustomNetwork)
+      addCustomNetwork({ customL2Network })
 
-      expect(await getNetwork(mockOrbitChainId, 2)).to.be.ok
+      expect(await getL2Network(mockL3ChainId)).to.be.ok
+
+      // assert chain was added as child
+      const l2Network = await getL2Network(customL2Network.partnerChainID)
+      expect(l2Network.partnerChainIDs).to.include(mockL3ChainId)
     })
 
-    it('adds a custom L1, L2, and L3', async function () {
-      const ethNetwork = await getL1Network(mainnetId)
-      const arbOneNetwork = await getL2Network(arbOneId)
-
-      const mockCustomNetwork = {
-        customL1Network: {
-          ...ethNetwork,
-          chainID: mockL1ChainId,
-          isArbitrum: false,
-          isCustom: true,
-        },
-        customL2Network: {
-          ...arbOneNetwork,
-          chainID: mockL2ChainId,
-          isArbitrum: true,
-          isCustom: true,
-        },
+    it('adds a custom L1, L2, and L3 network', async function () {
+      const customL1Network = {
+        ...ethereumMainnet,
+        chainID: mockL1ChainId,
+        isArbitrum: false,
+        isCustom: true,
       } as const
 
-      addCustomNetwork(mockCustomNetwork)
-
-      const mockOrbitNetwork = {
-        customL2Network: {
-          ...arbOneNetwork,
-          chainID: mockOrbitChainId,
-          partnerChainID: mockL2ChainId,
-          isArbitrum: true,
-          isCustom: true,
-        },
+      const customL2Network = {
+        ...arbitrumOne,
+        chainID: mockL2ChainId,
+        partnerChainID: mockL1ChainId,
+        isArbitrum: true,
+        isCustom: true,
       } as const
 
-      addCustomNetwork(mockOrbitNetwork)
+      addCustomNetwork({ customL1Network, customL2Network })
 
       expect(await getL1Network(mockL1ChainId)).to.be.ok
       expect(await getL2Network(mockL2ChainId)).to.be.ok
-      expect(await getL2Network(mockOrbitChainId)).to.be.ok
+
+      // assert chain was added as child
+      const l1Network = await getL1Network(mockL1ChainId)
+      expect(l1Network.partnerChainIDs).to.include(mockL2ChainId)
+
+      const customL3Network = {
+        ...arbitrumOne,
+        chainID: mockL3ChainId,
+        partnerChainID: mockL2ChainId,
+        isArbitrum: true,
+        isCustom: true,
+      } as const
+
+      addCustomNetwork({ customL2Network: customL3Network })
+
+      expect(await getL2Network(mockL3ChainId)).to.be.ok
+
+      // assert chain was added as child
+      const l2Network = await getL2Network(mockL2ChainId)
+      expect(l2Network.partnerChainIDs).to.include(mockL3ChainId)
     })
 
-    it('fails to add an Orbit chain paired with default L1', async function () {
-      const arbOneNetwork = await getL2Network(arbOneId)
+    it('fails to add a custom L1 and L2 network if they do not match', async function () {
+      const wrongPartnerChainId = 1241244
 
-      const mockCustomNetwork = {
-        customL2Network: {
-          ...arbOneNetwork,
-          chainID: mockOrbitChainId,
-          partnerChainID: mainnetId,
-          isArbitrum: true,
-          isCustom: true,
-        },
+      const customL1Network = {
+        ...ethereumMainnet,
+        chainID: mockL1ChainId,
+        isArbitrum: false,
+        isCustom: true,
+      } as const
+
+      const customL2Network = {
+        ...arbitrumOne,
+        partnerChainID: wrongPartnerChainId,
+        chainID: mockL2ChainId,
+        isArbitrum: true,
+        isCustom: true,
       } as const
 
       try {
-        addCustomNetwork(mockCustomNetwork)
+        addCustomNetwork({ customL1Network, customL2Network })
       } catch (err) {
         // should fail
         expect(err).to.be.an('error')
         expect((err as Error).message).to.be.eq(
-          'Orbit chains must be paired with an L2 chain'
+          `Partner chain id for L2 network ${customL2Network.chainID} doesn't match the provided L1 network. Expected ${customL1Network.chainID} but got ${wrongPartnerChainId}.`
         )
       }
     })
 
-    it('fails to add a custom L1 paired with an L3', async function () {
-      const ethNetwork = await getL1Network(mainnetId)
-      const arbOneNetwork = await getL2Network(arbOneId)
-
-      const mockCustomNetwork = {
-        customL1Network: {
-          ...ethNetwork,
-          chainID: mockL1ChainId,
-          isArbitrum: false,
-          isCustom: true,
-        },
-        customL2Network: {
-          ...arbOneNetwork,
-          chainID: mockOrbitChainId,
-          partnerChainID: mockL1ChainId,
-          isArbitrum: true,
-          isCustom: true,
-        },
-      } as const
-
+    it('fails to add a custom L3 without previously registering L2', async function () {
       try {
-        addCustomNetwork(mockCustomNetwork)
+        addCustomNetwork({
+          customL2Network: {
+            ...arbitrumOne,
+            chainID: mockL3ChainId,
+            partnerChainID: mockL2ChainId,
+            isArbitrum: true,
+            isCustom: true,
+          },
+        })
       } catch (err) {
         // should fail
         expect(err).to.be.an('error')
         expect((err as Error).message).to.be.eq(
-          'Orbit chains must be paired with an L2 chain'
+          `Network ${mockL3ChainId}'s parent network ${mockL2ChainId} is not recognized`
         )
       }
     })
@@ -179,19 +183,24 @@ describe('Networks', () => {
 
   describe('fetching networks', () => {
     it('successfully fetches an L1 network with `getL1Network`', async function () {
-      const network = await getL1Network(mainnetId)
-      expect(network.chainID, fetchErrorMessage).to.be.eq(mainnetId)
+      const network = await getL1Network(ethereumMainnetChainId)
+      expect(network.chainID).to.be.eq(ethereumMainnetChainId)
+    })
+
+    it('successfully fetches an L2 network with `getL2Network`', async function () {
+      const network = await getL2Network(arbitrumOneChainId)
+      expect(network.chainID, fetchErrorMessage).to.be.eq(arbitrumOneChainId)
     })
 
     it('fails to fetch an L2 network that is not a parent with `getL1Network`', async function () {
       let network
       try {
-        network = await getL1Network(arbNovaId)
+        network = await getL1Network(arbitrumNovaChainId)
       } catch (err) {
         // should fail
         expect(err).to.be.an('error')
         expect((err as Error).message).to.be.eq(
-          `Unrecognized network ${arbNovaId}.`
+          `Unrecognized network ${arbitrumNovaChainId}.`
         )
       } finally {
         expect(network, '`getL1Network` returned a result for an L2 network.')
@@ -199,20 +208,15 @@ describe('Networks', () => {
       }
     })
 
-    it('successfully fetches an L2 network with `getL2Network`', async function () {
-      const network = await getL2Network(arbOneId)
-      expect(network.chainID, fetchErrorMessage).to.be.eq(arbOneId)
-    })
-
     it('fails to fetch an L1 network with `getL2Network`', async function () {
       let network
       try {
-        network = await getL2Network(mainnetId)
+        network = await getL2Network(ethereumMainnetChainId)
       } catch (err) {
         // should fail
         expect(err).to.be.an('error')
         expect((err as Error).message).to.be.eq(
-          `Unrecognized network ${mainnetId}.`
+          `Unrecognized network ${ethereumMainnetChainId}.`
         )
       } finally {
         expect(network, '`getL2Network` returned a result for an L1 network.')
@@ -223,12 +227,12 @@ describe('Networks', () => {
     it('fails to fetch an Orbit chain with `getL1Network`', async function () {
       let parentChain
       try {
-        parentChain = await getL1Network(mockOrbitChainId)
+        parentChain = await getL1Network(mockL3ChainId)
       } catch (err) {
         // should fail
         expect(err).to.be.an('error')
         expect((err as Error).message).to.be.eq(
-          `Unrecognized network ${mockOrbitChainId}.`
+          `Unrecognized network ${mockL3ChainId}.`
         )
       } finally {
         expect(
@@ -238,22 +242,20 @@ describe('Networks', () => {
       }
     })
 
-    it('successfully fetches an Orbit chain with `getL2Network`', async function () {
-      const arbOneNetwork = await getL2Network(arbOneId)
-
+    it('successfully fetches an L3 chain with `getL2Network`', async function () {
       const mockCustomNetwork = {
         customL2Network: {
-          ...arbOneNetwork,
-          chainID: mockOrbitChainId,
-          partnerChainID: arbOneId,
+          ...arbitrumOne,
+          chainID: mockL3ChainId,
+          partnerChainID: arbitrumOneChainId,
           isArbitrum: true,
           isCustom: true,
         },
       } as const
 
       addCustomNetwork(mockCustomNetwork)
-      const chain = await getNetwork(mockOrbitChainId, 2)
-      expect(chain.chainID, fetchErrorMessage).to.be.eq(mockOrbitChainId)
+      const chain = await getL2Network(mockL3ChainId)
+      expect(chain.chainID, fetchErrorMessage).to.be.eq(mockL3ChainId)
     })
 
     it('fails to fetch an unrecognized L1 network', async () => {
