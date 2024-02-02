@@ -37,7 +37,7 @@
     "lint": "eslint .",
     "format": "prettier './**/*.{js,json,md,ts,yml}' '!./src/lib/abi' --write && yarn run lint --fix",
     "clean:compile": "ts-node scripts/cleanCompileContracts.ts",
-    "generate_docs": "typedoc --options typedoc_md.js && node scripts/postProcessDocs.js",
+    "generate_docs": "typedoc --options typedoc_md.js",
     "generate_docs_site": "typedoc",
     "checkRetryable": "ts-node scripts/checkRetryableStatus.ts",
     "redeemRetryable": "ts-node scripts/redeemRetryable.ts",
@@ -86,7 +86,7 @@
     "typechain": "7.0.0",
     "typedoc": "^0.25.7",
     "typedoc-plugin-markdown": "^3.17.1",
-    "typescript": "^5.3.3",
+    "typescript": "^4.9.3",
     "yargs": "^17.3.1"
   },
   "files": [
