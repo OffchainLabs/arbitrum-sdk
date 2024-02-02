@@ -599,16 +599,17 @@ const addNetwork = (network: L1Network | L2Network) => {
 export const addCustomNetwork = ({
   customL1Network,
   customL2Network,
-}:
-  | {
-      customL1Network?: L1Network
-      customL2Network: L2Network
-    }
-  | {
-      customL1Network?: L2Network
-      customL2Network: L2Network
-    }): void => {
+}: {
+  customL1Network?: L1Network
+  customL2Network: L2Network
+}): void => {
   if (customL1Network) {
+    if (customL1Network.chainID !== customL2Network.partnerChainID) {
+      throw new ArbSdkError(
+        `Partner chain id for L2 network ${customL2Network.chainID} doesn't match the provided L1 network. Expected ${customL1Network.chainID} but got ${customL2Network.partnerChainID}.`
+      )
+    }
+
     // check the if the parent chain is in any of the lists
     if (l1Networks[customL1Network.chainID]) {
       throw new ArbSdkError(
