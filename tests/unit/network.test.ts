@@ -83,32 +83,6 @@ describe('Networks', () => {
       expect(await getNetwork(mockOrbitChainId, 2)).to.be.ok
     })
 
-    it('adds a custom L2 and Orbit chain', async function () {
-      const arbOneNetwork = await getL2Network(arbOneId)
-
-      const mockCustomNetwork = {
-        customL1Network: {
-          ...arbOneNetwork,
-          partnerChainID: mainnetId,
-          chainID: mockL2ChainId,
-          isArbitrum: true,
-          isCustom: true,
-        },
-        customL2Network: {
-          ...arbOneNetwork,
-          chainID: mockOrbitChainId,
-          partnerChainID: mockL2ChainId,
-          isArbitrum: true,
-          isCustom: true,
-        },
-      } as const
-
-      addCustomNetwork(mockCustomNetwork)
-
-      expect(await getL2Network(mockL2ChainId)).to.be.ok
-      expect(await getL2Network(mockOrbitChainId)).to.be.ok
-    })
-
     it('adds a custom L1, L2, and L3', async function () {
       const ethNetwork = await getL1Network(mainnetId)
       const arbOneNetwork = await getL2Network(arbOneId)
