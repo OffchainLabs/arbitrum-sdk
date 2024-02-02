@@ -192,77 +192,54 @@ describe('Networks', async () => {
       expect(network.chainID, fetchErrorMessage).to.be.eq(arbitrumOneChainId)
     })
 
-    it('fails to fetch an L2 network that is not a parent with `getL1Network`', async function () {
-      let network
+    it('fails to fetch a registered L2 network with `getL1Network`', async function () {
       try {
-        network = await getL1Network(arbitrumNovaChainId)
+        await getL1Network(arbitrumOneChainId)
       } catch (err) {
         // should fail
         expect(err).to.be.an('error')
         expect((err as Error).message).to.be.eq(
-          `Unrecognized network ${arbitrumNovaChainId}.`
+          `Unrecognized network ${arbitrumOneChainId}.`
         )
-      } finally {
-        expect(network, '`getL1Network` returned a result for an L2 network.')
-          .to.be.undefined
       }
     })
 
-    it('fails to fetch an L1 network with `getL2Network`', async function () {
-      let network
+    it('fails to fetch a registered L1 network with `getL2Network`', async function () {
       try {
-        network = await getL2Network(ethereumMainnetChainId)
+        await getL2Network(ethereumMainnetChainId)
       } catch (err) {
         // should fail
         expect(err).to.be.an('error')
         expect((err as Error).message).to.be.eq(
           `Unrecognized network ${ethereumMainnetChainId}.`
         )
-      } finally {
-        expect(network, '`getL2Network` returned a result for an L1 network.')
-          .to.be.undefined
-      }
-    })
-
-    it('fails to fetch an Orbit chain with `getL1Network`', async function () {
-      let parentChain
-      try {
-        parentChain = await getL1Network(mockL3ChainId)
-      } catch (err) {
-        // should fail
-        expect(err).to.be.an('error')
-        expect((err as Error).message).to.be.eq(
-          `Unrecognized network ${mockL3ChainId}.`
-        )
-      } finally {
-        expect(
-          parentChain,
-          '`getNetwork` returned a result for an Orbit chain.'
-        ).to.be.undefined
       }
     })
 
     it('successfully fetches an L3 chain with `getL2Network`', async function () {
-      const mockCustomNetwork = {
-        customL2Network: {
-          ...arbitrumOne,
-          chainID: mockL3ChainId,
-          partnerChainID: arbitrumOneChainId,
-          isArbitrum: true,
-          isCustom: true,
-        },
+      const customL3Network = {
+        ...arbitrumOne,
+        chainID: mockL3ChainId,
+        partnerChainID: arbitrumOneChainId,
+        isArbitrum: true,
+        isCustom: true,
       } as const
 
-      addCustomNetwork(mockCustomNetwork)
-      const chain = await getL2Network(mockL3ChainId)
-      expect(chain.chainID, fetchErrorMessage).to.be.eq(mockL3ChainId)
+      addCustomNetwork({ customL2Network: customL3Network })
+
+      const l3Network = await getL2Network(mockL3ChainId)
+      expect(l3Network.chainID, fetchErrorMessage).to.be.eq(mockL3ChainId)
+
+      // assert chain was added as child
+      const l2Network = await getL2Network(customL3Network.partnerChainID)
+      expect(l2Network.partnerChainIDs).to.include(mockL3ChainId)
     })
 
     it('fails to fetch an unrecognized L1 network', async () => {
       const chainId = 9999
+
       try {
         await getL1Network(chainId)
-        expect.fail('Expected error was not thrown')
       } catch (err) {
         expect(err).to.be.instanceOf(Error)
         expect((err as Error).message).to.be.eq(
@@ -271,11 +248,11 @@ describe('Networks', async () => {
       }
     })
 
-    it('fails to fetch an unrecognized L2 network', async () => {
+    it('fails to fetch an unrecognized L2/L3 network', async () => {
       const chainId = 9999
+
       try {
         await getL2Network(chainId)
-        expect.fail('Expected error was not thrown')
       } catch (err) {
         expect(err).to.be.instanceOf(Error)
         expect((err as Error).message).to.be.eq(
