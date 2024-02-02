@@ -361,7 +361,10 @@ export const setupNetworks = async (
   if (isTestingOrbitChains) {
     addCustomNetwork({ customL2Network: l2Network })
   } else {
-    addCustomNetwork({ ...customNetworks, customL2Network: l2Network })
+    addCustomNetwork({
+      customL1Network: customNetworks.customL1Network as L1Network,
+      customL2Network: l2Network,
+    })
   }
 
   // also register the weth gateway
@@ -416,7 +419,9 @@ export const testSetup = async (): Promise<{
 
   let setL1Network: L1Network | L2Network, setL2Network: L2Network
   try {
-    const l1Network = await getL1Network(l1Deployer)
+    const l1Network = isTestingOrbitChains
+      ? await getL2Network(l1Deployer)
+      : await getL1Network(l1Deployer)
     const l2Network = await getL2Network(l2Deployer)
     setL1Network = l1Network
     setL2Network = l2Network

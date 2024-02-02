@@ -581,15 +581,10 @@ const addNetwork = (network: L1Network | L2Network) => {
 export const addCustomNetwork = ({
   customL1Network,
   customL2Network,
-}:
-  | {
-      customL1Network?: L1Network
-      customL2Network: L2Network
-    }
-  | {
-      customL1Network?: L2Network
-      customL2Network: L2Network
-    }): void => {
+}: {
+  customL1Network?: L1Network
+  customL2Network: L2Network
+}): void => {
   if (customL1Network) {
     // check the if the parent chain is in any of the lists
     if (l1Networks[customL1Network.chainID]) {
