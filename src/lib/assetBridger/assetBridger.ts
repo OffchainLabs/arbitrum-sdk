@@ -33,6 +33,9 @@ import {
  * Base for bridging assets from l1 to l2 and back
  */
 export abstract class AssetBridger<DepositParams, WithdrawParams> {
+  /**
+   * Parent chain for the given Arbitrum chain, can be an L1 or an L2
+   */
   public readonly l1Network: L1Network | L2Network
 
   public constructor(public readonly l2Network: L2Network) {
