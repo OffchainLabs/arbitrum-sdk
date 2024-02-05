@@ -169,14 +169,6 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Whether the chain uses ETH as its native/fee token.
-   * @returns
-   */
-  private get isNativeTokenEth() {
-    return !this.nativeToken || this.nativeToken === constants.AddressZero
-  }
-
-  /**
    * Instantiates a new EthBridger from an L2 Provider
    * @param l2Provider
    * @returns
@@ -202,7 +194,7 @@ export class EthBridger extends AssetBridger<
   public getApproveFeeTokenRequest(
     params?: ApproveFeeTokenParams
   ): Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>> {
-    if (this.isNativeTokenEth) {
+    if (this.nativeTokenIsEth) {
       throw new Error('chain uses ETH as its native/fee token')
     }
 
@@ -226,7 +218,7 @@ export class EthBridger extends AssetBridger<
   public async approveFeeToken(
     params: WithL1Signer<ApproveFeeTokenParamsOrTxRequest>
   ) {
-    if (this.isNativeTokenEth) {
+    if (this.nativeTokenIsEth) {
       throw new Error('chain uses ETH as its native/fee token')
     }
 
@@ -246,7 +238,7 @@ export class EthBridger extends AssetBridger<
    * @returns
    */
   private getDepositRequestData(params: EthDepositRequestParams) {
-    if (!this.isNativeTokenEth) {
+    if (!this.nativeTokenIsEth) {
       return (
         ERC20Inbox__factory.createInterface() as unknown as {
           encodeFunctionData(
@@ -278,7 +270,7 @@ export class EthBridger extends AssetBridger<
     return {
       txRequest: {
         to: this.l2Network.ethBridge.inbox,
-        value: this.isNativeTokenEth ? params.amount : 0,
+        value: this.nativeTokenIsEth ? params.amount : 0,
         data: this.getDepositRequestData(params),
         from: params.from,
       },

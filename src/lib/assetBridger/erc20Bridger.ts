@@ -183,14 +183,6 @@ export class Erc20Bridger extends AssetBridger<
   }
 
   /**
-   * Whether the chain uses ETH as its native/fee token.
-   * @returns
-   */
-  private get isNativeTokenEth() {
-    return !this.nativeToken || this.nativeToken === constants.AddressZero
-  }
-
-  /**
    * Instantiates a new Erc20Bridger from an L2 Provider
    * @param l2Provider
    * @returns
@@ -242,7 +234,7 @@ export class Erc20Bridger extends AssetBridger<
   public async getApproveFeeTokenRequest(
     params: ProviderTokenApproveParams
   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
-    if (this.isNativeTokenEth) {
+    if (this.nativeTokenIsEth) {
       throw new Error('chain uses ETH as its native/fee token')
     }
 
@@ -258,7 +250,7 @@ export class Erc20Bridger extends AssetBridger<
   public async approveFeeToken(
     params: ApproveParamsOrTxRequest
   ): Promise<ethers.ContractTransaction> {
-    if (this.isNativeTokenEth) {
+    if (this.nativeTokenIsEth) {
       throw new Error('chain uses ETH as its native/fee token')
     }
 
@@ -563,7 +555,7 @@ export class Erc20Bridger extends AssetBridger<
   ) {
     // the call value should be zero when paying with a custom fee token,
     // as the fee amount is packed inside the last parameter (`data`) of the call to `outboundTransfer`
-    if (!this.isNativeTokenEth) {
+    if (!this.nativeTokenIsEth) {
       return constants.Zero
     }
 
@@ -580,7 +572,7 @@ export class Erc20Bridger extends AssetBridger<
   private getDepositRequestOutboundTransferDataParam(
     depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
   ) {
-    if (!this.isNativeTokenEth) {
+    if (!this.nativeTokenIsEth) {
       return defaultAbiCoder.encode(
         ['uint256', 'bytes', 'uint256'],
         [
@@ -762,7 +754,7 @@ export class Erc20Bridger extends AssetBridger<
       // in the future we want to do proper estimation here
       /* eslint-disable @typescript-eslint/no-unused-vars */
       estimateL1GasLimit: async (l1Provider: Provider) => {
-        if (!this.isNativeTokenEth) {
+        if (!this.nativeTokenIsEth) {
           // measured 172867 - add some padding
           return BigNumber.from(200000)
         }

@@ -16,6 +16,8 @@
 /* eslint-env node */
 'use strict'
 
+import { constants } from 'ethers'
+
 import { L1ContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'
 
@@ -64,6 +66,14 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    */
   protected async checkL2Network(sop: SignerOrProvider): Promise<void> {
     await SignerProviderUtils.checkNetworkMatches(sop, this.l2Network.chainID)
+  }
+
+  /**
+   * Whether the chain uses ETH as its native/gas token
+   * @returns {boolean}
+   */
+  protected get nativeTokenIsEth() {
+    return !this.nativeToken || this.nativeToken === constants.AddressZero
   }
 
   /**
