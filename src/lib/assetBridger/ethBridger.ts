@@ -164,16 +164,8 @@ export class EthBridger extends AssetBridger<
   EthDepositParams | EthDepositToParams | L1ToL2TxReqAndSigner,
   EthWithdrawParams | L2ToL1TxReqAndSigner
 > {
-  /**
-   * In case of a chain that uses ETH as its native/fee token, this is either undefined or the zero address.
-   * In case of a chain that uses an ERC-20 token from the parent chain as its native/fee token, this is the address of said token on the parent chain.
-   */
-  public readonly nativeToken?: string
-
   public constructor(public readonly l2Network: L2Network) {
     super(l2Network)
-
-    this.nativeToken = l2Network.nativeToken
   }
 
   /**
