@@ -330,28 +330,21 @@ export const deployErc20AndInit = async (
     ).wait()
   }
 
-  const ret = {
+  return {
     l1CustomGateway: l1.customGateway.address,
     l1ERC20Gateway: l1.standardGateway.address,
     l1GatewayRouter: l1.router.address,
     l1MultiCall: l1.multicall.address,
     l1ProxyAdmin: l1.proxyAdmin.address,
+    l1Weth: l1WethOverride || l1.weth?.address || constants.AddressZero,
+    l1WethGateway: l1.wethGateway?.address || constants.AddressZero,
 
     l2CustomGateway: l2.customGateway.address,
     l2ERC20Gateway: l2.standardGateway.address,
     l2GatewayRouter: l2.router.address,
     l2Multicall: l2.multicall.address,
     l2ProxyAdmin: l2.proxyAdmin.address,
+    l2Weth: l2.weth?.address || constants.AddressZero,
+    l2WethGateway: l2.wethGateway?.address || constants.AddressZero,
   }
-
-  if (l1.weth && l2.weth) {
-    return {
-      ...ret,
-      l1Weth: l1WethOverride || l1.weth.address,
-      l1WethGateway: l1.wethGateway.address,
-      l2Weth: l2.weth.address,
-      l2WethGateway: l2.wethGateway.address,
-    }
-  }
-  return ret
 }
