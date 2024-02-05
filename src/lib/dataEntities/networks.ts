@@ -651,6 +651,7 @@ export const addDefaultLocalNetwork = (): {
     isCustom: true,
     name: 'ArbLocal',
     partnerChainID: 1337,
+    partnerChainIDs: [],
     retryableLifetimeSeconds: 604800,
     nitroGenesisBlock: 0,
     nitroGenesisL1Block: 0,
@@ -672,7 +673,6 @@ export const addDefaultLocalNetwork = (): {
       l2WethGateway: '0x4A2bA922052bA54e29c5417bC979Daaf7D5Fe4f4',
     },
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
-    partnerChainIDs: [],
   }
 
   addCustomNetwork({
