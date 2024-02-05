@@ -124,12 +124,15 @@ jobs:
         run: CI=true yarn test:unit
 
   test-integration:
-    name: Test (Integration)
+    name: Test (Integration) - ${{ matrix.orbit-test == '1' && 'Orbit' || 'No Orbit' }} - Node ${{ matrix.node-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [16, 18, 20]
+        orbit-test: ['1', '0']
     needs: install
+    env:
+      ORBIT_TEST: ${{ matrix.orbit-test }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -145,7 +148,9 @@ jobs:
       - name: Set up the local node
         uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
+          nitro-testnode-ref: master
           no-token-bridge: true
+          l3-node: ${{ matrix.orbit-test == '1' }}
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
