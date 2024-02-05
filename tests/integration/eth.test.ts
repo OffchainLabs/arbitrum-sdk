@@ -83,12 +83,12 @@ describe('Ether', async () => {
 
   // Test should only run if we're using eth as native fee
   if (!isL2NetworkWithCustomFeeToken()) {
-    it('"EthBridger.approveFeeToken" throws when eth is used as native/fee token', async () => {
+    it('"EthBridger.approveGasToken" throws when eth is used as native/fee token', async () => {
       const { ethBridger, l1Signer } = await testSetup()
 
       try {
-        await ethBridger.approveFeeToken({ l1Signer })
-        expect.fail(`"EthBridger.approveFeeToken" should have thrown`)
+        await ethBridger.approveGasToken({ l1Signer })
+        expect.fail(`"EthBridger.approveGasToken" should have thrown`)
       } catch (error: any) {
         expect(error.message).to.equal('chain uses ETH as its native/fee token')
       }

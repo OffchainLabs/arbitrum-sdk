@@ -228,14 +228,14 @@ export class Erc20Bridger extends AssetBridger<
   }
 
   /**
-   * Creates a transaction request for approving the custom fee token to be spent by the relevant Gateway on the parent chain.
+   * Creates a transaction request for approving the custom gas token to be spent by the relevant gateway on the parent chain
    * @param params
    */
-  public async getApproveFeeTokenRequest(
+  public async getApproveGasTokenRequest(
     params: ProviderTokenApproveParams
   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
     if (this.nativeTokenIsEth) {
-      throw new Error('chain uses ETH as its native/fee token')
+      throw new Error('chain uses ETH as its native/gas token')
     }
 
     const txRequest = await this.getApproveTokenRequest(params)
@@ -244,26 +244,27 @@ export class Erc20Bridger extends AssetBridger<
   }
 
   /**
-   * Approves the custom fee token to be spent by the relevant Gateway on the parent chain.
+   * Approves the custom gas token to be spent by the relevant gateway on the parent chain
    * @param params
    */
-  public async approveFeeToken(
+  public async approveGasToken(
     params: ApproveParamsOrTxRequest
   ): Promise<ethers.ContractTransaction> {
     if (this.nativeTokenIsEth) {
-      throw new Error('chain uses ETH as its native/fee token')
+      throw new Error('chain uses ETH as its native/gas token')
     }
 
     await this.checkL1Network(params.l1Signer)
 
-    const approveRequest = this.isApproveParams(params)
-      ? await this.getApproveFeeTokenRequest({
+    const approveGasTokenRequest = this.isApproveParams(params)
+      ? await this.getApproveGasTokenRequest({
           ...params,
           l1Provider: SignerProviderUtils.getProviderOrThrow(params.l1Signer),
         })
       : params.txRequest
-    return await params.l1Signer.sendTransaction({
-      ...approveRequest,
+
+    return params.l1Signer.sendTransaction({
+      ...approveGasTokenRequest,
       ...params.overrides,
     })
   }
@@ -553,7 +554,7 @@ export class Erc20Bridger extends AssetBridger<
   private getDepositRequestCallValue(
     depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
   ) {
-    // the call value should be zero when paying with a custom fee token,
+    // the call value should be zero when paying with a custom gas token,
     // as the fee amount is packed inside the last parameter (`data`) of the call to `outboundTransfer`
     if (!this.nativeTokenIsEth) {
       return constants.Zero

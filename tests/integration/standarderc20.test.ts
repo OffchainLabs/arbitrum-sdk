@@ -103,7 +103,7 @@ describe('standard ERC20', () => {
         'initial allowance is not empty'
       )
 
-      const tx = await erc20Bridger.approveFeeToken({
+      const tx = await erc20Bridger.approveGasToken({
         l1Signer: l1Signer,
         erc20L1Address: testState.l1Token.address,
       })

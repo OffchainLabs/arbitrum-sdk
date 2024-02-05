@@ -49,7 +49,7 @@ import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { L2Network, getL2Network } from '../dataEntities/networks'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 
-export type ApproveFeeTokenParams = {
+export type ApproveGasTokenParams = {
   /**
    * Amount to approve. Defaults to max int.
    */
@@ -60,7 +60,7 @@ export type ApproveFeeTokenParams = {
   overrides?: PayableOverrides
 }
 
-export type ApproveFeeTokenTxRequest = {
+export type ApproveGasTokenTxRequest = {
   /**
    * Transaction request
    */
@@ -71,11 +71,11 @@ export type ApproveFeeTokenTxRequest = {
   overrides?: Overrides
 }
 
-export type ApproveFeeTokenParamsOrTxRequest =
-  | ApproveFeeTokenParams
-  | ApproveFeeTokenTxRequest
+export type ApproveGasTokenParamsOrTxRequest =
+  | ApproveGasTokenParams
+  | ApproveGasTokenTxRequest
 
-type WithL1Signer<T extends ApproveFeeTokenParamsOrTxRequest> = T & {
+type WithL1Signer<T extends ApproveGasTokenParamsOrTxRequest> = T & {
   l1Signer: Signer
 }
 
@@ -164,10 +164,6 @@ export class EthBridger extends AssetBridger<
   EthDepositParams | EthDepositToParams | L1ToL2TxReqAndSigner,
   EthWithdrawParams | L2ToL1TxReqAndSigner
 > {
-  public constructor(public readonly l2Network: L2Network) {
-    super(l2Network)
-  }
-
   /**
    * Instantiates a new EthBridger from an L2 Provider
    * @param l2Provider
@@ -178,24 +174,24 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Asserts that the provided argument is of type `ApproveFeeTokenParams` and not `ApproveFeeTokenTxRequest`.
+   * Asserts that the provided argument is of type `ApproveGasTokenParams` and not `ApproveGasTokenTxRequest`.
    * @param params
    */
-  private isApproveFeeTokenParams(
-    params: ApproveFeeTokenParamsOrTxRequest
-  ): params is WithL1Signer<ApproveFeeTokenParams> {
-    return typeof (params as ApproveFeeTokenTxRequest).txRequest === 'undefined'
+  private isApproveGasTokenParams(
+    params: ApproveGasTokenParamsOrTxRequest
+  ): params is WithL1Signer<ApproveGasTokenParams> {
+    return typeof (params as ApproveGasTokenTxRequest).txRequest === 'undefined'
   }
 
   /**
-   * Creates a transaction request for approving the custom fee token to be spent by the Inbox on the parent chain.
+   * Creates a transaction request for approving the custom gas token to be spent by the inbox on the parent chain
    * @param params
    */
-  public getApproveFeeTokenRequest(
-    params?: ApproveFeeTokenParams
+  public getApproveGasTokenRequest(
+    params?: ApproveGasTokenParams
   ): Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>> {
     if (this.nativeTokenIsEth) {
-      throw new Error('chain uses ETH as its native/fee token')
+      throw new Error('chain uses ETH as its native/gas token')
     }
 
     const erc20Interface = ERC20__factory.createInterface()
@@ -212,28 +208,28 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Approves the custom fee token to be spent by the Inbox on the parent chain.
+   * Approves the custom gas token to be spent by the Inbox on the parent chain.
    * @param params
    */
-  public async approveFeeToken(
-    params: WithL1Signer<ApproveFeeTokenParamsOrTxRequest>
+  public async approveGasToken(
+    params: WithL1Signer<ApproveGasTokenParamsOrTxRequest>
   ) {
     if (this.nativeTokenIsEth) {
-      throw new Error('chain uses ETH as its native/fee token')
+      throw new Error('chain uses ETH as its native/gas token')
     }
 
-    const approveFeeTokenRequest = this.isApproveFeeTokenParams(params)
-      ? this.getApproveFeeTokenRequest(params)
+    const approveGasTokenRequest = this.isApproveGasTokenParams(params)
+      ? this.getApproveGasTokenRequest(params)
       : params.txRequest
 
-    return await params.l1Signer.sendTransaction({
-      ...approveFeeTokenRequest,
+    return params.l1Signer.sendTransaction({
+      ...approveGasTokenRequest,
       ...params.overrides,
     })
   }
 
   /**
-   * Gets the transaction data for a tx request necessary for depositing ETH or other native/fee token.
+   * Gets the transaction calldata for a tx request necessary for depositing ETH or custom gas token
    * @param params
    * @returns
    */
