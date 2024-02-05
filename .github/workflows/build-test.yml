@@ -9,7 +9,7 @@ env:
 
 jobs:
   install:
-    name: 'Install'
+    name: Install on Node.js v${{ matrix.node-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -27,7 +27,7 @@ jobs:
         uses: OffchainLabs/actions/node-modules/install@main
 
   lint:
-    name: Lint
+    name: Lint on Node.js v${{ matrix.node-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -76,7 +76,7 @@ jobs:
           verbose: false
 
   audit:
-    name: Audit
+    name: Audit on Node.js v${{ matrix.node-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -97,7 +97,7 @@ jobs:
       - run: yarn audit:ci
 
   test-unit:
-    name: Test (Unit)
+    name: Test (Unit) on Node.js v${{ matrix.node-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -124,7 +124,7 @@ jobs:
         run: CI=true yarn test:unit
 
   test-integration:
-    name: Test (Int.) Node ${{ matrix.node-version }}/${{ matrix.orbit-test == '1' && 'Orbit' || 'No Orbit' }}/${{ matrix.custom-fee == '1' && 'Custom Fee' || 'No Custom Fee' }}
+    name: Test (Integration) on Node.js v${{ matrix.node-version }}${{ matrix.orbit-test == '1' && ' with L3' || '' }}${{ matrix.custom-fee == '1' && ' with custom gas token' || '' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false # runs all tests to completion even if one fails
@@ -161,7 +161,7 @@ jobs:
       - name: Set up the local node
         uses: OffchainLabs/actions/run-nitro-test-node@ha/token-bridge-args
         with:
-          nitro-testnode-ref: ha/l1-fee-token-and-register-weth
+          nitro-testnode-ref: master
           l3-node: ${{ matrix.orbit-test == '1' }}
           args: ${{ matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
 
