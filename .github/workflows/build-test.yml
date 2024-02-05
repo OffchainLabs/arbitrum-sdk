@@ -161,7 +161,7 @@ jobs:
       - name: Set up the local node
         uses: OffchainLabs/actions/run-nitro-test-node@230a6eb600fbe7ddfd279580d3f55e6999f6a6d9
         with:
-          nitro-testnode-ref: master
+          nitro-testnode-ref: ha/token-bridge-ref
           l3-node: ${{ matrix.orbit-test == '1' }}
           args: ${{ matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
 
