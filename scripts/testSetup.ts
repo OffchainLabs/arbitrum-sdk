@@ -29,7 +29,7 @@ import {
   getL2Network,
   addCustomNetwork,
 } from '../src/lib/dataEntities/networks'
-import { Signer, providers } from 'ethers'
+import { Signer, constants, providers } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { execSync } from 'child_process'
 import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
@@ -369,7 +369,7 @@ export const setupNetworks = async (
   // also register the weth gateway
   // we add it here rather than in deployBridge because
   // we have access to an adminerc20bridger
-  if (tokenBridge.l1Weth) {
+  if (tokenBridge.l1Weth !== constants.AddressZero) {
     const adminErc20Bridger = new AdminErc20Bridger(l2Network)
     await (
       await (
