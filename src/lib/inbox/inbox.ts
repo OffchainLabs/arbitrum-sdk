@@ -61,8 +61,13 @@ type RequiredTransactionRequestType = RequiredPick<
  * Tools for interacting with the inbox and bridge contracts
  */
 export class InboxTools {
-  // by L1 we really mean "parent chain", the misnomer will be fixed in the next major version
+  /**
+   * Parent chain provider
+   */
   private readonly l1Provider: Provider
+  /**
+   * Parent chain for the given Arbitrum chain, can be an L1 or an L2
+   */
   private readonly l1Network: L1Network | L2Network
 
   constructor(
