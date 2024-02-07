@@ -323,6 +323,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   protected readonly l2Erc20Bridger = new Erc20Bridger(this.l2Network)
   protected readonly l3Erc20Bridger = new Erc20Bridger(this.l3Network)
 
+  public readonly l2ForwarderFactoryDefaultGasLimit = BigNumber.from(1_000_000)
+
   /**
    * If the L3 network has a native token, this is the address of that token on L2
    */
@@ -490,11 +492,12 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   }
 
   /**
-   * todo fix comment
    * Given L2Forwarder parameters, get the address of the L2Forwarder contract
    */
   public async l2ForwarderAddress(
-    l2ForwarderParams: IL2Forwarder.L2ForwarderParamsStruct,
+    owner: string,
+    routerOrInbox: string,
+    to: string,
     l1Provider: Provider
   ): Promise<string> {
     await this._checkL2Network(l1Provider)
@@ -502,8 +505,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     return IL2ForwarderFactory__factory.connect(
       this.teleporterAddresses.l1Teleporter,
       l1Provider
-    ).l2ForwarderAddress(l2ForwarderParams.owner, l2ForwarderParams.routerOrInbox, l2ForwarderParams.to)
+    ).l2ForwarderAddress(owner, routerOrInbox, to)
   }
+
 
   public async getApproveTokenRequest(
     params: TokenApproveParams
@@ -650,18 +654,6 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
-  //todo move
-  protected _decodeTeleportCalldata(
-    data: string
-  ): IL1Teleporter.TeleportParamsStruct {
-    const iface = IL1Teleporter__factory.createInterface()
-    const decoded = iface.parseTransaction({ data })
-    if (decoded.functionFragment.name !== 'teleport') {
-      throw new ArbSdkError(`not a teleport tx`)
-    }
-    return decoded.args[0]
-  }
-
   public async getDepositMessages(
     params: Erc20DepositMessagesParams
   ): Promise<Erc20DepositMessages> {
@@ -755,7 +747,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       params.from,
       params.to,
       params.amount,
-      '0x' // todo: might need this for custom fee tokens
+      '0x'
     )
 
     const estimates = await new L1ToL2MessageGasEstimator(
@@ -847,7 +839,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     )
 
     return {
-      gasLimit: BigNumber.from(1_000_000), // todo: move this constant somewhere else
+      gasLimit: this.l2ForwarderFactoryDefaultGasLimit,
       maxSubmissionFee,
     }
   }
@@ -875,8 +867,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
           to: params.partialTeleportParams.to,
           data: '0x',
           from: params.l2ForwarderAddress,
-          // l2CallValue will be amount less the fees in reality, todo could call this twice to make sure it's the same with both amounts
-          // probably overkill
+          // l2CallValue will be amount less the fees in reality
           l2CallValue: BigNumber.from(params.partialTeleportParams.amount),
           excessFeeRefundAddress: params.partialTeleportParams.to,
           callValueRefundAddress: params.partialTeleportParams.to,
@@ -1102,6 +1093,17 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     if (!ft)
       throw new Error(`L3 network ${this.l3Network.name} uses ETH for fees`)
     return ft
+  }
+
+  protected _decodeTeleportCalldata(
+    data: string
+  ): IL1Teleporter.TeleportParamsStruct {
+    const iface = IL1Teleporter__factory.createInterface()
+    const decoded = iface.parseTransaction({ data })
+    if (decoded.functionFragment.name !== 'teleport') {
+      throw new ArbSdkError(`not a teleport tx`)
+    }
+    return decoded.args[0]
   }
 }
 
