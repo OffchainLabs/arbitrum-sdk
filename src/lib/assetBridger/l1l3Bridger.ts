@@ -502,7 +502,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     return IL2ForwarderFactory__factory.connect(
       this.teleporterAddresses.l1Teleporter,
       l1Provider
-    ).l2ForwarderAddress(l2ForwarderParams)
+    ).l2ForwarderAddress(l2ForwarderParams.owner, l2ForwarderParams.routerOrInbox, l2ForwarderParams.to)
   }
 
   public async getApproveTokenRequest(
@@ -595,7 +595,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       'gasParams'
     > = {
       l1Token: params.erc20L1Address,
-      l1FeeToken: l1FeeToken || ethers.constants.AddressZero,
+      l3FeeTokenL1Addr: l1FeeToken || ethers.constants.AddressZero,
       l1l2Router: this.l2Network.tokenBridge.l1GatewayRouter,
       l2l3RouterOrInbox:
         l1FeeToken &&
@@ -718,14 +718,14 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   public teleportationType(
     partialTeleportParams: Pick<
       IL1Teleporter.TeleportParamsStruct,
-      'l1FeeToken' | 'l1Token'
+      'l3FeeTokenL1Addr' | 'l1Token'
     >
   ) {
-    if (partialTeleportParams.l1FeeToken === ethers.constants.AddressZero) {
+    if (partialTeleportParams.l3FeeTokenL1Addr === ethers.constants.AddressZero) {
       return TeleportationType.Standard
     } else if (
       getAddress(partialTeleportParams.l1Token) ===
-      getAddress(partialTeleportParams.l1FeeToken)
+      getAddress(partialTeleportParams.l3FeeTokenL1Addr)
     ) {
       return TeleportationType.OnlyFeeToken
     } else {
@@ -1087,6 +1087,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       to: ethers.constants.AddressZero,
       gasLimit: 0,
       gasPriceBid: 0,
+      maxSubmissionCost: 0
     }
     const dummyCalldata =
       IL2ForwarderFactory__factory.createInterface().encodeFunctionData(

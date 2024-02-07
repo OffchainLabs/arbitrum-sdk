@@ -59,7 +59,7 @@ async function deployTeleportContracts(l1Signer: Signer, l2Signer: Signer) {
 
   const l2ContractsDeployer = await new L2ForwarderContractsDeployer__factory(
     l2Signer
-  ).deploy(new Address(predL1Teleporter).applyAlias().value)
+  ).deploy(new Address(predL1Teleporter).applyAlias().value, await l1Signer.getChainId())
   await l2ContractsDeployer.deployed()
 
   const l1Teleporter = await new L1Teleporter__factory(l1Signer).deploy(
