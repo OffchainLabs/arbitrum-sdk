@@ -173,10 +173,6 @@ jobs:
           yarn gen:abi
           yarn build
 
-      # todo: remove this
-      - name: Clone latest teleporter contracts and link
-        run: git clone https://github.com/OffchainLabs/l1-l3-teleport-contracts && cd l1-l3-teleport-contracts && yarn link
-
       - name: Generate network file
         run: yarn gen:network
 
