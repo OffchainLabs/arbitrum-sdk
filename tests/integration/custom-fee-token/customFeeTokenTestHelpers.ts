@@ -56,7 +56,7 @@ export async function fundL1CustomFeeToken(l1SignerOrAddress: Signer | string) {
 export async function approveL1CustomFeeToken(l1Signer: Signer) {
   const ethBridger = await EthBridger.fromProvider(arbProvider())
 
-  const tx = await ethBridger.approveFeeToken({ l1Signer })
+  const tx = await ethBridger.approveGasToken({ l1Signer })
   await tx.wait()
 }
 
@@ -75,7 +75,7 @@ export async function approveL1CustomFeeTokenForErc20Deposit(
 ) {
   const erc20Bridger = await Erc20Bridger.fromProvider(arbProvider())
 
-  const tx = await erc20Bridger.approveFeeToken({ erc20L1Address, l1Signer })
+  const tx = await erc20Bridger.approveGasToken({ erc20L1Address, l1Signer })
   await tx.wait()
 }
 

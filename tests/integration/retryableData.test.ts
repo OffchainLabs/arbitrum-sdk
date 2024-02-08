@@ -165,7 +165,7 @@ describe('RevertData', () => {
     if (isL2NetworkWithCustomFeeToken()) {
       // approve the custom fee token
       await (
-        await erc20Bridger.approveFeeToken({
+        await erc20Bridger.approveGasToken({
           erc20L1Address: l1TokenAddress,
           l1Signer: l1Signer,
         })

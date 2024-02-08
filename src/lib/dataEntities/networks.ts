@@ -35,7 +35,7 @@ export interface Network {
    */
   blockTime: number
   /**
-   * Chain ids of children chains.
+   * Chain ids of children chains, i.e. chains that settle to this chain.
    */
   partnerChainIDs: number[]
 }
@@ -55,7 +55,7 @@ export interface L2Network extends Network {
   ethBridge: EthBridge
   teleporterAddresses?: TeleporterAddresses
   /**
-   * Chain id of the parent chain.
+   * Chain id of the parent chain, i.e. the chain on which this chain settles to.
    */
   partnerChainID: number
   isArbitrum: true
@@ -68,8 +68,9 @@ export interface L2Network extends Network {
    */
   depositTimeout: number
   /**
-   * In case of a chain that uses ETH as its native/fee token, this is either undefined or the zero address.
-   * In case of a chain that uses an ERC-20 token from the parent chain as its native/fee token, this is the address of said token on the parent chain.
+   * In case of a chain that uses ETH as its native/gas token, this is either `undefined` or the zero address
+   *
+   * In case of a chain that uses an ERC-20 token from the parent chain as its native/gas token, this is the address of said token on the parent chain
    */
   nativeToken?: string
 }
@@ -79,34 +80,27 @@ export interface TeleporterAddresses {
   l2ForwarderFactory: string
 }
 
-type BaseTokenBridge = {
+export interface TeleporterAddresses {
+  l1Teleporter: string
+  l2ForwarderFactory: string
+}
+
+export interface TokenBridge {
   l1GatewayRouter: string
   l2GatewayRouter: string
   l1ERC20Gateway: string
   l2ERC20Gateway: string
   l1CustomGateway: string
   l2CustomGateway: string
+  l1WethGateway: string
+  l2WethGateway: string
+  l2Weth: string
+  l1Weth: string
   l1ProxyAdmin: string
   l2ProxyAdmin: string
   l1MultiCall: string
   l2Multicall: string
 }
-
-export type TokenBridge = BaseTokenBridge &
-  (
-    | {
-        l1WethGateway: string
-        l2WethGateway: string
-        l2Weth: string
-        l1Weth: string
-      }
-    | {
-        l1WethGateway?: never
-        l2WethGateway?: never
-        l2Weth?: never
-        l1Weth?: never
-      }
-  )
 
 export interface EthBridge {
   bridge: string
@@ -205,6 +199,7 @@ export const networks: Networks = {
     name: 'Arbitrum One',
     explorerUrl: 'https://arbiscan.io',
     partnerChainID: 1,
+    partnerChainIDs: [],
     isArbitrum: true,
     tokenBridge: mainnetTokenBridge,
     ethBridge: mainnetETHBridge,
@@ -220,7 +215,6 @@ export const networks: Networks = {
      */
     depositTimeout: 1800000,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
-    partnerChainIDs: [],
   },
   421613: {
     chainID: 421613,
@@ -238,6 +232,7 @@ export const networks: Networks = {
     isCustom: false,
     name: 'Arbitrum Rollup Goerli Testnet',
     partnerChainID: 5,
+    partnerChainIDs: [],
     tokenBridge: {
       l1CustomGateway: '0x9fDD1C4E4AA24EEc1d913FABea925594a20d43C7',
       l1ERC20Gateway: '0x715D99480b77A8d9D603638e593a539E21345FdF',
@@ -262,7 +257,6 @@ export const networks: Networks = {
      */
     depositTimeout: 3960000,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
-    partnerChainIDs: [],
   },
   42170: {
     chainID: 42170,
@@ -279,6 +273,7 @@ export const networks: Networks = {
     isCustom: false,
     name: 'Arbitrum Nova',
     partnerChainID: 1,
+    partnerChainIDs: [],
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     tokenBridge: {
       l1CustomGateway: '0x23122da8C581AA7E0d07A36Ff1f16F799650232f',
@@ -305,7 +300,6 @@ export const networks: Networks = {
      */
     depositTimeout: 1800000,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
-    partnerChainIDs: [],
   },
   421614: {
     chainID: 421614,
@@ -360,6 +354,7 @@ export const networks: Networks = {
     isCustom: false,
     name: 'Stylus Testnet',
     partnerChainID: 421614,
+    partnerChainIDs: [],
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     tokenBridge: {
       l1CustomGateway: '0xd624D491A5Bc32de52a2e1481846752213bF7415',
@@ -381,7 +376,6 @@ export const networks: Networks = {
     nitroGenesisL1Block: 0,
     depositTimeout: 900000,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
-    partnerChainIDs: [],
   },
 }
 
@@ -431,7 +425,6 @@ const getChainsByType = <T extends typeof networks>(
 
 const getL1Chains = () => getChainsByType<L1Networks>(isL1Network)
 const getArbitrumChains = () => getChainsByType<L2Networks>(isArbitrumNetwork)
-const getParentChains = () => getChainsByType<Networks>(isParentChain)
 
 /**
  * Returns the parent chain for the given chain.
@@ -497,7 +490,7 @@ export const getNetwork = async (
   let network: L1Network | L2Network | undefined = undefined
 
   if (layer === 1) {
-    network = getParentChains()[chainID]
+    network = getL1Chains()[chainID]
   } else {
     network = getArbitrumChains()[chainID]
   }
@@ -534,7 +527,7 @@ export const getL2Network = (
 /**
  * Returns the addresses of all contracts that make up the ETH bridge
  * @param rollupContractAddress Address of the Rollup contract
- * @param l1SignerOrProvider An L1 signer or provider
+ * @param l1SignerOrProvider A parent chain signer or provider
  * @returns EthBridge object with all information about the ETH bridge
  */
 export const getEthBridgeInformation = async (
@@ -597,24 +590,25 @@ const addNetwork = (network: L1Network | L2Network) => {
 }
 
 /**
- * Registers a pair of custom chains (parent and child). These networks will be returned in `getL1Network` and `getL2Network`, respectively.
+ * Registers a pair of custom L1 and L2 chains, or a single custom Arbitrum chain (L2 or L3).
  *
- * @param customL1Network the parent chain **(could be an L1 or L2 chain)**
- * @param customL2Network the child chain **(must be an Arbitrum chain)**
+ * @param customL1Network the custom L1 chain (optional)
+ * @param customL2Network the custom L2 or L3 chain
  */
 export const addCustomNetwork = ({
   customL1Network,
   customL2Network,
-}:
-  | {
-      customL1Network?: L1Network
-      customL2Network: L2Network
-    }
-  | {
-      customL1Network?: L2Network
-      customL2Network: L2Network
-    }): void => {
+}: {
+  customL1Network?: L1Network
+  customL2Network: L2Network
+}): void => {
   if (customL1Network) {
+    if (customL1Network.chainID !== customL2Network.partnerChainID) {
+      throw new ArbSdkError(
+        `Partner chain id for L2 network ${customL2Network.chainID} doesn't match the provided L1 network. Expected ${customL1Network.chainID} but got ${customL2Network.partnerChainID}.`
+      )
+    }
+
     // check the if the parent chain is in any of the lists
     if (l1Networks[customL1Network.chainID]) {
       throw new ArbSdkError(
@@ -674,6 +668,7 @@ export const addDefaultLocalNetwork = (): {
     isCustom: true,
     name: 'ArbLocal',
     partnerChainID: 1337,
+    partnerChainIDs: [],
     retryableLifetimeSeconds: 604800,
     nitroGenesisBlock: 0,
     nitroGenesisL1Block: 0,
@@ -695,7 +690,6 @@ export const addDefaultLocalNetwork = (): {
       l2WethGateway: '0x4A2bA922052bA54e29c5417bC979Daaf7D5Fe4f4',
     },
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
-    partnerChainIDs: [],
   }
 
   addCustomNetwork({

@@ -259,7 +259,7 @@ export const depositToken = async (
 
   if (isL2NetworkWithCustomFeeToken()) {
     await (
-      await erc20Bridger.approveFeeToken({
+      await erc20Bridger.approveGasToken({
         l1Signer,
         erc20L1Address: l1TokenAddress,
       })

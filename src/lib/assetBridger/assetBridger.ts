@@ -16,6 +16,8 @@
 /* eslint-env node */
 'use strict'
 
+import { constants } from 'ethers'
+
 import { L1ContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'
 
@@ -30,20 +32,28 @@ import {
 } from '../dataEntities/signerOrProvider'
 
 /**
- * Base for bridging assets from a parent chain to a child chain and back.
+ * Base for bridging assets from l1 to l2 and back
  */
 export abstract class AssetBridger<DepositParams, WithdrawParams> {
   /**
-   * The parent chain. Could be an L1 or an L2.
+   * Parent chain for the given Arbitrum chain, can be an L1 or an L2
    */
   public readonly l1Network: L1Network | L2Network
 
+  /**
+   * In case of a chain that uses ETH as its native/gas token, this is either `undefined` or the zero address
+   *
+   * In case of a chain that uses an ERC-20 token from the parent chain as its native/gas token, this is the address of said token on the parent chain
+   */
+  public readonly nativeToken?: string
+
   public constructor(public readonly l2Network: L2Network) {
     this.l1Network = getParentForNetwork(l2Network)
+    this.nativeToken = l2Network.nativeToken
   }
 
   /**
-   * Check the signer/provider matches the parent chain, throws if not.
+   * Check the signer/provider matches the l1Network, throws if not
    * @param sop
    */
   protected async checkL1Network(sop: SignerOrProvider): Promise<void> {
@@ -51,7 +61,7 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   }
 
   /**
-   * Check the signer/provider matches the child chain, throws if not.
+   * Check the signer/provider matches the l2Network, throws if not
    * @param sop
    */
   protected async checkL2Network(sop: SignerOrProvider): Promise<void> {
@@ -59,13 +69,21 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   }
 
   /**
-   * Transfer assets from parent chain to child chain.
+   * Whether the chain uses ETH as its native/gas token
+   * @returns {boolean}
+   */
+  protected get nativeTokenIsEth() {
+    return !this.nativeToken || this.nativeToken === constants.AddressZero
+  }
+
+  /**
+   * Transfer assets from L1 to L2
    * @param params
    */
   public abstract deposit(params: DepositParams): Promise<L1ContractTransaction>
 
   /**
-   * Transfer assets from child chain to parent chain.
+   * Transfer assets from L2 to L1
    * @param params
    */
   public abstract withdraw(

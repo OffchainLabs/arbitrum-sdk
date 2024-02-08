@@ -30,31 +30,14 @@ async function main() {
   // https://yarnpkg.com/advanced/rulebook#packages-should-never-write-inside-their-own-folder-outside-of-postinstall
   // instead of writing in postinstall in each of those packages, we should target a local folder in sdk's postinstall
 
-  // copy the hardhat config to nitro-contracts
-  execSync(
-    `cp ${cwd}/hardhat.nitro-contracts-abigen.ts ${nitroPath}/hardhat-abigen.ts`
-  )
-  // copy the hardhat config to token-bridge-contracts
-  execSync(
-    `cp ${cwd}/hardhat.token-bridge-contracts-abigen.ts ${tokenBridgePath}/hardhat-abigen.ts`
-  )
-  // copy the hardhat config to teleporter-contracts
-  execSync(
-    `cp ${cwd}/hardhat.teleporter-contracts-abigen.js ${teleporterPath}/hardhat-abigen.js`
-  )
-
   console.log('building @arbitrum/nitro-contracts')
-  execSync(`${npmExec} run build --config hardhat-abigen.ts`, {
-    cwd: nitroPath,
-  })
+  execSync(`${npmExec} run build`, { cwd: nitroPath })
 
   console.log('building @arbitrum/token-bridge-contracts')
-  execSync(`${npmExec} run build --config hardhat-abigen.ts`, {
-    cwd: tokenBridgePath,
-  })
+  execSync(`${npmExec} run build`, { cwd: tokenBridgePath })
 
   console.log('building @offchainlabs/l1-l3-teleport-contracts')
-  execSync(`${npmExec} run build --config hardhat-abigen.js`, {
+  execSync(`${npmExec} run build`, {
     cwd: teleporterPath,
   })
 

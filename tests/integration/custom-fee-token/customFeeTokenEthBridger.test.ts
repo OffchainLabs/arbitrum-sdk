@@ -53,7 +53,7 @@ if (isL2NetworkWithCustomFeeToken()) {
       await fundL1Ether(l1Signer)
       await fundL1CustomFeeToken(l1Signer)
 
-      const approvalTx = await ethBridger.approveFeeToken({
+      const approvalTx = await ethBridger.approveGasToken({
         amount,
         l1Signer,
       })
@@ -76,8 +76,8 @@ if (isL2NetworkWithCustomFeeToken()) {
       await fundL1Ether(l1Signer)
       await fundL1CustomFeeToken(l1Signer)
 
-      const approvalTx = await ethBridger.approveFeeToken({
-        txRequest: await ethBridger.getApproveFeeTokenRequest(),
+      const approvalTx = await ethBridger.approveGasToken({
+        txRequest: await ethBridger.getApproveGasTokenRequest(),
         l1Signer,
       })
       await approvalTx.wait()

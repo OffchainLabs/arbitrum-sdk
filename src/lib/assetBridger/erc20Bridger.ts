@@ -176,26 +176,10 @@ export class Erc20Bridger extends AssetBridger<
   public static MIN_CUSTOM_DEPOSIT_GAS_LIMIT = BigNumber.from(275000)
 
   /**
-   * In case of a chain that uses ETH as its native/fee token, this is either undefined or the zero address.
-   * In case of a chain that uses an ERC-20 token from the parent chain as its native/fee token, this is the address of said token on the parent chain.
-   */
-  public readonly nativeToken?: string
-
-  /**
    * Bridger for moving ERC20 tokens back and forth between L1 to L2
    */
   public constructor(l2Network: L2Network) {
     super(l2Network)
-
-    this.nativeToken = l2Network.nativeToken
-  }
-
-  /**
-   * Whether the chain uses ETH as its native/fee token.
-   * @returns
-   */
-  private get isNativeTokenEth() {
-    return !this.nativeToken || this.nativeToken === constants.AddressZero
   }
 
   /**
@@ -244,14 +228,14 @@ export class Erc20Bridger extends AssetBridger<
   }
 
   /**
-   * Creates a transaction request for approving the custom fee token to be spent by the relevant Gateway on the parent chain.
+   * Creates a transaction request for approving the custom gas token to be spent by the relevant gateway on the parent chain
    * @param params
    */
-  public async getApproveFeeTokenRequest(
+  public async getApproveGasTokenRequest(
     params: ProviderTokenApproveParams
   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
-    if (this.isNativeTokenEth) {
-      throw new Error('chain uses ETH as its native/fee token')
+    if (this.nativeTokenIsEth) {
+      throw new Error('chain uses ETH as its native/gas token')
     }
 
     const txRequest = await this.getApproveTokenRequest(params)
@@ -260,26 +244,27 @@ export class Erc20Bridger extends AssetBridger<
   }
 
   /**
-   * Approves the custom fee token to be spent by the relevant Gateway on the parent chain.
+   * Approves the custom gas token to be spent by the relevant gateway on the parent chain
    * @param params
    */
-  public async approveFeeToken(
+  public async approveGasToken(
     params: ApproveParamsOrTxRequest
   ): Promise<ethers.ContractTransaction> {
-    if (this.isNativeTokenEth) {
-      throw new Error('chain uses ETH as its native/fee token')
+    if (this.nativeTokenIsEth) {
+      throw new Error('chain uses ETH as its native/gas token')
     }
 
     await this.checkL1Network(params.l1Signer)
 
-    const approveRequest = this.isApproveParams(params)
-      ? await this.getApproveFeeTokenRequest({
+    const approveGasTokenRequest = this.isApproveParams(params)
+      ? await this.getApproveGasTokenRequest({
           ...params,
           l1Provider: SignerProviderUtils.getProviderOrThrow(params.l1Signer),
         })
       : params.txRequest
-    return await params.l1Signer.sendTransaction({
-      ...approveRequest,
+
+    return params.l1Signer.sendTransaction({
+      ...approveGasTokenRequest,
       ...params.overrides,
     })
   }
@@ -569,9 +554,9 @@ export class Erc20Bridger extends AssetBridger<
   private getDepositRequestCallValue(
     depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
   ) {
-    // the call value should be zero when paying with a custom fee token,
+    // the call value should be zero when paying with a custom gas token,
     // as the fee amount is packed inside the last parameter (`data`) of the call to `outboundTransfer`
-    if (!this.isNativeTokenEth) {
+    if (!this.nativeTokenIsEth) {
       return constants.Zero
     }
 
@@ -588,7 +573,7 @@ export class Erc20Bridger extends AssetBridger<
   private getDepositRequestOutboundTransferDataParam(
     depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
   ) {
-    if (!this.isNativeTokenEth) {
+    if (!this.nativeTokenIsEth) {
       return defaultAbiCoder.encode(
         ['uint256', 'bytes', 'uint256'],
         [
@@ -770,22 +755,22 @@ export class Erc20Bridger extends AssetBridger<
       // in the future we want to do proper estimation here
       /* eslint-disable @typescript-eslint/no-unused-vars */
       estimateL1GasLimit: async (l1Provider: Provider) => {
-        if (this.isNativeTokenEth) {
-          const l1GatewayAddress = await this.getL1GatewayAddress(
-            params.erc20l1Address,
-            l1Provider
-          )
-
-          // The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
-          // Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
-          const isWeth = await this.isWethGateway(l1GatewayAddress, l1Provider)
-
-          // measured 157421 - add some padding
-          return isWeth ? BigNumber.from(190000) : BigNumber.from(160000)
-        } else {
+        if (!this.nativeTokenIsEth) {
           // measured 172867 - add some padding
           return BigNumber.from(200000)
         }
+
+        const l1GatewayAddress = await this.getL1GatewayAddress(
+          params.erc20l1Address,
+          l1Provider
+        )
+
+        // The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
+        // Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
+        const isWeth = await this.isWethGateway(l1GatewayAddress, l1Provider)
+
+        // measured 157421 - add some padding
+        return isWeth ? BigNumber.from(190000) : BigNumber.from(160000)
       },
     }
   }
