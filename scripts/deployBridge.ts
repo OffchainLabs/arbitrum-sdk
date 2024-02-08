@@ -36,7 +36,7 @@ const deployBehindProxy = async <
   await proxy.deployed()
   console.log(factory['contractName'], proxy.address)
 
-  return instance.attach(proxy.address)
+  return instance.attach(proxy.address) as ReturnType<T['deploy']>
 }
 
 export const deployErc20L1 = async (deployer: Signer) => {
@@ -80,7 +80,7 @@ export const deployErc20L1 = async (deployer: Signer) => {
 
   const multicall = await new Multicall2__factory().connect(deployer).deploy()
   await multicall.deployed()
-  console.log('multicall', weth.address)
+  console.log('multicall', multicall.address)
 
   return {
     proxyAdmin,
@@ -179,8 +179,10 @@ export const deployErc20AndInit = async (
   const l2 = await deployErc20L2(l2Signer)
 
   console.log('initialising L2')
-  await l2.router.initialize(l1.router.address, l2.standardGateway.address)
-  await l2.beaconProxyFactory.initialize(l2.beacon.address)
+  await (
+    await l2.router.initialize(l1.router.address, l2.standardGateway.address)
+  ).wait()
+  await (await l2.beaconProxyFactory.initialize(l2.beacon.address)).wait()
   await (
     await l2.standardGateway.initialize(
       l1.standardGateway.address,

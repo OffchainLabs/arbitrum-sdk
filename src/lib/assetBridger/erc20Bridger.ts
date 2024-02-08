@@ -176,7 +176,7 @@ export class Erc20Bridger extends AssetBridger<
   Erc20DepositParams | L1ToL2TxReqAndSignerProvider,
   OmitTyped<Erc20WithdrawParams, 'from'> | L2ToL1TransactionRequest
 > {
-  public static MAX_APPROVAL = MaxUint256
+  public static MAX_APPROVAL: BigNumber = MaxUint256
   public static MIN_CUSTOM_DEPOSIT_GAS_LIMIT = BigNumber.from(275000)
 
   /**
@@ -301,7 +301,8 @@ export class Erc20Bridger extends AssetBridger<
     gatewayAddress: string,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     l1TokenAddress?: string,
-    fromAddress?: string
+    fromAddress?: string,
+    toAddress?: string
   ): Promise<(EventArgs<WithdrawalInitiatedEvent> & { txHash: string })[]> {
     await this.checkL2Network(l2Provider)
 
@@ -310,7 +311,11 @@ export class Erc20Bridger extends AssetBridger<
       await eventFetcher.getEvents(
         L2ArbitrumGateway__factory,
         contract =>
-          contract.filters.WithdrawalInitiated(null, fromAddress || null),
+          contract.filters.WithdrawalInitiated(
+            null, // l1Token
+            fromAddress || null, // _from
+            toAddress || null // _to
+          ),
         { ...filter, address: gatewayAddress }
       )
     ).map(a => ({ txHash: a.transactionHash, ...a.event }))

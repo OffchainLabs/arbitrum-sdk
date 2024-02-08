@@ -32,13 +32,14 @@ import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { L2ToL1TxEvent } from '../abi/ArbSys'
 import { ContractTransaction, Overrides } from 'ethers'
+import { Mutex } from 'async-mutex'
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
-import { wait } from '../utils/lib'
+import { getBlockRangesForL1Block, isArbitrumChain, wait } from '../utils/lib'
 import { getL2Network } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
 import { ArbitrumProvider } from '../utils/arbProvider'
@@ -61,22 +62,89 @@ const ASSERTION_CREATED_PADDING = 50
 // expected number of L1 blocks that it takes for a validator to confirm an L1 block after the node deadline is passed
 const ASSERTION_CONFIRMED_PADDING = 20
 
+const l2BlockRangeCache: { [key in string]: (number | undefined)[] } = {}
+const mutex = new Mutex()
+
+function getL2BlockRangeCacheKey({
+  l2ChainId,
+  l1BlockNumber,
+}: {
+  l2ChainId: number
+  l1BlockNumber: number
+}) {
+  return `${l2ChainId}-${l1BlockNumber}`
+}
+
+function setL2BlockRangeCache(key: string, value: (number | undefined)[]) {
+  l2BlockRangeCache[key] = value
+}
+
+async function getBlockRangesForL1BlockWithCache({
+  l1Provider,
+  l2Provider,
+  forL1Block,
+}: {
+  l1Provider: JsonRpcProvider
+  l2Provider: JsonRpcProvider
+  forL1Block: number
+}) {
+  const l2ChainId = (await l2Provider.getNetwork()).chainId
+  const key = getL2BlockRangeCacheKey({
+    l2ChainId,
+    l1BlockNumber: forL1Block,
+  })
+
+  if (l2BlockRangeCache[key]) {
+    return l2BlockRangeCache[key]
+  }
+
+  // implements a lock that only fetches cache once
+  const release = await mutex.acquire()
+
+  // if cache has been acquired while awaiting the lock
+  if (l2BlockRangeCache[key]) {
+    release()
+    return l2BlockRangeCache[key]
+  }
+
+  try {
+    const l2BlockRange = await getBlockRangesForL1Block({
+      forL1Block,
+      provider: l1Provider,
+    })
+    setL2BlockRangeCache(key, l2BlockRange)
+  } finally {
+    release()
+  }
+
+  return l2BlockRangeCache[key]
+}
+
 /**
  * Base functionality for nitro L2->L1 messages
  */
 export class L2ToL1MessageNitro {
   protected constructor(public readonly event: EventArgs<L2ToL1TxEvent>) {}
 
+  /**
+   * Instantiates a new `L2ToL1MessageWriterNitro` or `L2ToL1MessageReaderNitro` object.
+   *
+   * @param {SignerOrProvider} l1SignerOrProvider Signer or provider to be used for executing or reading the L2-to-L1 message.
+   * @param {EventArgs<L2ToL1TxEvent>} event The event containing the data of the L2-to-L1 message.
+   * @param {Provider} [l1Provider] Optional. Used to override the Provider which is attached to `l1SignerOrProvider` in case you need more control. This will be a required parameter in a future major version update.
+   */
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event: EventArgs<L2ToL1TxEvent>
+    event: EventArgs<L2ToL1TxEvent>,
+    l1Provider?: Provider
   ): L2ToL1MessageReaderOrWriterNitro<T>
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event: EventArgs<L2ToL1TxEvent>
+    event: EventArgs<L2ToL1TxEvent>,
+    l1Provider?: Provider
   ): L2ToL1MessageReaderNitro | L2ToL1MessageWriterNitro {
     return SignerProviderUtils.isSigner(l1SignerOrProvider)
-      ? new L2ToL1MessageWriterNitro(l1SignerOrProvider, event)
+      ? new L2ToL1MessageWriterNitro(l1SignerOrProvider, event, l1Provider)
       : new L2ToL1MessageReaderNitro(l1SignerOrProvider, event)
   }
 
@@ -170,10 +238,16 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
 
   private async getBlockFromNodeLog(
     l2Provider: JsonRpcProvider,
-    log: FetchedEvent<NodeCreatedEvent>
+    log: FetchedEvent<NodeCreatedEvent> | undefined
   ) {
-    const parsedLog = this.parseNodeCreatedAssertion(log)
     const arbitrumProvider = new ArbitrumProvider(l2Provider)
+
+    if (!log) {
+      console.warn('No NodeCreated events found, defaulting to block 0')
+      return arbitrumProvider.getBlock(0)
+    }
+
+    const parsedLog = this.parseNodeCreatedAssertion(log)
     const l2Block = await arbitrumProvider.getBlock(
       parsedLog.afterState.blockHash
     )
@@ -195,7 +269,47 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     nodeNum: BigNumber,
     l2Provider: Provider
   ): Promise<ArbBlock> {
-    const node = await rollup.getNode(nodeNum)
+    const { createdAtBlock } = await rollup.getNode(nodeNum)
+
+    let createdFromBlock = createdAtBlock
+    let createdToBlock = createdAtBlock
+
+    // If L1 is Arbitrum, then L2 is an Orbit chain.
+    if (await isArbitrumChain(this.l1Provider)) {
+      try {
+        const nodeInterface = NodeInterface__factory.connect(
+          NODE_INTERFACE_ADDRESS,
+          this.l1Provider
+        )
+
+        const l2BlockRangeFromNode = await nodeInterface.l2BlockRangeForL1(
+          createdAtBlock
+        )
+
+        createdFromBlock = l2BlockRangeFromNode.firstBlock
+        createdToBlock = l2BlockRangeFromNode.lastBlock
+      } catch {
+        // defaults to binary search
+        try {
+          const l2BlockRange = await getBlockRangesForL1BlockWithCache({
+            l1Provider: this.l1Provider as JsonRpcProvider,
+            l2Provider: l2Provider as JsonRpcProvider,
+            forL1Block: createdAtBlock.toNumber(),
+          })
+          const startBlock = l2BlockRange[0]
+          const endBlock = l2BlockRange[1]
+          if (!startBlock || !endBlock) {
+            throw new Error()
+          }
+          createdFromBlock = BigNumber.from(startBlock)
+          createdToBlock = BigNumber.from(endBlock)
+        } catch {
+          // fallback to the original method
+          createdFromBlock = createdAtBlock
+          createdToBlock = createdAtBlock
+        }
+      }
+    }
 
     // now get the block hash and sendroot for that node
     const eventFetcher = new EventFetcher(rollup.provider)
@@ -203,13 +317,17 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
       RollupUserLogic__factory,
       t => t.filters.NodeCreated(nodeNum),
       {
-        fromBlock: node.createdAtBlock.toNumber(),
-        toBlock: node.createdAtBlock.toNumber(),
+        fromBlock: createdFromBlock.toNumber(),
+        toBlock: createdToBlock.toNumber(),
         address: rollup.address,
       }
     )
 
-    if (logs.length !== 1) throw new ArbSdkError('No NodeCreated events found')
+    if (logs.length > 1)
+      throw new ArbSdkError(
+        `Unexpected number of NodeCreated events. Expected 0 or 1, got ${logs.length}.`
+      )
+
     return await this.getBlockFromNodeLog(
       l2Provider as JsonRpcProvider,
       logs[0]
@@ -289,21 +407,21 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
    * WARNING: Outbox entries are only created when the corresponding node is confirmed. Which
    * can take 1 week+, so waiting here could be a very long operation.
    * @param retryDelay
-   * @returns
+   * @returns outbox entry status (either executed or confirmed but not pending)
    */
   public async waitUntilReadyToExecute(
     l2Provider: Provider,
     retryDelay = 500
-  ): Promise<void> {
+  ): Promise<L2ToL1MessageStatus.EXECUTED | L2ToL1MessageStatus.CONFIRMED> {
     const status = await this.status(l2Provider)
     if (
       status === L2ToL1MessageStatus.CONFIRMED ||
       status === L2ToL1MessageStatus.EXECUTED
     ) {
-      return
+      return status
     } else {
       await wait(retryDelay)
-      await this.waitUntilReadyToExecute(l2Provider, retryDelay)
+      return await this.waitUntilReadyToExecute(l2Provider, retryDelay)
     }
   }
 
@@ -401,11 +519,19 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
  * Provides read and write access for nitro l2-to-l1-messages
  */
 export class L2ToL1MessageWriterNitro extends L2ToL1MessageReaderNitro {
+  /**
+   * Instantiates a new `L2ToL1MessageWriterNitro` object.
+   *
+   * @param {Signer} l1Signer The signer to be used for executing the L2-to-L1 message.
+   * @param {EventArgs<L2ToL1TxEvent>} event The event containing the data of the L2-to-L1 message.
+   * @param {Provider} [l1Provider] Optional. Used to override the Provider which is attached to `l1Signer` in case you need more control. This will be a required parameter in a future major version update.
+   */
   constructor(
     private readonly l1Signer: Signer,
-    event: EventArgs<L2ToL1TxEvent>
+    event: EventArgs<L2ToL1TxEvent>,
+    l1Provider?: Provider
   ) {
-    super(l1Signer.provider!, event)
+    super(l1Provider ?? l1Signer.provider!, event)
   }
 
   /**

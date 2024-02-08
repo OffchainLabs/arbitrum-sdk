@@ -63,16 +63,25 @@ export class L2ToL1Message {
     )
   }
 
+  /**
+   * Instantiates a new `L2ToL1MessageWriter` or `L2ToL1MessageReader` object.
+   *
+   * @param {SignerOrProvider} l1SignerOrProvider Signer or provider to be used for executing or reading the L2-to-L1 message.
+   * @param {L2ToL1TransactionEvent} event The event containing the data of the L2-to-L1 message.
+   * @param {Provider} [l1Provider] Optional. Used to override the Provider which is attached to `l1SignerOrProvider` in case you need more control. This will be a required parameter in a future major version update.
+   */
   public static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event: L2ToL1TransactionEvent
+    event: L2ToL1TransactionEvent,
+    l1Provider?: Provider
   ): L2ToL1MessageReaderOrWriter<T>
   static fromEvent<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    event: L2ToL1TransactionEvent
+    event: L2ToL1TransactionEvent,
+    l1Provider?: Provider
   ): L2ToL1MessageReader | L2ToL1MessageWriter {
     return SignerProviderUtils.isSigner(l1SignerOrProvider)
-      ? new L2ToL1MessageWriter(l1SignerOrProvider, event)
+      ? new L2ToL1MessageWriter(l1SignerOrProvider, event, l1Provider)
       : new L2ToL1MessageReader(l1SignerOrProvider, event)
   }
 
@@ -225,12 +234,12 @@ export class L2ToL1MessageReader extends L2ToL1Message {
    * WARNING: Outbox entries are only created when the corresponding node is confirmed. Which
    * can take 1 week+, so waiting here could be a very long operation.
    * @param retryDelay
-   * @returns
+   * @returns outbox entry status (either executed or confirmed but not pending)
    */
   public async waitUntilReadyToExecute(
     l2Provider: Provider,
     retryDelay = 500
-  ): Promise<void> {
+  ): Promise<L2ToL1MessageStatus.EXECUTED | L2ToL1MessageStatus.CONFIRMED> {
     if (this.nitroReader)
       return this.nitroReader.waitUntilReadyToExecute(l2Provider, retryDelay)
     else
@@ -262,17 +271,33 @@ export class L2ToL1MessageWriter extends L2ToL1MessageReader {
   private readonly classicWriter?: classic.L2ToL1MessageWriterClassic
   private readonly nitroWriter?: nitro.L2ToL1MessageWriterNitro
 
-  constructor(l1Signer: Signer, event: L2ToL1TransactionEvent) {
-    super(l1Signer.provider!, event)
+  /**
+   * Instantiates a new `L2ToL1MessageWriter` object.
+   *
+   * @param {Signer} l1Signer The signer to be used for executing the L2-to-L1 message.
+   * @param {L2ToL1TransactionEvent} event The event containing the data of the L2-to-L1 message.
+   * @param {Provider} [l1Provider] Optional. Used to override the Provider which is attached to `l1Signer` in case you need more control. This will be a required parameter in a future major version update.
+   */
+  constructor(
+    l1Signer: Signer,
+    event: L2ToL1TransactionEvent,
+    l1Provider?: Provider
+  ) {
+    super(l1Provider ?? l1Signer.provider!, event)
 
     if (this.isClassic(event)) {
       this.classicWriter = new classic.L2ToL1MessageWriterClassic(
         l1Signer,
         event.batchNumber,
-        event.indexInBatch
+        event.indexInBatch,
+        l1Provider
       )
     } else {
-      this.nitroWriter = new nitro.L2ToL1MessageWriterNitro(l1Signer, event)
+      this.nitroWriter = new nitro.L2ToL1MessageWriterNitro(
+        l1Signer,
+        event,
+        l1Provider
+      )
     }
   }
 

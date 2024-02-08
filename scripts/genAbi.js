@@ -11,7 +11,7 @@ async function main() {
   const cwd = process.cwd()
 
   const nitroPath = getPackagePath('@arbitrum/nitro-contracts')
-  const tokenBridge = getPackagePath('@arbitrum/token-bridge-contracts')
+  const tokenBridgePath = getPackagePath('@arbitrum/token-bridge-contracts')
 
   console.log('Compiling paths.')
 
@@ -28,19 +28,19 @@ async function main() {
   // instead of writing in postinstall in each of those packages, we should target a local folder in sdk's postinstall
 
   console.log('building nitro')
-  execSync(`${npmExec} run hardhat:prod compile`, {
+  execSync(`${npmExec} run build`, {
     cwd: nitroPath,
   })
 
   console.log('building token bridge')
   execSync(`${npmExec} run build`, {
-    cwd: tokenBridge,
+    cwd: tokenBridgePath,
   })
 
   console.log('Done compiling')
 
   const nitroFiles = glob(cwd, [
-    `${tokenBridge}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
+    `${tokenBridgePath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
     `${nitroPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
   ])
 
