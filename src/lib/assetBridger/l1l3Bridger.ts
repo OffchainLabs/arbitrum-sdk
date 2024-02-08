@@ -52,6 +52,7 @@ import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { OmitTyped } from '../utils/types'
 import { getAddress } from 'ethers/lib/utils'
 import { IL2Forwarder } from '../abi/IL2Forwarder'
+import { ERC20__factory } from '../abi/factories/ERC20__factory'
 
 type PickedTransactionRequest = Required<
   Pick<TransactionRequest, 'to' | 'data' | 'value'>
@@ -355,38 +356,53 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   }
 
   /**
-   * Make sure the L3 network is compatible with the L1 to L3 bridging
-   */
-  public async checkSupport(l2Provider: Provider): Promise<boolean> {
-    try {
-      await this.l1FeeTokenAddress(l2Provider)
-      return true
-    } catch {
-      return false
-    }
-  }
-
-  /**
    * If the L3 network has a native token, return the address of that token on L1.
    * If the L3 network has a native token that is not available on L1, throw.
+   * If the L3 network has a native token that doesn't use 18 decimals on L1 and L2, throw.
    * If the L3 network uses ETH for fees, return undefined.
    */
   public async l1FeeTokenAddress(
+    l1Provider: Provider,
     l2Provider: Provider
   ): Promise<string | undefined> {
-    if (!this.l2FeeTokenAddress) {
-      return undefined
-    }
-    this._l1FeeTokenAddress ||= await this.l2Erc20Bridger.getL1ERC20Address(
-      this.l2FeeTokenAddress,
-      l2Provider
-    )
-    if (this._l1FeeTokenAddress === ethers.constants.AddressZero) {
-      throw new ArbSdkError(
-        `L3 uses a custom fee token that is not available on L1. This configuration is not supported`
+    if (!this.l2FeeTokenAddress) return undefined
+    if (this._l1FeeTokenAddress) return this._l1FeeTokenAddress
+
+    await this._checkL1Network(l1Provider)
+    await this._checkL2Network(l2Provider)
+
+    let l1FeeTokenAddress: string | undefined
+    
+    try {
+      l1FeeTokenAddress = await this.l2Erc20Bridger.getL1ERC20Address(
+        this.l2FeeTokenAddress,
+        l2Provider
       )
+    } catch (e: any) {
+      // todo: this feels like a hack
+      // if the error is a CALL_EXCEPTION, the token surely doesn't exist on L1
+      // if the error is something else, rethrow
+      if (e.code !== 'CALL_EXCEPTION') {
+        throw e
+      }
     }
-    return this._l1FeeTokenAddress
+
+    if (
+      !l1FeeTokenAddress ||
+      l1FeeTokenAddress === ethers.constants.AddressZero
+    ) {
+      throw new ArbSdkError(`Could not find address for L3's fee token on L1`)
+    }
+
+    // make sure boh the L1 and L2 tokens have 18 decimals
+    if (await ERC20__factory.connect(l1FeeTokenAddress, l1Provider).decimals() !== 18) {
+      throw new ArbSdkError(`L3's fee token doesn't use 18 decimals on L1`)
+    }
+    if (await ERC20__factory.connect(this.l2FeeTokenAddress, l2Provider).decimals() !== 18) {
+      throw new ArbSdkError(`L3's fee token doesn't use 18 decimals on L2`)
+    }
+
+    return this._l1FeeTokenAddress = l1FeeTokenAddress
   }
 
   /**
@@ -500,14 +516,13 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     to: string,
     l1Provider: Provider
   ): Promise<string> {
-    await this._checkL2Network(l1Provider)
+    await this._checkL1Network(l1Provider)
 
     return IL2ForwarderFactory__factory.connect(
       this.teleporterAddresses.l1Teleporter,
       l1Provider
     ).l2ForwarderAddress(owner, routerOrInbox, to)
   }
-
 
   public async getApproveTokenRequest(
     params: TokenApproveParams
@@ -529,6 +544,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       | (TokenApproveParams & { l1Signer: Signer; overrides?: Overrides })
       | TxRequestParams
   ): Promise<ethers.ContractTransaction> {
+    await this._checkL1Network(params.l1Signer)
+
     const approveRequest = isTxRequestParams(params)
       ? params.txRequest
       : await this.getApproveTokenRequest(params)
@@ -540,11 +557,12 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   }
 
   public async getApproveFeeTokenRequest(params: {
+    l1Provider: Provider
     l2Provider: Provider
     amount?: BigNumber
   }): Promise<PickedTransactionRequest> {
     return this.getApproveTokenRequest({
-      erc20L1Address: await this._l1FeeTokenAddressOrThrow(params.l2Provider),
+      erc20L1Address: await this._l1FeeTokenAddressOrThrow(params.l1Provider, params.l2Provider),
       amount: params.amount,
     })
   }
@@ -559,9 +577,12 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         }
       | TxRequestParams
   ): Promise<ethers.ContractTransaction> {
+    await this._checkL1Network(params.l1Signer)
+
     const approveRequest = isTxRequestParams(params)
       ? params.txRequest
       : await this.getApproveFeeTokenRequest({
+          l1Provider: params.l1Signer.provider!,
           l2Provider: params.l2Provider,
           amount: params.amount,
         })
@@ -585,15 +606,15 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     const l1Provider = hasL1Signer(params)
       ? params.l1Signer.provider!
       : params.l1Provider
-    this._checkL1Network(l1Provider)
-    this._checkL2Network(params.l2Provider)
-    this._checkL3Network(params.l3Provider)
+    await this._checkL1Network(l1Provider)
+    await this._checkL2Network(params.l2Provider)
+    await this._checkL3Network(params.l3Provider)
 
     const from = hasL1Signer(params)
       ? await params.l1Signer.getAddress()
       : params.from
 
-    const l1FeeToken = await this.l1FeeTokenAddress(params.l2Provider)
+    const l1FeeToken = await this.l1FeeTokenAddress(l1Provider, params.l2Provider)
     const partialTeleportParams: OmitTyped<
       IL1Teleporter.TeleportParamsStruct,
       'gasParams'
@@ -642,6 +663,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         })
       | TxRequestParams
   ): Promise<L1ContractCallTransaction> {
+    await this._checkL1Network(params.l1Signer)
+
     const depositRequest = isTxRequestParams(params)
       ? params.txRequest
       : (await this.getDepositRequest(params)).txRequest
@@ -657,6 +680,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   public async getDepositMessages(
     params: Erc20DepositMessagesParams
   ): Promise<Erc20DepositMessages> {
+    await this._checkL1Network(params.l1Provider)
+    await this._checkL2Network(params.l2Provider)
+    await this._checkL3Network(params.l3Provider)
+
     const tx = await params.l1Provider.getTransaction(params.txHash)
     const teleportParams = this._decodeTeleportCalldata(tx.data)
 
@@ -713,7 +740,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       'l3FeeTokenL1Addr' | 'l1Token'
     >
   ) {
-    if (partialTeleportParams.l3FeeTokenL1Addr === ethers.constants.AddressZero) {
+    if (
+      partialTeleportParams.l3FeeTokenL1Addr === ethers.constants.AddressZero
+    ) {
       return TeleportationType.Standard
     } else if (
       getAddress(partialTeleportParams.l1Token) ===
@@ -808,6 +837,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l2Provider: Provider
   }): Promise<RetryableGasValues> {
     const l1FeeTokenAddress = await this._l1FeeTokenAddressOrThrow(
+      params.l1Provider,
       params.l2Provider
     )
     return this._getTokenBridgeGasEstimates({
@@ -915,7 +945,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     partialTeleportParams = jsonCopy(partialTeleportParams)
 
     // get gasLimit and submission cost for a retryable while respecting overrides
-    const getValuesWithOverrides = async (
+    const getRetryableGasValuesWithOverrides = async (
       overrides: TeleporterRetryableGasOverride | undefined,
       getValues: () => Promise<RetryableGasValues>
     ): Promise<RetryableGasValues> => {
@@ -979,7 +1009,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       ethers.utils.randomBytes(20)
     )
 
-    const l1l2TokenBridgeGasValues = await getValuesWithOverrides(
+    const l1l2TokenBridgeGasValues = await getRetryableGasValuesWithOverrides(
       retryableOverrides.l1l2TokenBridgeRetryableGas,
       () =>
         this._getL1L2TokenBridgeGasEstimates({
@@ -991,12 +1021,13 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         })
     )
 
-    const l2ForwarderFactoryGasValues = await getValuesWithOverrides(
-      retryableOverrides.l2ForwarderFactoryRetryableGas,
-      () => this._getL2ForwarderFactoryGasEstimates(l1GasPrice, l1Provider)
-    )
+    const l2ForwarderFactoryGasValues =
+      await getRetryableGasValuesWithOverrides(
+        retryableOverrides.l2ForwarderFactoryRetryableGas,
+        () => this._getL2ForwarderFactoryGasEstimates(l1GasPrice, l1Provider)
+      )
 
-    const l2l3TokenBridgeGasValues = await getValuesWithOverrides(
+    const l2l3TokenBridgeGasValues = await getRetryableGasValuesWithOverrides(
       retryableOverrides.l2l3TokenBridgeRetryableGas,
       () =>
         this._getL2L3BridgeGasEstimates({
@@ -1014,7 +1045,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       this.teleportationType(partialTeleportParams) ===
       TeleportationType.NonFeeTokenToCustomFee
     ) {
-      l1l2FeeTokenBridgeGasValues = await getValuesWithOverrides(
+      l1l2FeeTokenBridgeGasValues = await getRetryableGasValuesWithOverrides(
         retryableOverrides.l1l2FeeTokenBridgeRetryableGas,
         () =>
           this._getL1L2FeeTokenBridgeGasEstimates({
@@ -1078,7 +1109,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       to: ethers.constants.AddressZero,
       gasLimit: 0,
       gasPriceBid: 0,
-      maxSubmissionCost: 0
+      maxSubmissionCost: 0,
     }
     const dummyCalldata =
       IL2ForwarderFactory__factory.createInterface().encodeFunctionData(
@@ -1088,8 +1119,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     return ethers.utils.hexDataLength(dummyCalldata) - 4
   }
 
-  protected async _l1FeeTokenAddressOrThrow(l2Provider: Provider) {
-    const ft = await this.l1FeeTokenAddress(l2Provider)
+  protected async _l1FeeTokenAddressOrThrow(l1Provider: Provider, l2Provider: Provider) {
+    const ft = await this.l1FeeTokenAddress(l1Provider, l2Provider)
     if (!ft)
       throw new Error(`L3 network ${this.l3Network.name} uses ETH for fees`)
     return ft

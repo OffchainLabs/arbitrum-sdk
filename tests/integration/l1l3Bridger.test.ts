@@ -13,21 +13,52 @@ import {
   isL2NetworkWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
+import { Deferrable } from 'ethers/lib/utils'
 
 type Unwrap<T> = T extends Promise<infer U> ? U : T
 
 async function expectPromiseToReject(
   promise: Promise<any>,
-  message?: string
-): Promise<Error> {
+  expectedError?: string
+): Promise<void> {
   let err: Error | undefined = undefined
   try {
     await promise
   } catch (e: any) {
     err = e
   }
-  if (!err) throw new Error(message || 'Promise did not reject')
-  return err
+  if (!err)
+    throw new Error('Promise did not reject, expected: ' + expectedError)
+  if (expectedError && err.message !== expectedError) {
+    throw new Error(
+      `Expected error "${expectedError}" but got "${err.message}" instead`
+    )
+  }
+}
+
+function hackProvider(
+  provider: ethers.providers.JsonRpcProvider,
+  to: string,
+  calldata: string,
+  retData: string
+) {
+  const oldCall = provider.call.bind(provider)
+  /// @ts-ignore
+  provider.originalCall ||= oldCall
+  /// @ts-ignore
+  provider.call = async (
+    txRequest: Deferrable<ethers.providers.TransactionRequest>,
+    b: any
+  ) => {
+    return (await txRequest.to) === to && (await txRequest.data) === calldata
+      ? retData
+      : oldCall(txRequest, b)
+  }
+}
+
+function unhackProvider(provider: ethers.providers.JsonRpcProvider) {
+  /// @ts-ignore
+  if (provider.originalCall) provider.call = provider.originalCall
 }
 
 function poll(
@@ -59,7 +90,10 @@ async function deployTeleportContracts(l1Signer: Signer, l2Signer: Signer) {
 
   const l2ContractsDeployer = await new L2ForwarderContractsDeployer__factory(
     l2Signer
-  ).deploy(new Address(predL1Teleporter).applyAlias().value, await l1Signer.getChainId())
+  ).deploy(
+    new Address(predL1Teleporter).applyAlias().value,
+    await l1Signer.getChainId()
+  )
   await l2ContractsDeployer.deployed()
 
   const l1Teleporter = await new L1Teleporter__factory(l1Signer).deploy(
@@ -112,6 +146,63 @@ describe('L1 to L3 Bridging', () => {
   let l1Signer: ethers.Signer
   let l2Signer: ethers.Signer
   let l3Provider: ethers.providers.JsonRpcProvider
+
+  type NetworkGuardCheckFunction = (
+    l1Signer: Signer,
+    l2Signer: Signer,
+    l3Signer: Signer,
+    bridger: Erc20L1L3Bridger
+  ) => Promise<any>
+
+  async function checkNetworkGuards(
+    l1: boolean,
+    l2: boolean,
+    l3: boolean,
+    checkFunction: NetworkGuardCheckFunction
+  ) {
+    const l1ChainId = await l1Signer.getChainId()
+    const l2ChainId = await l2Signer.getChainId()
+    const l3ChainId = (await l3Provider.getNetwork()).chainId
+
+    const l3Signer = new Wallet(
+      ethers.utils.hexlify(ethers.utils.randomBytes(32)),
+      l3Provider
+    )
+
+    if (l1) {
+      await expectPromiseToReject(
+        checkFunction(
+          l2Signer,
+          l2Signer,
+          l3Signer,
+          new Erc20L1L3Bridger(l3Network)
+        ),
+        `Signer/provider chain id: ${l2ChainId} doesn't match provided chain id: ${l1ChainId}.`
+      )
+    }
+    if (l2) {
+      await expectPromiseToReject(
+        checkFunction(
+          l1Signer,
+          l1Signer,
+          l3Signer,
+          new Erc20L1L3Bridger(l3Network)
+        ),
+        `Signer/provider chain id: ${l1ChainId} doesn't match provided chain id: ${l2ChainId}.`
+      )
+    }
+    if (l3) {
+      await expectPromiseToReject(
+        checkFunction(
+          l1Signer,
+          l2Signer,
+          l1Signer,
+          new Erc20L1L3Bridger(l3Network)
+        ),
+        `Signer/provider chain id: ${l1ChainId} doesn't match provided chain id: ${l3ChainId}.`
+      )
+    }
+  }
 
   // setup for all test cases
   before(async function () {
@@ -186,10 +277,10 @@ describe('L1 to L3 Bridging', () => {
 
       // check eth balances
       const l3Balance = await l3Provider.getBalance(l3Recipient)
-      expect(l3Balance.gt(ethers.utils.parseEther('0.1'))).to.be.true
+      assert(l3Balance.gt(ethers.utils.parseEther('0.1')))
 
       const l2Balance = await l2Signer.provider!.getBalance(l2RefundAddress)
-      expect(l2Balance.gt(ethers.utils.parseEther('0'))).to.be.true
+      assert(l2Balance.gt(ethers.utils.parseEther('0')))
     })
   })
 
@@ -220,27 +311,6 @@ describe('L1 to L3 Bridging', () => {
       l1l3Bridger = new Erc20L1L3Bridger(l3Network)
     })
 
-    it('should detect an unavailable fee token', async () => {
-      const networkCopy = JSON.parse(JSON.stringify(l3Network)) as L2Network
-      const oldNativeToken = networkCopy.nativeToken
-      networkCopy.nativeToken = ethers.utils.hexlify(
-        ethers.utils.randomBytes(32)
-      )
-
-      let tmpBridger = new Erc20L1L3Bridger(networkCopy)
-
-      await expectPromiseToReject(
-        tmpBridger.l1FeeTokenAddress(l2Signer.provider!),
-        'did not reject l1FeeTokenAddress'
-      )
-      expect(await tmpBridger.checkSupport(l2Signer.provider!)).to.be.false
-
-      networkCopy.nativeToken = oldNativeToken
-      tmpBridger = new Erc20L1L3Bridger(networkCopy)
-
-      expect(await tmpBridger.checkSupport(l2Signer.provider!)).to.be.true
-    })
-
     if (isL2NetworkWithCustomFeeToken()) {
       it('should properly get l2 and l1 fee token addresses', async () => {
         if (l1l3Bridger.l2FeeTokenAddress === undefined) {
@@ -251,16 +321,90 @@ describe('L1 to L3 Bridging', () => {
         // make sure l1 token maps to l2 token
         expect(
           await new Erc20Bridger(l2Network).getL2ERC20Address(
-            (await l1l3Bridger.l1FeeTokenAddress(l2Signer.provider!))!,
+            (await l1l3Bridger.l1FeeTokenAddress(l1Signer.provider!, l2Signer.provider!))!,
             l1Signer.provider!
           )
         ).to.eq(l1l3Bridger.l2FeeTokenAddress)
+      })
+
+      it('should throw when the fee token cannot be found on L1', async () => {
+        const networkCopy = JSON.parse(JSON.stringify(l3Network)) as L2Network
+        networkCopy.nativeToken = ethers.utils.hexlify(
+          ethers.utils.randomBytes(20)
+        )
+
+        const hackedL1Provider = new ethers.providers.JsonRpcProvider(
+          process.env['ETH_URL']
+        )
+        const hackedL2Provider = new ethers.providers.JsonRpcProvider(
+          process.env['ARB_URL']
+        )
+
+        await expectPromiseToReject(
+          new Erc20L1L3Bridger(networkCopy).l1FeeTokenAddress(
+            hackedL1Provider,
+            hackedL2Provider
+          ),
+          `Could not find address for L3's fee token on L1`
+        )
+      })
+
+      it('should throw when the fee token does not use 18 decimals on L1 or L2', async () => {
+        const hackedL1Provider = new ethers.providers.JsonRpcProvider(
+          process.env['ETH_URL']
+        )
+        const hackedL2Provider = new ethers.providers.JsonRpcProvider(
+          process.env['ARB_URL']
+        )
+
+        const decimalSelector =
+          ERC20__factory.createInterface().encodeFunctionData('decimals')
+        const encodeDecimals = (decimals: number) =>
+          new ethers.utils.AbiCoder().encode(['uint8'], [decimals])
+
+        // test require custom fee token has 18 decimals on l1 and l2
+        const l1FeeToken = (await l1l3Bridger.l1FeeTokenAddress(
+          l1Signer.provider!,
+          l2Signer.provider!
+        ))!
+
+        // incorrect L2 fee token decimals
+        hackProvider(
+          hackedL2Provider,
+          l1l3Bridger.l2FeeTokenAddress!,
+          decimalSelector,
+          encodeDecimals(10)
+        )
+        await expectPromiseToReject(
+          new Erc20L1L3Bridger(l3Network).l1FeeTokenAddress(
+            hackedL1Provider,
+            hackedL2Provider
+          ),
+          `L3's fee token doesn't use 18 decimals on L2`
+        )
+
+        // incorrect L1 fee token decimals
+        unhackProvider(hackedL2Provider)
+        hackProvider(
+          hackedL1Provider,
+          l1FeeToken,
+          decimalSelector,
+          encodeDecimals(17)
+        )
+        await expectPromiseToReject(
+          new Erc20L1L3Bridger(l3Network).l1FeeTokenAddress(
+            hackedL1Provider,
+            hackedL2Provider
+          ),
+          `L3's fee token doesn't use 18 decimals on L1`
+        )
+      
       })
     } else {
       it('should not have l1 and l2 fee token addresses', async () => {
         // make sure l2 is undefined and l1 is also undefined
         expect(l1l3Bridger.l2FeeTokenAddress).to.be.undefined
-        expect(await l1l3Bridger.l1FeeTokenAddress(l2Signer.provider!)).to.be
+        expect(await l1l3Bridger.l1FeeTokenAddress(l1Signer.provider!, l2Signer.provider!)).to.be
           .undefined
       })
     }
@@ -297,6 +441,7 @@ describe('L1 to L3 Bridging', () => {
       expect(defaultAns).to.eq(l1l2Gateway)
     })
 
+    // only perform these tests if there are known weth pairs we can test against
     if (!isL2NetworkWithCustomFeeToken()) {
       it('getL3ERC20Address', async () => {
         // use weth to test, since we already know its addresses
@@ -340,8 +485,214 @@ describe('L1 to L3 Bridging', () => {
         await l1l3Bridger.approveToken({
           erc20L1Address: l1Token.address,
           l1Signer,
+          amount: amount,
         })
       ).wait()
+
+      assert(
+        (
+          await l1Token.allowance(
+            await l1Signer.getAddress(),
+            l1l3Bridger.teleporterAddresses.l1Teleporter
+          )
+        ).eq(amount)
+      )
+    })
+
+    it('functions should be guarded by check*Network', async () => {
+      // l1FeeTokenAddress
+      await checkNetworkGuards(
+        true,
+        true,
+        false,
+        async (l1Signer, l2Signer, l3Signer, bridger) => {
+          return bridger.l1FeeTokenAddress(l1Signer.provider!, l2Signer.provider!)
+        }
+      )
+
+      // getL2ERC20Address
+      await checkNetworkGuards(
+        true,
+        false,
+        false,
+        async (l1Signer, l2Signer, l3Signer, bridger) => {
+          return bridger.getL2ERC20Address(l1Token.address, l1Signer.provider!)
+        }
+      )
+
+      // getL3ERC20Address
+      await checkNetworkGuards(
+        true,
+        true,
+        false,
+        async (l1Signer, l2Signer, l3Signer, bridger) => {
+          return bridger.getL3ERC20Address(
+            l1Token.address,
+            l1Signer.provider!,
+            l2Signer.provider!
+          )
+        }
+      )
+
+      // getL1L2GatewayAddress
+      await checkNetworkGuards(
+        true,
+        false,
+        false,
+        async (l1Signer, l2Signer, l3Signer, bridger) => {
+          return bridger.getL1L2GatewayAddress(
+            l1Token.address,
+            l1Signer.provider!
+          )
+        }
+      )
+
+      // getL2L3GatewayAddress
+      await checkNetworkGuards(
+        true,
+        true,
+        false,
+        async (l1Signer, l2Signer, l3Signer, bridger) => {
+          return bridger.getL2L3GatewayAddress(
+            l1Token.address,
+            l1Signer.provider!,
+            l2Signer.provider!
+          )
+        }
+      )
+
+      // l1TokenIsDisabled
+      await checkNetworkGuards(
+        true,
+        false,
+        false,
+        async (l1Signer, l2Signer, l3Signer, bridger) => {
+          return bridger.l1TokenIsDisabled(l1Token.address, l1Signer.provider!)
+        }
+      )
+
+      // l2TokenIsDisabled
+      await checkNetworkGuards(
+        false,
+        true,
+        false,
+        async (l1Signer, l2Signer, l3Signer, bridger) => {
+          return bridger.l2TokenIsDisabled(l1Token.address, l2Signer.provider!)
+        }
+      )
+
+      // l2ForwarderAddress
+      await checkNetworkGuards(
+        true,
+        false,
+        false,
+        async (l1Signer, l2Signer, l3Signer, bridger) => {
+          return bridger.l2ForwarderAddress(
+            l1Token.address,
+            l1Token.address,
+            l1Token.address,
+            l1Signer.provider!
+          )
+        }
+      )
+
+      // approveToken
+      await checkNetworkGuards(
+        true,
+        false,
+        false,
+        async (l1Signer, l2Signer, l3Signer, bridger) => {
+          return bridger.approveToken({
+            txRequest: {
+              to: l1Token.address,
+              value: amount,
+              data: '',
+            },
+            l1Signer,
+          })
+        }
+      )
+
+      // getApproveFeeTokenRequest
+      await checkNetworkGuards(
+        true,
+        true,
+        false,
+        async (l1Signer, l2Signer, l3Signer, bridger) => {
+          return bridger.getApproveFeeTokenRequest({
+            l1Provider: l1Signer.provider!,
+            l2Provider: l2Signer.provider!,
+            amount: amount,
+          })
+        }
+      )
+
+      // approveFeeToken
+      await checkNetworkGuards(
+        true,
+        false,
+        false,
+        async (l1Signer, l2Signer, l3Signer, bridger) => {
+          return bridger.approveFeeToken({
+            txRequest: {
+              to: l1Token.address,
+              value: amount,
+              data: '',
+            },
+            l1Signer,
+          })
+        }
+      )
+
+      // getDepositRequest
+      await checkNetworkGuards(
+        true,
+        true,
+        true,
+        async (l1Signer, l2Signer, l3Signer, bridger) => {
+          return bridger.getDepositRequest({
+            erc20L1Address: l1Token.address,
+            to: await l1Signer.getAddress(),
+            amount: amount,
+            from: await l1Signer.getAddress(),
+            l1Signer,
+            l2Provider: l2Signer.provider!,
+            l3Provider: l3Signer.provider!,
+          })
+        }
+      )
+
+      // deposit
+      await checkNetworkGuards(
+        true,
+        false,
+        false,
+        async (l1Signer, l2Signer, l3Signer, bridger) => {
+          return bridger.deposit({
+            l1Signer,
+            txRequest: {
+              to: await l1Signer.getAddress(),
+              value: amount,
+              data: '',
+            },
+          })
+        }
+      )
+
+      // getDepositMessages
+      await checkNetworkGuards(
+        true,
+        true,
+        true,
+        async (l1Signer, l2Signer, l3Signer, bridger) => {
+          return bridger.getDepositMessages({
+            txHash: '0x0',
+            l1Provider: l1Signer.provider!,
+            l2Provider: l2Signer.provider!,
+            l3Provider: l3Signer.provider!,
+          })
+        }
+      )
     })
 
     it('happy path non fee token or standard', async () => {
@@ -361,7 +712,7 @@ describe('L1 to L3 Bridging', () => {
       )
 
       if (isL2NetworkWithCustomFeeToken()) {
-        expect(depositTxRequest.feeTokenAmount.gt('0')).to.be.true
+        assert(depositTxRequest.feeTokenAmount.gt('0'))
         // approve fee token
         await (
           await l1l3Bridger.approveFeeToken({
@@ -371,7 +722,7 @@ describe('L1 to L3 Bridging', () => {
           })
         ).wait()
       } else {
-        expect(depositTxRequest.feeTokenAmount.eq('0'))
+        assert(depositTxRequest.feeTokenAmount.eq('0'))
       }
 
       const depositTx = await l1l3Bridger.deposit({
@@ -402,15 +753,16 @@ describe('L1 to L3 Bridging', () => {
 
       const l3Balance = await l3Token.balanceOf(l3Recipient)
 
-      expect((await l3Provider.getBalance(l3Recipient)).gt('0'))
+      assert((await l3Provider.getBalance(l3Recipient)).gt('0'))
 
-      expect(l3Balance.eq(amount)).to.be.true
+      assert(l3Balance.eq(amount))
     })
 
     if (isL2NetworkWithCustomFeeToken()) {
       it('happy path OnlyCustomFee', async () => {
         const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
         const l1FeeToken = (await l1l3Bridger.l1FeeTokenAddress(
+          l1Signer.provider!,
           l2Signer.provider!
         ))!
         const depositParams = {
@@ -447,7 +799,7 @@ describe('L1 to L3 Bridging', () => {
         }, 1000)
 
         // todo make this check better
-        expect((await l3Provider.getBalance(l3Recipient)).gt('0'))
+        assert((await l3Provider.getBalance(l3Recipient)).gt('0'))
       })
     }
   })
