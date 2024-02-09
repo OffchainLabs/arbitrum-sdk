@@ -195,6 +195,14 @@ export type EthDepositRequestParams = {
    */
   amount: BigNumberish
   /**
+   * L2 provider
+   */
+  l2Provider: Provider
+  /**
+   * L3 provider
+   */
+  l3Provider: Provider
+  /**
    * Optional recipient on L3, defaults to signer's address
    */
   to?: string
@@ -214,13 +222,13 @@ export type EthDepositRequestParams = {
 
 export type EthDepositStatus = {
   /**
-   * Status + redemption tx receipt of the retryable ticket to L2
+   * L1 to L2 message
    */
-  l2Retryable: L1ToL2MessageWaitResult
+  l2Retryable: L1ToL2MessageReader
   /**
-   * Status + redemption tx receipt of the retryable ticket to L3
+   * L2 to L3 message
    */
-  l3Retryable: L1ToL2MessageWaitResult
+  l3Retryable: L1ToL2MessageReader | undefined
   /**
    * Whether the teleportation has completed
    */
@@ -336,7 +344,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    */
   private _l1FeeTokenAddress: string | undefined
 
-  public constructor(public readonly l3Network: L2Network) {
+  public constructor(l3Network: L2Network) {
     super(l3Network)
 
     if (!this.l2Network.teleporterAddresses) {
@@ -372,7 +380,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     await this._checkL2Network(l2Provider)
 
     let l1FeeTokenAddress: string | undefined
-    
+
     try {
       l1FeeTokenAddress = await this.l2Erc20Bridger.getL1ERC20Address(
         this.l2FeeTokenAddress,
@@ -395,14 +403,24 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     }
 
     // make sure boh the L1 and L2 tokens have 18 decimals
-    if (await ERC20__factory.connect(l1FeeTokenAddress, l1Provider).decimals() !== 18) {
+    if (
+      (await ERC20__factory.connect(
+        l1FeeTokenAddress,
+        l1Provider
+      ).decimals()) !== 18
+    ) {
       throw new ArbSdkError(`L3's fee token doesn't use 18 decimals on L1`)
     }
-    if (await ERC20__factory.connect(this.l2FeeTokenAddress, l2Provider).decimals() !== 18) {
+    if (
+      (await ERC20__factory.connect(
+        this.l2FeeTokenAddress,
+        l2Provider
+      ).decimals()) !== 18
+    ) {
       throw new ArbSdkError(`L3's fee token doesn't use 18 decimals on L2`)
     }
 
-    return this._l1FeeTokenAddress = l1FeeTokenAddress
+    return (this._l1FeeTokenAddress = l1FeeTokenAddress)
   }
 
   /**
@@ -562,7 +580,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     amount?: BigNumber
   }): Promise<PickedTransactionRequest> {
     return this.getApproveTokenRequest({
-      erc20L1Address: await this._l1FeeTokenAddressOrThrow(params.l1Provider, params.l2Provider),
+      erc20L1Address: await this._l1FeeTokenAddressOrThrow(
+        params.l1Provider,
+        params.l2Provider
+      ),
       amount: params.amount,
     })
   }
@@ -614,7 +635,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       ? await params.l1Signer.getAddress()
       : params.from
 
-    const l1FeeToken = await this.l1FeeTokenAddress(l1Provider, params.l2Provider)
+    const l1FeeToken = await this.l1FeeTokenAddress(
+      l1Provider,
+      params.l2Provider
+    )
     const partialTeleportParams: OmitTyped<
       IL1Teleporter.TeleportParamsStruct,
       'gasParams'
@@ -1119,7 +1143,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     return ethers.utils.hexDataLength(dummyCalldata) - 4
   }
 
-  protected async _l1FeeTokenAddressOrThrow(l1Provider: Provider, l2Provider: Provider) {
+  protected async _l1FeeTokenAddressOrThrow(
+    l1Provider: Provider,
+    l2Provider: Provider
+  ) {
     const ft = await this.l1FeeTokenAddress(l1Provider, l2Provider)
     if (!ft)
       throw new Error(`L3 network ${this.l3Network.name} uses ETH for fees`)
@@ -1142,49 +1169,66 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
  * Bridge ETH from L1 to L3 using a double retryable ticket
  */
 export class EthL1L3Bridger extends BaseL1L3Bridger {
+  constructor(l3Network: L2Network) {
+    super(l3Network)
+
+    if (l3Network.nativeToken && l3Network.nativeToken !== ethers.constants.AddressZero) {
+      throw new ArbSdkError(`L3 network ${l3Network.name} uses a custom fee token`)
+    }
+  }
+
   /**
    * Get a tx request to deposit ETH to L3 via a double retryable ticket
    */
   public async getDepositRequest(
-    params: EthDepositRequestParams,
-    l1Signer: Signer,
-    l2Provider: Provider,
-    l3Provider: Provider
+    params: EthDepositRequestParams &
+      (
+        | {
+            from: string
+            l1Provider: Provider
+          }
+        | { l1Signer: Signer }
+      )
   ): Promise<L1ToL2TransactionRequest> {
-    await this._checkL1Network(l1Signer)
-    await this._checkL2Network(l2Provider)
-    await this._checkL3Network(l3Provider)
+    const l1Provider = hasL1Signer(params)
+      ? params.l1Signer.provider!
+      : params.l1Provider
+    await this._checkL1Network(l1Provider)
+    await this._checkL2Network(params.l2Provider)
+    await this._checkL3Network(params.l3Provider)
 
-    const l1Address = await l1Signer.getAddress()
+    const from = hasL1Signer(params)
+      ? await params.l1Signer.getAddress()
+      : params.from
 
-    const l3DestinationAddress = params.to || l1Address
-    const l2RefundAddress = params.l2RefundAddress || l1Address
+    const l3DestinationAddress = params.to || from
+    const l2RefundAddress = params.l2RefundAddress || from
 
     const l3TicketRequest = await L1ToL2MessageCreator.getTicketCreationRequest(
       {
         to: l3DestinationAddress,
         data: '0x',
-        from: new Address(l1Address).applyAlias().value,
+        from: new Address(from).applyAlias().value,
         l2CallValue: BigNumber.from(params.amount),
         excessFeeRefundAddress: l3DestinationAddress,
         callValueRefundAddress: l3DestinationAddress,
       },
-      l2Provider,
-      l3Provider,
+      params.l2Provider,
+      params.l3Provider,
       params.l3TicketGasOverrides
     )
 
     const l2TicketRequest = await L1ToL2MessageCreator.getTicketCreationRequest(
       {
-        from: l1Address,
+        from,
         to: l3TicketRequest.txRequest.to,
         l2CallValue: BigNumber.from(l3TicketRequest.txRequest.value),
         data: ethers.utils.hexlify(l3TicketRequest.txRequest.data),
         excessFeeRefundAddress: l2RefundAddress,
         callValueRefundAddress: l2RefundAddress,
       },
-      l1Signer.provider!,
-      l2Provider,
+      l1Provider,
+      params.l2Provider,
       params.l2TicketGasOverrides
     )
 
@@ -1195,31 +1239,25 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
    * Deposit ETH to L3 via a double retryable ticket
    */
   public async deposit(
-    params: EthDepositRequestParams,
-    l1Signer: Signer,
-    l2Provider: Provider,
-    l3Provider: Provider
+    params:
+      | (EthDepositRequestParams & {
+          l1Signer: Signer
+          overrides?: PayableOverrides
+        })
+      | TxRequestParams
   ): Promise<L1ContractCallTransaction> {
-    const txRequest = await this.getDepositRequest(
-      params,
-      l1Signer,
-      l2Provider,
-      l3Provider
-    )
+    await this._checkL1Network(params.l1Signer)
 
-    return this.executeDepositRequest(txRequest, l1Signer)
-  }
+    const depositRequest = isTxRequestParams(params)
+      ? params.txRequest
+      : (await this.getDepositRequest(params)).txRequest
 
-  /**
-   * Execute a deposit request to L3 via a double retryable ticket
-   */
-  public async executeDepositRequest(
-    depositRequest: L1ToL2TransactionRequest,
-    l1Signer: Signer
-  ): Promise<L1ContractCallTransaction> {
-    return L1TransactionReceipt.monkeyPatchContractCallWait(
-      await l1Signer.sendTransaction(depositRequest.txRequest)
-    )
+    const tx = await params.l1Signer.sendTransaction({
+      ...depositRequest,
+      ...params.overrides,
+    })
+
+    return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
   /**
@@ -1227,31 +1265,24 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
    *
    * @return Information regarding each step of the deposit
    * and `EthDepositStatus.completed` which indicates whether the deposit has fully completed.
-   *
-   * If `EthDepositStatus.l2Retryable.status` is `L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2`,
-   * then the first step has failed (creating an ETH deposit retryable to L3).
-   * The retryable to L2 must be manually redeemed before proceeding.
-   *
-   * If `EthDepositStatus.l3Retryable.status` is `L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2`,
-   * then the second step has failed (depositing ETH to L3 via retryable).
-   * The retryable to L3 must be manually redeemed.
    */
-  public async getDepositStatus(
-    l1TxReceipt: L1ContractCallTransactionReceipt,
-    l2Provider: Provider,
+  public async getDepositMessages(params: {
+    l1TxReceipt: L1ContractCallTransactionReceipt
+    l2Provider: Provider
     l3Provider: Provider
-  ): Promise<EthDepositStatus> {
-    await this._checkL2Network(l2Provider)
-    await this._checkL3Network(l3Provider)
+  }): Promise<EthDepositStatus> {
+    await this._checkL2Network(params.l2Provider)
+    await this._checkL3Network(params.l3Provider)
 
-    const l1l2Message = (await l1TxReceipt.getL1ToL2Messages(l2Provider))[0]
-
+    const l1l2Message = (
+      await params.l1TxReceipt.getL1ToL2Messages(params.l2Provider)
+    )[0]
     const l1l2Redeem = await l1l2Message.getSuccessfulRedeem()
 
     if (l1l2Redeem.status != L1ToL2MessageStatus.REDEEMED) {
       return {
-        l2Retryable: l1l2Redeem,
-        l3Retryable: { status: L1ToL2MessageStatus.NOT_YET_CREATED },
+        l2Retryable: l1l2Message,
+        l3Retryable: undefined,
         completed: false,
       }
     }
@@ -1259,19 +1290,17 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
     const l2l3Message = (
       await new L1EthDepositTransactionReceipt(
         l1l2Redeem.l2TxReceipt
-      ).getL1ToL2Messages(l3Provider)
+      ).getL1ToL2Messages(params.l3Provider)
     )[0]
 
     if (l2l3Message === undefined) {
       throw new ArbSdkError(`L2 to L3 message not found`)
     }
 
-    const l2l3Redeem = await l2l3Message.getSuccessfulRedeem()
-
     return {
-      l2Retryable: l1l2Redeem,
-      l3Retryable: l2l3Redeem,
-      completed: l2l3Redeem.status === L1ToL2MessageStatus.REDEEMED,
+      l2Retryable: l1l2Message,
+      l3Retryable: l2l3Message,
+      completed: (await l2l3Message.status()) === L1ToL2MessageStatus.REDEEMED,
     }
   }
 }
