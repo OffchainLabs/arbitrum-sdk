@@ -101,6 +101,10 @@ export interface Erc20DepositParams extends EthDepositParams {
    */
   destinationAddress?: string
   /**
+   * The maximum cost to be paid for submitting the transaction
+   */
+  maxSubmissionCost?: BigNumber
+  /**
    * The address to return the any gas that was not spent on fees
    */
   excessFeeRefundAddress?: string
@@ -642,17 +646,33 @@ export class Erc20Bridger extends AssetBridger<
     const depositFunc = (
       depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
     ) => {
+      depositParams.maxSubmissionCost =
+        params.maxSubmissionCost || depositParams.maxSubmissionCost
+
       const iGatewayRouter = L1GatewayRouter__factory.createInterface()
 
+      const functionData =
+        defaultedParams.excessFeeRefundAddress !== defaultedParams.from
+          ? iGatewayRouter.encodeFunctionData('outboundTransferCustomRefund', [
+              erc20L1Address,
+              defaultedParams.excessFeeRefundAddress,
+              destinationAddress,
+              amount,
+              depositParams.gasLimit,
+              depositParams.maxFeePerGas,
+              this.getDepositRequestOutboundTransferDataParam(depositParams),
+            ])
+          : iGatewayRouter.encodeFunctionData('outboundTransfer', [
+              erc20L1Address,
+              destinationAddress,
+              amount,
+              depositParams.gasLimit,
+              depositParams.maxFeePerGas,
+              this.getDepositRequestOutboundTransferDataParam(depositParams),
+            ])
+
       return {
-        data: iGatewayRouter.encodeFunctionData('outboundTransfer', [
-          erc20L1Address,
-          destinationAddress,
-          amount,
-          depositParams.gasLimit,
-          depositParams.maxFeePerGas,
-          this.getDepositRequestOutboundTransferDataParam(depositParams),
-        ]),
+        data: functionData,
         to: this.l2Network.tokenBridge.l1GatewayRouter,
         from: defaultedParams.from,
         value: this.getDepositRequestCallValue(depositParams),

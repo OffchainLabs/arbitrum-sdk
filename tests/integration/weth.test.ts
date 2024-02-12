@@ -64,15 +64,15 @@ if (!isL2NetworkWithCustomFeeToken()) {
         value: wethToWrap,
       })
       await res.wait()
-      await depositToken(
-        wethToDeposit,
-        l1WethAddress,
+      await depositToken({
+        depositAmount: wethToDeposit,
+        l1TokenAddress: l1WethAddress,
         erc20Bridger,
         l1Signer,
         l2Signer,
-        L1ToL2MessageStatus.REDEEMED,
-        GatewayType.WETH
-      )
+        expectedStatus: L1ToL2MessageStatus.REDEEMED,
+        expectedGatewayType: GatewayType.WETH,
+      })
 
       const l2WethGateway = await erc20Bridger.getL2GatewayAddress(
         l1WethAddress,

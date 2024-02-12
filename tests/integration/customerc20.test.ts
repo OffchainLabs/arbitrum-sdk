@@ -17,6 +17,7 @@
 'use strict'
 
 import { expect } from 'chai'
+import { Signer, Wallet, constants, utils, ethers } from 'ethers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Logger, LogLevel } from '@ethersproject/logger'
 Logger.setLogLevel(LogLevel.ERROR)
@@ -38,7 +39,6 @@ import {
   withdrawToken,
 } from './testHelpers'
 import { L1ToL2MessageStatus, L2Network } from '../../src'
-import { Signer, constants, ethers } from 'ethers'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
@@ -91,15 +91,15 @@ describe('Custom ERC20', () => {
     await (
       await testState.l1CustomToken.connect(testState.l1Signer).mint()
     ).wait()
-    await depositToken(
+    await depositToken({
       depositAmount,
-      testState.l1CustomToken.address,
-      testState.adminErc20Bridger,
-      testState.l1Signer,
-      testState.l2Signer,
-      L1ToL2MessageStatus.REDEEMED,
-      GatewayType.CUSTOM
-    )
+      l1TokenAddress: testState.l1CustomToken.address,
+      erc20Bridger: testState.adminErc20Bridger,
+      l1Signer: testState.l1Signer,
+      l2Signer: testState.l2Signer,
+      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      expectedGatewayType: GatewayType.CUSTOM,
+    })
   })
 
   it('withdraws erc20', async function () {
@@ -113,6 +113,34 @@ describe('Custom ERC20', () => {
         testState.l1CustomToken.address,
         testState.l1Signer.provider!
       ),
+    })
+  })
+
+  it('deposits erc20 with extra ETH', async () => {
+    await depositToken({
+      depositAmount,
+      ethDepositAmount: utils.parseEther('0.0005'),
+      l1TokenAddress: testState.l1CustomToken.address,
+      erc20Bridger: testState.adminErc20Bridger,
+      l1Signer: testState.l1Signer,
+      l2Signer: testState.l2Signer,
+      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      expectedGatewayType: GatewayType.CUSTOM,
+    })
+  })
+
+  it('deposits erc20 with extra ETH to a specific L2 address', async () => {
+    const randomAddress = Wallet.createRandom().address
+    await depositToken({
+      depositAmount,
+      ethDepositAmount: utils.parseEther('0.0005'),
+      l1TokenAddress: testState.l1CustomToken.address,
+      erc20Bridger: testState.adminErc20Bridger,
+      l1Signer: testState.l1Signer,
+      l2Signer: testState.l2Signer,
+      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      expectedGatewayType: GatewayType.CUSTOM,
+      destinationAddress: randomAddress,
     })
   })
 })
