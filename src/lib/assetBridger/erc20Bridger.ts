@@ -101,6 +101,10 @@ export interface Erc20DepositParams extends EthDepositParams {
    */
   destinationAddress?: string
   /**
+   * The maximum cost to be paid for submitting the transaction
+   */
+  maxSubmissionCost?: BigNumber
+  /**
    * The address to return the any gas that was not spent on fees
    */
   excessFeeRefundAddress?: string
@@ -542,21 +546,37 @@ export class Erc20Bridger extends AssetBridger<
     const depositFunc = (
       depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
     ) => {
+      depositParams.maxSubmissionCost =
+        params.maxSubmissionCost || depositParams.maxSubmissionCost
+
       const innerData = defaultAbiCoder.encode(
         ['uint256', 'bytes'],
         [depositParams.maxSubmissionCost, '0x']
       )
       const iGatewayRouter = L1GatewayRouter__factory.createInterface()
 
+      const functionData =
+        defaultedParams.excessFeeRefundAddress !== defaultedParams.from
+          ? iGatewayRouter.encodeFunctionData('outboundTransferCustomRefund', [
+              erc20L1Address,
+              defaultedParams.excessFeeRefundAddress,
+              destinationAddress,
+              amount,
+              depositParams.gasLimit,
+              depositParams.maxFeePerGas,
+              innerData,
+            ])
+          : iGatewayRouter.encodeFunctionData('outboundTransfer', [
+              erc20L1Address,
+              destinationAddress,
+              amount,
+              depositParams.gasLimit,
+              depositParams.maxFeePerGas,
+              innerData,
+            ])
+
       return {
-        data: iGatewayRouter.encodeFunctionData('outboundTransfer', [
-          erc20L1Address,
-          destinationAddress,
-          amount,
-          depositParams.gasLimit,
-          depositParams.maxFeePerGas,
-          innerData,
-        ]),
+        data: functionData,
         to: this.l2Network.tokenBridge.l1GatewayRouter,
         from: defaultedParams.from,
         value: depositParams.gasLimit
