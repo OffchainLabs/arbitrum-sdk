@@ -650,6 +650,8 @@ export class Erc20Bridger extends AssetBridger<
         params.maxSubmissionCost || depositParams.maxSubmissionCost
 
       const iGatewayRouter = L1GatewayRouter__factory.createInterface()
+      const innerData =
+        this.getDepositRequestOutboundTransferDataParam(depositParams)
 
       const functionData =
         defaultedParams.excessFeeRefundAddress !== defaultedParams.from
@@ -660,7 +662,7 @@ export class Erc20Bridger extends AssetBridger<
               amount,
               depositParams.gasLimit,
               depositParams.maxFeePerGas,
-              this.getDepositRequestOutboundTransferDataParam(depositParams),
+              innerData,
             ])
           : iGatewayRouter.encodeFunctionData('outboundTransfer', [
               erc20L1Address,
@@ -668,7 +670,7 @@ export class Erc20Bridger extends AssetBridger<
               amount,
               depositParams.gasLimit,
               depositParams.maxFeePerGas,
-              this.getDepositRequestOutboundTransferDataParam(depositParams),
+              innerData,
             ])
 
       return {
