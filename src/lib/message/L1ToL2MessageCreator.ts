@@ -74,9 +74,9 @@ export class L1ToL2MessageCreator {
     estimates: Pick<RetryableData, L1ToL2GasKeys>,
     excessFeeRefundAddress: string,
     callValueRefundAddress: string,
-    isNativeTokenEth: boolean
+    nativeTokenIsEth: boolean
   ) {
-    if (!isNativeTokenEth) {
+    if (!nativeTokenIsEth) {
       return ERC20Inbox__factory.createInterface().encodeFunctionData(
         'createRetryableTicket',
         [
@@ -139,21 +139,21 @@ export class L1ToL2MessageCreator {
     )
 
     const l2Network = await getL2Network(l2Provider)
-    const isNativeTokenEth = typeof l2Network.nativeToken === 'undefined'
+    const nativeTokenIsEth = typeof l2Network.nativeToken === 'undefined'
 
     const data = L1ToL2MessageCreator.getTicketCreationRequestData(
       params,
       estimates,
       excessFeeRefundAddress,
       callValueRefundAddress,
-      isNativeTokenEth
+      nativeTokenIsEth
     )
 
     return {
       txRequest: {
         to: l2Network.ethBridge.inbox,
         data,
-        value: isNativeTokenEth ? estimates.deposit : constants.Zero,
+        value: nativeTokenIsEth ? estimates.deposit : constants.Zero,
         from: params.from,
       },
       retryableData: {
