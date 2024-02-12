@@ -109,7 +109,7 @@ export type TokenApproveParams = {
   amount?: BigNumber
 }
 
-type Erc20DepositRequestRetryableOverrides = {
+export type Erc20DepositRequestRetryableOverrides = {
   /**
    * Optional L1 gas price override. Used to estimate submission fees.
    */
