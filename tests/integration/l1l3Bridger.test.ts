@@ -459,46 +459,46 @@ describe('L1 to L3 Bridging', () => {
       })
     }
 
-    it('getL2ERC20Address', async () => {
-      // use weth to test, since we already know its addresses
-      const l1Weth = l2Network.tokenBridge.l1Weth
-      const l2Weth = l2Network.tokenBridge.l2Weth
-      const ans = await l1l3Bridger.getL2ERC20Address(
-        l1Weth!, // todo handle undefined
-        l1Signer.provider!
-      )
-      expect(ans).to.eq(l2Weth)
-    })
-
-    it('getL1L2GatewayAddress', async () => {
-      // test weth and default gateway
-      const l1Weth = l2Network.tokenBridge.l1Weth
-      const l1l2WethGateway = l2Network.tokenBridge.l1WethGateway
-
-      const wethAns = await l1l3Bridger.getL1L2GatewayAddress(
-        l1Weth!, // todo handle undefined
-        l1Signer.provider!
-      )
-
-      expect(wethAns).to.eq(l1l2WethGateway)
-
-      // test default gateway
-      const l1l2Gateway = l2Network.tokenBridge.l1ERC20Gateway
-      const defaultAns = await l1l3Bridger.getL1L2GatewayAddress(
-        l1Token.address,
-        l1Signer.provider!
-      )
-      expect(defaultAns).to.eq(l1l2Gateway)
-    })
-
     // only perform these tests if there are known weth pairs we can test against
     if (!isL2NetworkWithCustomFeeToken()) {
+      it('getL2ERC20Address', async () => {
+        // use weth to test, since we already know its addresses
+        const l1Weth = l2Network.tokenBridge.l1Weth
+        const l2Weth = l2Network.tokenBridge.l2Weth
+        const ans = await l1l3Bridger.getL2ERC20Address(
+          l1Weth,
+          l1Signer.provider!
+        )
+        expect(ans).to.eq(l2Weth)
+      })
+
+      it('getL1L2GatewayAddress', async () => {
+        // test weth and default gateway
+        const l1Weth = l2Network.tokenBridge.l1Weth
+        const l1l2WethGateway = l2Network.tokenBridge.l1WethGateway
+
+        const wethAns = await l1l3Bridger.getL1L2GatewayAddress(
+          l1Weth,
+          l1Signer.provider!
+        )
+
+        expect(wethAns).to.eq(l1l2WethGateway)
+
+        // test default gateway
+        const l1l2Gateway = l2Network.tokenBridge.l1ERC20Gateway
+        const defaultAns = await l1l3Bridger.getL1L2GatewayAddress(
+          l1Token.address,
+          l1Signer.provider!
+        )
+        expect(defaultAns).to.eq(l1l2Gateway)
+      })
+
       it('getL3ERC20Address', async () => {
         // use weth to test, since we already know its addresses
         const l1Weth = l2Network.tokenBridge.l1Weth
         const l3Weth = l3Network.tokenBridge.l2Weth
         const ans = await l1l3Bridger.getL3ERC20Address(
-          l1Weth!, // todo handle undefined
+          l1Weth,
           l1Signer.provider!,
           l2Signer.provider!
         )
@@ -511,7 +511,7 @@ describe('L1 to L3 Bridging', () => {
         const l2l3WethGateway = l3Network.tokenBridge.l1WethGateway
 
         const wethAns = await l1l3Bridger.getL2L3GatewayAddress(
-          l1Weth!, // todo handle undefined
+          l1Weth,
           l1Signer.provider!,
           l2Signer.provider!
         )

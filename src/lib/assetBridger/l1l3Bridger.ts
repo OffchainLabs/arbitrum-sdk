@@ -683,6 +683,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       l1Provider,
       params.l2Provider
     )
+
     const partialTeleportParams: OmitTyped<
       IL1Teleporter.TeleportParamsStruct,
       'gasParams'
@@ -1032,7 +1033,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     // get gasLimit and submission cost for a retryable while respecting overrides
     const getRetryableGasValuesWithOverrides = async (
       overrides: TeleporterRetryableGasOverride | undefined,
-      getValues: () => Promise<RetryableGasValues>
+      getEstimates: () => Promise<RetryableGasValues>
     ): Promise<RetryableGasValues> => {
       let base: RetryableGasValues
       if (overrides?.gasLimit?.base && overrides?.maxSubmissionFee?.base) {
@@ -1041,7 +1042,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
           maxSubmissionFee: overrides.maxSubmissionFee.base,
         }
       } else {
-        const calculated = await getValues()
+        const calculated = await getEstimates()
         base = {
           gasLimit: overrides?.gasLimit?.base || calculated.gasLimit,
           maxSubmissionFee:
@@ -1069,10 +1070,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     // get gas price while respecting overrides
     const applyGasPercentIncrease = async (
       overrides: PercentIncrease | undefined,
-      getValue: () => Promise<BigNumber>
+      getEstimate: () => Promise<BigNumber>
     ) => {
       return this._percentIncrease(
-        overrides?.base || (await getValue()),
+        overrides?.base || (await getEstimate()),
         overrides?.percentIncrease || this.defaultGasPricePercentIncrease
       )
     }
