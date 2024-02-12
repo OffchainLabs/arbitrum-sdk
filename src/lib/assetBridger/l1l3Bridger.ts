@@ -168,11 +168,14 @@ export type Erc20DepositRequestParams = {
 }
 
 export type Erc20DepositMessagesParams = {
-  txHash: string
   l1Provider: Provider
   l2Provider: Provider
   l3Provider: Provider
-}
+} & (
+  | { txHash: string }
+  | { tx: L1ContractCallTransaction }
+  | { txReceipt: L1ContractCallTransactionReceipt }
+)
 
 export type Erc20DepositMessages = {
   /**
@@ -657,6 +660,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
   /**
    * Get a tx request for teleporting some tokens from L1 to L3.
+   * Also returns the amount of fee tokens required for teleportation.
    */
   public async getDepositRequest(
     params: Erc20DepositRequestParams &
@@ -749,7 +753,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   }
 
   /**
-   * Fetch the cross chain messages from a teleportation transaction hash
+   * Fetch the cross chain messages
+   * 
+   * Can provide either the txHash, the tx, or the txReceipt
    */
   public async getDepositMessages(
     params: Erc20DepositMessagesParams
@@ -758,12 +764,26 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
 
-    const tx = await params.l1Provider.getTransaction(params.txHash)
-    const teleportParams = this._decodeTeleportCalldata(tx.data)
+    let data: string
+    let l1TxReceipt: L1ContractCallTransactionReceipt
+    if ('txHash' in params) {
+      data = (await params.l1Provider.getTransaction(params.txHash)).data
+      l1TxReceipt = new L1ContractCallTransactionReceipt(
+        await params.l1Provider.getTransactionReceipt(params.txHash)
+      )
+    } else if ('tx' in params) {
+      data = params.tx.data
+      l1TxReceipt = new L1ContractCallTransactionReceipt(
+        await params.l1Provider.getTransactionReceipt(params.tx.hash)
+      )
+    } else {
+      data = (
+        await params.l1Provider.getTransaction(params.txReceipt.transactionHash)
+      ).data
+      l1TxReceipt = params.txReceipt
+    }
 
-    const l1TxReceipt = new L1TransactionReceipt(
-      await params.l1Provider.getTransactionReceipt(params.txHash)
-    )
+    const teleportParams = this._decodeTeleportCalldata(data)
     const l1l2Messages = await l1TxReceipt.getL1ToL2Messages(params.l2Provider)
 
     let partialResult: OmitTyped<
