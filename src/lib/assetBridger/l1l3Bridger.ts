@@ -572,9 +572,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   ): Promise<ethers.ContractTransaction> {
     await this._checkL1Network(params.l1Signer)
 
-    const approveRequest = 'txRequest' in params
-      ? params.txRequest
-      : await this.getApproveTokenRequest(params)
+    const approveRequest =
+      'txRequest' in params
+        ? params.txRequest
+        : await this.getApproveTokenRequest(params)
 
     return params.l1Signer.sendTransaction({
       ...approveRequest,
@@ -618,13 +619,14 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   ): Promise<ethers.ContractTransaction> {
     await this._checkL1Network(params.l1Signer)
 
-    const approveRequest = 'txRequest' in params
-      ? params.txRequest
-      : await this.getApproveFeeTokenRequest({
-          l1Provider: params.l1Signer.provider!,
-          l2Provider: params.l2Provider,
-          amount: params.amount,
-        })
+    const approveRequest =
+      'txRequest' in params
+        ? params.txRequest
+        : await this.getApproveFeeTokenRequest({
+            l1Provider: params.l1Signer.provider!,
+            l2Provider: params.l2Provider,
+            amount: params.amount,
+          })
 
     return params.l1Signer.sendTransaction({
       ...approveRequest,
@@ -646,13 +648,15 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         | { l1Signer: Signer }
       )
   ): Promise<DepositRequestResult> {
-    const l1Provider = 'l1Provider' in params ? params.l1Provider : params.l1Signer.provider!
-    
+    const l1Provider =
+      'l1Provider' in params ? params.l1Provider : params.l1Signer.provider!
+
     await this._checkL1Network(l1Provider)
     await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
-    
-    const from = 'from' in params ? params.from : await params.l1Signer.getAddress()
+
+    const from =
+      'from' in params ? params.from : await params.l1Signer.getAddress()
 
     const l1FeeToken = await this.l1FeeTokenAddress(
       l1Provider,
@@ -711,9 +715,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   ): Promise<L1ContractCallTransaction> {
     await this._checkL1Network(params.l1Signer)
 
-    const depositRequest = 'txRequest' in params
-      ? params.txRequest
-      : (await this.getDepositRequest(params)).txRequest
+    const depositRequest =
+      'txRequest' in params
+        ? params.txRequest
+        : (await this.getDepositRequest(params)).txRequest
 
     const tx = await params.l1Signer.sendTransaction({
       ...depositRequest,
@@ -725,7 +730,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
   /**
    * Fetch the cross chain messages
-   * 
+   *
    * Can provide either the txHash, the tx, or the txReceipt
    */
   public async getDepositMessages(
@@ -1257,12 +1262,14 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
         | { l1Signer: Signer }
       )
   ): Promise<L1ToL2TransactionRequest> {
-    const l1Provider = 'l1Provider' in params ? params.l1Provider : params.l1Signer.provider!
+    const l1Provider =
+      'l1Provider' in params ? params.l1Provider : params.l1Signer.provider!
     await this._checkL1Network(l1Provider)
     await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
 
-    const from = 'from' in params ? params.from : await params.l1Signer.getAddress()
+    const from =
+      'from' in params ? params.from : await params.l1Signer.getAddress()
 
     const l3DestinationAddress = params.to || from
     const l2RefundAddress = params.l2RefundAddress || from
@@ -1311,9 +1318,10 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
   ): Promise<L1ContractCallTransaction> {
     await this._checkL1Network(params.l1Signer)
 
-    const depositRequest = 'txRequest' in params
-      ? params.txRequest
-      : (await this.getDepositRequest(params)).txRequest
+    const depositRequest =
+      'txRequest' in params
+        ? params.txRequest
+        : (await this.getDepositRequest(params)).txRequest
 
     const tx = await params.l1Signer.sendTransaction({
       ...depositRequest,
