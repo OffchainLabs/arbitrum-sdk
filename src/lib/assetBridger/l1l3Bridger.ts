@@ -309,32 +309,6 @@ class BaseL1L3Bridger {
 }
 
 /**
- * Ensure the T is not of TxRequestParams type by ensure it doesnt have a specific TxRequestParams property
- */
-type IsNotTxRequestParams<T> = T extends TxRequestParams ? never : T
-
-type DoesNotHaveL1Signer<T> = T extends { l1Signer: Signer } ? never : T
-
-/**
- * Check if an object has an l1Signer property
- */
-const hasL1Signer = <T>(
-  x: DoesNotHaveL1Signer<T> | { l1Signer: Signer }
-): x is { l1Signer: Signer } => {
-  return isDefined((x as { l1Signer: Signer }).l1Signer)
-}
-
-/**
- * Check if an object is of TxRequestParams type
- */
-const isTxRequestParams = <T>(
-  possibleRequest: IsNotTxRequestParams<T> | TxRequestParams
-): possibleRequest is TxRequestParams => {
-  const req = possibleRequest as TxRequestParams
-  return isDefined(req.txRequest) && isDefined(req.l1Signer)
-}
-
-/**
  * Bridger for moving ERC20 tokens from L1 to L3
  */
 export class Erc20L1L3Bridger extends BaseL1L3Bridger {
@@ -598,7 +572,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   ): Promise<ethers.ContractTransaction> {
     await this._checkL1Network(params.l1Signer)
 
-    const approveRequest = isTxRequestParams(params)
+    const approveRequest = 'txRequest' in params
       ? params.txRequest
       : await this.getApproveTokenRequest(params)
 
@@ -644,7 +618,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   ): Promise<ethers.ContractTransaction> {
     await this._checkL1Network(params.l1Signer)
 
-    const approveRequest = isTxRequestParams(params)
+    const approveRequest = 'txRequest' in params
       ? params.txRequest
       : await this.getApproveFeeTokenRequest({
           l1Provider: params.l1Signer.provider!,
@@ -672,16 +646,13 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         | { l1Signer: Signer }
       )
   ): Promise<DepositRequestResult> {
-    const l1Provider = hasL1Signer(params)
-      ? params.l1Signer.provider!
-      : params.l1Provider
+    const l1Provider = 'l1Provider' in params ? params.l1Provider : params.l1Signer.provider!
+    
     await this._checkL1Network(l1Provider)
     await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
-
-    const from = hasL1Signer(params)
-      ? await params.l1Signer.getAddress()
-      : params.from
+    
+    const from = 'from' in params ? params.from : await params.l1Signer.getAddress()
 
     const l1FeeToken = await this.l1FeeTokenAddress(
       l1Provider,
@@ -740,7 +711,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   ): Promise<L1ContractCallTransaction> {
     await this._checkL1Network(params.l1Signer)
 
-    const depositRequest = isTxRequestParams(params)
+    const depositRequest = 'txRequest' in params
       ? params.txRequest
       : (await this.getDepositRequest(params)).txRequest
 
@@ -1286,16 +1257,12 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
         | { l1Signer: Signer }
       )
   ): Promise<L1ToL2TransactionRequest> {
-    const l1Provider = hasL1Signer(params)
-      ? params.l1Signer.provider!
-      : params.l1Provider
+    const l1Provider = 'l1Provider' in params ? params.l1Provider : params.l1Signer.provider!
     await this._checkL1Network(l1Provider)
     await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
 
-    const from = hasL1Signer(params)
-      ? await params.l1Signer.getAddress()
-      : params.from
+    const from = 'from' in params ? params.from : await params.l1Signer.getAddress()
 
     const l3DestinationAddress = params.to || from
     const l2RefundAddress = params.l2RefundAddress || from
@@ -1344,7 +1311,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
   ): Promise<L1ContractCallTransaction> {
     await this._checkL1Network(params.l1Signer)
 
-    const depositRequest = isTxRequestParams(params)
+    const depositRequest = 'txRequest' in params
       ? params.txRequest
       : (await this.getDepositRequest(params)).txRequest
 
