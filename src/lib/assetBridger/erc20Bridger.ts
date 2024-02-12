@@ -554,7 +554,7 @@ export class Erc20Bridger extends AssetBridger<
     depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
   ) {
     // the call value should be zero when paying with a custom gas token,
-    // as the fee amount is packed inside the last parameter (`data`) of the call to `outboundTransfer`
+    // as the fee amount is packed inside the last parameter (`data`) of the call to `outboundTransfer`, see `getDepositRequestOutboundTransferDataParam`
     if (!this.nativeTokenIsEth) {
       return constants.Zero
     }
@@ -568,7 +568,11 @@ export class Erc20Bridger extends AssetBridger<
       .add(depositParams.maxSubmissionCost)
   }
 
-  // todo(spsjvc): jsdoc
+  /**
+   * Get the `data` param for call to `outboundTransfer`
+   * @param depositParams
+   * @returns
+   */
   private getDepositRequestOutboundTransferDataParam(
     depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
   ) {
@@ -576,8 +580,11 @@ export class Erc20Bridger extends AssetBridger<
       return defaultAbiCoder.encode(
         ['uint256', 'bytes', 'uint256'],
         [
+          // maxSubmissionCost
           constants.Zero,
+          // callHookData
           '0x',
+          // nativeTokenTotalFee
           depositParams.gasLimit
             .mul(depositParams.maxFeePerGas)
             .add(depositParams.maxSubmissionCost),
@@ -587,7 +594,12 @@ export class Erc20Bridger extends AssetBridger<
 
     return defaultAbiCoder.encode(
       ['uint256', 'bytes'],
-      [depositParams.maxSubmissionCost, '0x']
+      [
+        // maxSubmissionCost
+        depositParams.maxSubmissionCost,
+        // callHookData
+        '0x',
+      ]
     )
   }
 
