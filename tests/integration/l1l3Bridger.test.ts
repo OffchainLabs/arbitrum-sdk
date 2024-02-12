@@ -146,7 +146,7 @@ describe('L1 to L3 Bridging', () => {
   let l1Signer: ethers.Signer
   let l2Signer: ethers.Signer
   let l3Provider: ethers.providers.JsonRpcProvider
-  
+
   async function checkNetworkGuards(
     l1: boolean,
     l2: boolean,
@@ -168,31 +168,19 @@ describe('L1 to L3 Bridging', () => {
 
     if (l1) {
       await expectPromiseToReject(
-        checkFunction(
-          l2Signer,
-          l2Signer,
-          l3Signer
-        ),
+        checkFunction(l2Signer, l2Signer, l3Signer),
         `Signer/provider chain id: ${l2ChainId} doesn't match provided chain id: ${l1ChainId}.`
       )
     }
     if (l2) {
       await expectPromiseToReject(
-        checkFunction(
-          l1Signer,
-          l1Signer,
-          l3Signer
-        ),
+        checkFunction(l1Signer, l1Signer, l3Signer),
         `Signer/provider chain id: ${l1ChainId} doesn't match provided chain id: ${l2ChainId}.`
       )
     }
     if (l3) {
       await expectPromiseToReject(
-        checkFunction(
-          l1Signer,
-          l2Signer,
-          l1Signer
-        ),
+        checkFunction(l1Signer, l2Signer, l1Signer),
         `Signer/provider chain id: ${l1ChainId} doesn't match provided chain id: ${l3ChainId}.`
       )
     }
@@ -289,8 +277,10 @@ describe('L1 to L3 Bridging', () => {
 
     it('should fail construction if l3 uses a custom fee token', async () => {
       l3Network.nativeToken = ethers.utils.hexlify(ethers.utils.randomBytes(20))
-      
-      expect(() => new EthL1L3Bridger(l3Network)).to.throw(`L3 network ${l3Network.name} uses a custom fee token`)
+
+      expect(() => new EthL1L3Bridger(l3Network)).to.throw(
+        `L3 network ${l3Network.name} uses a custom fee token`
+      )
 
       l3Network.nativeToken = undefined
 
@@ -581,7 +571,10 @@ describe('L1 to L3 Bridging', () => {
         false,
         false,
         async (l1Signer, l2Signer, l3Signer) => {
-          return new Erc20L1L3Bridger(l3Network).getL2ERC20Address(l1Token.address, l1Signer.provider!)
+          return new Erc20L1L3Bridger(l3Network).getL2ERC20Address(
+            l1Token.address,
+            l1Signer.provider!
+          )
         }
       )
 
@@ -632,7 +625,10 @@ describe('L1 to L3 Bridging', () => {
         false,
         false,
         async (l1Signer, l2Signer, l3Signer) => {
-          return new Erc20L1L3Bridger(l3Network).l1TokenIsDisabled(l1Token.address, l1Signer.provider!)
+          return new Erc20L1L3Bridger(l3Network).l1TokenIsDisabled(
+            l1Token.address,
+            l1Signer.provider!
+          )
         }
       )
 
@@ -642,7 +638,10 @@ describe('L1 to L3 Bridging', () => {
         true,
         false,
         async (l1Signer, l2Signer, l3Signer) => {
-          return new Erc20L1L3Bridger(l3Network).l2TokenIsDisabled(l1Token.address, l2Signer.provider!)
+          return new Erc20L1L3Bridger(l3Network).l2TokenIsDisabled(
+            l1Token.address,
+            l2Signer.provider!
+          )
         }
       )
 

@@ -59,8 +59,17 @@ type PickedTransactionRequest = Required<
 >
 
 export enum TeleportationType {
+  /**
+   * Teleporting to an ETH fee L3
+   */
   Standard,
+  /**
+   * Teleporting the fee token to a custom fee L3
+   */
   OnlyFeeToken,
+  /**
+   * Teleporting a non-fee token to a custom fee L3
+   */
   NonFeeTokenToCustomFee,
 }
 
@@ -308,6 +317,9 @@ type IsNotTxRequestParams<T> = T extends TxRequestParams ? never : T
 
 type DoesNotHaveL1Signer<T> = T extends { l1Signer: Signer } ? never : T
 
+/**
+ * Check if an object has an l1Signer property
+ */
 const hasL1Signer = <T>(
   x: DoesNotHaveL1Signer<T> | { l1Signer: Signer }
 ): x is { l1Signer: Signer } => {
@@ -316,8 +328,6 @@ const hasL1Signer = <T>(
 
 /**
  * Check if an object is of TxRequestParams type
- * @param possibleRequest
- * @returns
  */
 const isTxRequestParams = <T>(
   possibleRequest: IsNotTxRequestParams<T> | TxRequestParams
@@ -326,12 +336,24 @@ const isTxRequestParams = <T>(
   return isDefined(req.txRequest) && isDefined(req.l1Signer)
 }
 
+/**
+ * Bridger for moving ERC20 tokens from L1 to L3
+ */
 export class Erc20L1L3Bridger extends BaseL1L3Bridger {
+  /**
+   * Addresses of teleporter contracts on L2
+   */
   public readonly teleporterAddresses: TeleporterAddresses
 
-  protected readonly l2Erc20Bridger = new Erc20Bridger(this.l2Network)
-  protected readonly l3Erc20Bridger = new Erc20Bridger(this.l3Network)
-
+  /**
+   * Default gas limit for L2ForwarderFactory.callForwarder of 1,000,000
+   *
+   * Measured Standard: 361746
+   *
+   * Measured OnlyCustomFee: 220416
+   *
+   * Measured NonFeeTokenToCustomFee: 373449
+   */
   public readonly l2ForwarderFactoryDefaultGasLimit = BigNumber.from(1_000_000)
 
   /**
@@ -339,10 +361,13 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    */
   public readonly l2FeeTokenAddress: string | undefined
 
+  protected readonly l2Erc20Bridger = new Erc20Bridger(this.l2Network)
+  protected readonly l3Erc20Bridger = new Erc20Bridger(this.l3Network)
+
   /**
    * If the L3 network has a native token, this is the address of that token on L1
    */
-  private _l1FeeTokenAddress: string | undefined
+  protected _l1FeeTokenAddress: string | undefined
 
   public constructor(l3Network: L2Network) {
     super(l3Network)
@@ -365,9 +390,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
   /**
    * If the L3 network has a native token, return the address of that token on L1.
+   * If the L3 network uses ETH for fees, return undefined.
    * If the L3 network has a native token that is not available on L1, throw.
    * If the L3 network has a native token that doesn't use 18 decimals on L1 and L2, throw.
-   * If the L3 network uses ETH for fees, return undefined.
    */
   public async l1FeeTokenAddress(
     l1Provider: Provider,
@@ -402,7 +427,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       throw new ArbSdkError(`Could not find address for L3's fee token on L1`)
     }
 
-    // make sure boh the L1 and L2 tokens have 18 decimals
+    // make sure both the L1 and L2 tokens have 18 decimals
     if (
       (await ERC20__factory.connect(
         l1FeeTokenAddress,
@@ -506,7 +531,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   }
 
   /**
-   * Whether the L1 token has been disabled on the router given an L1 token address
+   * Whether the L1 token has been disabled on the L1 <-> L2 router given an L1 token address
    */
   public async l1TokenIsDisabled(
     l1TokenAddress: string,
@@ -516,7 +541,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   }
 
   /**
-   * Whether the L2 token has been disabled on the router given an L2 token address
+   * Whether the L2 token has been disabled on the L2 <-> L3 router given an L2 token address
    */
   public async l2TokenIsDisabled(
     l2TokenAddress: string,
@@ -542,6 +567,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     ).l2ForwarderAddress(owner, routerOrInbox, to)
   }
 
+  /**
+   * Get a tx request to approve tokens for teleportation.
+   * The tokens will be approved for L1Teleporter.
+   */
   public async getApproveTokenRequest(
     params: TokenApproveParams
   ): Promise<PickedTransactionRequest> {
@@ -557,6 +586,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     }
   }
 
+  /**
+   * Approve tokens for teleportation.
+   * The tokens will be approved for L1Teleporter.
+   */
   public async approveToken(
     params:
       | (TokenApproveParams & { l1Signer: Signer; overrides?: Overrides })
@@ -574,6 +607,11 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     })
   }
 
+  /**
+   * Get a tx request to approve the L3's fee token for teleportation.
+   * The tokens will be approved for L1Teleporter.
+   * Will throw if the L3 network uses ETH for fees or the fee token doesn't exist on L1.
+   */
   public async getApproveFeeTokenRequest(params: {
     l1Provider: Provider
     l2Provider: Provider
@@ -588,6 +626,11 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     })
   }
 
+  /**
+   * Approve the L3's fee token for teleportation.
+   * The tokens will be approved for L1Teleporter.
+   * Will throw if the L3 network uses ETH for fees or the fee token doesn't exist on L1.
+   */
   public async approveFeeToken(
     params:
       | {
@@ -614,6 +657,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     })
   }
 
+  /**
+   * Get a tx request for teleporting some tokens from L1 to L3.
+   */
   public async getDepositRequest(
     params: Erc20DepositRequestParams &
       (
@@ -679,6 +725,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     }
   }
 
+  /**
+   * Execute a teleportation of some tokens from L1 to L3.
+   */
   public async deposit(
     params:
       | (Erc20DepositRequestParams & {
@@ -701,6 +750,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
+  /**
+   * Fetch the cross chain messages from a teleportation transaction hash
+   */
   public async getDepositMessages(
     params: Erc20DepositMessagesParams
   ): Promise<Erc20DepositMessages> {
@@ -758,6 +810,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     }
   }
 
+  /**
+   * Get the type of teleportation from the l1Token and l3FeeTokenL1Addr teleport parameters
+   */
   public teleportationType(
     partialTeleportParams: Pick<
       IL1Teleporter.TeleportParamsStruct,
@@ -780,22 +835,25 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
   // gas estimation helpers
 
+  /**
+   * Estimate the gasLimit and maxSubmissionFee for a token bridge retryable
+   */
   protected async _getTokenBridgeGasEstimates(params: {
     parentProvider: Provider
     childProvider: Provider
     parentGasPrice: BigNumber
     parentErc20Address: string
-    parentChildGatewayAddress: string
+    parentGatewayAddress: string
     from: string
     to: string
     amount: BigNumber
   }): Promise<RetryableGasValues> {
-    const parentChildGateway = L1GatewayRouter__factory.connect(
-      params.parentChildGatewayAddress,
+    const parentGateway = L1GatewayRouter__factory.connect(
+      params.parentGatewayAddress,
       params.parentProvider
     )
 
-    const outboundCalldata = await parentChildGateway.getOutboundCalldata(
+    const outboundCalldata = await parentGateway.getOutboundCalldata(
       params.parentErc20Address,
       params.from,
       params.to,
@@ -807,9 +865,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       params.childProvider
     ).estimateAll(
       {
-        to: await parentChildGateway.counterpartGateway(),
+        to: await parentGateway.counterpartGateway(),
         data: outboundCalldata,
-        from: parentChildGateway.address,
+        from: parentGateway.address,
         l2CallValue: BigNumber.from(0),
         excessFeeRefundAddress: params.to,
         callValueRefundAddress: new Address(params.from).applyAlias().value,
@@ -824,11 +882,12 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     }
   }
 
+  /**
+   * Estimate the gasLimit and maxSubmissionFee for the L1 to L2 token bridge leg of a teleportation
+   */
   protected async _getL1L2TokenBridgeGasEstimates(params: {
-    partialTeleportParams: OmitTyped<
-      IL1Teleporter.TeleportParamsStruct,
-      'gasParams'
-    >
+    l1Token: string,
+    amount: BigNumberish,
     l1GasPrice: BigNumber
     l2ForwarderAddress: string
     l1Provider: Provider
@@ -838,22 +897,21 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       parentProvider: params.l1Provider,
       childProvider: params.l2Provider,
       parentGasPrice: params.l1GasPrice,
-      parentErc20Address: params.partialTeleportParams.l1Token,
-      parentChildGatewayAddress: await this.getL1L2GatewayAddress(
-        params.partialTeleportParams.l1Token,
+      parentErc20Address: params.l1Token,
+      parentGatewayAddress: await this.getL1L2GatewayAddress(
+        params.l1Token,
         params.l1Provider
       ),
       from: this.teleporterAddresses.l1Teleporter,
       to: params.l2ForwarderAddress,
-      amount: BigNumber.from(params.partialTeleportParams.amount),
+      amount: BigNumber.from(params.amount),
     })
   }
 
+  /**
+   * Estimate the gasLimit and maxSubmissionFee for the L1 to L2 fee token bridge leg of a teleportation
+   */
   protected async _getL1L2FeeTokenBridgeGasEstimates(params: {
-    partialTeleportParams: OmitTyped<
-      IL1Teleporter.TeleportParamsStruct,
-      'gasParams'
-    >
     l1GasPrice: BigNumber
     feeTokenAmount: BigNumber
     l2ForwarderAddress: string
@@ -869,7 +927,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       childProvider: params.l2Provider,
       parentGasPrice: params.l1GasPrice,
       parentErc20Address: l1FeeTokenAddress,
-      parentChildGatewayAddress: await this.getL1L2GatewayAddress(
+      parentGatewayAddress: await this.getL1L2GatewayAddress(
         l1FeeTokenAddress,
         params.l1Provider
       ),
@@ -879,6 +937,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     })
   }
 
+  /**
+   * Estimate the gasLimit and maxSubmissionFee for L2ForwarderFactory.callForwarder leg of a teleportation.
+   * Gas limit is hardcoded to 1,000,000
+   */
   protected async _getL2ForwarderFactoryGasEstimates(
     l1GasPrice: BigNumber,
     l1Provider: Provider
@@ -898,6 +960,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     }
   }
 
+  /**
+   * Estimate the gasLimit and maxSubmissionFee for the L2 -> L3 leg of a teleportation.
+   */
   protected async _getL2L3BridgeGasEstimates(params: {
     partialTeleportParams: OmitTyped<
       IL1Teleporter.TeleportParamsStruct,
@@ -943,7 +1008,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
           params.partialTeleportParams.l1Token,
           params.l1Provider
         ),
-        parentChildGatewayAddress: await this.getL2L3GatewayAddress(
+        parentGatewayAddress: await this.getL2L3GatewayAddress(
           params.partialTeleportParams.l1Token,
           params.l1Provider,
           params.l2Provider
@@ -955,6 +1020,12 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     }
   }
 
+  /**
+   * Given TeleportParams without the gas parameters, return TeleportParams with gas parameters populated.
+   * Does not modify the input parameters.
+   * 
+   * Todo: the L2Forwarder address is randomly generated and not based on the parameters.
+   */
   protected async _fillPartialTeleportParams(
     partialTeleportParams: OmitTyped<
       IL1Teleporter.TeleportParamsStruct,
@@ -966,8 +1037,6 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l2Provider: Provider,
     l3Provider: Provider
   ) {
-    partialTeleportParams = jsonCopy(partialTeleportParams)
-
     // get gasLimit and submission cost for a retryable while respecting overrides
     const getRetryableGasValuesWithOverrides = async (
       overrides: TeleporterRetryableGasOverride | undefined,
@@ -1037,7 +1106,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       retryableOverrides.l1l2TokenBridgeRetryableGas,
       () =>
         this._getL1L2TokenBridgeGasEstimates({
-          partialTeleportParams,
+          l1Token: partialTeleportParams.l1Token,
+          amount: partialTeleportParams.amount,
           l1GasPrice,
           l2ForwarderAddress: fakeRandomL2Forwarder,
           l1Provider,
@@ -1073,7 +1143,6 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         retryableOverrides.l1l2FeeTokenBridgeRetryableGas,
         () =>
           this._getL1L2FeeTokenBridgeGasEstimates({
-            partialTeleportParams,
             l1GasPrice,
             feeTokenAmount: l2l3TokenBridgeGasValues.gasLimit
               .mul(l3GasPrice)
@@ -1124,11 +1193,14 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     }
   }
 
+  /**
+   * @returns The size of the calldata for a call to L2ForwarderFactory.callForwarder
+   */
   protected _l2ForwarderFactoryCalldataSize() {
     const struct: IL2Forwarder.L2ForwarderParamsStruct = {
       owner: ethers.constants.AddressZero,
       l2Token: ethers.constants.AddressZero,
-      l2FeeToken: ethers.constants.AddressZero,
+      l3FeeTokenL2Addr: ethers.constants.AddressZero,
       routerOrInbox: ethers.constants.AddressZero,
       to: ethers.constants.AddressZero,
       gasLimit: 0,
@@ -1143,6 +1215,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     return ethers.utils.hexDataLength(dummyCalldata) - 4
   }
 
+  /**
+   * Get the L1 address of the L3's fee token, or if there isn't one throw.
+   */
   protected async _l1FeeTokenAddressOrThrow(
     l1Provider: Provider,
     l2Provider: Provider
@@ -1153,6 +1228,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     return ft
   }
 
+  /**
+   * Given raw calldata for a teleport tx, decode the teleport parameters
+   */
   protected _decodeTeleportCalldata(
     data: string
   ): IL1Teleporter.TeleportParamsStruct {
@@ -1172,8 +1250,13 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
   constructor(l3Network: L2Network) {
     super(l3Network)
 
-    if (l3Network.nativeToken && l3Network.nativeToken !== ethers.constants.AddressZero) {
-      throw new ArbSdkError(`L3 network ${l3Network.name} uses a custom fee token`)
+    if (
+      l3Network.nativeToken &&
+      l3Network.nativeToken !== ethers.constants.AddressZero
+    ) {
+      throw new ArbSdkError(
+        `L3 network ${l3Network.name} uses a custom fee token`
+      )
     }
   }
 
