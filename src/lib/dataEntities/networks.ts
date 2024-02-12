@@ -80,11 +80,6 @@ export interface TeleporterAddresses {
   l2ForwarderFactory: string
 }
 
-export interface TeleporterAddresses {
-  l1Teleporter: string
-  l2ForwarderFactory: string
-}
-
 export interface TokenBridge {
   l1GatewayRouter: string
   l2GatewayRouter: string
