@@ -587,7 +587,7 @@ export class Erc20Bridger extends AssetBridger<
           // nativeTokenTotalFee
           depositParams.gasLimit
             .mul(depositParams.maxFeePerGas)
-            .add(depositParams.maxSubmissionCost),
+            .add(depositParams.maxSubmissionCost), // will be zero
         ]
       )
     }
