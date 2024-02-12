@@ -558,7 +558,7 @@ export class Erc20Bridger extends AssetBridger<
     depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
   ) {
     // the call value should be zero when paying with a custom gas token,
-    // as the fee amount is packed inside the last parameter (`data`) of the call to `outboundTransfer`, see `getDepositRequestOutboundTransferDataParam`
+    // as the fee amount is packed inside the last parameter (`data`) of the call to `outboundTransfer`, see `getDepositRequestOutboundTransferInnerData`
     if (!this.nativeTokenIsEth) {
       return constants.Zero
     }
@@ -577,7 +577,7 @@ export class Erc20Bridger extends AssetBridger<
    * @param depositParams
    * @returns
    */
-  private getDepositRequestOutboundTransferDataParam(
+  private getDepositRequestOutboundTransferInnerData(
     depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
   ) {
     if (!this.nativeTokenIsEth) {
@@ -651,7 +651,7 @@ export class Erc20Bridger extends AssetBridger<
 
       const iGatewayRouter = L1GatewayRouter__factory.createInterface()
       const innerData =
-        this.getDepositRequestOutboundTransferDataParam(depositParams)
+        this.getDepositRequestOutboundTransferInnerData(depositParams)
 
       const functionData =
         defaultedParams.excessFeeRefundAddress !== defaultedParams.from
