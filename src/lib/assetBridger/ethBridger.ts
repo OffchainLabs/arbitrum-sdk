@@ -46,7 +46,7 @@ import {
 import { OmitTyped } from '../utils/types'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
-import { L2Network, getL2Network } from '../dataEntities/networks'
+import { getL2Network } from '../dataEntities/networks'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 
 export type ApproveGasTokenParams = {
@@ -194,11 +194,15 @@ export class EthBridger extends AssetBridger<
       throw new Error('chain uses ETH as its native/gas token')
     }
 
-    const erc20Interface = ERC20__factory.createInterface()
-    const data = erc20Interface.encodeFunctionData('approve', [
-      this.l2Network.ethBridge.inbox,
-      params?.amount ?? constants.MaxUint256,
-    ])
+    const data = ERC20__factory.createInterface().encodeFunctionData(
+      'approve',
+      [
+        // spender
+        this.l2Network.ethBridge.inbox,
+        // value
+        params?.amount ?? constants.MaxUint256,
+      ]
+    )
 
     return {
       to: this.nativeToken!,
@@ -229,7 +233,7 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Gets the transaction calldata for a tx request necessary for depositing ETH or custom gas token
+   * Gets transaction calldata for a tx request for depositing ETH or custom gas token
    * @param params
    * @returns
    */
@@ -256,7 +260,7 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Get a transaction request for an eth deposit
+   * Gets tx request for depositing ETH or custom gas token
    * @param params
    * @returns
    */
