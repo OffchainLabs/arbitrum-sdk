@@ -152,10 +152,10 @@ const registerCustomToken = async (
   adminErc20Bridger: AdminErc20Bridger
 ) => {
   // create a custom token on L1 and L2
-  const l1CustomTokenFac = isL2NetworkWithCustomFeeToken()
+  const l1CustomTokenFactory = isL2NetworkWithCustomFeeToken()
     ? new TestOrbitCustomTokenL1__factory(l1Signer)
     : new TestCustomTokenL1__factory(l1Signer)
-  const l1CustomToken = await l1CustomTokenFac.deploy(
+  const l1CustomToken = await l1CustomTokenFactory.deploy(
     l2Network.tokenBridge.l1CustomGateway,
     l2Network.tokenBridge.l1GatewayRouter
   )
