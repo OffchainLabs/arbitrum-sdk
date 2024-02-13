@@ -22,17 +22,19 @@ import { BigNumber } from 'ethers'
 import { skipIfMainnet } from './testHelpers'
 import { testSetup } from '../../scripts/testSetup'
 import { L1ToL2MessageGasEstimator } from '../../src'
-import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
-
-const isCustomFeeToken = isL2NetworkWithCustomFeeToken()
+import {
+  itOnlyWhenEth,
+  itOnlyWhenCustomGasToken,
+} from './custom-fee-token/mochaExtensions'
 
 describe('L1ToL2MessageGasEstimator', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
 
-  if (!isCustomFeeToken) {
-    it(`"estimateSubmissionFee" returns non-0 for eth chain`, async () => {
+  itOnlyWhenEth(
+    `"estimateSubmissionFee" returns non-0 for eth chain`,
+    async () => {
       const { l1Provider, l2Provider } = await testSetup()
 
       const submissionFee = await new L1ToL2MessageGasEstimator(
@@ -44,11 +46,12 @@ describe('L1ToL2MessageGasEstimator', () => {
       )
 
       expect(submissionFee.toString()).to.not.eq(BigNumber.from(0).toString())
-    })
-  }
+    }
+  )
 
-  if (isCustomFeeToken) {
-    it(`"estimateSubmissionFee" returns 0 for custom gas token chain`, async () => {
+  itOnlyWhenCustomGasToken(
+    `"estimateSubmissionFee" returns 0 for custom gas token chain`,
+    async () => {
       const { l1Provider, l2Provider } = await testSetup()
 
       const submissionFee = await new L1ToL2MessageGasEstimator(
@@ -60,6 +63,6 @@ describe('L1ToL2MessageGasEstimator', () => {
       )
 
       expect(submissionFee.toString()).to.eq(BigNumber.from(0).toString())
-    })
-  }
+    }
+  )
 })
