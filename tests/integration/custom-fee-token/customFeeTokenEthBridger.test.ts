@@ -22,7 +22,6 @@ import dotenv from 'dotenv'
 
 import { parseEther } from '@ethersproject/units'
 
-import { isL2NetworkWithCustomFeeToken } from './customFeeTokenTestHelpers'
 import {
   fundL1 as fundL1Ether,
   mineUntilStop,
@@ -30,15 +29,11 @@ import {
   wait,
 } from '../testHelpers'
 import { L2ToL1Message, L2ToL1MessageStatus } from '../../../src'
+import { describeOnlyWhenCustomGasToken } from './mochaExtensions'
 
 dotenv.config()
 
-// only run when using a custom gas token chain
-const describeWithCustomGasTokenPatch = isL2NetworkWithCustomFeeToken()
-  ? describe
-  : describe.skip
-
-describeWithCustomGasTokenPatch(
+describeOnlyWhenCustomGasToken(
   'EthBridger (with custom fee token)',
   async () => {
     const {
@@ -83,7 +78,7 @@ describeWithCustomGasTokenPatch(
       await fundL1CustomFeeToken(l1Signer)
 
       const approvalTx = await ethBridger.approveGasToken({
-        txRequest: await ethBridger.getApproveGasTokenRequest(),
+        txRequest: ethBridger.getApproveGasTokenRequest(),
         l1Signer,
       })
       await approvalTx.wait()

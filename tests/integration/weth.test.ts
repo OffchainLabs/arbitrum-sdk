@@ -31,14 +31,9 @@ import { L1ToL2MessageStatus } from '../../src'
 import { Wallet } from 'ethers'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
-import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
+import { describeOnlyWhenEth } from './custom-fee-token/mochaExtensions'
 
-// only run when not using a custom gas token chain
-const describeWithCustomGasTokenPatch = !isL2NetworkWithCustomFeeToken()
-  ? describe
-  : describe.skip
-
-describeWithCustomGasTokenPatch('WETH', async () => {
+describeOnlyWhenEth('WETH', async () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
