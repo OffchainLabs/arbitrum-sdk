@@ -1,78 +1,83 @@
-const { runTypeChain, glob } = require('typechain')
-const { execSync } = require('child_process')
-const { unlinkSync } = require('fs')
+const { runTypeChain, glob } = require('typechain');
+const { execSync } = require('child_process');
+const { unlinkSync } = require('fs');
 
-const getPackagePath = packageName => {
-  const path = require.resolve(`${packageName}/package.json`)
-  return path.substr(0, path.indexOf('package.json'))
-}
+/**
+ * Get the path of a package by its name.
+ * @param {string} packageName The name of the package.
+ * @returns {string} The path to the package.
+ */
+const getPackagePath = (packageName) => {
+  const path = require.resolve(`${packageName}/package.json`);
+  return path.substr(0, path.indexOf('package.json'));
+};
 
 async function main() {
-  const cwd = process.cwd()
+  const cwd = process.cwd();
 
-  const nitroPath = getPackagePath('@arbitrum/nitro-contracts')
-  const tokenBridgePath = getPackagePath('@arbitrum/token-bridge-contracts')
+  // Retrieve paths for nitro and token bridge contracts
+  const nitroPath = getPackagePath('@arbitrum/nitro-contracts');
+  const tokenBridgePath = getPackagePath('@arbitrum/token-bridge-contracts');
 
-  console.log('Compiling paths.')
+  console.log('Compiling contracts.');
 
-  const npmExec = process.env['npm_execpath']
-  if (!npmExec || npmExec === '')
-    throw new Error(
-      'No support for npm_execpath env variable in package manager'
-    )
+  // Validate npm_execpath environment variable
+  const npmExec = process.env['npm_execpath'];
+  if (!npmExec || npmExec === '') {
+    throw new Error('npm_execpath environment variable is not set or empty. Please ensure your package manager is configured correctly.');
+  }
 
-  // TODO: use `HARDHAT_ARTIFACT_PATH` to write files to arbitrum sdk instead of the packages themselves.
-  // this is currently broken since hardhat throws a weird error:
-  // `Error HH702: Invalid artifact path [...] its correct case-sensitive path is...`
-  // https://yarnpkg.com/advanced/rulebook#packages-should-never-write-inside-their-own-folder-outside-of-postinstall
-  // instead of writing in postinstall in each of those packages, we should target a local folder in sdk's postinstall
-
-  console.log('building nitro')
+  // Compile contracts for nitro and token bridge
+  console.log('Building nitro contracts...');
   execSync(`${npmExec} run build`, {
     cwd: nitroPath,
-  })
+  });
 
-  console.log('building token bridge')
+  console.log('Building token bridge contracts...');
   execSync(`${npmExec} run build`, {
     cwd: tokenBridgePath,
-  })
+  });
 
-  console.log('Done compiling')
+  console.log('Compilation complete.');
 
+  // Define paths to contract JSON files, excluding build-info
   const nitroFiles = glob(cwd, [
     `${tokenBridgePath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
     `${nitroPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
-  ])
+  ]);
 
-  // TODO: generate files into different subfolders (ie `/nitro/*`) to avoid overwrite of contracts with the same name
+  // Generate TypeChain typings for nitro contracts
   await runTypeChain({
     cwd,
     filesToProcess: nitroFiles,
     allFiles: nitroFiles,
     outDir: './src/lib/abi/',
     target: 'ethers-v5',
-  })
+  });
 
+  // Define path for classic contract files
   const classicFiles = glob(cwd, [
-    // we have a hardcoded abi for the old outbox
-    `./src/lib/dataEntities/Outbox.json`,
-  ])
+    './src/lib/dataEntities/Outbox.json', // Hardcoded ABI for the old outbox
+  ]);
 
+  // Generate TypeChain typings for classic contracts
   await runTypeChain({
     cwd,
     filesToProcess: classicFiles,
     allFiles: classicFiles,
     outDir: './src/lib/abi/classic',
     target: 'ethers-v5',
-  })
+  });
 
-  // we delete the index file since it doesn't play well with tree shaking
-  unlinkSync(`${cwd}/src/lib/abi/index.ts`)
-  unlinkSync(`${cwd}/src/lib/abi/classic/index.ts`)
+  // Delete index files to improve compatibility with tree shaking
+  unlinkSync(`${cwd}/src/lib/abi/index.ts`);
+  unlinkSync(`${cwd}/src/lib/abi/classic/index.ts`);
 
-  console.log('Typechain generated')
+  console.log('TypeChain typings generated.');
 }
 
 main()
-  .then(() => console.log('Done.'))
-  .catch(console.error)
+  .then(() => console.log('Process completed successfully.'))
+  .catch((error) => {
+    console.error('An error occurred:', error);
+  });
