@@ -81,44 +81,43 @@ describe('standard ERC20', () => {
     testState = { ...setup, l1Token: testToken }
   })
 
-  itOnlyWhenCustomGasToken('approves the thing', async () => {
-    const { l1Signer, erc20Bridger } = await testSetup()
+  itOnlyWhenCustomGasToken(
+    'approves custom gas token to be spent by the relevant gateway',
+    async () => {
+      const { l1Signer, erc20Bridger } = await testSetup()
 
-    const gatewayAddress = await erc20Bridger.getL1GatewayAddress(
-      testState.l1Token.address,
-      l1Signer.provider!
-    )
+      const gatewayAddress = await erc20Bridger.getL1GatewayAddress(
+        testState.l1Token.address,
+        l1Signer.provider!
+      )
 
-    const initialAllowance = await getL1CustomFeeTokenAllowance(
-      await l1Signer.getAddress(),
-      gatewayAddress
-    )
+      const initialAllowance = await getL1CustomFeeTokenAllowance(
+        await l1Signer.getAddress(),
+        gatewayAddress
+      )
 
-    console.log({ initialAllowance })
+      expect(initialAllowance.toString()).to.eq(
+        constants.Zero.toString(),
+        'initial allowance is not empty'
+      )
 
-    expect(initialAllowance.toString()).to.eq(
-      constants.Zero.toString(),
-      'initial allowance is not empty'
-    )
+      const tx = await erc20Bridger.approveGasToken({
+        l1Signer: l1Signer,
+        erc20L1Address: testState.l1Token.address,
+      })
+      await tx.wait()
 
-    const tx = await erc20Bridger.approveGasToken({
-      l1Signer: l1Signer,
-      erc20L1Address: testState.l1Token.address,
-    })
-    await tx.wait()
+      const finalAllowance = await getL1CustomFeeTokenAllowance(
+        await l1Signer.getAddress(),
+        gatewayAddress
+      )
 
-    const finalAllowance = await getL1CustomFeeTokenAllowance(
-      await l1Signer.getAddress(),
-      gatewayAddress
-    )
-
-    console.log({ finalAllowance })
-
-    expect(finalAllowance.toString()).to.eq(
-      constants.MaxUint256.toString(),
-      'initial allowance is not empty'
-    )
-  })
+      expect(finalAllowance.toString()).to.eq(
+        constants.MaxUint256.toString(),
+        'initial allowance is not empty'
+      )
+    }
+  )
 
   it('deposits erc20', async () => {
     if (isL2NetworkWithCustomFeeToken()) {
