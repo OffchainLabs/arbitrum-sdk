@@ -33,8 +33,14 @@ import { L2ToL1Message, L2ToL1MessageStatus } from '../../../src'
 
 dotenv.config()
 
-if (isL2NetworkWithCustomFeeToken()) {
-  describe('EthBridger (with custom fee token)', async () => {
+// only run when using a custom gas token chain
+const describeWithCustomGasTokenPatch = isL2NetworkWithCustomFeeToken()
+  ? describe
+  : describe.skip
+
+describeWithCustomGasTokenPatch(
+  'EthBridger (with custom fee token)',
+  async () => {
     const {
       testSetup,
       fundL1CustomFeeToken,
@@ -269,5 +275,5 @@ if (isL2NetworkWithCustomFeeToken()) {
         'incorrect balance in destination after withdrawal'
       )
     })
-  })
-}
+  }
+)
