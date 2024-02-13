@@ -585,7 +585,7 @@ export class Erc20Bridger extends AssetBridger<
         ['uint256', 'bytes', 'uint256'],
         [
           // maxSubmissionCost
-          constants.Zero,
+          depositParams.maxSubmissionCost, // will be zero
           // callHookData
           '0x',
           // nativeTokenTotalFee
