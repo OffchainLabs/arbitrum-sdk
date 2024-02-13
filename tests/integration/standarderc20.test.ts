@@ -46,8 +46,8 @@ import { ArbRetryableTx__factory } from '../../src/lib/abi/factories/ArbRetryabl
 import { NodeInterface__factory } from '../../src/lib/abi/factories/NodeInterface__factory'
 import { isDefined } from '../../src/lib/utils/lib'
 import {
+  getL1CustomFeeTokenAllowance,
   approveL1CustomFeeTokenForErc20Deposit,
-  getNativeTokenAllowance,
   isL2NetworkWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
 const depositAmount = BigNumber.from(100)
@@ -91,7 +91,7 @@ describe('standard ERC20', () => {
         l1Signer.provider!
       )
 
-      const initialAllowance = await getNativeTokenAllowance(
+      const initialAllowance = await getL1CustomFeeTokenAllowance(
         await l1Signer.getAddress(),
         gatewayAddress
       )
@@ -109,7 +109,7 @@ describe('standard ERC20', () => {
       })
       await tx.wait()
 
-      const finalAllowance = await getNativeTokenAllowance(
+      const finalAllowance = await getL1CustomFeeTokenAllowance(
         await l1Signer.getAddress(),
         gatewayAddress
       )
