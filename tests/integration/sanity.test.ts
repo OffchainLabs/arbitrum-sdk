@@ -68,6 +68,33 @@ describe('sanity checks (read-only)', async () => {
     expect(l2Router).to.equal(l2Network.tokenBridge.l2GatewayRouter)
   })
 
+  it('custom gateways public storage vars properly set', async () => {
+    const { l1Signer, l2Signer, l2Network } = await testSetup()
+    const l1Gateway = await L1CustomGateway__factory.connect(
+      l2Network.tokenBridge.l1CustomGateway,
+      l1Signer
+    )
+    const l2Gateway = await L2CustomGateway__factory.connect(
+      l2Network.tokenBridge.l2CustomGateway,
+      l2Signer
+    )
+    const l1GatewayCounterParty = await l1Gateway.counterpartGateway()
+    expect(l1GatewayCounterParty).to.equal(
+      l2Network.tokenBridge.l2CustomGateway
+    )
+
+    const l2GatewayCounterParty = await l2Gateway.counterpartGateway()
+    expect(l2GatewayCounterParty).to.equal(
+      l2Network.tokenBridge.l1CustomGateway
+    )
+
+    const l1Router = await l1Gateway.router()
+    expect(l1Router).to.equal(l2Network.tokenBridge.l1GatewayRouter)
+
+    const l2Router = await l2Gateway.router()
+    expect(l2Router).to.equal(l2Network.tokenBridge.l2GatewayRouter)
+  })
+
   itOnlyWhenEth(
     'weth gateways gateways public storage vars properly set',
     async () => {
@@ -132,33 +159,6 @@ describe('sanity checks (read-only)', async () => {
     )
 
     expect(gateway).to.equal(l2Network.tokenBridge.l1WethGateway)
-  })
-
-  it('custom gateways public storage vars properly set', async () => {
-    const { l1Signer, l2Signer, l2Network } = await testSetup()
-    const l1Gateway = await L1CustomGateway__factory.connect(
-      l2Network.tokenBridge.l1CustomGateway,
-      l1Signer
-    )
-    const l2Gateway = await L2CustomGateway__factory.connect(
-      l2Network.tokenBridge.l2CustomGateway,
-      l2Signer
-    )
-    const l1GatewayCounterParty = await l1Gateway.counterpartGateway()
-    expect(l1GatewayCounterParty).to.equal(
-      l2Network.tokenBridge.l2CustomGateway
-    )
-
-    const l2GatewayCounterParty = await l2Gateway.counterpartGateway()
-    expect(l2GatewayCounterParty).to.equal(
-      l2Network.tokenBridge.l1CustomGateway
-    )
-
-    const l1Router = await l1Gateway.router()
-    expect(l1Router).to.equal(l2Network.tokenBridge.l1GatewayRouter)
-
-    const l2Router = await l2Gateway.router()
-    expect(l2Router).to.equal(l2Network.tokenBridge.l2GatewayRouter)
   })
 
   it('L1 and L2 implementations of calculateL2ERC20Address match', async () => {

@@ -29,8 +29,6 @@ import {
   isL2NetworkWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
 
-const isCustomFeeToken = isL2NetworkWithCustomFeeToken()
-
 describe('L1ToL2MessageCreator', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
@@ -47,7 +45,7 @@ describe('L1ToL2MessageCreator', () => {
     // Funding L1 wallet
     await fundL1(l1Signer)
 
-    if (isCustomFeeToken) {
+    if (isL2NetworkWithCustomFeeToken()) {
       await fundL1CustomFeeToken(l1Signer)
       await approveL1CustomFeeToken(l1Signer)
     }
@@ -105,7 +103,7 @@ describe('L1ToL2MessageCreator', () => {
     // Funding L1 wallet
     await fundL1(l1Signer)
 
-    if (isCustomFeeToken) {
+    if (isL2NetworkWithCustomFeeToken()) {
       await fundL1CustomFeeToken(l1Signer)
       await approveL1CustomFeeToken(l1Signer)
     }

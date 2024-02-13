@@ -50,10 +50,9 @@ import {
   approveL1CustomFeeTokenForErc20Deposit,
   isL2NetworkWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
+import { itOnlyWhenCustomGasToken } from './custom-fee-token/mochaExtensions'
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
-
-const isCustomFeeToken = isL2NetworkWithCustomFeeToken()
 
 describe('standard ERC20', () => {
   beforeEach('skipIfMainnet', async function () {
@@ -82,49 +81,47 @@ describe('standard ERC20', () => {
     testState = { ...setup, l1Token: testToken }
   })
 
-  if (isL2NetworkWithCustomFeeToken()) {
-    it('approves the thing', async () => {
-      const { l1Signer, erc20Bridger } = await testSetup()
+  itOnlyWhenCustomGasToken('approves the thing', async () => {
+    const { l1Signer, erc20Bridger } = await testSetup()
 
-      const gatewayAddress = await erc20Bridger.getL1GatewayAddress(
-        testState.l1Token.address,
-        l1Signer.provider!
-      )
+    const gatewayAddress = await erc20Bridger.getL1GatewayAddress(
+      testState.l1Token.address,
+      l1Signer.provider!
+    )
 
-      const initialAllowance = await getL1CustomFeeTokenAllowance(
-        await l1Signer.getAddress(),
-        gatewayAddress
-      )
+    const initialAllowance = await getL1CustomFeeTokenAllowance(
+      await l1Signer.getAddress(),
+      gatewayAddress
+    )
 
-      console.log({ initialAllowance })
+    console.log({ initialAllowance })
 
-      expect(initialAllowance.toString()).to.eq(
-        constants.Zero.toString(),
-        'initial allowance is not empty'
-      )
+    expect(initialAllowance.toString()).to.eq(
+      constants.Zero.toString(),
+      'initial allowance is not empty'
+    )
 
-      const tx = await erc20Bridger.approveGasToken({
-        l1Signer: l1Signer,
-        erc20L1Address: testState.l1Token.address,
-      })
-      await tx.wait()
-
-      const finalAllowance = await getL1CustomFeeTokenAllowance(
-        await l1Signer.getAddress(),
-        gatewayAddress
-      )
-
-      console.log({ finalAllowance })
-
-      expect(finalAllowance.toString()).to.eq(
-        constants.MaxUint256.toString(),
-        'initial allowance is not empty'
-      )
+    const tx = await erc20Bridger.approveGasToken({
+      l1Signer: l1Signer,
+      erc20L1Address: testState.l1Token.address,
     })
-  }
+    await tx.wait()
+
+    const finalAllowance = await getL1CustomFeeTokenAllowance(
+      await l1Signer.getAddress(),
+      gatewayAddress
+    )
+
+    console.log({ finalAllowance })
+
+    expect(finalAllowance.toString()).to.eq(
+      constants.MaxUint256.toString(),
+      'initial allowance is not empty'
+    )
+  })
 
   it('deposits erc20', async () => {
-    if (isCustomFeeToken) {
+    if (isL2NetworkWithCustomFeeToken()) {
       await approveL1CustomFeeTokenForErc20Deposit(
         testState.l1Signer,
         testState.l1Token.address
