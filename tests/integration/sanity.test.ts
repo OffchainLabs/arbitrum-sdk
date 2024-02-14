@@ -138,27 +138,44 @@ describe('sanity checks (read-only)', async () => {
   itOnlyWhenEth('aeWETh public vars properly set', async () => {
     const { l2Signer, l2Network } = await testSetup()
 
-      const aeWeth = AeWETH__factory.connect(
-        l2Network.tokenBridge.l2Weth,
-        l2Signer
-      )
+    const aeWeth = AeWETH__factory.connect(
+      l2Network.tokenBridge.l2Weth,
+      l2Signer
+    )
 
-      const l2GatewayOnAeWeth = await aeWeth.l2Gateway()
-      expectIgnoreCase(l2GatewayOnAeWeth, l2Network.tokenBridge.l2WethGateway)
+    const l2GatewayOnAeWeth = await aeWeth.l2Gateway()
+    expectIgnoreCase(l2GatewayOnAeWeth, l2Network.tokenBridge.l2WethGateway)
 
-      const l1AddressOnAeWeth = await aeWeth.l1Address()
-      expectIgnoreCase(l1AddressOnAeWeth, l2Network.tokenBridge.l1Weth)
-    })
+    const l1AddressOnAeWeth = await aeWeth.l1Address()
+    expectIgnoreCase(l1AddressOnAeWeth, l2Network.tokenBridge.l1Weth)
+  })
 
   itOnlyWhenEth('l1 gateway router points to right weth gateways', async () => {
     const { adminErc20Bridger, l1Signer, l2Network } = await testSetup()
 
-      const gateway = await adminErc20Bridger.getL1GatewayAddress(
-        l2Network.tokenBridge.l1Weth,
-        l1Signer.provider!
-      )
+    const gateway = await adminErc20Bridger.getL1GatewayAddress(
+      l2Network.tokenBridge.l1Weth,
+      l1Signer.provider!
+    )
 
-      expect(gateway).to.equal(l2Network.tokenBridge.l1WethGateway)
-    })
-  }
+    expect(gateway).to.equal(l2Network.tokenBridge.l1WethGateway)
+  })
+
+  it('L1 and L2 implementations of calculateL2ERC20Address match', async () => {
+    const { l1Signer, l2Signer, l2Network, erc20Bridger } = await testSetup()
+
+    const address = hexlify(randomBytes(20))
+
+    const erc20L2AddressAsPerL1 = await erc20Bridger.getL2ERC20Address(
+      address,
+      l1Signer.provider!
+    )
+    const l2gr = L2GatewayRouter__factory.connect(
+      l2Network.tokenBridge.l2GatewayRouter,
+      l2Signer.provider!
+    )
+    const erc20L2AddressAsPerL2 = await l2gr.calculateL2TokenAddress(address)
+
+    expect(erc20L2AddressAsPerL2).to.equal(erc20L2AddressAsPerL1)
+  })
 })

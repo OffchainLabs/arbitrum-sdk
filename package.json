@@ -44,8 +44,7 @@
     "setStandard": "ts-node scripts/setStandardGateways.ts",
     "setCustom": "ts-node scripts/setArbCustomGateways.ts",
     "cancelRetryable": "ts-node scripts/cancelRetryable.ts",
-    "bridgeStandardToken": "ts-node scripts/deployStandard.ts",
-    "fund": "ts-node scripts/fundCustomFeeToken.ts"
+    "bridgeStandardToken": "ts-node scripts/deployStandard.ts"
   },
   "dependencies": {
     "@ethersproject/address": "^5.0.8",
