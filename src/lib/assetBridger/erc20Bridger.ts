@@ -25,7 +25,7 @@ import {
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
 import { MaxUint256 } from '@ethersproject/constants'
 import { ErrorCode, Logger } from '@ethersproject/logger'
-import { BigNumber, BigNumberish, ethers, BytesLike } from 'ethers'
+import { BigNumber, BigNumberish, ethers, BytesLike, constants } from 'ethers'
 
 import { L1GatewayRouter__factory } from '../abi/factories/L1GatewayRouter__factory'
 import { L2GatewayRouter__factory } from '../abi/factories/L2GatewayRouter__factory'
@@ -71,6 +71,7 @@ import { OmitTyped, RequiredPick } from '../utils/types'
 import { RetryableDataTools } from '../dataEntities/retryableData'
 import { EventArgs } from '../dataEntities/event'
 import { L1ToL2MessageGasParams } from '../message/L1ToL2MessageCreator'
+import { isArbitrumChain } from '../utils/lib'
 
 export interface TokenApproveParams {
   /**
@@ -229,6 +230,48 @@ export class Erc20Bridger extends AssetBridger<
       this.l2Network.tokenBridge.l2GatewayRouter,
       l2Provider
     ).getGateway(erc20L1Address)
+  }
+
+  /**
+   * Creates a transaction request for approving the custom gas token to be spent by the relevant gateway on the parent chain
+   * @param params
+   */
+  public async getApproveGasTokenRequest(
+    params: ProviderTokenApproveParams
+  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
+    if (this.nativeTokenIsEth) {
+      throw new Error('chain uses ETH as its native/gas token')
+    }
+
+    const txRequest = await this.getApproveTokenRequest(params)
+    // just reuse the approve token request but direct it towards the native token contract
+    return { ...txRequest, to: this.nativeToken! }
+  }
+
+  /**
+   * Approves the custom gas token to be spent by the relevant gateway on the parent chain
+   * @param params
+   */
+  public async approveGasToken(
+    params: ApproveParamsOrTxRequest
+  ): Promise<ethers.ContractTransaction> {
+    if (this.nativeTokenIsEth) {
+      throw new Error('chain uses ETH as its native/gas token')
+    }
+
+    await this.checkL1Network(params.l1Signer)
+
+    const approveGasTokenRequest = this.isApproveParams(params)
+      ? await this.getApproveGasTokenRequest({
+          ...params,
+          l1Provider: SignerProviderUtils.getProviderOrThrow(params.l1Signer),
+        })
+      : params.txRequest
+
+    return params.l1Signer.sendTransaction({
+      ...approveGasTokenRequest,
+      ...params.overrides,
+    })
   }
 
   /**
@@ -508,6 +551,64 @@ export class Erc20Bridger extends AssetBridger<
   }
 
   /**
+   * Get the call value for the deposit transaction request
+   * @param depositParams
+   * @returns
+   */
+  private getDepositRequestCallValue(
+    depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
+  ) {
+    // the call value should be zero when paying with a custom gas token,
+    // as the fee amount is packed inside the last parameter (`data`) of the call to `outboundTransfer`, see `getDepositRequestOutboundTransferInnerData`
+    if (!this.nativeTokenIsEth) {
+      return constants.Zero
+    }
+
+    // we dont include the l2 call value for token deposits because
+    // they either have 0 call value, or their call value is withdrawn from
+    // a contract by the gateway (weth). So in both of these cases the l2 call value
+    // is not actually deposited in the value field
+    return depositParams.gasLimit
+      .mul(depositParams.maxFeePerGas)
+      .add(depositParams.maxSubmissionCost)
+  }
+
+  /**
+   * Get the `data` param for call to `outboundTransfer`
+   * @param depositParams
+   * @returns
+   */
+  private getDepositRequestOutboundTransferInnerData(
+    depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
+  ) {
+    if (!this.nativeTokenIsEth) {
+      return defaultAbiCoder.encode(
+        ['uint256', 'bytes', 'uint256'],
+        [
+          // maxSubmissionCost
+          depositParams.maxSubmissionCost, // will be zero
+          // callHookData
+          '0x',
+          // nativeTokenTotalFee
+          depositParams.gasLimit
+            .mul(depositParams.maxFeePerGas)
+            .add(depositParams.maxSubmissionCost), // will be zero
+        ]
+      )
+    }
+
+    return defaultAbiCoder.encode(
+      ['uint256', 'bytes'],
+      [
+        // maxSubmissionCost
+        depositParams.maxSubmissionCost,
+        // callHookData
+        '0x',
+      ]
+    )
+  }
+
+  /**
    * Get the arguments for calling the deposit function
    * @param params
    * @returns
@@ -549,11 +650,9 @@ export class Erc20Bridger extends AssetBridger<
       depositParams.maxSubmissionCost =
         params.maxSubmissionCost || depositParams.maxSubmissionCost
 
-      const innerData = defaultAbiCoder.encode(
-        ['uint256', 'bytes'],
-        [depositParams.maxSubmissionCost, '0x']
-      )
       const iGatewayRouter = L1GatewayRouter__factory.createInterface()
+      const innerData =
+        this.getDepositRequestOutboundTransferInnerData(depositParams)
 
       const functionData =
         defaultedParams.excessFeeRefundAddress !== defaultedParams.from
@@ -579,13 +678,7 @@ export class Erc20Bridger extends AssetBridger<
         data: functionData,
         to: this.l2Network.tokenBridge.l1GatewayRouter,
         from: defaultedParams.from,
-        value: depositParams.gasLimit
-          .mul(depositParams.maxFeePerGas)
-          .add(depositParams.maxSubmissionCost),
-        // we dont include the l2 call value for token deposits because
-        // they either have 0 call value, or their call value is withdrawn from
-        // a contract by the gateway (weth). So in both of these cases the l2 call value
-        // is not actually deposited in the value field
+        value: this.getDepositRequestCallValue(depositParams),
       }
     }
 
@@ -692,10 +785,16 @@ export class Erc20Bridger extends AssetBridger<
         value: BigNumber.from(0),
         from: params.from,
       },
-      // we make this async and expect a provider since we
-      // in the future we want to do proper estimation here
-      /* eslint-disable @typescript-eslint/no-unused-vars */
+      // todo: do proper estimation
       estimateL1GasLimit: async (l1Provider: Provider) => {
+        if (await isArbitrumChain(l1Provider)) {
+          // values for L3 are dependent on the L1 base fee, so hardcoding can never be accurate
+          // however, this is only an estimate used for display, so should be good enough
+          //
+          // measured with token withdrawals from Rari then added some padding
+          return BigNumber.from(8_000_000)
+        }
+
         const l1GatewayAddress = await this.getL1GatewayAddress(
           params.erc20l1Address,
           l1Provider
@@ -706,7 +805,7 @@ export class Erc20Bridger extends AssetBridger<
         const isWeth = await this.isWethGateway(l1GatewayAddress, l1Provider)
 
         // measured 157421 - add some padding
-        return isWeth ? BigNumber.from(180000) : BigNumber.from(160000)
+        return isWeth ? BigNumber.from(190000) : BigNumber.from(160000)
       },
     }
   }

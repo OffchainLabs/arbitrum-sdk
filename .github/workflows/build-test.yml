@@ -9,7 +9,7 @@ env:
 
 jobs:
   install:
-    name: 'Install'
+    name: Install on Node.js v${{ matrix.node-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -27,7 +27,7 @@ jobs:
         uses: OffchainLabs/actions/node-modules/install@main
 
   lint:
-    name: Lint
+    name: Lint on Node.js v${{ matrix.node-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -76,7 +76,7 @@ jobs:
           verbose: false
 
   audit:
-    name: Audit
+    name: Audit on Node.js v${{ matrix.node-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -97,7 +97,7 @@ jobs:
       - run: yarn audit:ci
 
   test-unit:
-    name: Test (Unit)
+    name: Test (Unit) on Node.js v${{ matrix.node-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -124,12 +124,25 @@ jobs:
         run: CI=true yarn test:unit
 
   test-integration:
-    name: Test (Integration) - ${{ matrix.orbit-test == '1' && 'Orbit' || 'No Orbit' }} - Node ${{ matrix.node-version }}
+    name: Test (Integration) on Node.js v${{ matrix.node-version }}${{ matrix.orbit-test == '1' && ' with L3' || '' }}${{ matrix.custom-fee == '1' && ' with custom gas token' || '' }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false # runs all tests to completion even if one fails
       matrix:
         node-version: [16, 18, 20]
-        orbit-test: ['1', '0']
+        orbit-test: ['0', '1']
+        custom-fee: ['0']
+        include:
+          - orbit-test: '1'
+            custom-fee: '1'
+            node-version: 16
+          - orbit-test: '1'
+            custom-fee: '1'
+            node-version: 18
+          - orbit-test: '1'
+            custom-fee: '1'
+            node-version: 20
+
     needs: install
     env:
       ORBIT_TEST: ${{ matrix.orbit-test }}
@@ -149,8 +162,8 @@ jobs:
         uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
           nitro-testnode-ref: master
-          no-token-bridge: true
           l3-node: ${{ matrix.orbit-test == '1' }}
+          args: ${{ matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
 
       - name: Copy .env
         run: cp ./.env-sample ./.env

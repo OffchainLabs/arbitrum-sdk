@@ -35,6 +35,8 @@ import { L2Network } from '../../src/lib/dataEntities/networks'
 import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
 import { ArbSdkError } from '../../src/lib/dataEntities/errors'
 import { ERC20 } from '../../src/lib/abi/ERC20'
+import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
+import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 
 export const preFundAmount = parseEther('0.1')
 
@@ -268,6 +270,25 @@ export const depositToken = async ({
   )
   expect(allowance.eq(Erc20Bridger.MAX_APPROVAL), 'set token allowance failed')
     .to.be.true
+
+  if (isL2NetworkWithCustomFeeToken()) {
+    await (
+      await erc20Bridger.approveGasToken({
+        l1Signer,
+        erc20L1Address: l1TokenAddress,
+      })
+    ).wait()
+
+    const feeTokenAllowance = await ERC20__factory.connect(
+      erc20Bridger.nativeToken!,
+      l1Signer
+    ).allowance(await l1Signer.getAddress(), expectedL1GatewayAddress)
+
+    expect(
+      feeTokenAllowance.eq(Erc20Bridger.MAX_APPROVAL),
+      'set fee token allowance failed'
+    ).to.be.true
+  }
 
   const initialBridgeTokenBalance = await l1Token.balanceOf(
     expectedL1GatewayAddress

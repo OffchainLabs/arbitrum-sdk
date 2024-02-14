@@ -31,8 +31,9 @@ import { L1ToL2MessageStatus } from '../../src'
 import { Wallet } from 'ethers'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
+import { describeOnlyWhenEth } from './custom-fee-token/mochaExtensions'
 
-describe('WETH', async () => {
+describeOnlyWhenEth('WETH', async () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })

@@ -1,6 +1,6 @@
 {
   "name": "@arbitrum/sdk",
-  "version": "3.2.0",
+  "version": "3.3.0-beta.0",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -54,8 +54,8 @@
     "ethers": "^5.1.0"
   },
   "devDependencies": {
-    "@arbitrum/nitro-contracts": "1.1.0",
-    "@arbitrum/token-bridge-contracts": "1.2.0",
+    "@arbitrum/nitro-contracts": "^1.1.1",
+    "@arbitrum/token-bridge-contracts": "^1.2.1",
     "@nomiclabs/hardhat-ethers": "^2.0.4",
     "@typechain/ethers-v5": "9.0.0",
     "@types/chai": "^4.2.11",

@@ -27,15 +27,11 @@ async function main() {
   // https://yarnpkg.com/advanced/rulebook#packages-should-never-write-inside-their-own-folder-outside-of-postinstall
   // instead of writing in postinstall in each of those packages, we should target a local folder in sdk's postinstall
 
-  console.log('building nitro')
-  execSync(`${npmExec} run build`, {
-    cwd: nitroPath,
-  })
+  console.log('building @arbitrum/nitro-contracts')
+  execSync(`${npmExec} run build`, { cwd: nitroPath })
 
-  console.log('building token bridge')
-  execSync(`${npmExec} run build`, {
-    cwd: tokenBridgePath,
-  })
+  console.log('building @arbitrum/token-bridge-contracts')
+  execSync(`${npmExec} run build`, { cwd: tokenBridgePath })
 
   console.log('Done compiling')
 

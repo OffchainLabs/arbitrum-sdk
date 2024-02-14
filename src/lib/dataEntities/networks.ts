@@ -66,6 +66,12 @@ export interface L2Network extends Network {
    * How long to wait (ms) for a deposit to arrive on l2 before timing out a request
    */
   depositTimeout: number
+  /**
+   * In case of a chain that uses ETH as its native/gas token, this is either `undefined` or the zero address
+   *
+   * In case of a chain that uses an ERC-20 token from the parent chain as its native/gas token, this is the address of said token on the parent chain
+   */
+  nativeToken?: string
 }
 
 export interface TokenBridge {

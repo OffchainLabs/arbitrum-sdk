@@ -17,16 +17,16 @@
 'use strict'
 
 import { expect } from 'chai'
-import { Signer, Wallet, utils } from 'ethers'
+import { Signer, Wallet, utils, constants } from 'ethers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import {
   fundL1,
-  fundL2,
   skipIfMainnet,
   depositToken,
   GatewayType,
   withdrawToken,
+  fundL2,
 } from './testHelpers'
 import {
   Erc20Bridger,
@@ -45,6 +45,12 @@ import {
 import { ArbRetryableTx__factory } from '../../src/lib/abi/factories/ArbRetryableTx__factory'
 import { NodeInterface__factory } from '../../src/lib/abi/factories/NodeInterface__factory'
 import { isDefined } from '../../src/lib/utils/lib'
+import {
+  getL1CustomFeeTokenAllowance,
+  approveL1CustomFeeTokenForErc20Deposit,
+  isL2NetworkWithCustomFeeToken,
+} from './custom-fee-token/customFeeTokenTestHelpers'
+import { itOnlyWhenCustomGasToken } from './custom-fee-token/mochaExtensions'
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
@@ -66,7 +72,6 @@ describe('standard ERC20', () => {
     const setup = await testSetup()
     await fundL1(setup.l1Signer)
     await fundL2(setup.l2Signer)
-
     const deployErc20 = new TestERC20__factory().connect(setup.l1Signer)
     const testToken = await deployErc20.deploy()
     await testToken.deployed()
@@ -76,7 +81,52 @@ describe('standard ERC20', () => {
     testState = { ...setup, l1Token: testToken }
   })
 
+  itOnlyWhenCustomGasToken(
+    'approves custom gas token to be spent by the relevant gateway',
+    async () => {
+      const { l1Signer, erc20Bridger } = await testSetup()
+
+      const gatewayAddress = await erc20Bridger.getL1GatewayAddress(
+        testState.l1Token.address,
+        l1Signer.provider!
+      )
+
+      const initialAllowance = await getL1CustomFeeTokenAllowance(
+        await l1Signer.getAddress(),
+        gatewayAddress
+      )
+
+      expect(initialAllowance.toString()).to.eq(
+        constants.Zero.toString(),
+        'initial allowance is not empty'
+      )
+
+      const tx = await erc20Bridger.approveGasToken({
+        l1Signer: l1Signer,
+        erc20L1Address: testState.l1Token.address,
+      })
+      await tx.wait()
+
+      const finalAllowance = await getL1CustomFeeTokenAllowance(
+        await l1Signer.getAddress(),
+        gatewayAddress
+      )
+
+      expect(finalAllowance.toString()).to.eq(
+        constants.MaxUint256.toString(),
+        'initial allowance is not empty'
+      )
+    }
+  )
+
   it('deposits erc20', async () => {
+    if (isL2NetworkWithCustomFeeToken()) {
+      await approveL1CustomFeeTokenForErc20Deposit(
+        testState.l1Signer,
+        testState.l1Token.address
+      )
+    }
+
     await depositToken({
       depositAmount,
       l1TokenAddress: testState.l1Token.address,
@@ -212,7 +262,7 @@ describe('standard ERC20', () => {
 
     // force the redeem to fail by submitted just a bit under the required gas
     // so it is enough to pay for L1 + L2 intrinsic gas costs
-    await redeemAndTest(waitRes.message, 0, gasComponents.gasEstimate.sub(1000))
+    await redeemAndTest(waitRes.message, 0, gasComponents.gasEstimate.sub(3000))
     await redeemAndTest(waitRes.message, 1)
   })
 
