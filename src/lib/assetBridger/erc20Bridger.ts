@@ -71,6 +71,7 @@ import { OmitTyped, RequiredPick } from '../utils/types'
 import { RetryableDataTools } from '../dataEntities/retryableData'
 import { EventArgs } from '../dataEntities/event'
 import { L1ToL2MessageGasParams } from '../message/L1ToL2MessageCreator'
+import { isArbitrumChain } from '../utils/lib'
 
 export interface TokenApproveParams {
   /**
@@ -784,13 +785,14 @@ export class Erc20Bridger extends AssetBridger<
         value: BigNumber.from(0),
         from: params.from,
       },
-      // we make this async and expect a provider since we
-      // in the future we want to do proper estimation here
-      /* eslint-disable @typescript-eslint/no-unused-vars */
+      // todo: do proper estimation
       estimateL1GasLimit: async (l1Provider: Provider) => {
-        if (!this.nativeTokenIsEth) {
-          // measured 172867 - add some padding
-          return BigNumber.from(200000)
+        if (await isArbitrumChain(l1Provider)) {
+          // values for L3 are dependent on the L1 base fee, so hardcoding can never be accurate
+          // however, this is only an estimate used for display, so should be good enough
+          //
+          // measured with token withdrawals from Rari then added some padding
+          return BigNumber.from(8_000_000)
         }
 
         const l1GatewayAddress = await this.getL1GatewayAddress(

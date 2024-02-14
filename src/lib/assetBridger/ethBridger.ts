@@ -48,6 +48,7 @@ import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getL2Network } from '../dataEntities/networks'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
+import { isArbitrumChain } from '../utils/lib'
 
 export type ApproveGasTokenParams = {
   /**
@@ -379,11 +380,17 @@ export class EthBridger extends AssetBridger<
         value: params.amount,
         from: params.from,
       },
-      // we make this async and expect a provider since we
-      // in the future we want to do proper estimation here
-      /* eslint-disable @typescript-eslint/no-unused-vars */
+      // todo: do proper estimation
       estimateL1GasLimit: async (l1Provider: Provider) => {
-        //  measured 126998 - add some padding
+        if (await isArbitrumChain(l1Provider)) {
+          // values for L3 are dependent on the L1 base fee, so hardcoding can never be accurate
+          // however, this is only an estimate used for display, so should be good enough
+          //
+          // measured with withdrawals from Xai and Rari then added some padding
+          return BigNumber.from(4_000_000)
+        }
+
+        // measured 126998 - add some padding
         return BigNumber.from(130000)
       },
     }
