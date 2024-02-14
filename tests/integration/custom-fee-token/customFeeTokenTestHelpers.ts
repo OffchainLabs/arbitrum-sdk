@@ -60,7 +60,10 @@ export async function approveL1CustomFeeToken(l1Signer: Signer) {
   await tx.wait()
 }
 
-export async function getNativeTokenAllowance(owner: string, spender: string) {
+export async function getL1CustomFeeTokenAllowance(
+  owner: string,
+  spender: string
+) {
   const nativeToken = localNetworks().l2Network.nativeToken
   const nativeTokenContract = ERC20__factory.connect(
     nativeToken!,

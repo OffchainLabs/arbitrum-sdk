@@ -46,8 +46,9 @@ import {
 import { OmitTyped } from '../utils/types'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
-import { L2Network, getL2Network } from '../dataEntities/networks'
+import { getL2Network } from '../dataEntities/networks'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
+import { isArbitrumChain } from '../utils/lib'
 
 export type ApproveGasTokenParams = {
   /**
@@ -194,11 +195,15 @@ export class EthBridger extends AssetBridger<
       throw new Error('chain uses ETH as its native/gas token')
     }
 
-    const erc20Interface = ERC20__factory.createInterface()
-    const data = erc20Interface.encodeFunctionData('approve', [
-      this.l2Network.ethBridge.inbox,
-      params?.amount ?? constants.MaxUint256,
-    ])
+    const data = ERC20__factory.createInterface().encodeFunctionData(
+      'approve',
+      [
+        // spender
+        this.l2Network.ethBridge.inbox,
+        // value
+        params?.amount ?? constants.MaxUint256,
+      ]
+    )
 
     return {
       to: this.nativeToken!,
@@ -229,7 +234,7 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Gets the transaction calldata for a tx request necessary for depositing ETH or custom gas token
+   * Gets transaction calldata for a tx request for depositing ETH or custom gas token
    * @param params
    * @returns
    */
@@ -256,7 +261,7 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Get a transaction request for an eth deposit
+   * Gets tx request for depositing ETH or custom gas token
    * @param params
    * @returns
    */
@@ -375,11 +380,17 @@ export class EthBridger extends AssetBridger<
         value: params.amount,
         from: params.from,
       },
-      // we make this async and expect a provider since we
-      // in the future we want to do proper estimation here
-      /* eslint-disable @typescript-eslint/no-unused-vars */
+      // todo: do proper estimation
       estimateL1GasLimit: async (l1Provider: Provider) => {
-        //  measured 126998 - add some padding
+        if (await isArbitrumChain(l1Provider)) {
+          // values for L3 are dependent on the L1 base fee, so hardcoding can never be accurate
+          // however, this is only an estimate used for display, so should be good enough
+          //
+          // measured with withdrawals from Xai and Rari then added some padding
+          return BigNumber.from(4_000_000)
+        }
+
+        // measured 126998 - add some padding
         return BigNumber.from(130000)
       },
     }

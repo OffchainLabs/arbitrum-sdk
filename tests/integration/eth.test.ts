@@ -36,6 +36,7 @@ import { L1ToL2MessageStatus } from '../../src/lib/message/L1ToL2Message'
 import { testSetup } from '../../scripts/testSetup'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
+import { itOnlyWhenEth } from './custom-fee-token/mochaExtensions'
 
 dotenv.config()
 
@@ -81,19 +82,19 @@ describe('Ether', async () => {
     )
   })
 
-  // Test should only run if we're using eth as native fee
-  if (!isL2NetworkWithCustomFeeToken()) {
-    it('"EthBridger.approveGasToken" throws when eth is used as native/fee token', async () => {
+  itOnlyWhenEth(
+    '"EthBridger.approveGasToken" throws when eth is used as native/gas token',
+    async () => {
       const { ethBridger, l1Signer } = await testSetup()
 
       try {
         await ethBridger.approveGasToken({ l1Signer })
         expect.fail(`"EthBridger.approveGasToken" should have thrown`)
       } catch (error: any) {
-        expect(error.message).to.equal('chain uses ETH as its native/fee token')
+        expect(error.message).to.equal('chain uses ETH as its native/gas token')
       }
-    })
-  }
+    }
+  )
 
   it('deposits ether', async () => {
     const { ethBridger, l1Signer, l2Signer } = await testSetup()

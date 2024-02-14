@@ -68,15 +68,23 @@ export class L1ToL2MessageCreator {
     )
   }
 
-  // todo(spsjvc): jsdoc
-  protected static getTicketCreationRequestData(
+  /**
+   * Prepare calldata for a call to create a retryable ticket
+   * @param params
+   * @param estimates
+   * @param excessFeeRefundAddress
+   * @param callValueRefundAddress
+   * @param nativeTokenIsEth
+   * @returns
+   */
+  protected static getTicketCreationRequestCallData(
     params: L1ToL2MessageParams,
     estimates: Pick<RetryableData, L1ToL2GasKeys>,
     excessFeeRefundAddress: string,
     callValueRefundAddress: string,
-    isNativeTokenEth: boolean
+    nativeTokenIsEth: boolean
   ) {
-    if (!isNativeTokenEth) {
+    if (!nativeTokenIsEth) {
       return ERC20Inbox__factory.createInterface().encodeFunctionData(
         'createRetryableTicket',
         [
@@ -139,21 +147,21 @@ export class L1ToL2MessageCreator {
     )
 
     const l2Network = await getL2Network(l2Provider)
-    const isNativeTokenEth = typeof l2Network.nativeToken === 'undefined'
+    const nativeTokenIsEth = typeof l2Network.nativeToken === 'undefined'
 
-    const data = L1ToL2MessageCreator.getTicketCreationRequestData(
+    const data = L1ToL2MessageCreator.getTicketCreationRequestCallData(
       params,
       estimates,
       excessFeeRefundAddress,
       callValueRefundAddress,
-      isNativeTokenEth
+      nativeTokenIsEth
     )
 
     return {
       txRequest: {
         to: l2Network.ethBridge.inbox,
         data,
-        value: isNativeTokenEth ? estimates.deposit : constants.Zero,
+        value: nativeTokenIsEth ? estimates.deposit : constants.Zero,
         from: params.from,
       },
       retryableData: {

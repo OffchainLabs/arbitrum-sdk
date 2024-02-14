@@ -17,6 +17,7 @@
 'use strict'
 
 import { expect } from 'chai'
+import { Signer, Wallet, utils, constants } from 'ethers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import {
@@ -34,7 +35,6 @@ import {
   L2Network,
   L2TransactionReceipt,
 } from '../../src'
-import { Signer, constants } from 'ethers'
 import { TestERC20 } from '../../src/lib/abi/TestERC20'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
@@ -46,10 +46,11 @@ import { ArbRetryableTx__factory } from '../../src/lib/abi/factories/ArbRetryabl
 import { NodeInterface__factory } from '../../src/lib/abi/factories/NodeInterface__factory'
 import { isDefined } from '../../src/lib/utils/lib'
 import {
+  getL1CustomFeeTokenAllowance,
   approveL1CustomFeeTokenForErc20Deposit,
-  getNativeTokenAllowance,
   isL2NetworkWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
+import { itOnlyWhenCustomGasToken } from './custom-fee-token/mochaExtensions'
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
@@ -82,8 +83,9 @@ describe('standard ERC20', () => {
     testState = { ...setup, l1Token: testToken }
   })
 
-  if (isL2NetworkWithCustomFeeToken()) {
-    it('approves the thing', async () => {
+  itOnlyWhenCustomGasToken(
+    'approves custom gas token to be spent by the relevant gateway',
+    async () => {
       const { l1Signer, erc20Bridger } = await testSetup()
 
       const gatewayAddress = await erc20Bridger.getL1GatewayAddress(
@@ -91,12 +93,10 @@ describe('standard ERC20', () => {
         l1Signer.provider!
       )
 
-      const initialAllowance = await getNativeTokenAllowance(
+      const initialAllowance = await getL1CustomFeeTokenAllowance(
         await l1Signer.getAddress(),
         gatewayAddress
       )
-
-      console.log({ initialAllowance })
 
       expect(initialAllowance.toString()).to.eq(
         constants.Zero.toString(),
@@ -109,37 +109,35 @@ describe('standard ERC20', () => {
       })
       await tx.wait()
 
-      const finalAllowance = await getNativeTokenAllowance(
+      const finalAllowance = await getL1CustomFeeTokenAllowance(
         await l1Signer.getAddress(),
         gatewayAddress
       )
-
-      console.log({ finalAllowance })
 
       expect(finalAllowance.toString()).to.eq(
         constants.MaxUint256.toString(),
         'initial allowance is not empty'
       )
-    })
-  }
+    }
+  )
 
   it('deposits erc20', async () => {
-    if (isCustomFeeToken) {
+    if (isL2NetworkWithCustomFeeToken()) {
       await approveL1CustomFeeTokenForErc20Deposit(
         testState.l1Signer,
         testState.l1Token.address
       )
     }
 
-    await depositToken(
+    await depositToken({
       depositAmount,
-      testState.l1Token.address,
-      testState.erc20Bridger,
-      testState.l1Signer,
-      testState.l2Signer,
-      L1ToL2MessageStatus.REDEEMED,
-      GatewayType.STANDARD
-    )
+      l1TokenAddress: testState.l1Token.address,
+      erc20Bridger: testState.erc20Bridger,
+      l1Signer: testState.l1Signer,
+      l2Signer: testState.l2Signer,
+      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      expectedGatewayType: GatewayType.STANDARD,
+    })
   })
 
   const redeemAndTest = async (
@@ -165,37 +163,37 @@ describe('standard ERC20', () => {
   }
 
   it('deposit with no funds, manual redeem', async () => {
-    const { waitRes } = await depositToken(
+    const { waitRes } = await depositToken({
       depositAmount,
-      testState.l1Token.address,
-      testState.erc20Bridger,
-      testState.l1Signer,
-      testState.l2Signer,
-      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
-      GatewayType.STANDARD,
-      {
+      l1TokenAddress: testState.l1Token.address,
+      erc20Bridger: testState.erc20Bridger,
+      l1Signer: testState.l1Signer,
+      l2Signer: testState.l2Signer,
+      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      expectedGatewayType: GatewayType.STANDARD,
+      retryableOverrides: {
         gasLimit: { base: BigNumber.from(0) },
         maxFeePerGas: { base: BigNumber.from(0) },
-      }
-    )
+      },
+    })
 
     await redeemAndTest(waitRes.message, 1)
   })
 
   it('deposit with low funds, manual redeem', async () => {
-    const { waitRes } = await depositToken(
+    const { waitRes } = await depositToken({
       depositAmount,
-      testState.l1Token.address,
-      testState.erc20Bridger,
-      testState.l1Signer,
-      testState.l2Signer,
-      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
-      GatewayType.STANDARD,
-      {
+      l1TokenAddress: testState.l1Token.address,
+      erc20Bridger: testState.erc20Bridger,
+      l1Signer: testState.l1Signer,
+      l2Signer: testState.l2Signer,
+      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      expectedGatewayType: GatewayType.STANDARD,
+      retryableOverrides: {
         gasLimit: { base: BigNumber.from(5) },
         maxFeePerGas: { base: BigNumber.from(5) },
-      }
-    )
+      },
+    })
 
     await redeemAndTest(waitRes.message, 1)
   })
@@ -203,18 +201,18 @@ describe('standard ERC20', () => {
   it('deposit with only low gas limit, manual redeem succeeds', async () => {
     // this should cause us to emit a RedeemScheduled event, but no actual
     // redeem transaction
-    const { waitRes } = await depositToken(
+    const { waitRes } = await depositToken({
       depositAmount,
-      testState.l1Token.address,
-      testState.erc20Bridger,
-      testState.l1Signer,
-      testState.l2Signer,
-      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
-      GatewayType.STANDARD,
-      {
+      l1TokenAddress: testState.l1Token.address,
+      erc20Bridger: testState.erc20Bridger,
+      l1Signer: testState.l1Signer,
+      l2Signer: testState.l2Signer,
+      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      expectedGatewayType: GatewayType.STANDARD,
+      retryableOverrides: {
         gasLimit: { base: BigNumber.from(21000) },
-      }
-    )
+      },
+    })
 
     // check that a RedeemScheduled event was emitted, but no retry tx receipt exists
     const retryableCreation =
@@ -235,19 +233,19 @@ describe('standard ERC20', () => {
   })
 
   it('deposit with low funds, fails first redeem, succeeds seconds', async () => {
-    const { waitRes } = await depositToken(
+    const { waitRes } = await depositToken({
       depositAmount,
-      testState.l1Token.address,
-      testState.erc20Bridger,
-      testState.l1Signer,
-      testState.l2Signer,
-      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
-      GatewayType.STANDARD,
-      {
+      l1TokenAddress: testState.l1Token.address,
+      erc20Bridger: testState.erc20Bridger,
+      l1Signer: testState.l1Signer,
+      l2Signer: testState.l2Signer,
+      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      expectedGatewayType: GatewayType.STANDARD,
+      retryableOverrides: {
         gasLimit: { base: BigNumber.from(5) },
         maxFeePerGas: { base: BigNumber.from(5) },
-      }
-    )
+      },
+    })
     const arbRetryableTx = ArbRetryableTx__factory.connect(
       ARB_RETRYABLE_TX_ADDRESS,
       testState.l2Signer.provider!
@@ -297,6 +295,34 @@ describe('standard ERC20', () => {
         testState.l1Token.address,
         testState.l1Signer.provider!
       ),
+    })
+  })
+
+  it('deposits erc20 with extra ETH', async () => {
+    await depositToken({
+      depositAmount,
+      ethDepositAmount: utils.parseEther('0.0005'),
+      l1TokenAddress: testState.l1Token.address,
+      erc20Bridger: testState.erc20Bridger,
+      l1Signer: testState.l1Signer,
+      l2Signer: testState.l2Signer,
+      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      expectedGatewayType: GatewayType.STANDARD,
+    })
+  })
+
+  it('deposits erc20 with extra ETH to a specific L2 address', async () => {
+    const randomAddress = Wallet.createRandom().address
+    await depositToken({
+      depositAmount,
+      ethDepositAmount: utils.parseEther('0.0005'),
+      l1TokenAddress: testState.l1Token.address,
+      erc20Bridger: testState.erc20Bridger,
+      l1Signer: testState.l1Signer,
+      l2Signer: testState.l2Signer,
+      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      expectedGatewayType: GatewayType.STANDARD,
+      destinationAddress: randomAddress,
     })
   })
 })

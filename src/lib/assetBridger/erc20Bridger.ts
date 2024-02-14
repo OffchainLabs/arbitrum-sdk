@@ -71,6 +71,7 @@ import { OmitTyped, RequiredPick } from '../utils/types'
 import { RetryableDataTools } from '../dataEntities/retryableData'
 import { EventArgs } from '../dataEntities/event'
 import { L1ToL2MessageGasParams } from '../message/L1ToL2MessageCreator'
+import { isArbitrumChain } from '../utils/lib'
 
 export interface TokenApproveParams {
   /**
@@ -100,6 +101,10 @@ export interface Erc20DepositParams extends EthDepositParams {
    * L2 address of the entity receiving the funds. Defaults to the l1FromAddress
    */
   destinationAddress?: string
+  /**
+   * The maximum cost to be paid for submitting the transaction
+   */
+  maxSubmissionCost?: BigNumber
   /**
    * The address to return the any gas that was not spent on fees
    */
@@ -555,7 +560,7 @@ export class Erc20Bridger extends AssetBridger<
     depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
   ) {
     // the call value should be zero when paying with a custom gas token,
-    // as the fee amount is packed inside the last parameter (`data`) of the call to `outboundTransfer`
+    // as the fee amount is packed inside the last parameter (`data`) of the call to `outboundTransfer`, see `getDepositRequestOutboundTransferInnerData`
     if (!this.nativeTokenIsEth) {
       return constants.Zero
     }
@@ -569,26 +574,38 @@ export class Erc20Bridger extends AssetBridger<
       .add(depositParams.maxSubmissionCost)
   }
 
-  // todo(spsjvc): jsdoc
-  private getDepositRequestOutboundTransferDataParam(
+  /**
+   * Get the `data` param for call to `outboundTransfer`
+   * @param depositParams
+   * @returns
+   */
+  private getDepositRequestOutboundTransferInnerData(
     depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
   ) {
     if (!this.nativeTokenIsEth) {
       return defaultAbiCoder.encode(
         ['uint256', 'bytes', 'uint256'],
         [
-          constants.Zero,
+          // maxSubmissionCost
+          depositParams.maxSubmissionCost, // will be zero
+          // callHookData
           '0x',
+          // nativeTokenTotalFee
           depositParams.gasLimit
             .mul(depositParams.maxFeePerGas)
-            .add(depositParams.maxSubmissionCost),
+            .add(depositParams.maxSubmissionCost), // will be zero
         ]
       )
     }
 
     return defaultAbiCoder.encode(
       ['uint256', 'bytes'],
-      [depositParams.maxSubmissionCost, '0x']
+      [
+        // maxSubmissionCost
+        depositParams.maxSubmissionCost,
+        // callHookData
+        '0x',
+      ]
     )
   }
 
@@ -631,17 +648,35 @@ export class Erc20Bridger extends AssetBridger<
     const depositFunc = (
       depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
     ) => {
+      depositParams.maxSubmissionCost =
+        params.maxSubmissionCost || depositParams.maxSubmissionCost
+
       const iGatewayRouter = L1GatewayRouter__factory.createInterface()
+      const innerData =
+        this.getDepositRequestOutboundTransferInnerData(depositParams)
+
+      const functionData =
+        defaultedParams.excessFeeRefundAddress !== defaultedParams.from
+          ? iGatewayRouter.encodeFunctionData('outboundTransferCustomRefund', [
+              erc20L1Address,
+              defaultedParams.excessFeeRefundAddress,
+              destinationAddress,
+              amount,
+              depositParams.gasLimit,
+              depositParams.maxFeePerGas,
+              innerData,
+            ])
+          : iGatewayRouter.encodeFunctionData('outboundTransfer', [
+              erc20L1Address,
+              destinationAddress,
+              amount,
+              depositParams.gasLimit,
+              depositParams.maxFeePerGas,
+              innerData,
+            ])
 
       return {
-        data: iGatewayRouter.encodeFunctionData('outboundTransfer', [
-          erc20L1Address,
-          destinationAddress,
-          amount,
-          depositParams.gasLimit,
-          depositParams.maxFeePerGas,
-          this.getDepositRequestOutboundTransferDataParam(depositParams),
-        ]),
+        data: functionData,
         to: this.l2Network.tokenBridge.l1GatewayRouter,
         from: defaultedParams.from,
         value: this.getDepositRequestCallValue(depositParams),
@@ -751,13 +786,14 @@ export class Erc20Bridger extends AssetBridger<
         value: BigNumber.from(0),
         from: params.from,
       },
-      // we make this async and expect a provider since we
-      // in the future we want to do proper estimation here
-      /* eslint-disable @typescript-eslint/no-unused-vars */
+      // todo: do proper estimation
       estimateL1GasLimit: async (l1Provider: Provider) => {
-        if (!this.nativeTokenIsEth) {
-          // measured 172867 - add some padding
-          return BigNumber.from(200000)
+        if (await isArbitrumChain(l1Provider)) {
+          // values for L3 are dependent on the L1 base fee, so hardcoding can never be accurate
+          // however, this is only an estimate used for display, so should be good enough
+          //
+          // measured with token withdrawals from Rari then added some padding
+          return BigNumber.from(8_000_000)
         }
 
         const l1GatewayAddress = await this.getL1GatewayAddress(

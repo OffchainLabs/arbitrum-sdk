@@ -31,14 +31,12 @@ import { L1ToL2MessageStatus } from '../../src'
 import { Wallet } from 'ethers'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
-import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
+import { describeOnlyWhenEth } from './custom-fee-token/mochaExtensions'
 
-// WETH tests are only relevant for networks that use WETH as the native token
-if (!isL2NetworkWithCustomFeeToken()) {
-  describe('WETH', async () => {
-    beforeEach('skipIfMainnet', async function () {
-      await skipIfMainnet(this)
-    })
+describeOnlyWhenEth('WETH', async () => {
+  beforeEach('skipIfMainnet', async function () {
+    await skipIfMainnet(this)
+  })
 
     it('deposit WETH', async () => {
       const { l2Network, l1Signer, l2Signer, erc20Bridger } = await testSetup()
@@ -59,20 +57,20 @@ if (!isL2NetworkWithCustomFeeToken()) {
         'start balance weth'
       ).to.eq('0')
 
-      const l1WETH = AeWETH__factory.connect(l1WethAddress, l1Signer)
-      const res = await l1WETH.deposit({
-        value: wethToWrap,
-      })
-      await res.wait()
-      await depositToken(
-        wethToDeposit,
-        l1WethAddress,
-        erc20Bridger,
-        l1Signer,
-        l2Signer,
-        L1ToL2MessageStatus.REDEEMED,
-        GatewayType.WETH
-      )
+    const l1WETH = AeWETH__factory.connect(l1WethAddress, l1Signer)
+    const res = await l1WETH.deposit({
+      value: wethToWrap,
+    })
+    await res.wait()
+    await depositToken({
+      depositAmount: wethToDeposit,
+      l1TokenAddress: l1WethAddress,
+      erc20Bridger,
+      l1Signer,
+      l2Signer,
+      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      expectedGatewayType: GatewayType.WETH,
+    })
 
       const l2WethGateway = await erc20Bridger.getL2GatewayAddress(
         l1WethAddress,
