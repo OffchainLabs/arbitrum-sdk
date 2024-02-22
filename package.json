@@ -57,7 +57,7 @@
     "@arbitrum/nitro-contracts": "^1.1.1",
     "@arbitrum/token-bridge-contracts": "^1.2.1",
     "@nomiclabs/hardhat-ethers": "^2.0.4",
-    "@offchainlabs/l1-l3-teleport-contracts": "^0.1.0-alpha.0",
+    "@offchainlabs/l1-l3-teleport-contracts": "^0.1.0-alpha.1",
     "@typechain/ethers-v5": "9.0.0",
     "@types/chai": "^4.2.11",
     "@types/mocha": "^9.0.0",

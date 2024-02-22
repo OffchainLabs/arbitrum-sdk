@@ -46,7 +46,6 @@ import {
   L1TransactionReceipt,
 } from '../message/L1Transaction'
 import { Erc20Bridger } from './erc20Bridger'
-import { isDefined } from '../utils/lib'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { OmitTyped } from '../utils/types'
 import { getAddress } from 'ethers/lib/utils'
@@ -774,9 +773,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       'completed' | 'l2l3TokenBridge'
     >
 
-    if (
-      l1l2Messages.length === 2
-    ) {
+    if (l1l2Messages.length === 2) {
       partialResult = {
         l1l2TokenBridge: l1l2Messages[0],
         l2ForwarderFactory: l1l2Messages[1],
@@ -993,8 +990,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         gasLimit: BigNumber.from(0),
         maxSubmissionFee: BigNumber.from(0),
       }
-    }
-    else if (teleportationType === TeleportationType.OnlyFeeToken) {
+    } else if (teleportationType === TeleportationType.OnlyFeeToken) {
       // we are bridging the fee token to l3, this will not go through the l2l3 token bridge, instead it's just a regular retryable
       const estimate = await new L1ToL2MessageGasEstimator(
         params.l3Provider
@@ -1099,6 +1095,11 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       )
     }
 
+    const l1FeeTokenAddress = await this.l1FeeTokenAddress(
+      l1Provider,
+      l2Provider
+    )
+
     const l1GasPrice = await applyGasPercentIncrease(
       retryableOverrides.l1GasPrice,
       () => l1Provider.getGasPrice()
@@ -1107,10 +1108,12 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       retryableOverrides.l2GasPrice,
       () => l2Provider.getGasPrice()
     )
-    const l3GasPrice = await applyGasPercentIncrease(
-      retryableOverrides.l3GasPrice,
-      () => l3Provider.getGasPrice()
-    )
+    const l3GasPrice =
+      l1FeeTokenAddress === this.skipL1FeeTokenMagic
+        ? BigNumber.from(0)
+        : await applyGasPercentIncrease(retryableOverrides.l3GasPrice, () =>
+            l3Provider.getGasPrice()
+          )
 
     const fakeRandomL2Forwarder = ethers.utils.hexlify(
       ethers.utils.randomBytes(20)
