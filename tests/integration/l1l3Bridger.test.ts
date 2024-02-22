@@ -349,7 +349,6 @@ describe('L1 to L3 Bridging', () => {
       const { l2ContractsDeployer, l1Teleporter } =
         await deployTeleportContracts(l1Signer, l2Signer)
 
-      const l2ForwarderImplAddr = await l2ContractsDeployer.implementation()
       const l2ForwarderFactory = await l2ContractsDeployer.factory()
 
       // set the teleporter on the l2Network
