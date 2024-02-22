@@ -328,6 +328,14 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    */
   public readonly l2ForwarderFactoryDefaultGasLimit = BigNumber.from(1_000_000)
 
+  public readonly skipL1FeeTokenMagic = ethers.utils.getAddress(
+    ethers.utils.hexDataSlice(
+      ethers.utils.keccak256(ethers.utils.toUtf8Bytes('SKIP_FEE_TOKEN')),
+      0,
+      20
+    )
+  )
+
   /**
    * If the L3 network uses a custom (non-eth) fee token, this is the address of that token on L2
    */
@@ -363,8 +371,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   /**
    * If the L3 network uses a custom fee token, return the address of that token on L1.
    * If the L3 network uses ETH for fees, return undefined.
-   * If the L3 network uses a custom fee token that is not available on L1, throw.
-   * If the L3 network uses a custom fee token that doesn't use 18 decimals on L1 and L2, throw.
+   * If the L3 network uses a custom fee token that is not available on L1, return the magic address.
+   * If the L3 network uses a custom fee token that doesn't use 18 decimals on L1 and L2, return the magic address.
    */
   public async l1FeeTokenAddress(
     l1Provider: Provider,
@@ -399,7 +407,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       !l1FeeTokenAddress ||
       l1FeeTokenAddress === ethers.constants.AddressZero
     ) {
-      throw new ArbSdkError(`Could not find address for L3's fee token on L1`)
+      return (this._l1FeeTokenAddress = this.skipL1FeeTokenMagic)
     }
 
     // make sure both the L1 and L2 tokens have 18 decimals
@@ -409,7 +417,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         l1Provider
       ).decimals()) !== 18
     ) {
-      throw new ArbSdkError(`L3's fee token doesn't use 18 decimals on L1`)
+      return (this._l1FeeTokenAddress = this.skipL1FeeTokenMagic)
     }
     if (
       (await ERC20__factory.connect(
@@ -417,7 +425,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         l2Provider
       ).decimals()) !== 18
     ) {
-      throw new ArbSdkError(`L3's fee token doesn't use 18 decimals on L2`)
+      return (this._l1FeeTokenAddress = this.skipL1FeeTokenMagic)
     }
 
     return (this._l1FeeTokenAddress = l1FeeTokenAddress)
@@ -759,7 +767,6 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       l1TxReceipt = params.txReceipt
     }
 
-    const teleportParams = this._decodeTeleportCalldata(data)
     const l1l2Messages = await l1TxReceipt.getL1ToL2Messages(params.l2Provider)
 
     let partialResult: OmitTyped<
@@ -767,10 +774,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       'completed' | 'l2l3TokenBridge'
     >
 
-    const type = this.teleportationType(teleportParams)
     if (
-      type === TeleportationType.Standard ||
-      type === TeleportationType.OnlyFeeToken
+      l1l2Messages.length === 2
     ) {
       partialResult = {
         l1l2TokenBridge: l1l2Messages[0],
@@ -914,6 +919,12 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       params.l1Provider,
       params.l2Provider
     )
+    if (l1FeeTokenAddress === this.skipL1FeeTokenMagic) {
+      return {
+        gasLimit: BigNumber.from(0),
+        maxSubmissionFee: BigNumber.from(0),
+      }
+    }
     return this._getTokenBridgeGasEstimates({
       parentProvider: params.l1Provider,
       childProvider: params.l2Provider,
@@ -966,10 +977,24 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l3Provider: Provider
     l2ForwarderAddress: string
   }): Promise<RetryableGasValues> {
+    const teleportationType = this.teleportationType(
+      params.partialTeleportParams
+    )
+    const l1FeeTokenAddress = await this.l1FeeTokenAddress(
+      params.l1Provider,
+      params.l2Provider
+    )
     if (
-      this.teleportationType(params.partialTeleportParams) ===
-      TeleportationType.OnlyFeeToken
+      teleportationType === TeleportationType.NonFeeTokenToCustomFee &&
+      l1FeeTokenAddress === this.skipL1FeeTokenMagic
     ) {
+      // we aren't paying for the retryable to L3
+      return {
+        gasLimit: BigNumber.from(0),
+        maxSubmissionFee: BigNumber.from(0),
+      }
+    }
+    else if (teleportationType === TeleportationType.OnlyFeeToken) {
       // we are bridging the fee token to l3, this will not go through the l2l3 token bridge, instead it's just a regular retryable
       const estimate = await new L1ToL2MessageGasEstimator(
         params.l3Provider
