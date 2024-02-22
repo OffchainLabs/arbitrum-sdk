@@ -37,7 +37,7 @@ async function main() {
   execSync(`${npmExec} run build`, { cwd: tokenBridgePath })
 
   console.log('building @offchainlabs/l1-l3-teleport-contracts')
-  execSync(`${npmExec} && ${npmExec} run build`, {
+  execSync(`${npmExec} run build`, {
     cwd: teleporterPath,
   })
 
