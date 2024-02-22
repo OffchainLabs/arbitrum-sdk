@@ -44,15 +44,13 @@ async function expectPromiseToReject(
 }
 
 function hackProvider(
-  provider: ethers.providers.JsonRpcProvider,
+  provider: any,
   to: string,
   calldata: string,
   retData: string
 ) {
   const oldCall = provider.call.bind(provider)
-  /// @ts-ignore
   provider.originalCall ||= oldCall
-  /// @ts-ignore
   provider.call = async (
     txRequest: Deferrable<ethers.providers.TransactionRequest>,
     b: any
@@ -63,8 +61,7 @@ function hackProvider(
   }
 }
 
-function unhackProvider(provider: ethers.providers.JsonRpcProvider) {
-  /// @ts-ignore
+function unhackProvider(provider: any) {
   if (provider.originalCall) provider.call = provider.originalCall
 }
 
