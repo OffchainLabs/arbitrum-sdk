@@ -747,22 +747,16 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
 
-    let data: string
     let l1TxReceipt: L1ContractCallTransactionReceipt
     if ('txHash' in params) {
-      data = (await params.l1Provider.getTransaction(params.txHash)).data
       l1TxReceipt = new L1ContractCallTransactionReceipt(
         await params.l1Provider.getTransactionReceipt(params.txHash)
       )
     } else if ('tx' in params) {
-      data = params.tx.data
       l1TxReceipt = new L1ContractCallTransactionReceipt(
         await params.l1Provider.getTransactionReceipt(params.tx.hash)
       )
     } else {
-      data = (
-        await params.l1Provider.getTransaction(params.txReceipt.transactionHash)
-      ).data
       l1TxReceipt = params.txReceipt
     }
 

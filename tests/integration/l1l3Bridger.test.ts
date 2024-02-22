@@ -24,8 +24,6 @@ import {
   itOnlyWhenEth,
 } from './custom-fee-token/mochaExtensions'
 
-type Unwrap<T> = T extends Promise<infer U> ? U : T
-
 async function expectPromiseToReject(
   promise: Promise<any>,
   expectedError?: string
@@ -262,7 +260,7 @@ describe('L1 to L3 Bridging', () => {
         true,
         false,
         false,
-        async (l1Signer, l2Signer, l3Signer) => {
+        async (l1Signer, _l2Signer, _l3Signer) => {
           return new EthL1L3Bridger(l3Network).deposit({
             l1Signer,
             txRequest: {
@@ -278,7 +276,7 @@ describe('L1 to L3 Bridging', () => {
         false,
         true,
         true,
-        async (l1Signer, l2Signer, l3Signer) => {
+        async (_l1Signer, l2Signer, l3Signer) => {
           return new EthL1L3Bridger(l3Network).getDepositMessages({
             l1TxReceipt: '' as any,
             l2Provider: l2Signer.provider!,
@@ -560,7 +558,7 @@ describe('L1 to L3 Bridging', () => {
           true,
           true,
           false,
-          async (l1Signer, l2Signer, l3Signer) => {
+          async (l1Signer, l2Signer, _l3Signer) => {
             return new Erc20L1L3Bridger(l3Network).l1FeeTokenAddress(
               l1Signer.provider!,
               l2Signer.provider!
@@ -574,7 +572,7 @@ describe('L1 to L3 Bridging', () => {
         true,
         false,
         false,
-        async (l1Signer, l2Signer, l3Signer) => {
+        async (l1Signer, _l2Signer, _l3Signer) => {
           return new Erc20L1L3Bridger(l3Network).getL2ERC20Address(
             l1Token.address,
             l1Signer.provider!
@@ -587,7 +585,7 @@ describe('L1 to L3 Bridging', () => {
         true,
         true,
         false,
-        async (l1Signer, l2Signer, l3Signer) => {
+        async (l1Signer, l2Signer, _l3Signer) => {
           return new Erc20L1L3Bridger(l3Network).getL3ERC20Address(
             l1Token.address,
             l1Signer.provider!,
@@ -601,7 +599,7 @@ describe('L1 to L3 Bridging', () => {
         true,
         false,
         false,
-        async (l1Signer, l2Signer, l3Signer) => {
+        async (l1Signer, _l2Signer, _l3Signer) => {
           return new Erc20L1L3Bridger(l3Network).getL1L2GatewayAddress(
             l1Token.address,
             l1Signer.provider!
@@ -614,7 +612,7 @@ describe('L1 to L3 Bridging', () => {
         true,
         true,
         false,
-        async (l1Signer, l2Signer, l3Signer) => {
+        async (l1Signer, l2Signer, _l3Signer) => {
           return new Erc20L1L3Bridger(l3Network).getL2L3GatewayAddress(
             l1Token.address,
             l1Signer.provider!,
@@ -628,7 +626,7 @@ describe('L1 to L3 Bridging', () => {
         true,
         false,
         false,
-        async (l1Signer, l2Signer, l3Signer) => {
+        async (l1Signer, _l2Signer, _l3Signer) => {
           return new Erc20L1L3Bridger(l3Network).l1TokenIsDisabled(
             l1Token.address,
             l1Signer.provider!
@@ -641,7 +639,7 @@ describe('L1 to L3 Bridging', () => {
         false,
         true,
         false,
-        async (l1Signer, l2Signer, l3Signer) => {
+        async (_l1Signer, l2Signer, _l3Signer) => {
           return new Erc20L1L3Bridger(l3Network).l2TokenIsDisabled(
             l1Token.address,
             l2Signer.provider!
@@ -654,7 +652,7 @@ describe('L1 to L3 Bridging', () => {
         true,
         false,
         false,
-        async (l1Signer, l2Signer, l3Signer) => {
+        async (l1Signer, _l2Signer, _l3Signer) => {
           return new Erc20L1L3Bridger(l3Network).l2ForwarderAddress(
             l1Token.address,
             l1Token.address,
@@ -669,7 +667,7 @@ describe('L1 to L3 Bridging', () => {
         true,
         false,
         false,
-        async (l1Signer, l2Signer, l3Signer) => {
+        async (l1Signer, _l2Signer, _l3Signer) => {
           return new Erc20L1L3Bridger(l3Network).approveToken({
             txRequest: {
               to: l1Token.address,
@@ -687,7 +685,7 @@ describe('L1 to L3 Bridging', () => {
           true,
           true,
           false,
-          async (l1Signer, l2Signer, l3Signer) => {
+          async (l1Signer, l2Signer, _l3Signer) => {
             return new Erc20L1L3Bridger(l3Network).getApproveFeeTokenRequest({
               l1Provider: l1Signer.provider!,
               l2Provider: l2Signer.provider!,
@@ -702,7 +700,7 @@ describe('L1 to L3 Bridging', () => {
         true,
         false,
         false,
-        async (l1Signer, l2Signer, l3Signer) => {
+        async (l1Signer, _l2Signer, _l3Signer) => {
           return new Erc20L1L3Bridger(l3Network).approveFeeToken({
             txRequest: {
               to: l1Token.address,
@@ -737,7 +735,7 @@ describe('L1 to L3 Bridging', () => {
         true,
         false,
         false,
-        async (l1Signer, l2Signer, l3Signer) => {
+        async (l1Signer, _l2Signer, _l3Signer) => {
           return new Erc20L1L3Bridger(l3Network).deposit({
             l1Signer,
             txRequest: {
