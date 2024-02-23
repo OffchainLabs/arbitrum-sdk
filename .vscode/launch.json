@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Run Unit Tests",
+      "runtimeExecutable": "yarn",
+      "runtimeVersion": "18",
+      "runtimeArgs": ["test:unit"],
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Run Integration Tests",
+      "runtimeExecutable": "yarn",
+      "runtimeVersion": "18",
+      "runtimeArgs": ["test:integration"],
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}

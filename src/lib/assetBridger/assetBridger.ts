@@ -16,11 +16,13 @@
 /* eslint-env node */
 'use strict'
 
-import { ArbSdkError } from '../dataEntities/errors'
+import { constants } from 'ethers'
+
 import { L1ContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'
 
 import {
+  getParentForNetwork,
   parentChains as l1Networks,
   ChildChain as L2Network,
   ParentChain,
@@ -29,20 +31,27 @@ import {
   SignerOrProvider,
   SignerProviderUtils,
 } from '../dataEntities/signerOrProvider'
+import { L1Network } from '../..'
 
 /**
  * Base for bridging assets from l1 to l2 and back
  */
 export abstract class AssetBridger<DepositParams, WithdrawParams> {
-  public readonly l1Network: ParentChain
+  /**
+   * Parent chain for the given Arbitrum chain, can be an L1 or an L2
+   */
+  public readonly l1Network: L1Network | L2Network
+
+  /**
+   * In case of a chain that uses ETH as its native/gas token, this is either `undefined` or the zero address
+   *
+   * In case of a chain that uses an ERC-20 token from the parent chain as its native/gas token, this is the address of said token on the parent chain
+   */
+  public readonly nativeToken?: string
 
   public constructor(public readonly l2Network: L2Network) {
-    this.l1Network = l1Networks[l2Network.parentChainId]
-    if (!this.l1Network) {
-      throw new ArbSdkError(
-        `Unknown l1 network chain id: ${l2Network.parentChainId}`
-      )
-    }
+    this.l1Network = getParentForNetwork(l2Network)
+    this.nativeToken = l2Network.nativeToken
   }
 
   /**
@@ -59,6 +68,14 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    */
   protected async checkL2Network(sop: SignerOrProvider): Promise<void> {
     await SignerProviderUtils.checkNetworkMatches(sop, this.l2Network.chainID)
+  }
+
+  /**
+   * Whether the chain uses ETH as its native/gas token
+   * @returns {boolean}
+   */
+  protected get nativeTokenIsEth() {
+    return !this.nativeToken || this.nativeToken === constants.AddressZero
   }
 
   /**

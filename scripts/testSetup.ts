@@ -18,183 +18,53 @@
 
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { Wallet } from '@ethersproject/wallet'
-
+import { Provider } from '@ethersproject/abstract-provider'
 import dotenv from 'dotenv'
-import { EthBridger, InboxTools, Erc20Bridger } from '../src'
-import {
-  ParentChain,
-  ChildChain,
-  getParentChain,
-  getChildChain,
-  addCustomNetwork,
-} from '../src/lib/dataEntities/networks'
+
 import { Signer } from 'ethers'
-import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
-import { execSync } from 'child_process'
-import { Bridge__factory } from '../src/lib/abi/factories/Bridge__factory'
-import { RollupAdminLogic__factory } from '../src/lib/abi/factories/RollupAdminLogic__factory'
-import { deployErc20AndInit } from './deployBridge'
-import * as path from 'path'
 import * as fs from 'fs'
+import * as path from 'path'
+import { Erc20Bridger, EthBridger, InboxTools } from '../src'
+import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
+import {
+  ChildChain,
+  ChildChain as L1Network,
+  ParentChain as L2Network,
+  ParentChain,
+  addCustomNetwork,
+  getChildChain,
+  getParentChain,
+} from '../src/lib/dataEntities/networks'
+import {
+  approveL1CustomFeeToken,
+  fundL1CustomFeeToken,
+  isL2NetworkWithCustomFeeToken,
+} from '../tests/integration/custom-fee-token/customFeeTokenTestHelpers'
+import { fundL1 } from '../tests/integration/testHelpers'
 
 dotenv.config()
 
-export const config = {
-  arbUrl: process.env['ARB_URL'] as string,
-  ethUrl: process.env['ETH_URL'] as string,
-  arbKey: process.env['ARB_KEY'] as string,
-  ethKey: process.env['ETH_KEY'] as string,
-}
+const isTestingOrbitChains = process.env.ORBIT_TEST === '1'
 
-function getDeploymentData(): string {
-  const dockerNames = [
-    'nitro_sequencer_1',
-    'nitro-sequencer-1',
-    'nitro-testnode-sequencer-1',
-    'nitro-testnode_sequencer_1',
-  ]
-  for (const dockerName of dockerNames) {
-    try {
-      return execSync(
-        'docker exec ' + dockerName + ' cat /config/deployment.json'
-      ).toString()
-    } catch {
-      // empty on purpose
+/**
+ * The RPC urls and private keys using during testing
+ *
+ * @note When the `ORBIT_TEST` env variable is `true`, we treat `ethUrl` as the L2 and `arbUrl` as the L3
+ */
+export const config = isTestingOrbitChains
+  ? {
+      arbUrl: process.env['ORBIT_URL'] as string,
+      ethUrl: process.env['ARB_URL'] as string,
+      arbKey: process.env['ORBIT_KEY'] as string,
+      ethKey: process.env['ARB_KEY'] as string,
     }
-  }
-  throw new Error('nitro-testnode sequencer not found')
-}
-
-export const getCustomNetworks = async (
-  l1Url: string,
-  l2Url: string
-): Promise<{
-  l1Network: ParentChain
-  l2Network: Omit<ChildChain, 'tokenBridge'>
-}> => {
-  const l1Provider = new JsonRpcProvider(l1Url)
-  const l2Provider = new JsonRpcProvider(l2Url)
-  const deploymentData = getDeploymentData()
-  const parsedDeploymentData = JSON.parse(deploymentData) as {
-    bridge: string
-    inbox: string
-    ['sequencer-inbox']: string
-    rollup: string
-  }
-
-  const rollup = RollupAdminLogic__factory.connect(
-    parsedDeploymentData.rollup,
-    l1Provider
-  )
-  const confirmPeriodBlocks = await rollup.confirmPeriodBlocks()
-
-  const bridge = Bridge__factory.connect(
-    parsedDeploymentData.bridge,
-    l1Provider
-  )
-  const outboxAddr = await bridge.allowedOutboxList(0)
-
-  const l1NetworkInfo = await l1Provider.getNetwork()
-  const l2NetworkInfo = await l2Provider.getNetwork()
-
-  const l1Network: ParentChain = {
-    blockTime: 10,
-    chainID: l1NetworkInfo.chainId,
-    explorerUrl: '',
-    isCustom: true,
-    name: 'EthLocal',
-    childChainIds: [l2NetworkInfo.chainId],
-    isArbitrum: false,
-  }
-
-  const l2Network: Omit<ChildChain, 'tokenBridge'> = {
-    chainID: l2NetworkInfo.chainId,
-    confirmPeriodBlocks: confirmPeriodBlocks.toNumber(),
-    ethBridge: {
-      bridge: parsedDeploymentData.bridge,
-      inbox: parsedDeploymentData.inbox,
-      outbox: outboxAddr,
-      rollup: parsedDeploymentData.rollup,
-      sequencerInbox: parsedDeploymentData['sequencer-inbox'],
-    },
-    explorerUrl: '',
-    isArbitrum: true,
-    isCustom: true,
-    name: 'ArbLocal',
-    parentChainId: l1NetworkInfo.chainId,
-    retryableLifetimeSeconds: 7 * 24 * 60 * 60,
-    nitroGenesisBlock: 0,
-    nitroGenesisL1Block: 0,
-    depositTimeout: 900000,
-  }
-  return {
-    l1Network,
-    l2Network,
-  }
-}
-
-export const setupNetworks = async (
-  l1Deployer: Signer,
-  l2Deployer: Signer,
-  l1Url: string,
-  l2Url: string
-) => {
-  const { l1Network, l2Network: coreL2Network } = await getCustomNetworks(
-    l1Url,
-    l2Url
-  )
-  const { l1: l1Contracts, l2: l2Contracts } = await deployErc20AndInit(
-    l1Deployer,
-    l2Deployer,
-    coreL2Network.ethBridge.inbox
-  )
-  const l2Network: ChildChain = {
-    ...coreL2Network,
-    tokenBridge: {
-      l1CustomGateway: l1Contracts.customGateway.address,
-      l1ERC20Gateway: l1Contracts.standardGateway.address,
-      l1GatewayRouter: l1Contracts.router.address,
-      l1MultiCall: l1Contracts.multicall.address,
-      l1ProxyAdmin: l1Contracts.proxyAdmin.address,
-      l1Weth: l1Contracts.weth.address,
-      l1WethGateway: l1Contracts.wethGateway.address,
-
-      l2CustomGateway: l2Contracts.customGateway.address,
-      l2ERC20Gateway: l2Contracts.standardGateway.address,
-      l2GatewayRouter: l2Contracts.router.address,
-      l2Multicall: l2Contracts.multicall.address,
-      l2ProxyAdmin: l2Contracts.proxyAdmin.address,
-      l2Weth: l2Contracts.weth.address,
-      l2WethGateway: l2Contracts.wethGateway.address,
-    },
-  }
-
-  addCustomNetwork({
-    customParentChain: l1Network,
-    customChildChain: l2Network,
-  })
-
-  // also register the weth gateway
-  // we add it here rather than in deployBridge because
-  // we have access to an adminerc20bridger
-  const adminErc20Bridger = new AdminErc20Bridger(l2Network)
-  await (
-    await (
-      await adminErc20Bridger.setGateways(l1Deployer, l2Deployer.provider!, [
-        {
-          gatewayAddr: l2Network.tokenBridge.l1WethGateway,
-          tokenAddr: l2Network.tokenBridge.l1Weth,
-        },
-      ])
-    ).wait()
-  ).waitForL2(l2Deployer)
-
-  return {
-    l1Network,
-    l2Network,
-  }
-}
+  : {
+      arbUrl: process.env['ARB_URL'] as string,
+      ethUrl: process.env['ETH_URL'] as string,
+      arbKey: process.env['ARB_KEY'] as string,
+      ethKey: process.env['ETH_KEY'] as string,
+    }
 
 export const getSigner = (provider: JsonRpcProvider, key?: string) => {
   if (!key && !provider)
@@ -208,6 +78,8 @@ export const testSetup = async (): Promise<{
   l2Network: ChildChain
   l1Signer: Signer
   l2Signer: Signer
+  l1Provider: Provider
+  l2Provider: Provider
   erc20Bridger: Erc20Bridger
   ethBridger: EthBridger
   adminErc20Bridger: AdminErc20Bridger
@@ -235,28 +107,40 @@ export const testSetup = async (): Promise<{
     // the networks havent been added yet
 
     // check if theres an existing network available
-    const localNetworkFile = path.join(__dirname, '..', 'localNetwork.json')
-    if (fs.existsSync(localNetworkFile)) {
-      const { l1Network, l2Network } = JSON.parse(
-        fs.readFileSync(localNetworkFile).toString()
-      ) as {
-        l1Network: ParentChain
-        l2Network: ChildChain
+    const localNetworkFile = getLocalNetworksFromFile()
+
+    const { l1Network, l2Network } = localNetworkFile
+
+    if (isTestingOrbitChains) {
+      const _l1Network = l1Network as L2Network
+      const ethLocal: L1Network = {
+        blockTime: 10,
+        chainID: _l1Network.partnerChainID,
+        explorerUrl: '',
+        isCustom: true,
+        name: 'EthLocal',
+        partnerChainIDs: [_l1Network.chainID],
+        isArbitrum: false,
       }
+
+      addCustomNetwork({
+        customParentChain: ethLocal,
+        customChildChain: _l1Network,
+      })
+
       addCustomNetwork({
         customParentChain: l1Network,
         customChildChain: l2Network,
       })
+
       setL1Network = l1Network
       setL2Network = l2Network
     } else {
-      // deploy a new network
-      const { l1Network, l2Network } = await setupNetworks(
-        l1Deployer,
-        l2Deployer,
-        config.ethUrl,
-        config.arbUrl
-      )
+      addCustomNetwork({
+        customParentChain: l1Network as L1Network,
+        customChildChain: l2Network,
+      })
+
       setL1Network = l1Network
       setL2Network = l2Network
     }
@@ -267,9 +151,17 @@ export const testSetup = async (): Promise<{
   const ethBridger = new EthBridger(setL2Network)
   const inboxTools = new InboxTools(l1Signer, setL2Network)
 
+  if (isL2NetworkWithCustomFeeToken()) {
+    await fundL1(l1Signer)
+    await fundL1CustomFeeToken(l1Signer)
+    await approveL1CustomFeeToken(l1Signer)
+  }
+
   return {
     l1Signer,
     l2Signer,
+    l1Provider: ethProvider,
+    l2Provider: arbProvider,
     l1Network: setL1Network,
     l2Network: setL2Network,
     erc20Bridger,
@@ -279,4 +171,16 @@ export const testSetup = async (): Promise<{
     l1Deployer,
     l2Deployer,
   }
+}
+
+export function getLocalNetworksFromFile(): {
+  l1Network: L1Network | L2Network
+  l2Network: L2Network
+} {
+  const pathToLocalNetworkFile = path.join(__dirname, '..', 'localNetwork.json')
+  if (!fs.existsSync(pathToLocalNetworkFile)) {
+    throw new ArbSdkError('localNetwork.json not found, must gen:network first')
+  }
+  const localNetworksFile = fs.readFileSync(pathToLocalNetworkFile, 'utf8')
+  return JSON.parse(localNetworksFile)
 }

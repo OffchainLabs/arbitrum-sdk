@@ -28,7 +28,11 @@ import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factor
 import { IInbox__factory } from '../abi/factories/IInbox__factory'
 import { RequiredPick } from '../utils/types'
 import { MessageDeliveredEvent } from '../abi/Bridge'
-import { parentChains, ChildChain } from '../dataEntities/networks'
+import {
+  ChildChain,
+  ParentChain,
+  getParentForNetwork,
+} from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
 import { MultiCaller, CallInput } from '../utils/multicall'
@@ -57,8 +61,14 @@ type RequiredTransactionRequestType = RequiredPick<
  * Tools for interacting with the inbox and bridge contracts
  */
 export class InboxTools {
-  private readonly parentChainProvider
-  private readonly parentChain
+  /**
+   * Parent chain provider
+   */
+  private readonly parentChainProvider: Provider
+  /**
+   * Parent chain for the given Arbitrum chain, can be an L1 or an L2
+   */
+  private readonly parentChain: ParentChain
 
   constructor(
     private readonly parentChainSigner: Signer,
@@ -67,11 +77,7 @@ export class InboxTools {
     this.parentChainProvider = SignerProviderUtils.getProviderOrThrow(
       this.parentChainSigner
     )
-    this.parentChain = parentChains[childChain.parentChainId]
-    if (!this.parentChain)
-      throw new ArbSdkError(
-        `ParentChain not found for chain id: ${childChain.parentChainId}.`
-      )
+    this.parentChain = getParentForNetwork(childChain)
   }
 
   /**

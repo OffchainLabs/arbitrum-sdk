@@ -293,25 +293,40 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
     let createdFromBlock = createdAtBlock
     let createdToBlock = createdAtBlock
 
-    // If Parent is Arbitrum, then Child is an Orbit chain.
-    if (await isArbitrumChain(this.parentProvider)) {
+    // If L1 is Arbitrum, then L2 is an Orbit chain.
+    if (await isArbitrumChain(this.l1Provider)) {
       try {
-        const childChainBlockRange = await getBlockRangesForL1BlockWithCache({
-          parentProvider: this.parentProvider as JsonRpcProvider,
-          childProvider: childProvider as JsonRpcProvider,
-          forParentChainBlock: createdAtBlock.toNumber(),
-        })
-        const startBlock = childChainBlockRange[0]
-        const endBlock = childChainBlockRange[1]
-        if (!startBlock || !endBlock) {
-          throw new Error()
+        const nodeInterface = NodeInterface__factory.connect(
+          NODE_INTERFACE_ADDRESS,
+          this.l1Provider
+        )
+
+        const l2BlockRangeFromNode = await nodeInterface.l2BlockRangeForL1(
+          createdAtBlock
+        )
+
+        createdFromBlock = l2BlockRangeFromNode.firstBlock
+        createdToBlock = l2BlockRangeFromNode.lastBlock
+      } catch {
+        // defaults to binary search
+        try {
+          const l2BlockRange = await getBlockRangesForL1BlockWithCache({
+            parentProvider: this.parentProvider as JsonRpcProvider,
+            childProvider: childProvider as JsonRpcProvider,
+            forParentChainBlock: createdAtBlock.toNumber(),
+          })
+          const startBlock = l2BlockRange[0]
+          const endBlock = l2BlockRange[1]
+          if (!startBlock || !endBlock) {
+            throw new Error()
+          }
+          createdFromBlock = BigNumber.from(startBlock)
+          createdToBlock = BigNumber.from(endBlock)
+        } catch {
+          // fallback to the original method
+          createdFromBlock = createdAtBlock
+          createdToBlock = createdAtBlock
         }
-        createdFromBlock = BigNumber.from(startBlock)
-        createdToBlock = BigNumber.from(endBlock)
-      } catch (e) {
-        // fallback to old method if the new method fails
-        createdFromBlock = createdAtBlock
-        createdToBlock = createdAtBlock
       }
     }
 
@@ -413,18 +428,18 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
    * WARNING: Outbox entries are only created when the corresponding node is confirmed. Which
    * can take 1 week+, so waiting here could be a very long operation.
    * @param retryDelay
-   * @returns
+   * @returns outbox entry status (either executed or confirmed but not pending)
    */
   public async waitUntilReadyToExecute(
     childProvider: Provider,
     retryDelay = 500
-  ): Promise<void> {
+  ): Promise<L2ToL1MessageStatus.EXECUTED | L2ToL1MessageStatus.CONFIRMED> {
     const status = await this.status(childProvider)
     if (
       status === ChildToParentChainMessageStatus.CONFIRMED ||
       status === ChildToParentChainMessageStatus.EXECUTED
     ) {
-      return
+      return status
     } else {
       await wait(retryDelay)
       await this.waitUntilReadyToExecute(childProvider, retryDelay)

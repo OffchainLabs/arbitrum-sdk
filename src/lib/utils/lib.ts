@@ -5,11 +5,12 @@ import { ArbitrumProvider } from './arbProvider'
 import { childChains } from '../dataEntities/networks'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
+import { BigNumber } from 'ethers'
 
 export const wait = (ms: number): Promise<void> =>
   new Promise(res => setTimeout(res, ms))
 
-export const getBaseFee = async (provider: Provider) => {
+export const getBaseFee = async (provider: Provider): Promise<BigNumber> => {
   const baseFee = (await provider.getBlock('latest')).baseFeePerGas
   if (!baseFee) {
     throw new ArbSdkError(
