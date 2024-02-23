@@ -146,7 +146,6 @@ export class L1ToL2MessageCreator {
       options
     )
 
-
     const l2Network = await getChildChain(l2Provider)
     const nativeTokenIsEth = typeof l2Network.nativeToken === 'undefined'
 
