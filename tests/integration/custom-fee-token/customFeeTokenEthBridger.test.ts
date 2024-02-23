@@ -204,7 +204,7 @@ describeOnlyWhenCustomGasToken(
         'custom fee token withdraw getWithdrawalsInL2Transaction query came back empty'
       )
 
-      const withdrawalEvents = await L2ToL1Message.getL2ToL1Events(
+      const withdrawalEvents = await L2ToL1Message.getChildToParentEvents(
         l2Provider,
         { fromBlock: withdrawalTxReceipt.blockNumber, toBlock: 'latest' },
         undefined,

@@ -46,7 +46,7 @@ import {
 import { OmitTyped } from '../utils/types'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
-import { getChildChain } from '../dataEntities/networks'
+import { getL2Network as getChildChain } from '../dataEntities/networks'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { isArbitrumChain } from '../utils/lib'
 
@@ -175,7 +175,7 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-      * Asserts that the provided argument is of type `ApproveGasTokenParams` and not `ApproveGasTokenTxRequest`.
+   * Asserts that the provided argument is of type `ApproveGasTokenParams` and not `ApproveGasTokenTxRequest`.
    * @param params
    */
   private isApproveGasTokenParams(

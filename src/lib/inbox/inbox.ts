@@ -29,8 +29,8 @@ import { IInbox__factory } from '../abi/factories/IInbox__factory'
 import { RequiredPick } from '../utils/types'
 import { MessageDeliveredEvent } from '../abi/Bridge'
 import {
-  ChildChain,
-  ParentChain,
+  L2Network as ChildChain,
+  L1Network as ParentChain,
   getParentForNetwork,
 } from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
@@ -68,7 +68,7 @@ export class InboxTools {
   /**
    * Parent chain for the given Arbitrum chain, can be an L1 or an L2
    */
-  private readonly parentChain: ParentChain
+  private readonly parentChain: ParentChain | ChildChain
 
   constructor(
     private readonly parentChainSigner: Signer,

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 /* eslint-env node */
-'use strict'
+;('use strict')
 
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
@@ -23,7 +23,6 @@ import {
   ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
 } from './constants'
 import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__factory'
-import { L1Network, L1Networks, L2Network, L2Networks } from '../..'
 
 export interface Network {
   chainID: number
@@ -38,22 +37,25 @@ export interface Network {
   /**
    * Chain ids of children chains, i.e. chains that settle to this chain.
    */
-  partnerChainIDs?: number[]
+  partnerChainIDs: number[]
 }
 
 /**
- * Represents a parent chain, e.g. Ethereum Mainnet or Sepolia.
+ * Represents an L1 chain, e.g. Ethereum Mainnet or Sepolia.
  */
-export interface ParentChain extends Network {
+export interface L1Network extends Network {
   isArbitrum: false
 }
 
 /**
  * Represents an Arbitrum chain, e.g. Arbitrum One, Arbitrum Sepolia, or an L3 chain.
  */
-export interface ChildChain extends Network {
+export interface L2Network extends Network {
   tokenBridge: TokenBridge
   ethBridge: EthBridge
+  /**
+   * Chain id of the parent chain, i.e. the chain on which this chain settles to.
+   */
   partnerChainID: number
   isArbitrum: true
   confirmPeriodBlocks: number
@@ -100,16 +102,16 @@ export interface EthBridge {
   }
 }
 
-export interface ParentChains {
-  [id: string]: ParentChain
+export interface L1Networks {
+  [id: string]: L1Network
 }
 
-export interface ChildChains {
-  [id: string]: ChildChain
+export interface L2Networks {
+  [id: string]: L2Network
 }
 
 export interface Networks {
-  [id: string]: ParentChain | ChildChain
+  [id: string]: L1Network | L2Network
 }
 
 const mainnetTokenBridge: TokenBridge = {
@@ -369,8 +371,8 @@ export const networks: Networks = {
 /**
  * Determines if a chain is a parent of *any* other chain. Could be an L1 or an L2 chain.
  */
-const isParentChain = (chain: ParentChain | ChildChain): boolean => {
-  return Boolean(chain.partnerChainIDs) && chain.partnerChainIDs?.length > 0
+const isParentChain = (chain: L1Network | L2Network): boolean => {
+  return chain.partnerChainIDs.length > 0
 }
 
 /**
@@ -474,7 +476,7 @@ export const getNetwork = async (
     return chainId
   })()
 
-  let network: ParentChain | ChildChain | undefined = undefined
+  let network: L1Network | L2Network | undefined = undefined
 
   if (layer === 1) {
     network = getL1Chains()[chainID]
@@ -494,10 +496,10 @@ export const getNetwork = async (
  *
  * @note Throws if the chain is not an L1 chain.
  */
-export const getParentChain = (
+export const getL1Network = (
   signerOrProviderOrChainID: SignerOrProvider | number
-): Promise<ParentChain> => {
-  return getNetwork(signerOrProviderOrChainID, 1) as Promise<ParentChain>
+): Promise<L1Network> => {
+  return getNetwork(signerOrProviderOrChainID, 1) as Promise<L1Network>
 }
 
 /**
@@ -505,10 +507,10 @@ export const getParentChain = (
  *
  * @note Throws if the chain is not an Arbitrum chain.
  */
-export const getChildChain = (
+export const getL2Network = (
   signerOrProviderOrChainID: SignerOrProvider | number
-): Promise<ChildChain> => {
-  return getNetwork(signerOrProviderOrChainID, 2) as Promise<ChildChain>
+): Promise<L2Network> => {
+  return getNetwork(signerOrProviderOrChainID, 2) as Promise<L2Network>
 }
 
 /**
@@ -579,59 +581,58 @@ const addNetwork = (network: L1Network | L2Network) => {
 /**
  * Registers a pair of custom L1 and L2 chains, or a single custom Arbitrum chain (L2 or L3).
  *
- * @param customParentChain the custom L1 chain (optional)
- * @param customChildChain the custom L2 or L3 chain
+ * @param customL1Network the custom L1 chain (optional)
+ * @param customL2Network the custom L2 or L3 chain
  */
 export const addCustomNetwork = ({
-  customParentChain,
-  customChildChain,
+  customL1Network,
+  customL2Network,
 }: {
-  customParentChain?: L1Network
-  customChildChain: L2Network
+  customL1Network?: L1Network
+  customL2Network: L2Network
 }): void => {
-  if (customParentChain) {
-    if (customParentChain.chainID !== customChildChain.partnerChainID) {
+  if (customL1Network) {
+    if (customL1Network.chainID !== customL2Network.partnerChainID) {
       throw new ArbSdkError(
-        `Partner chain id for L2 network ${customChildChain.chainID} doesn't match the provided L1 network. Expected ${customParentChain.chainID} but got ${customChildChain.partnerChainID}.`
+        `Partner chain id for L2 network ${customL2Network.chainID} doesn't match the provided L1 network. Expected ${customL1Network.chainID} but got ${customL2Network.partnerChainID}.`
       )
     }
 
     // check the if the parent chain is in any of the lists
-    if (l1Networks[customParentChain.chainID]) {
+    if (l1Networks[customL1Network.chainID]) {
       throw new ArbSdkError(
-        `Network ${customParentChain.chainID} already included`
+        `Network ${customL1Network.chainID} already included`
       )
-    } else if (!customParentChain.isCustom) {
+    } else if (!customL1Network.isCustom) {
       throw new ArbSdkError(
-        `Custom network ${customParentChain.chainID} must have isCustom flag set to true`
+        `Custom network ${customL1Network.chainID} must have isCustom flag set to true`
       )
     }
 
-    addNetwork(customParentChain)
+    addNetwork(customL1Network)
   }
 
-  if (l2Networks[customChildChain.chainID]) {
+  if (l2Networks[customL2Network.chainID]) {
+    throw new ArbSdkError(`Network ${customL2Network.chainID} already included`)
+  } else if (!customL2Network.isCustom) {
     throw new ArbSdkError(
-      `Network ${customChildChain.chainID} already included`
-    )
-  } else if (!customChildChain.isCustom) {
-    throw new ArbSdkError(
-      `Custom network ${customChildChain.chainID} must have isCustom flag set to true`
+      `Custom network ${customL2Network.chainID} must have isCustom flag set to true`
     )
   }
 
-  addNetwork(customChildChain)
+  addNetwork(customL2Network)
 }
+
 /**
  * Registers a custom network that matches the one created by a Nitro local node. Useful in development.
  *
  * @see {@link https://github.com/OffchainLabs/nitro}
  */
 export const addDefaultLocalNetwork = (): {
-  parentChain: ParentChain
-  chain: ChildChain
+  l1Network: L1Network
+  l2Network: L2Network
 } => {
-  const defaultLocalParentChain: ParentChain = {
+  const defaultLocalL1Network: L1Network = {
     blockTime: 10,
     chainID: 1337,
     explorerUrl: '',
@@ -641,7 +642,7 @@ export const addDefaultLocalNetwork = (): {
     isArbitrum: false,
   }
 
-  const defaultLocalChain: ChildChain = {
+  const defaultLocalL2Network: L2Network = {
     chainID: 412346,
     confirmPeriodBlocks: 20,
     ethBridge: {
@@ -681,13 +682,13 @@ export const addDefaultLocalNetwork = (): {
   }
 
   addCustomNetwork({
-    customParentChain: defaultLocalParentChain,
-    customChildChain: defaultLocalChain,
+    customL1Network: defaultLocalL1Network,
+    customL2Network: defaultLocalL2Network,
   })
 
   return {
-    parentChain: defaultLocalParentChain,
-    chain: defaultLocalChain,
+    l1Network: defaultLocalL1Network,
+    l2Network: defaultLocalL2Network,
   }
 }
 
@@ -710,3 +711,4 @@ const createNetworkStateHandler = () => {
 const { resetNetworksToDefault } = createNetworkStateHandler()
 
 export { resetNetworksToDefault }
+export const getChildChain = getL2Network

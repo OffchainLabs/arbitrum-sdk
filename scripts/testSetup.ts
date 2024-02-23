@@ -21,21 +21,19 @@ import { Wallet } from '@ethersproject/wallet'
 import { Provider } from '@ethersproject/abstract-provider'
 import dotenv from 'dotenv'
 
-import { Signer } from 'ethers'
-import * as fs from 'fs'
-import * as path from 'path'
-import { Erc20Bridger, EthBridger, InboxTools } from '../src'
-import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
-import { ArbSdkError } from '../src/lib/dataEntities/errors'
+import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
-  ChildChain,
-  ChildChain as L1Network,
-  ParentChain as L2Network,
-  ParentChain,
+  L1Network,
+  L2Network,
+  getL1Network,
+  getL2Network,
   addCustomNetwork,
-  getChildChain,
-  getParentChain,
 } from '../src/lib/dataEntities/networks'
+import { Signer } from 'ethers'
+import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
+import * as path from 'path'
+import * as fs from 'fs'
+import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import {
   approveL1CustomFeeToken,
   fundL1CustomFeeToken,
@@ -74,8 +72,8 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
 }
 
 export const testSetup = async (): Promise<{
-  l1Network: ParentChain
-  l2Network: ChildChain
+  l1Network: L1Network | L2Network
+  l2Network: L2Network
   l1Signer: Signer
   l2Signer: Signer
   l1Provider: Provider
@@ -97,10 +95,12 @@ export const testSetup = async (): Promise<{
   const l1Signer = seed.connect(ethProvider)
   const l2Signer = seed.connect(arbProvider)
 
-  let setL1Network: ParentChain, setL2Network: ChildChain
+  let setL1Network: L1Network | L2Network, setL2Network: L2Network
   try {
-    const l1Network = await getParentChain(l1Deployer)
-    const l2Network = await getChildChain(l2Deployer)
+    const l1Network = isTestingOrbitChains
+      ? await getL2Network(l1Deployer)
+      : await getL1Network(l1Deployer)
+    const l2Network = await getL2Network(l2Deployer)
     setL1Network = l1Network
     setL2Network = l2Network
   } catch (err) {
@@ -124,21 +124,20 @@ export const testSetup = async (): Promise<{
       }
 
       addCustomNetwork({
-        customParentChain: ethLocal,
-        customChildChain: _l1Network,
+        customL1Network: ethLocal,
+        customL2Network: _l1Network,
       })
 
       addCustomNetwork({
-        customParentChain: l1Network,
-        customChildChain: l2Network,
+        customL2Network: l2Network,
       })
 
       setL1Network = l1Network
       setL2Network = l2Network
     } else {
       addCustomNetwork({
-        customParentChain: l1Network as L1Network,
-        customChildChain: l2Network,
+        customL1Network: l1Network as L1Network,
+        customL2Network: l2Network,
       })
 
       setL1Network = l1Network

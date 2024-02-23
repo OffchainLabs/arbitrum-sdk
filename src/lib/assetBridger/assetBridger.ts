@@ -22,16 +22,14 @@ import { L1ContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'
 
 import {
+  L1Network,
+  L2Network,
   getParentForNetwork,
-  parentChains as l1Networks,
-  ChildChain as L2Network,
-  ParentChain,
 } from '../dataEntities/networks'
 import {
   SignerOrProvider,
   SignerProviderUtils,
 } from '../dataEntities/signerOrProvider'
-import { L1Network } from '../..'
 
 /**
  * Base for bridging assets from l1 to l2 and back

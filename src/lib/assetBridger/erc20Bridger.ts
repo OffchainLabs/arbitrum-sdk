@@ -45,7 +45,10 @@ import {
   L1ToL2MessageGasEstimator,
 } from '../message/L1ToL2MessageGasEstimator'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
-import { ChildChain, getChildChain } from '../dataEntities/networks'
+import {
+  L2Network as ChildChain,
+  getL2Network as getChildChain,
+} from '../dataEntities/networks'
 import { ArbSdkError, MissingProviderArbSdkError } from '../dataEntities/errors'
 import { DISABLED_GATEWAY } from '../dataEntities/constants'
 import { EventFetcher } from '../utils/eventFetcher'

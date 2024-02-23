@@ -294,11 +294,11 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
     let createdToBlock = createdAtBlock
 
     // If L1 is Arbitrum, then L2 is an Orbit chain.
-    if (await isArbitrumChain(this.l1Provider)) {
+    if (await isArbitrumChain(this.parentProvider)) {
       try {
         const nodeInterface = NodeInterface__factory.connect(
           NODE_INTERFACE_ADDRESS,
-          this.l1Provider
+          this.parentProvider
         )
 
         const l2BlockRangeFromNode = await nodeInterface.l2BlockRangeForL1(
@@ -433,7 +433,10 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
   public async waitUntilReadyToExecute(
     childProvider: Provider,
     retryDelay = 500
-  ): Promise<L2ToL1MessageStatus.EXECUTED | L2ToL1MessageStatus.CONFIRMED> {
+  ): Promise<
+    | ChildToParentChainMessageStatus.EXECUTED
+    | ChildToParentChainMessageStatus.CONFIRMED
+  > {
     const status = await this.status(childProvider)
     if (
       status === ChildToParentChainMessageStatus.CONFIRMED ||
@@ -442,7 +445,7 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
       return status
     } else {
       await wait(retryDelay)
-      await this.waitUntilReadyToExecute(childProvider, retryDelay)
+      return await this.waitUntilReadyToExecute(childProvider, retryDelay)
     }
   }
 

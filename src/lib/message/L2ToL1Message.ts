@@ -249,7 +249,10 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
   public async waitUntilReadyToExecute(
     childChainProvider: Provider,
     retryDelay = 500
-  ): Promise<L2ToL1MessageStatus.EXECUTED | L2ToL1MessageStatus.CONFIRMED> {
+  ): Promise<
+    | ChildToParentChainMessageStatus.EXECUTED
+    | ChildToParentChainMessageStatus.CONFIRMED
+  > {
     if (this.nitroReader)
       return this.nitroReader.waitUntilReadyToExecute(
         childChainProvider,
