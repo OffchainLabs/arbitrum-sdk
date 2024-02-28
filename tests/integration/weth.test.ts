@@ -31,8 +31,9 @@ import { L1ToL2MessageStatus } from '../../src'
 import { Wallet } from 'ethers'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
+import { describeOnlyWhenEth } from './custom-fee-token/mochaExtensions'
 
-describe('WETH', async () => {
+describeOnlyWhenEth('WETH', async () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
@@ -61,15 +62,15 @@ describe('WETH', async () => {
       value: wethToWrap,
     })
     await res.wait()
-    await depositToken(
-      wethToDeposit,
-      l1WethAddress,
+    await depositToken({
+      depositAmount: wethToDeposit,
+      l1TokenAddress: l1WethAddress,
       erc20Bridger,
       l1Signer,
       l2Signer,
-      L1ToL2MessageStatus.REDEEMED,
-      GatewayType.WETH
-    )
+      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      expectedGatewayType: GatewayType.WETH,
+    })
 
     const l2WethGateway = await erc20Bridger.getL2GatewayAddress(
       l1WethAddress,

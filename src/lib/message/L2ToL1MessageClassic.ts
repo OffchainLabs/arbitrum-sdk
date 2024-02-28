@@ -359,18 +359,22 @@ export class ChildToParentMessageReaderClassic extends ChildToParentMessageClass
    * WARNING: Outbox entries are only created when the corresponding node is confirmed. Which
    * can take 1 week+, so waiting here could be a very long operation.
    * @param retryDelay
-   * @returns
+   * @returns outbox entry status (either executed or confirmed but not pending)
    */
   public async waitUntilOutboxEntryCreated(
     childProvider: Provider,
     retryDelay = 500
-  ): Promise<void> {
+  ): Promise<
+    ChildToParentMessageStatus.EXECUTED | ChildToParentMessageStatus.CONFIRMED
+  > {
     const exists = await this.outboxEntryExists(childProvider)
     if (exists) {
-      return
+      return (await this.hasExecuted(childProvider))
+        ? ChildToParentMessageStatus.EXECUTED
+        : ChildToParentMessageStatus.CONFIRMED
     } else {
       await wait(retryDelay)
-      await this.waitUntilOutboxEntryCreated(childProvider, retryDelay)
+      return await this.waitUntilOutboxEntryCreated(childProvider, retryDelay)
     }
   }
 

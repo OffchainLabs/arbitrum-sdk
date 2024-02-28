@@ -31,10 +31,12 @@ import {
   L1ToL2MessageStatus,
   L2ToL1MessageStatus,
 } from '../../src'
-import { ChildChain as L2Network } from '../../src/lib/dataEntities/networks'
+import { L2Network } from '../../src/lib/dataEntities/networks'
 import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
 import { ArbSdkError } from '../../src/lib/dataEntities/errors'
 import { ERC20 } from '../../src/lib/abi/ERC20'
+import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
+import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 
 export const preFundAmount = parseEther('0.1')
 
@@ -223,16 +225,29 @@ const getGateways = (gatewayType: GatewayType, l2Network: L2Network) => {
  * @param l1Signer
  * @param l2Signer
  */
-export const depositToken = async (
-  depositAmount: BigNumber,
-  l1TokenAddress: string,
-  erc20Bridger: Erc20Bridger,
-  l1Signer: Signer,
-  l2Signer: Signer,
-  expectedStatus: L1ToL2MessageStatus,
-  expectedGatewayType: GatewayType,
+export const depositToken = async ({
+  depositAmount,
+  ethDepositAmount,
+  l1TokenAddress,
+  erc20Bridger,
+  l1Signer,
+  l2Signer,
+  expectedStatus,
+  expectedGatewayType,
+  retryableOverrides,
+  destinationAddress,
+}: {
+  depositAmount: BigNumber
+  ethDepositAmount?: BigNumber
+  l1TokenAddress: string
+  erc20Bridger: Erc20Bridger
+  l1Signer: Signer
+  l2Signer: Signer
+  expectedStatus: L1ToL2MessageStatus
+  expectedGatewayType: GatewayType
   retryableOverrides?: GasOverrides
-) => {
+  destinationAddress?: string
+}) => {
   await (
     await erc20Bridger.approveToken({
       erc20L1Address: l1TokenAddress,
@@ -240,6 +255,7 @@ export const depositToken = async (
     })
   ).wait()
 
+  const senderAddress = await l1Signer.getAddress()
   const expectedL1GatewayAddress = await erc20Bridger.getL1GatewayAddress(
     l1TokenAddress,
     l1Signer.provider!
@@ -249,16 +265,38 @@ export const depositToken = async (
     l1TokenAddress
   )
   const allowance = await l1Token.allowance(
-    await l1Signer.getAddress(),
+    senderAddress,
     expectedL1GatewayAddress
   )
   expect(allowance.eq(Erc20Bridger.MAX_APPROVAL), 'set token allowance failed')
     .to.be.true
 
+  if (isL2NetworkWithCustomFeeToken()) {
+    await (
+      await erc20Bridger.approveGasToken({
+        l1Signer,
+        erc20L1Address: l1TokenAddress,
+      })
+    ).wait()
+
+    const feeTokenAllowance = await ERC20__factory.connect(
+      erc20Bridger.nativeToken!,
+      l1Signer
+    ).allowance(await l1Signer.getAddress(), expectedL1GatewayAddress)
+
+    expect(
+      feeTokenAllowance.eq(Erc20Bridger.MAX_APPROVAL),
+      'set fee token allowance failed'
+    ).to.be.true
+  }
+
   const initialBridgeTokenBalance = await l1Token.balanceOf(
     expectedL1GatewayAddress
   )
-  const userBalBefore = await l1Token.balanceOf(await l1Signer.getAddress())
+  const tokenBalL1Before = await l1Token.balanceOf(senderAddress)
+  const ethBalL2Before = await l2Signer.provider!.getBalance(
+    destinationAddress || senderAddress
+  )
 
   const depositRes = await erc20Bridger.deposit({
     l1Signer: l1Signer,
@@ -266,6 +304,9 @@ export const depositToken = async (
     erc20L1Address: l1TokenAddress,
     amount: depositAmount,
     retryableGasOverrides: retryableOverrides,
+    maxSubmissionCost: ethDepositAmount,
+    excessFeeRefundAddress: destinationAddress,
+    destinationAddress,
   })
 
   const depositRec = await depositRes.wait()
@@ -281,12 +322,16 @@ export const depositToken = async (
       ? 0
       : initialBridgeTokenBalance.add(depositAmount).toNumber()
   )
-  const userBalAfter = await l1Token.balanceOf(await l1Signer.getAddress())
-  expect(userBalAfter.toString(), 'user bal after').to.eq(
-    userBalBefore.sub(depositAmount).toString()
+  const tokenBalL1After = await l1Token.balanceOf(senderAddress)
+  expect(tokenBalL1After.toString(), 'user bal after').to.eq(
+    tokenBalL1Before.sub(depositAmount).toString()
   )
 
   const waitRes = await depositRec.waitForL2(l2Signer)
+
+  const ethBalL2After = await l2Signer.provider!.getBalance(
+    destinationAddress || senderAddress
+  )
 
   expect(waitRes.status, 'Unexpected status').to.eq(expectedStatus)
   if (retryableOverrides) {
@@ -330,13 +375,25 @@ export const depositToken = async (
     'getERC20L1Address/getERC20L2Address failed with proper token address'
   )
 
-  const testWalletL2Balance = await l2Token.balanceOf(
-    await l2Signer.getAddress()
+  const tokenBalL2After = await l2Token.balanceOf(
+    destinationAddress || senderAddress
   )
-  expect(
-    testWalletL2Balance.eq(depositAmount),
-    'l2 wallet not updated after deposit'
-  ).to.be.true
+
+  // only check for standard deposits
+  if (!destinationAddress && !ethDepositAmount) {
+    expect(
+      tokenBalL2After.eq(depositAmount),
+      'l2 wallet not updated after deposit'
+    ).to.be.true
+  }
+
+  // batched token+eth
+  if (ethDepositAmount) {
+    expect(
+      ethBalL2After.gte(ethBalL2Before.add(ethDepositAmount)),
+      'l2 wallet not updated with the extra eth deposit'
+    ).to.be.true
+  }
 
   return { l1Token, waitRes, l2Token }
 }

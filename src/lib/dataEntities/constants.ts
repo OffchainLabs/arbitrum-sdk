@@ -33,6 +33,8 @@ export const ARB_GAS_INFO = '0x000000000000000000000000000000000000006C'
 
 export const ARB_STATISTICS = '0x000000000000000000000000000000000000006F'
 
+export const ARB_MINIMUM_BLOCK_TIME_IN_SECONDS = 0.25
+
 /**
  * The offset added to an L1 address to get the corresponding L2 address
  */

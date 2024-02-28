@@ -1,0 +1,16 @@
+{
+  // Input options
+  "entryPoints": ["./src/lib"],
+  "entryPointStrategy": "expand",
+  "exclude": ["./src/lib/abi"],
+  "excludeNotDocumented": true,
+  "excludeInternal": true,
+  "customCss": "./theme/style.css",
+
+  "sidebarLinks": {
+    "Arbitrum Docs": "https://docs.arbitrum.io"
+  },
+
+  // Output options
+  "out": "docs"
+}
