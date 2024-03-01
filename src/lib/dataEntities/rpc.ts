@@ -1,6 +1,5 @@
-import { TransactionReceipt, Block } from '@ethersproject/providers'
-import { BlockWithTransactions } from '@ethersproject/abstract-provider'
-import { BigNumber } from 'ethers'
+import { TransactionReceipt, Block } from 'ethers'
+import { BlockWithTransactions } from 'ethers'
 
 export interface ArbBlockProps {
   /**
@@ -11,7 +10,7 @@ export interface ArbBlockProps {
   /**
    * Cumulative number of withdrawals since genesis
    */
-  sendCount: BigNumber
+  sendCount: bigint
 
   /**
    * The l1 block number as seen from within this l2 block
@@ -35,5 +34,5 @@ export interface ArbTransactionReceipt extends TransactionReceipt {
   /**
    * Amount of gas spent on l1 computation in units of l2 gas
    */
-  gasUsedForL1: BigNumber
+  gasUsedForL1: bigint
 }

@@ -16,18 +16,22 @@
 /* eslint-env node */
 'use strict'
 
-import { Signer } from '@ethersproject/abstract-signer'
-import { Block, Provider } from '@ethersproject/abstract-provider'
-import { BigNumber, ContractTransaction, ethers, Overrides } from 'ethers'
-import { TransactionRequest } from '@ethersproject/providers'
+import { Signer, hexlify, solidityPacked } from 'ethers'
+import { Block, Provider } from 'ethers'
+import { ContractTransaction, ethers, Overrides } from 'ethers'
+import { TransactionRequest } from 'ethers'
 
-import { Bridge } from '../abi/Bridge'
-import { Bridge__factory } from '../abi/factories/Bridge__factory'
-import { SequencerInbox } from '../abi/SequencerInbox'
-import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factory'
-import { IInbox__factory } from '../abi/factories/IInbox__factory'
+import {
+  SequencerInbox__factory,
+  Bridge__factory,
+  IInbox__factory,
+} from '../abi/factories/nitro-contracts/build/contracts/src/bridge'
+import {
+  SequencerInbox,
+  Bridge,
+} from '../abi/nitro-contracts/build/contracts/src/bridge'
+import { NodeInterface__factory } from '../abi/factories/nitro-contracts/build/contracts/src/node-interface'
 import { RequiredPick } from '../utils/types'
-import { MessageDeliveredEvent } from '../abi/Bridge'
 import {
   L2Network as ChildChain,
   L1Network as ParentChain,
@@ -37,7 +41,7 @@ import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
 import { MultiCaller, CallInput } from '../utils/multicall'
 import { ArbSdkError } from '../dataEntities/errors'
-import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
+
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { InboxMessageKind } from '../dataEntities/message'
 import { isDefined } from '../utils/lib'
@@ -47,11 +51,11 @@ type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
 }
 
 type GasComponentsWithChildChainPart = {
-  gasEstimate: BigNumber
-  gasEstimateForL1: BigNumber
-  baseFee: BigNumber
-  l1BaseFeeEstimate: BigNumber
-  gasEstimateForChildChain: BigNumber
+  gasEstimate: bigint
+  gasEstimateForL1: bigint
+  baseFee: bigint
+  l1BaseFeeEstimate: bigint
+  gasEstimateForChildChain: bigint
 }
 type RequiredTransactionRequestType = RequiredPick<
   TransactionRequest,
@@ -149,9 +153,9 @@ export class InboxTools {
         value: childChainTransactionRequest.value,
       }
     )
-    const gasEstimateForChildChain: BigNumber = gasComponents.gasEstimate.sub(
-      gasComponents.gasEstimateForL1
-    )
+    const gasEstimateForChildChain: bigint =
+      gasComponents.gasEstimate - gasComponents.gasEstimateForL1
+
     return { ...gasComponents, gasEstimateForChildChain }
   }
 
@@ -367,9 +371,9 @@ export class InboxTools {
       this.parentChainSigner
     )
 
-    const sendData = ethers.utils.solidityPack(
+    const sendData = solidityPacked(
       ['uint8', 'bytes'],
-      [ethers.utils.hexlify(InboxMessageKind.L2MessageType_signedTx), signedTx]
+      [hexlify(InboxMessageKind.L2MessageType_signedTx), signedTx]
     )
 
     return await delayedInbox.functions.sendL2Message(sendData)

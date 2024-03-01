@@ -1,7 +1,4 @@
-import { TypedEvent, TypedEventFilter } from '../abi/common'
-import { Contract } from 'ethers'
-import { Provider, Log } from '@ethersproject/abstract-provider'
-import { Interface } from 'ethers/lib/utils'
+import { Contract, Interface, Provider, Log } from 'ethers'
 
 /**
  * The type of the event arguments.

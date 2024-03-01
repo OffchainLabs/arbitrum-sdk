@@ -1,5 +1,5 @@
-import { TransactionRequest, Provider } from '@ethersproject/providers'
-import { BigNumber } from 'ethers'
+import { TransactionRequest, Provider } from 'ethers'
+
 import {
   L1ToL2MessageGasParams,
   L1ToL2MessageParams,
@@ -41,7 +41,7 @@ export interface L2ToL1TransactionRequest {
    * the exact size of the proof straight away, however the real value should be
    * within a few thousand gas of this estimate.
    */
-  estimateL1GasLimit: (l1Provider: Provider) => Promise<BigNumber>
+  estimateL1GasLimit: (l1Provider: Provider) => Promise<BigInt>
 }
 
 /**

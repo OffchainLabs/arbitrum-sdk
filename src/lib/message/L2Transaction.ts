@@ -16,9 +16,9 @@
 /* eslint-env node */
 'use strict'
 
-import { TransactionReceipt } from '@ethersproject/providers'
-import { BigNumber } from '@ethersproject/bignumber'
-import { Log } from '@ethersproject/abstract-provider'
+import { TransactionReceipt } from 'ethers'
+
+import { Log } from 'ethers'
 import { ContractTransaction, providers } from 'ethers'
 import {
   SignerProviderUtils,
@@ -31,10 +31,12 @@ import {
   ChildToParentMessageWriter as L2ToL1MessageWriter,
   ChildToParentTransactionEvent as L2ToL1TransactionEvent,
 } from './L2ToL1Message'
-import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
-import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
-import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
-import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
+import { NodeInterface__factory } from '../abi/factories/nitro-contracts/build/contracts/src/node-interface'
+import {
+  ArbSys__factory,
+  ArbRetryableTx__factory,
+  ArbRetryableTx__factory,
+} from '../abi/factories/nitro-contracts/build/contracts/src/precompiles'
 import { ArbSdkError } from '../dataEntities/errors'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { EventArgs, parseTypedLogs } from '../dataEntities/event'
@@ -57,15 +59,15 @@ export class L2TransactionReceipt implements TransactionReceipt {
   public readonly contractAddress: string
   public readonly transactionIndex: number
   public readonly root?: string
-  public readonly gasUsed: BigNumber
+  public readonly gasUsed: bigint
   public readonly logsBloom: string
   public readonly blockHash: string
   public readonly transactionHash: string
   public readonly logs: Array<Log>
   public readonly blockNumber: number
   public readonly confirmations: number
-  public readonly cumulativeGasUsed: BigNumber
-  public readonly effectiveGasPrice: BigNumber
+  public readonly cumulativeGasUsed: bigint
+  public readonly effectiveGasPrice: bigint
   public readonly byzantium: boolean
   public readonly type: number
   public readonly status?: number

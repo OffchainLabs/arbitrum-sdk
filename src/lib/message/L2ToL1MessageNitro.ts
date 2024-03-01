@@ -20,17 +20,16 @@ import {
   ARB_SYS_ADDRESS,
   NODE_INTERFACE_ADDRESS,
 } from '../dataEntities/constants'
-import { Provider } from '@ethersproject/abstract-provider'
-import { Signer } from '@ethersproject/abstract-signer'
-import { BigNumber } from '@ethersproject/bignumber'
-import { BlockTag } from '@ethersproject/abstract-provider'
+import { Provider } from 'ethers'
+import { Signer } from 'ethers'
 
-import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
-import { RollupUserLogic__factory } from '../abi/factories/RollupUserLogic__factory'
-import { Outbox__factory } from '../abi/factories/Outbox__factory'
-import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
+import { BlockTag } from 'ethers'
 
-import { L2ToL1TxEvent as ChildToParentChainTxEvent } from '../abi/ArbSys'
+import { Outbox__factory } from '../abi/classic/factories'
+import { NodeInterface__factory } from '../abi/factories/nitro-contracts/build/contracts/src/node-interface'
+import { ArbSys__factory } from '../abi/factories/nitro-contracts/build/contracts/src/precompiles'
+import { RollupUserLogic__factory } from '../abi/factories/nitro-contracts/build/contracts/src/rollup/RollupUserLogic.sol'
+import { RollupUserLogic } from '../abi/nitro-contracts/build/contracts/src/rollup/RollupUserLogic.sol'
 import { ContractTransaction, Overrides } from 'ethers'
 import { Mutex } from 'async-mutex'
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
@@ -41,10 +40,10 @@ import {
 } from '../dataEntities/signerOrProvider'
 import { getBlockRangesForL1Block, isArbitrumChain, wait } from '../utils/lib'
 import { getChildChain } from '../dataEntities/networks'
-import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
+
 import { ArbitrumProvider } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
-import { JsonRpcProvider } from '@ethersproject/providers'
+import { JsonRpcProvider } from 'ethers'
 import { EventArgs } from '../dataEntities/event'
 import { L2ToL1MessageStatus as ChildToParentChainMessageStatus } from '../dataEntities/message'
 
@@ -131,25 +130,23 @@ async function getBlockRangesForL1BlockWithCache({
  * Base functionality for nitro Child->Parent messages
  */
 export class ChildToParentChainMessageNitro {
-  protected constructor(
-    public readonly event: EventArgs<ChildToParentChainTxEvent>
-  ) {}
+  protected constructor(public readonly event: EventArgs<L2ToL1TxEvent>) {}
 
   /**
    * Instantiates a new `ChildToParentChainMessageWriterNitro` or `ChildToParentChainMessageReaderNitro` object.
    *
    * @param {SignerOrProvider} parentSignerOrProvider Signer or provider to be used for executing or reading the Child-to-Parent message.
-   * @param {EventArgs<ChildToParentChainTxEvent>} event The event containing the data of the Child-to-Parent message.
+   * @param {EventArgs<L2ToL1TxEvent>} event The event containing the data of the Child-to-Parent message.
    * @param {Provider} [parentProvider] Optional. Used to override the Provider which is attached to `parentSignerOrProvider` in case you need more control. This will be a required parameter in a future major version update.
    */
   public static fromEvent<T extends SignerOrProvider>(
     parentSignerOrProvider: T,
-    event: EventArgs<ChildToParentChainTxEvent>,
+    event: EventArgs<L2ToL1TxEvent>,
     parentProvider?: Provider
   ): ChildToParentChainMessageReaderOrWriterNitro<T>
   public static fromEvent<T extends SignerOrProvider>(
     parentSignerOrProvider: T,
-    event: EventArgs<ChildToParentChainTxEvent>,
+    event: EventArgs<L2ToL1TxEvent>,
     parentProvider?: Provider
   ):
     | ChildToParentChainMessageReaderNitro
@@ -166,12 +163,10 @@ export class ChildToParentChainMessageNitro {
   public static async getChildToParentChainEvents(
     childProvider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
-    position?: BigNumber,
+    position?: bigint,
     destination?: string,
-    hash?: BigNumber
-  ): Promise<
-    (EventArgs<ChildToParentChainTxEvent> & { transactionHash: string })[]
-  > {
+    hash?: bigint
+  ): Promise<(EventArgs<L2ToL1TxEvent> & { transactionHash: string })[]> {
     const eventFetcher = new EventFetcher(childProvider)
     return (
       await eventFetcher.getEvents(
@@ -188,14 +183,14 @@ export class ChildToParentChainMessageNitro {
  */
 export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMessageNitro {
   protected sendRootHash?: string
-  protected sendRootSize?: BigNumber
+  protected sendRootSize?: bigint
   protected sendRootConfirmed?: boolean
   protected outboxAddress?: string
   protected l1BatchNumber?: number
 
   constructor(
     protected readonly parentProvider: Provider,
-    event: EventArgs<ChildToParentChainTxEvent>
+    event: EventArgs<L2ToL1TxEvent>
   ) {
     super(event)
   }
@@ -285,7 +280,7 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
 
   private async getBlockFromNodeNum(
     rollup: RollupUserLogic,
-    nodeNum: BigNumber,
+    nodeNum: bigint,
     childProvider: Provider
   ): Promise<ArbBlock> {
     const { createdAtBlock } = await rollup.getNode(nodeNum)
@@ -320,8 +315,8 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
           if (!startBlock || !endBlock) {
             throw new Error()
           }
-          createdFromBlock = BigNumber.from(startBlock)
-          createdToBlock = BigNumber.from(endBlock)
+          createdFromBlock = BigInt(startBlock)
+          createdToBlock = BigInt(endBlock)
         } catch {
           // fallback to the original method
           createdFromBlock = createdAtBlock
@@ -389,9 +384,7 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
         childProvider
       )
 
-      const sendRootSizeConfirmed = BigNumber.from(
-        childChainBlockConfirmed.sendCount
-      )
+      const sendRootSizeConfirmed = BigInt(childChainBlockConfirmed.sendCount)
       if (sendRootSizeConfirmed.gt(this.event.position)) {
         this.sendRootSize = sendRootSizeConfirmed
         this.sendRootHash = childChainBlockConfirmed.sendRoot
@@ -408,7 +401,7 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
             childProvider
           )
 
-          const sendRootSize = BigNumber.from(childChainBlock.sendCount)
+          const sendRootSize = BigInt(childChainBlock.sendCount)
           if (sendRootSize.gt(this.event.position)) {
             this.sendRootSize = sendRootSize
             this.sendRootHash = childChainBlock.sendRoot
@@ -457,7 +450,7 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
    */
   public async getFirstExecutableBlock(
     childProvider: Provider
-  ): Promise<BigNumber | null> {
+  ): Promise<BigInt | null> {
     const childChain = await getChildChain(childProvider)
 
     const rollup = RollupUserLogic__factory.connect(
@@ -482,7 +475,7 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
         {
           fromBlock: Math.max(
             latestBlock -
-              BigNumber.from(childChain.confirmPeriodBlocks)
+              BigInt(childChain.confirmPeriodBlocks)
                 .add(ASSERTION_CONFIRMED_PADDING)
                 .toNumber(),
             0
@@ -501,13 +494,13 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
             logs[logs.length - 1]
           )
     const lastSendCount = lastChildChainBlock
-      ? BigNumber.from(lastChildChainBlock.sendCount)
-      : BigNumber.from(0)
+      ? BigInt(lastChildChainBlock.sendCount)
+      : 0n
 
     // here we assume the Child to Parent tx is actually valid, so the user needs to wait the max time
     // since there isn't a pending node that includes this message yet
     if (lastSendCount.lte(this.event.position))
-      return BigNumber.from(childChain.confirmPeriodBlocks)
+      return BigInt(childChain.confirmPeriodBlocks)
         .add(ASSERTION_CREATED_PADDING)
         .add(ASSERTION_CONFIRMED_PADDING)
         .add(latestBlock)
@@ -524,7 +517,7 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
         childProvider as JsonRpcProvider,
         log
       )
-      const sendCount = BigNumber.from(childChainBlock.sendCount)
+      const sendCount = BigInt(childChainBlock.sendCount)
       if (sendCount.gt(this.event.position)) {
         foundLog = log
         right = mid - 1
@@ -547,12 +540,12 @@ export class ChildToParentChainMessageWriterNitro extends ChildToParentChainMess
    * Instantiates a new `ChildToParentChainMessageWriterNitro` object.
    *
    * @param {Signer} parentSigner The signer to be used for executing the Child-to-Parent message.
-   * @param {EventArgs<ChildToParentChainTxEvent>} event The event containing the data of the Child-to-Parent message.
+   * @param {EventArgs<L2ToL1TxEvent>} event The event containing the data of the Child-to-Parent message.
    * @param {Provider} [parentProvider] Optional. Used to override the Provider which is attached to `parentSigner` in case you need more control. This will be a required parameter in a future major version update.
    */
   constructor(
     private readonly parentSigner: Signer,
-    event: EventArgs<ChildToParentChainTxEvent>,
+    event: EventArgs<L2ToL1TxEvent>,
     parentProvider?: Provider
   ) {
     super(parentProvider ?? parentSigner.provider!, event)

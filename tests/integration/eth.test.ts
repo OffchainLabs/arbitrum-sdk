@@ -19,8 +19,8 @@
 import { expect } from 'chai'
 import dotenv from 'dotenv'
 
-import { Wallet } from '@ethersproject/wallet'
-import { parseEther } from '@ethersproject/units'
+import { Wallet } from 'ethers'
+import { parseEther } from 'ethers'
 
 import {
   fundL1,
@@ -75,10 +75,11 @@ describe('Ether', async () => {
       amountToSend.toString()
     )
     expect(balanceAfter.toString(), 'l2 balance after').to.eq(
-      balanceBefore
-        .sub(rec.gasUsed.mul(rec.effectiveGasPrice))
-        .sub(amountToSend)
-        .toString()
+      (
+        balanceBefore -
+        rec.gasUsed * rec.effectiveGasPrice -
+        amountToSend
+      ).toString()
     )
   })
 

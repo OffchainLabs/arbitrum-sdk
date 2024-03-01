@@ -1,17 +1,16 @@
-import { Provider } from '@ethersproject/abstract-provider'
-import { TransactionReceipt, JsonRpcProvider } from '@ethersproject/providers'
+import { Provider } from 'ethers'
+import { TransactionReceipt, JsonRpcProvider } from 'ethers'
 import { ArbSdkError } from '../dataEntities/errors'
 import { ArbitrumProvider } from './arbProvider'
 import { l2Networks } from '../dataEntities/networks'
-import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
+import { ArbSys__factory } from '../abi/factories/nitro-contracts/build/contracts/src/precompiles'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
-import { BigNumber } from 'ethers'
 
 export const wait = (ms: number): Promise<void> =>
   new Promise(res => setTimeout(res, ms))
 
-export const getBaseFee = async (provider: Provider): Promise<BigNumber> => {
-  const baseFee = (await provider.getBlock('latest')).baseFeePerGas
+export const getBaseFee = async (provider: Provider): Promise<BigInt> => {
+  const baseFee = (await provider.getBlock('latest'))?.baseFeePerGas
   if (!baseFee) {
     throw new ArbSdkError(
       'Latest block did not contain base fee, ensure provider is connected to a network that supports EIP 1559.'
@@ -101,7 +100,7 @@ export async function getFirstBlockForL1Block({
   const arbProvider = new ArbitrumProvider(provider)
   const currentArbBlock = await arbProvider.getBlockNumber()
   const arbitrumChainId = (await arbProvider.getNetwork()).chainId
-  const { nitroGenesisBlock } = l2Networks[arbitrumChainId]
+  const { nitroGenesisBlock } = l2Networks[Number(arbitrumChainId)]
 
   async function getL1Block(forL2Block: number) {
     const { l1BlockNumber } = await arbProvider.getBlock(forL2Block)
@@ -129,7 +128,7 @@ export async function getFirstBlockForL1Block({
   }
 
   let start = minL2Block
-  let end = maxL2Block
+  let end = Number(maxL2Block)
 
   let resultForTargetBlock
   let resultForGreaterBlock

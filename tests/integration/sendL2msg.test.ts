@@ -17,7 +17,7 @@
 // import { instantiateBridge } from './instantiate_bridge'
 ;('use strict')
 
-import { BigNumber, ethers, Signer } from 'ethers'
+import { BigInt, ethers, Signer } from 'ethers'
 import { InboxTools } from '../../src/lib/inbox/inbox'
 import { getL2Network, L2Network } from '../../src/lib/dataEntities/networks'
 import { testSetup } from '../../scripts/testSetup'
@@ -31,7 +31,7 @@ const sendSignedTx = async (testState: any, info?: any) => {
   const inbox = new InboxTools(l1Deployer, l2Network)
   const message = {
     ...info,
-    value: BigNumber.from(0),
+    value: 0n,
   }
   const signedTx = await inbox.signChildChainTx(message, l2Deployer)
 
@@ -63,7 +63,7 @@ describe('Send signedTx to l2 using inbox', async () => {
     ).connect(l2Deployer)
 
     const info = {
-      value: BigNumber.from(0),
+      value: 0n,
     }
     const contractCreationData = Greeter.getDeployTransaction(info)
     const { signedMsg, l1TransactionReceipt } = await sendSignedTx(
@@ -112,8 +112,8 @@ describe('Send signedTx to l2 using inbox', async () => {
       data: '0x12',
       nonce: currentNonce,
       to: await l2Deployer.getAddress(),
-      maxFeePerGas: BigNumber.from(10000000), //0.01gwei
-      maxPriorityFeePerGas: BigNumber.from(1000000), //0.001gwei
+      maxFeePerGas: bigint(10000000), //0.01gwei
+      maxPriorityFeePerGas: bigint(1000000), //0.001gwei
     }
     const lowFeeTx = await sendSignedTx(testState, lowFeeInfo)
     const lowFeeL1Status = lowFeeTx.l1TransactionReceipt?.status

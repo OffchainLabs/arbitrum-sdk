@@ -16,30 +16,13 @@
 /* eslint-env node */
 'use strict'
 
-import { Signer } from '@ethersproject/abstract-signer'
-import {
-  Provider,
-  BlockTag,
-  TransactionRequest,
-} from '@ethersproject/abstract-provider'
-import { PayableOverrides, Overrides } from '@ethersproject/contracts'
-import { MaxUint256 } from '@ethersproject/constants'
-import { ErrorCode, Logger } from '@ethersproject/logger'
-import { BigNumber, BigNumberish, ethers, BytesLike, constants } from 'ethers'
+import { Signer } from 'ethers'
+import { Provider, BlockTag, TransactionRequest } from 'ethers'
+import { PayableOverrides, Overrides } from 'ethers'
+import { MaxUint256 } from 'ethers'
+import { ErrorCode, Logger } from 'ethers'
+import { BigInt, BigIntish, ethers, BytesLike, constants } from 'ethers'
 
-import { L1GatewayRouter__factory } from '../abi/factories/L1GatewayRouter__factory'
-import { L2GatewayRouter__factory } from '../abi/factories/L2GatewayRouter__factory'
-import { L1WethGateway__factory } from '../abi/factories/L1WethGateway__factory'
-import { L2ArbitrumGateway__factory } from '../abi/factories/L2ArbitrumGateway__factory'
-import { ERC20__factory } from '../abi/factories/ERC20__factory'
-import { ERC20 } from '../abi/ERC20'
-import { L2GatewayToken__factory } from '../abi/factories/L2GatewayToken__factory'
-import { L2GatewayToken } from '../abi/L2GatewayToken'
-import { ICustomToken__factory } from '../abi/factories/ICustomToken__factory'
-import { IArbToken__factory } from '../abi/factories/IArbToken__factory'
-
-import { WithdrawalInitiatedEvent } from '../abi/L2ArbitrumGateway'
-import { GatewaySetEvent } from '../abi/L1GatewayRouter'
 import {
   GasOverrides,
   L1ToL2MessageGasEstimator,
@@ -69,12 +52,26 @@ import {
   L1ToL2TransactionRequest,
   L2ToL1TransactionRequest,
 } from '../dataEntities/transactionRequest'
-import { defaultAbiCoder } from 'ethers/lib/utils'
+import { AbiCoder } from 'ethers'
 import { OmitTyped, RequiredPick } from '../utils/types'
 import { RetryableDataTools } from '../dataEntities/retryableData'
 import { EventArgs } from '../dataEntities/event'
 import { L1ToL2MessageGasParams } from '../message/L1ToL2MessageCreator'
 import { isArbitrumChain } from '../utils/lib'
+import { ERC20__factory } from '../abi/factories/nitro-contracts/build/contracts/@openzeppelin/contracts/token/ERC20'
+import { IArbToken__factory } from '../abi/factories/token-bridge-contracts/build/contracts/contracts/tokenbridge/arbitrum'
+import {
+  L2GatewayRouter__factory,
+  L2ArbitrumGateway__factory,
+} from '../abi/factories/token-bridge-contracts/build/contracts/contracts/tokenbridge/arbitrum/gateway'
+import { ICustomToken__factory } from '../abi/factories/token-bridge-contracts/build/contracts/contracts/tokenbridge/ethereum/ICustomToken.sol'
+import {
+  L1GatewayRouter__factory,
+  L1WethGateway__factory,
+} from '../abi/factories/token-bridge-contracts/build/contracts/contracts/tokenbridge/ethereum/gateway'
+import { L2GatewayToken__factory } from '../abi/factories/token-bridge-contracts/build/contracts/contracts/tokenbridge/libraries'
+import { ERC20 } from '../abi/nitro-contracts/build/contracts/@openzeppelin/contracts/token/ERC20'
+import { L2GatewayToken } from '../abi/token-bridge-contracts/build/contracts/contracts/tokenbridge/libraries'
 
 export interface TokenApproveParams {
   /**
@@ -84,7 +81,7 @@ export interface TokenApproveParams {
   /**
    * Amount to approve. Defaults to max int.
    */
-  amount?: BigNumber
+  amount?: bigint
   /**
    * Transaction overrides
    */
@@ -107,7 +104,7 @@ export interface Erc20DepositParams extends EthDepositParams {
   /**
    * The maximum cost to be paid for submitting the transaction
    */
-  maxSubmissionCost?: BigNumber
+  maxSubmissionCost?: bigint
   /**
    * The address to return the any gas that was not spent on fees
    */
@@ -180,8 +177,8 @@ export class Erc20Bridger extends AssetBridger<
   Erc20DepositParams | L1ToL2TxReqAndSignerProvider,
   OmitTyped<Erc20WithdrawParams, 'from'> | L2ToL1TransactionRequest
 > {
-  public static MAX_APPROVAL: BigNumber = MaxUint256
-  public static MIN_CUSTOM_DEPOSIT_GAS_LIMIT = BigNumber.from(275000)
+  public static MAX_APPROVAL: bigint = MaxUint256
+  public static MIN_CUSTOM_DEPOSIT_GAS_LIMIT = BigInt(275000)
 
   /**
    * Bridger for moving ERC20 tokens back and forth between L1 to L2
@@ -301,7 +298,7 @@ export class Erc20Bridger extends AssetBridger<
     return {
       to: params.erc20L1Address,
       data,
-      value: BigNumber.from(0),
+      value: 0n,
     }
   }
 
@@ -564,7 +561,7 @@ export class Erc20Bridger extends AssetBridger<
     // the call value should be zero when paying with a custom gas token,
     // as the fee amount is packed inside the last parameter (`data`) of the call to `outboundTransfer`, see `getDepositRequestOutboundTransferInnerData`
     if (!this.nativeTokenIsEth) {
-      return constants.Zero
+      return 0n
     }
 
     // we dont include the l2 call value for token deposits because
@@ -585,7 +582,7 @@ export class Erc20Bridger extends AssetBridger<
     depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
   ) {
     if (!this.nativeTokenIsEth) {
-      return defaultAbiCoder.encode(
+      return AbiCoder.defaultAbiCoder().encode(
         ['uint256', 'bytes', 'uint256'],
         [
           // maxSubmissionCost
@@ -771,7 +768,7 @@ export class Erc20Bridger extends AssetBridger<
         routerInterface as unknown as {
           encodeFunctionData(
             functionFragment: 'outboundTransfer(address,address,uint256,bytes)',
-            values: [string, string, BigNumberish, BytesLike]
+            values: [string, string, BigIntish, BytesLike]
           ): string
         }
       ).encodeFunctionData('outboundTransfer(address,address,uint256,bytes)', [
@@ -785,7 +782,7 @@ export class Erc20Bridger extends AssetBridger<
       txRequest: {
         data: functionData,
         to: this.l2Network.tokenBridge.l2GatewayRouter,
-        value: BigNumber.from(0),
+        value: 0n,
         from: params.from,
       },
       // todo: do proper estimation
@@ -795,7 +792,7 @@ export class Erc20Bridger extends AssetBridger<
           // however, this is only an estimate used for display, so should be good enough
           //
           // measured with token withdrawals from Rari then added some padding
-          return BigNumber.from(8_000_000)
+          return 8_000_000n
         }
 
         const l1GatewayAddress = await this.getL1GatewayAddress(
@@ -808,7 +805,7 @@ export class Erc20Bridger extends AssetBridger<
         const isWeth = await this.isWethGateway(l1GatewayAddress, l1Provider)
 
         // measured 157421 - add some padding
-        return isWeth ? BigNumber.from(190000) : BigNumber.from(160000)
+        return isWeth ? 190000n : 160000n
       },
     }
   }
@@ -895,14 +892,14 @@ export class AdminErc20Bridger extends Erc20Bridger {
     }
 
     type GasParams = {
-      maxSubmissionCost: BigNumber
-      gasLimit: BigNumber
+      maxSubmissionCost: bigint
+      gasLimit: bigint
     }
     const from = await l1Signer.getAddress()
     const encodeFuncData = (
       setTokenGas: GasParams,
       setGatewayGas: GasParams,
-      maxFeePerGas: BigNumber
+      maxFeePerGas: bigint
     ) => {
       // if we set maxFeePerGas to be the error triggering param then it will
       // always trigger for the setToken call and never make it ti setGateways
@@ -950,7 +947,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
           },
           {
             gasLimit: RetryableDataTools.ErrorTriggeringParams.gasLimit,
-            maxSubmissionCost: BigNumber.from(1),
+            maxSubmissionCost: bigint(1),
           },
           params.maxFeePerGas
         ),

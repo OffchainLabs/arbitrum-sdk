@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { ContractReceipt } from '@ethersproject/contracts'
+import { ContractReceipt } from 'ethers'
 
 import { testSetup } from '../scripts/testSetup'
 import args from './getCLargs'

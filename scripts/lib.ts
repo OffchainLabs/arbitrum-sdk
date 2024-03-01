@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { ContractReceipt } from '@ethersproject/contracts'
+import { ContractReceipt } from 'ethers'
 
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
 import { L1ToL2MessageStatus } from '../src/lib/message/L1ToL2Message'

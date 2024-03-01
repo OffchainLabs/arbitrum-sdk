@@ -16,10 +16,9 @@
 /* eslint-env node */
 'use strict'
 
-import { Provider, BlockTag, Filter } from '@ethersproject/abstract-provider'
-import { Contract, Event } from '@ethersproject/contracts'
+import { Provider, BlockTag, Filter } from 'ethers'
+import { Contract, Event } from 'ethers'
 import { constants } from 'ethers'
-import { TypedEvent, TypedEventFilter } from '../abi/common'
 import { EventArgs, TypeChainContractFactory } from '../dataEntities/event'
 
 export type FetchedEvent<TEvent extends Event> = {

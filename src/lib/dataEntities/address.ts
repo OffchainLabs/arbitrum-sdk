@@ -1,5 +1,4 @@
-import { getAddress } from '@ethersproject/address'
-import { utils } from 'ethers'
+import { getAddress, isAddress } from 'ethers'
 import { ADDRESS_ALIAS_OFFSET } from './constants'
 import { ArbSdkError } from './errors'
 
@@ -16,7 +15,7 @@ export class Address {
    * @param value A valid Ethereum address. Doesn't need to be checksum cased.
    */
   constructor(public readonly value: string) {
-    if (!utils.isAddress(value))
+    if (!isAddress(value))
       throw new ArbSdkError(`'${value}' is not a valid address`)
   }
 

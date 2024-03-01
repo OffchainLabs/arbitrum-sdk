@@ -1,5 +1,4 @@
-import { Interface } from '@ethersproject/abi'
-import { BigNumber } from 'ethers'
+import { Interface } from 'ethers'
 import { isDefined } from '../utils/lib'
 
 // TODO: add typechain support
@@ -17,15 +16,15 @@ export interface RetryableData {
   /**
    * The value to call the L2 address with
    */
-  l2CallValue: BigNumber
+  l2CallValue: bigint
   /**
    * The total amount to deposit on L1 to cover L2 gas and L2 call value
    */
-  deposit: BigNumber
+  deposit: bigint
   /**
    * The maximum cost to be paid for submitting the transaction
    */
-  maxSubmissionCost: BigNumber
+  maxSubmissionCost: bigint
   /**
    * The address to return the any gas that was not spent on fees
    */
@@ -37,11 +36,11 @@ export interface RetryableData {
   /**
    * The L2 gas limit
    */
-  gasLimit: BigNumber
+  gasLimit: bigint
   /**
    * The max gas price to pay on L2
    */
-  maxFeePerGas: BigNumber
+  maxFeePerGas: bigint
   /**
    * The data to call the L2 address with
    */
@@ -61,8 +60,8 @@ export class RetryableDataTools {
    * a revert with retryable data
    */
   public static ErrorTriggeringParams = {
-    gasLimit: BigNumber.from(1),
-    maxFeePerGas: BigNumber.from(1),
+    gasLimit: 1n,
+    maxFeePerGas: 1n,
   }
 
   private static isErrorData(

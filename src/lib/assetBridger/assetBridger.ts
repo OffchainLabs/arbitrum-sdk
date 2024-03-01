@@ -16,11 +16,10 @@
 /* eslint-env node */
 'use strict'
 
-import { constants } from 'ethers'
-
 import { L1ContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'
 
+import { ZeroAddress } from 'ethers'
 import {
   L1Network,
   L2Network,
@@ -73,7 +72,7 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    * @returns {boolean}
    */
   protected get nativeTokenIsEth() {
-    return !this.nativeToken || this.nativeToken === constants.AddressZero
+    return !this.nativeToken || this.nativeToken === ZeroAddress
   }
 
   /**

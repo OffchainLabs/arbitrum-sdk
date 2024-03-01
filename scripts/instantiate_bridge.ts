@@ -16,8 +16,8 @@
 /* eslint-env node */
 'use strict'
 
-import { JsonRpcProvider } from '@ethersproject/providers'
-import { Wallet } from '@ethersproject/wallet'
+import { JsonRpcProvider } from 'ethers'
+import { Wallet } from 'ethers'
 
 import dotenv from 'dotenv'
 import args from './getCLargs'

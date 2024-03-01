@@ -18,8 +18,7 @@
 
 import { expect } from 'chai'
 
-import { BigNumber } from '@ethersproject/bignumber'
-import { Logger, LogLevel } from '@ethersproject/logger'
+import { Logger, LogLevel, zeroPadValue } from 'ethers'
 Logger.setLogLevel(LogLevel.ERROR)
 
 import { Bridge__factory } from '../../src/lib/abi/factories/Bridge__factory'
@@ -29,22 +28,19 @@ import { SequencerInbox__factory } from '../../src/lib/abi/factories/SequencerIn
 import { InboxTools } from '../../src'
 
 import { ethers, network } from 'hardhat'
-import { hexZeroPad } from '@ethersproject/bytes'
-import {
-  ChildChain as L2Network,
-  getChildChain as getL2Network,
-} from '../../src/lib/dataEntities/networks'
+import { zeroPadValue } from 'ethers'
+import { L2Network, getL2Network } from '../../src/lib/dataEntities/networks'
 import { solidityKeccak256 } from 'ethers/lib/utils'
 import { ContractTransaction, Signer } from 'ethers'
 
 const submitL2Tx = async (
   tx: {
     to: string
-    value?: BigNumber
+    value?: bigint
     data?: string
     nonce: number
-    maxFeePerGas: BigNumber
-    gasLimit: BigNumber
+    maxFeePerGas: bigint
+    gasLimit: bigint
   },
   l2Network: L2Network,
   l1Signer: Signer
@@ -56,7 +52,7 @@ const submitL2Tx = async (
     tx.maxFeePerGas,
     tx.nonce,
     tx.to,
-    tx.value || BigNumber.from(0),
+    tx.value || BigInt(0),
     tx.data || '0x'
   )
 }
@@ -117,9 +113,9 @@ describe('Inbox tools', () => {
     const l2Tx = await submitL2Tx(
       {
         to: await l1Signer.getAddress(),
-        value: BigNumber.from(0),
-        gasLimit: BigNumber.from(100000),
-        maxFeePerGas: BigNumber.from(21000000000),
+        value: 0n,
+        gasLimit: bigint(100000),
+        maxFeePerGas: bigint(21000000000),
         nonce: 0,
       },
       l2Network,
@@ -149,9 +145,9 @@ describe('Inbox tools', () => {
     const l2Tx1 = await submitL2Tx(
       {
         to: await l1Signer.getAddress(),
-        value: BigNumber.from(0),
-        gasLimit: BigNumber.from(100000),
-        maxFeePerGas: BigNumber.from(21000000000),
+        value: 0n,
+        gasLimit: bigint(100000),
+        maxFeePerGas: bigint(21000000000),
         nonce: 0,
       },
       l2Network,
@@ -162,9 +158,9 @@ describe('Inbox tools', () => {
     const l2Tx2 = await submitL2Tx(
       {
         to: await l1Signer.getAddress(),
-        value: BigNumber.from(10),
-        gasLimit: BigNumber.from(100000),
-        maxFeePerGas: BigNumber.from(21000000000),
+        value: bigint(10),
+        gasLimit: bigint(100000),
+        maxFeePerGas: bigint(21000000000),
         nonce: 1,
       },
       l2Network,
@@ -194,9 +190,9 @@ describe('Inbox tools', () => {
     const l2Tx1 = await submitL2Tx(
       {
         to: await l1Signer.getAddress(),
-        value: BigNumber.from(5),
-        gasLimit: BigNumber.from(100000),
-        maxFeePerGas: BigNumber.from(21000000000),
+        value: bigint(5),
+        gasLimit: bigint(100000),
+        maxFeePerGas: bigint(21000000000),
         nonce: 0,
       },
       l2Network,
@@ -205,9 +201,9 @@ describe('Inbox tools', () => {
     await l2Tx1.wait()
     const txParams = {
       to: await l1Signer.getAddress(),
-      value: BigNumber.from(10),
-      gasLimit: BigNumber.from(100000),
-      maxFeePerGas: BigNumber.from(21000000000),
+      value: bigint(10),
+      gasLimit: bigint(100000),
+      maxFeePerGas: bigint(21000000000),
       nonce: 1,
     }
     const messageDataHash = solidityKeccak256(
@@ -217,7 +213,7 @@ describe('Inbox tools', () => {
         txParams.gasLimit,
         txParams.maxFeePerGas,
         txParams.nonce,
-        hexZeroPad(txParams.to, 32),
+        zeroPadValue(txParams.to, 32),
         txParams.value,
         '0x',
       ]

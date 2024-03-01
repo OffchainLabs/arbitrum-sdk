@@ -16,10 +16,10 @@
 /* eslint-env node */
 'use strict'
 
-import { Provider } from '@ethersproject/abstract-provider'
-import { Signer } from '@ethersproject/abstract-signer'
-import { BigNumber } from '@ethersproject/bignumber'
-import { BlockTag } from '@ethersproject/abstract-provider'
+import { Provider } from 'ethers'
+import { Signer } from 'ethers'
+
+import { BlockTag } from 'ethers'
 
 import { ContractTransaction, Overrides } from 'ethers'
 import {
@@ -28,10 +28,6 @@ import {
 } from '../dataEntities/signerOrProvider'
 import * as classic from './L2ToL1MessageClassic'
 import * as nitro from './L2ToL1MessageNitro'
-import {
-  L2ToL1TransactionEvent as ClassicChildToParentTransactionEvent,
-  L2ToL1TxEvent as NitroChildToParentTransactionEvent,
-} from '../abi/ArbSys'
 import { isDefined } from '../utils/lib'
 import { EventArgs } from '../dataEntities/event'
 import { L2ToL1MessageStatus as ChildToParentChainMessageStatus } from '../dataEntities/message'
@@ -39,8 +35,8 @@ import { getChildChain } from '../dataEntities/networks'
 import { ArbSdkError } from '../dataEntities/errors'
 
 export type ChildToParentTransactionEvent =
-  | EventArgs<ClassicChildToParentTransactionEvent>
-  | EventArgs<NitroChildToParentTransactionEvent>
+  | EventArgs<L2ToL1TransactionEvent>
+  | EventArgs<L2ToL1TxEvent>
 
 /**
  * Conditional type for Signer or Provider. If T is of type Provider
@@ -57,10 +53,8 @@ export type ChildToParentMessageReaderOrWriter<T extends SignerOrProvider> =
 export class ChildToParentMessage {
   protected isClassic(
     e: ChildToParentTransactionEvent
-  ): e is EventArgs<ClassicChildToParentTransactionEvent> {
-    return isDefined(
-      (e as EventArgs<ClassicChildToParentTransactionEvent>).indexInBatch
-    )
+  ): e is EventArgs<L2ToL1TransactionEvent> {
+    return isDefined((e as EventArgs<L2ToL1TransactionEvent>).indexInBatch)
   }
 
   /**
@@ -106,10 +100,10 @@ export class ChildToParentMessage {
   public static async getChildToParentEvents(
     childChainProvider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
-    position?: BigNumber,
+    position?: bigint,
     destination?: string,
-    hash?: BigNumber,
-    indexInBatch?: BigNumber
+    hash?: bigint,
+    indexInBatch?: bigint
   ): Promise<(ChildToParentTransactionEvent & { transactionHash: string })[]> {
     const childChain = await getChildChain(childChainProvider)
 
@@ -273,7 +267,7 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
    */
   public async getFirstExecutableBlock(
     childChainProvider: Provider
-  ): Promise<BigNumber | null> {
+  ): Promise<BigInt | null> {
     if (this.nitroReader)
       return this.nitroReader.getFirstExecutableBlock(childChainProvider)
     else return this.classicReader!.getFirstExecutableBlock(childChainProvider)

@@ -1,7 +1,7 @@
 import { instantiateBridge } from './instantiate_bridge'
 import dotenv from 'dotenv'
 import args from './getCLargs'
-import { constants, BigNumber, utils } from 'ethers'
+import { constants, BigInt, utils } from 'ethers'
 import { MultiCaller } from '../src'
 import axios from 'axios'
 import prompt from 'prompts'
@@ -34,7 +34,7 @@ const main = async () => {
 
   /* Looks like an L1 token: */
   const multicaller = await MultiCaller.fromProvider(l1Provider)
-  let l1TokenData: { allowance: BigNumber | undefined }
+  let l1TokenData: { allowance: bigint | undefined }
   try {
     l1TokenData = (
       await multicaller.getTokenData([l1TokenAddress], {
@@ -97,7 +97,7 @@ const main = async () => {
 
   /* check that you have some eth */
   const walletBal = await l1Provider.getBalance(l1SignerAddr)
-  if (walletBal.eq(constants.Zero)) {
+  if (walletBal.eq(0n)) {
     throw new Error(`${l1SignerAddr} has no Ether to pay for gas`)
   }
 
@@ -117,8 +117,8 @@ const main = async () => {
   }
 
   /* set allowance */
-  const amount = BigNumber.from(0)
-  const approveAmount = BigNumber.from(1000)
+  const amount = BigInt(0)
+  const approveAmount = BigInt(1000)
   if (!l1TokenData.allowance) {
     throw new Error(`unable to fetch allowance of ${l1TokenAddress}`)
   }
@@ -137,7 +137,7 @@ const main = async () => {
   }
   // const depositParams = {
   //   erc20L1Address: l1TokenAddress,
-  //   amount: BigNumber.from(0),
+  //   amount: 0n,
   // }
   /* check for required gas */
   const gasNeeded = await erc20Bridger.depositEstimateGas({

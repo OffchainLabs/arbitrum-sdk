@@ -20,16 +20,14 @@ import {
   ARB_SYS_ADDRESS,
   NODE_INTERFACE_ADDRESS,
 } from '../dataEntities/constants'
-import { Provider } from '@ethersproject/abstract-provider'
-import { Signer } from '@ethersproject/abstract-signer'
-import { BigNumber } from '@ethersproject/bignumber'
-import { BlockTag } from '@ethersproject/abstract-provider'
+import { Provider } from 'ethers'
+import { Signer } from 'ethers'
 
-import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
+import { BlockTag } from 'ethers'
+
 import { Outbox__factory } from '../abi/classic/factories/Outbox__factory'
-
-import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
-import { L2ToL1TransactionEvent } from '../abi/ArbSys'
+import { NodeInterface__factory } from '../abi/factories/nitro-contracts/build/contracts/src/node-interface'
+import { ArbSys__factory } from '../abi/factories/nitro-contracts/build/contracts/src/precompiles'
 import { ContractTransaction, Overrides } from 'ethers'
 import { EventFetcher } from '../utils/eventFetcher'
 import {
@@ -51,7 +49,7 @@ export interface MessageBatchProofInfo {
   /**
    * Merkle path to message
    */
-  path: BigNumber
+  path: bigint
 
   /**
    * Sender of original message (i.e., caller of ArbSys.sendTxToL1)
@@ -66,22 +64,22 @@ export interface MessageBatchProofInfo {
   /**
    * L2 block number at which sendTxToL1 call was made
    */
-  l2Block: BigNumber
+  l2Block: bigint
 
   /**
    * L1 block number at which sendTxToL1 call was made
    */
-  l1Block: BigNumber
+  l1Block: bigint
 
   /**
    * L2 Timestamp at which sendTxToL1 call was made
    */
-  timestamp: BigNumber
+  timestamp: bigint
 
   /**
    * Value in L1 message in wei
    */
-  amount: BigNumber
+  amount: bigint
 
   /**
    * ABI-encoded L1 message data
@@ -102,14 +100,14 @@ export class L2ToL1MessageClassic {
   /**
    * The number of the batch this message is part of
    */
-  public readonly batchNumber: BigNumber
+  public readonly batchNumber: bigint
 
   /**
    * The index of this message in the batch
    */
-  public readonly indexInBatch: BigNumber
+  public readonly indexInBatch: bigint
 
-  protected constructor(batchNumber: BigNumber, indexInBatch: BigNumber) {
+  protected constructor(batchNumber: bigint, indexInBatch: bigint) {
     this.batchNumber = batchNumber
     this.indexInBatch = indexInBatch
   }
@@ -118,20 +116,20 @@ export class L2ToL1MessageClassic {
    * Instantiates a new `L2ToL1MessageWriterClassic` or `L2ToL1MessageReaderClassic` object.
    *
    * @param {SignerOrProvider} l1SignerOrProvider Signer or provider to be used for executing or reading the L2-to-L1 message.
-   * @param {BigNumber} batchNumber The number of the batch containing the L2-to-L1 message.
-   * @param {BigNumber} indexInBatch The index of the L2-to-L1 message within the batch.
+   * @param {BigInt} batchNumber The number of the batch containing the L2-to-L1 message.
+   * @param {BigInt} indexInBatch The index of the L2-to-L1 message within the batch.
    * @param {Provider} [l1Provider] Optional. Used to override the Provider which is attached to `l1SignerOrProvider` in case you need more control. This will be a required parameter in a future major version update.
    */
   public static fromBatchNumber<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber,
+    batchNumber: bigint,
+    indexInBatch: bigint,
     l1Provider?: Provider
   ): L2ToL1MessageReaderOrWriterClassic<T>
   public static fromBatchNumber<T extends SignerOrProvider>(
     l1SignerOrProvider: T,
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber,
+    batchNumber: bigint,
+    indexInBatch: bigint,
     l1Provider?: Provider
   ): L2ToL1MessageReaderClassic | L2ToL1MessageWriterClassic {
     return SignerProviderUtils.isSigner(l1SignerOrProvider)
@@ -151,10 +149,10 @@ export class L2ToL1MessageClassic {
   public static async getL2ToL1Events(
     l2Provider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
-    batchNumber?: BigNumber,
+    batchNumber?: bigint,
     destination?: string,
-    uniqueId?: BigNumber,
-    indexInBatch?: BigNumber
+    uniqueId?: bigint,
+    indexInBatch?: bigint
   ): Promise<
     (EventArgs<L2ToL1TransactionEvent> & { transactionHash: string })[]
   > {
@@ -185,8 +183,8 @@ export class L2ToL1MessageClassic {
 export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
   constructor(
     protected readonly l1Provider: Provider,
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber
+    batchNumber: bigint,
+    indexInBatch: bigint
   ) {
     super(batchNumber, indexInBatch)
   }
@@ -245,8 +243,8 @@ export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
 
   public static async tryGetProof(
     l2Provider: Provider,
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber
+    batchNumber: bigint,
+    indexInBatch: bigint
   ): Promise<MessageBatchProofInfo | null> {
     const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
@@ -374,7 +372,7 @@ export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
   public async getFirstExecutableBlock(
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     l2Provider: Provider
-  ): Promise<BigNumber | null> {
+  ): Promise<BigInt | null> {
     return null
   }
 }
@@ -387,14 +385,14 @@ export class L2ToL1MessageWriterClassic extends L2ToL1MessageReaderClassic {
    * Instantiates a new `L2ToL1MessageWriterClassic` object.
    *
    * @param {Signer} l1Signer The signer to be used for executing the L2-to-L1 message.
-   * @param {BigNumber} batchNumber The number of the batch containing the L2-to-L1 message.
-   * @param {BigNumber} indexInBatch The index of the L2-to-L1 message within the batch.
+   * @param {BigInt} batchNumber The number of the batch containing the L2-to-L1 message.
+   * @param {BigInt} indexInBatch The index of the L2-to-L1 message within the batch.
    * @param {Provider} [l1Provider] Optional. Used to override the Provider which is attached to `l1Signer` in case you need more control. This will be a required parameter in a future major version update.
    */
   constructor(
     private readonly l1Signer: Signer,
-    batchNumber: BigNumber,
-    indexInBatch: BigNumber,
+    batchNumber: bigint,
+    indexInBatch: bigint,
     l1Provider?: Provider
   ) {
     super(l1Provider ?? l1Signer.provider!, batchNumber, indexInBatch)

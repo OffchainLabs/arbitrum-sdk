@@ -1,6 +1,5 @@
-import { BigNumber } from 'ethers'
 import { expect } from 'chai'
-import { JsonRpcProvider } from '@ethersproject/providers'
+import { JsonRpcProvider } from 'ethers'
 import {
   getBlockRangesForL1Block,
   getFirstBlockForL1Block,
@@ -49,7 +48,7 @@ describe('L2 blocks lookup for an L1 block', () => {
 
     const [startBlock, blockBeforeStartBlock, endBlock, blockAfterEndBlock] =
       await Promise.all(promises).then(result =>
-        result.map(block => BigNumber.from(block.l1BlockNumber))
+        result.map(block => BigInt(block.l1BlockNumber))
       )
 
     if (startBlock && blockBeforeStartBlock) {

@@ -1,8 +1,8 @@
-import { Provider } from '@ethersproject/abstract-provider'
-import { BigNumber, BigNumberish } from '@ethersproject/bignumber'
+import { Provider } from 'ethers'
+import { BigInt, BigIntish } from 'ethers'
 import { BytesLike, constants, utils } from 'ethers'
-import { Inbox__factory } from '../abi/factories/Inbox__factory'
-import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
+import { Inbox__factory } from '../abi/factories/nitro-contracts/build/contracts/src/bridge'
+import { NodeInterface__factory } from '../abi/factories/nitro-contracts/build/contracts/src/node-interface'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { ArbSdkError } from '../dataEntities/errors'
 import { getChildChain } from '../dataEntities/networks'
@@ -24,13 +24,13 @@ import {
  * base fee increase. Since submission fee is a small amount it isn't too bas for UX to increase
  * it by a large amount, and provide better safety.
  */
-const DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE = BigNumber.from(300)
+const DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE = BigInt(300)
 
 /**
  * When submitting a retryable we need to estimate what the gas price for it will be when we actually come
  * to execute it. Since the l2 price can move due to congestion we should provide some padding here
  */
-const DEFAULT_GAS_PRICE_PERCENT_INCREASE = BigNumber.from(200)
+const DEFAULT_GAS_PRICE_PERCENT_INCREASE = BigInt(200)
 
 /**
  * An optional big number percentage increase
@@ -39,12 +39,12 @@ export type PercentIncrease = {
   /**
    * If provided, will override the estimated base
    */
-  base?: BigNumber
+  base?: bigint
 
   /**
    * How much to increase the base by. If not provided system defaults may be used.
    */
-  percentIncrease?: BigNumber
+  percentIncrease?: bigint
 }
 
 export interface GasOverrides {
@@ -52,7 +52,7 @@ export interface GasOverrides {
     /**
      * Set a minimum max gas
      */
-    min?: BigNumber
+    min?: bigint
   }
   maxSubmissionFee?: PercentIncrease
   maxFeePerGas?: PercentIncrease
@@ -66,14 +66,14 @@ const defaultL1ToL2MessageEstimateOptions = {
   maxSubmissionFeePercentIncrease: DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE,
   // gas limit for l1->l2 messages should be predictable. If it isn't due to the nature
   // of the specific transaction, then the caller should provide a 'min' override
-  gasLimitPercentIncrease: constants.Zero,
+  gasLimitPercentIncrease: 0n,
   maxFeePerGasPercentIncrease: DEFAULT_GAS_PRICE_PERCENT_INCREASE,
 }
 
 export class L1ToL2MessageGasEstimator {
   constructor(public readonly l2Provider: Provider) {}
 
-  private percentIncrease(num: BigNumber, increase: BigNumber): BigNumber {
+  private percentIncrease(num: bigint, increase: bigint): bigint {
     return num.add(num.mul(increase).div(100))
   }
 
@@ -98,14 +98,14 @@ export class L1ToL2MessageGasEstimator {
   }
 
   private applyGasLimitDefaults(
-    gasLimitDefaults?: PercentIncrease & { min?: BigNumber }
+    gasLimitDefaults?: PercentIncrease & { min?: bigint }
   ) {
     return {
       base: gasLimitDefaults?.base,
       percentIncrease:
         gasLimitDefaults?.percentIncrease ||
         defaultL1ToL2MessageEstimateOptions.gasLimitPercentIncrease,
-      min: gasLimitDefaults?.min || constants.Zero,
+      min: gasLimitDefaults?.min || 0n,
     }
   }
 
@@ -119,8 +119,8 @@ export class L1ToL2MessageGasEstimator {
    */
   public async estimateSubmissionFee(
     l1Provider: Provider,
-    l1BaseFee: BigNumber,
-    callDataSize: BigNumber | number,
+    l1BaseFee: bigint,
+    callDataSize: bigint | number,
     options?: PercentIncrease
   ): Promise<L1ToL2MessageGasParams['maxSubmissionCost']> {
     const defaultedOptions = this.applySubmissionPriceDefaults(options)
@@ -151,7 +151,7 @@ export class L1ToL2MessageGasEstimator {
       callValueRefundAddress,
       data,
     }: L1ToL2MessageNoGasParams,
-    senderDeposit: BigNumber = utils.parseEther('1').add(l2CallValue)
+    senderDeposit: bigint = utils.parseEther('1').add(l2CallValue)
   ): Promise<L1ToL2MessageGasParams['gasLimit']> {
     const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
@@ -213,7 +213,7 @@ export class L1ToL2MessageGasEstimator {
    */
   public async estimateAll(
     retryableEstimateData: L1ToL2MessageNoGasParams,
-    l1BaseFee: BigNumber,
+    l1BaseFee: bigint,
     l1Provider: Provider,
     options?: GasOverrides
   ): Promise<L1ToL2MessageGasParams> {
@@ -291,7 +291,7 @@ export class L1ToL2MessageGasEstimator {
     retryable: RetryableData
     data: BytesLike
     to: string
-    value: BigNumberish
+    value: bigintish
   }> {
     // get function data that should trigger a retryable data error
     const {
@@ -302,7 +302,7 @@ export class L1ToL2MessageGasEstimator {
     } = dataFunc({
       gasLimit: RetryableDataTools.ErrorTriggeringParams.gasLimit,
       maxFeePerGas: RetryableDataTools.ErrorTriggeringParams.maxFeePerGas,
-      maxSubmissionCost: BigNumber.from(1),
+      maxSubmissionCost: bigint(1),
     })
 
     let retryable: RetryableData | null

@@ -20,7 +20,7 @@ import { expect } from 'chai'
 import { ethers, constants, Wallet } from 'ethers'
 import dotenv from 'dotenv'
 
-import { parseEther } from '@ethersproject/units'
+import { parseEther } from 'ethers'
 
 import {
   fundL1 as fundL1Ether,
@@ -257,7 +257,7 @@ describeOnlyWhenCustomGasToken(
         (await nativeTokenContract.balanceOf(bridge)).toString()
       ).to.equal(
         // balance in the bridge after the withdrawal should equal to the initial balance in the bridge - the amount withdrawn
-        initialBalanceBridge.sub(amount).toString(),
+        (initialBalanceBridge - amount).toString(),
         'incorrect balance in bridge after withdrawal'
       )
 

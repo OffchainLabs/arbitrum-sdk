@@ -46,19 +46,17 @@ Arbitrum SDK includes methods for [serializing parameters](https://developer.off
  * @module Byte-Serialization
  */
 
-import { Provider } from '@ethersproject/abstract-provider'
-import { Signer } from '@ethersproject/abstract-signer'
-import { isAddress as _isAddress } from '@ethersproject/address'
-import { concat, hexZeroPad } from '@ethersproject/bytes'
-import { BigNumber } from '@ethersproject/bignumber'
-
-import { ArbAddressTable__factory } from '../abi/factories/ArbAddressTable__factory'
-import { ArbAddressTable } from '../abi/ArbAddressTable'
+import { Provider } from 'ethers'
+import { Signer } from 'ethers'
+import { isAddress as _isAddress } from 'ethers'
+import { concat, zeroPadValue } from 'ethers'
 
 import { ARB_ADDRESS_TABLE_ADDRESS } from '../dataEntities/constants'
 import { ArbSdkError } from '../dataEntities/errors'
+import { ArbAddressTable__factory } from '../abi/factories/nitro-contracts/build/contracts/src/precompiles'
+import { ArbAddressTable } from '../abi/nitro-contracts/build/contracts/src/precompiles'
 
-type PrimativeType = string | number | boolean | BigNumber
+type PrimativeType = string | number | boolean | BigInt
 type PrimativeOrPrimativeArray = PrimativeType | PrimativeType[]
 type BytesNumber = 1 | 4 | 8 | 16 | 32
 
@@ -112,7 +110,7 @@ const isAddress = (input: PrimativeType) =>
   typeof input === 'string' && _isAddress(input)
 
 const toUint = (val: PrimativeType, bytes: BytesNumber) =>
-  hexZeroPad(BigNumber.from(val).toHexString(), bytes)
+  zeroPadValue(BigInt(val).toHexString(), bytes)
 
 //  outputs string suitable for formatting
 const formatPrimative = (value: PrimativeType) => {
@@ -123,7 +121,7 @@ const formatPrimative = (value: PrimativeType) => {
   } else if (
     typeof value === 'number' ||
     Number(value) ||
-    BigNumber.isBigNumber(value)
+    BigInt.isBigInt(value)
   ) {
     return toUint(value, 32)
   } else {

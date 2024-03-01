@@ -17,8 +17,8 @@
 'use strict'
 
 import { assert, expect } from 'chai'
-import { BigNumber } from '@ethersproject/bignumber'
-import { hexlify } from '@ethersproject/bytes'
+
+import { hexlify } from 'ethers'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import { fundL1, skipIfMainnet } from './testHelpers'
 import { RetryableDataTools } from '../../src'
@@ -27,7 +27,7 @@ import { testSetup } from '../../scripts/testSetup'
 import { parseEther, randomBytes } from 'ethers/lib/utils'
 import { Inbox__factory } from '../../src/lib/abi/factories/Inbox__factory'
 import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
-const depositAmount = BigNumber.from(100)
+const depositAmount = BigInt(100)
 import { ERC20Inbox__factory } from '../../src/lib/abi/factories/ERC20Inbox__factory'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 
@@ -37,8 +37,8 @@ describe('RevertData', () => {
   })
 
   const createRevertParams = () => {
-    const l2CallValue = BigNumber.from(137)
-    const maxSubmissionCost = BigNumber.from(1618)
+    const l2CallValue = BigInt(137)
+    const maxSubmissionCost = BigInt(1618)
     return {
       to: Wallet.createRandom().address,
       excessFeeRefundAddress: Wallet.createRandom().address,
@@ -175,12 +175,12 @@ describe('RevertData', () => {
     const retryableOverrides: GasOverrides = {
       maxFeePerGas: {
         base: RetryableDataTools.ErrorTriggeringParams.maxFeePerGas,
-        percentIncrease: BigNumber.from(0),
+        percentIncrease: 0n,
       },
       gasLimit: {
         base: RetryableDataTools.ErrorTriggeringParams.gasLimit,
-        min: BigNumber.from(0),
-        percentIncrease: BigNumber.from(0),
+        min: 0n,
+        percentIncrease: 0n,
       },
     }
 

@@ -17,7 +17,7 @@
 'use strict'
 
 import { expect } from 'chai'
-import { parseEther } from '@ethersproject/units'
+import { parseEther } from 'ethers'
 import { AeWETH__factory } from '../../src/lib/abi/factories/AeWETH__factory'
 import {
   fundL1,

@@ -26,8 +26,8 @@ import {
   wait,
 } from './testHelpers'
 import { L2TransactionReceipt } from '../../src'
-import { JsonRpcProvider } from '@ethersproject/providers'
-import { BigNumber, Wallet } from 'ethers'
+import { JsonRpcProvider } from 'ethers'
+import { BigInt, Wallet } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
 import { testSetup } from '../../scripts/testSetup'
 
@@ -69,7 +69,7 @@ describe('ArbProvider', () => {
       const l1BatchNumber = (
         await arbTxReceipt.getBatchNumber(l2Provider).catch(() => {
           // findBatchContainingBlock errors if block number does not exist
-          return BigNumber.from(0)
+          return BigInt(0)
         })
       ).toNumber()
       const l1BatchConfirmations = (

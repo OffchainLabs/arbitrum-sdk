@@ -18,7 +18,7 @@
 
 import { expect } from 'chai'
 import { Signer, Wallet, utils, constants } from 'ethers'
-import { BigNumber } from '@ethersproject/bignumber'
+
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import {
   fundL1,
@@ -51,8 +51,8 @@ import {
   isL2NetworkWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
 import { itOnlyWhenCustomGasToken } from './custom-fee-token/mochaExtensions'
-const depositAmount = BigNumber.from(100)
-const withdrawalAmount = BigNumber.from(10)
+const depositAmount = BigInt(100)
+const withdrawalAmount = BigInt(10)
 
 describe('standard ERC20', () => {
   beforeEach('skipIfMainnet', async function () {
@@ -97,7 +97,7 @@ describe('standard ERC20', () => {
       )
 
       expect(initialAllowance.toString()).to.eq(
-        constants.Zero.toString(),
+        0n.toString(),
         'initial allowance is not empty'
       )
 
@@ -141,7 +141,7 @@ describe('standard ERC20', () => {
   const redeemAndTest = async (
     message: L1ToL2MessageWriter,
     expectedStatus: 0 | 1,
-    gasLimit?: BigNumber
+    gasLimit?: bigint
   ) => {
     const manualRedeem = await message.redeem({ gasLimit })
     const retryRec = await manualRedeem.waitForRedeem()
@@ -170,8 +170,8 @@ describe('standard ERC20', () => {
       expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
-        gasLimit: { base: BigNumber.from(0) },
-        maxFeePerGas: { base: BigNumber.from(0) },
+        gasLimit: { base: 0n },
+        maxFeePerGas: { base: 0n },
       },
     })
 
@@ -188,8 +188,8 @@ describe('standard ERC20', () => {
       expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
-        gasLimit: { base: BigNumber.from(5) },
-        maxFeePerGas: { base: BigNumber.from(5) },
+        gasLimit: { base: bigint(5) },
+        maxFeePerGas: { base: bigint(5) },
       },
     })
 
@@ -208,7 +208,7 @@ describe('standard ERC20', () => {
       expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
-        gasLimit: { base: BigNumber.from(21000) },
+        gasLimit: { base: bigint(21000) },
       },
     })
 
@@ -240,8 +240,8 @@ describe('standard ERC20', () => {
       expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
-        gasLimit: { base: BigNumber.from(5) },
-        maxFeePerGas: { base: BigNumber.from(5) },
+        gasLimit: { base: bigint(5) },
+        maxFeePerGas: { base: bigint(5) },
       },
     })
     const arbRetryableTx = ArbRetryableTx__factory.connect(
@@ -262,7 +262,7 @@ describe('standard ERC20', () => {
 
     // force the redeem to fail by submitted just a bit under the required gas
     // so it is enough to pay for L1 + L2 intrinsic gas costs
-    await redeemAndTest(waitRes.message, 0, gasComponents.gasEstimate.sub(3000))
+    await redeemAndTest(waitRes.message, 0, gasComponents.gasEstimate - 3000)
     await redeemAndTest(waitRes.message, 1)
   })
 

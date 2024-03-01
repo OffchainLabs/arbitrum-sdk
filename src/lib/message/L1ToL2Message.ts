@@ -16,16 +16,16 @@
 /* eslint-env node */
 'use strict'
 
-import { TransactionReceipt } from '@ethersproject/providers'
-import { Provider } from '@ethersproject/abstract-provider'
-import { Signer } from '@ethersproject/abstract-signer'
-import { ContractTransaction } from '@ethersproject/contracts'
-import { BigNumber } from '@ethersproject/bignumber'
-import { concat, zeroPad } from '@ethersproject/bytes'
-import { getAddress } from '@ethersproject/address'
-import { keccak256 } from '@ethersproject/keccak256'
+import { TransactionReceipt, ZeroAddress, encodeRlp } from 'ethers'
+import { Provider } from 'ethers'
+import { Signer } from 'ethers'
+import { ContractTransaction } from 'ethers'
 
-import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
+import { concat, zeroPad } from 'ethers'
+import { getAddress } from 'ethers'
+import { keccak256 } from 'ethers'
+
+import { ArbRetryableTx__factory } from '../abi/factories/nitro-contracts/build/contracts/src/precompiles'
 import { ARB_RETRYABLE_TX_ADDRESS } from '../dataEntities/constants'
 import {
   SignerProviderUtils,
@@ -41,7 +41,8 @@ import { getChildChain } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt, isDefined } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
-import { ErrorCode, Logger } from '@ethersproject/logger'
+import { ErrorCode, Logger } from 'ethers'
+import { hexConcat, stripZeros } from '@ethersproject/bytes'
 
 export enum ParentToChildMessageStatus {
   /**
@@ -126,24 +127,24 @@ export abstract class ParentToChildMessage {
   public static calculateSubmitRetryableId(
     chainChainId: number,
     fromAddress: string,
-    messageNumber: BigNumber,
-    parentChainBaseFee: BigNumber,
+    messageNumber: bigint,
+    parentChainBaseFee: bigint,
     destAddress: string,
-    chainCallValue: BigNumber,
-    parentChainValue: BigNumber,
-    maxSubmissionFee: BigNumber,
+    chainCallValue: bigint,
+    parentChainValue: bigint,
+    maxSubmissionFee: bigint,
     excessFeeRefundAddress: string,
     callValueRefundAddress: string,
-    gasLimit: BigNumber,
-    maxFeePerGas: BigNumber,
+    gasLimit: bigint,
+    maxFeePerGas: bigint,
     data: string
   ): string {
-    const formatNumber = (value: BigNumber): Uint8Array => {
-      return ethers.utils.stripZeros(value.toHexString())
+    const formatNumber = (value: bigint): Uint8Array => {
+      return stripZeros(value.toHexString())
     }
 
-    const chainId = BigNumber.from(chainChainId)
-    const msgNum = BigNumber.from(messageNumber)
+    const chainId = BigInt(chainChainId)
+    const msgNum = BigInt(messageNumber)
 
     const fields: any[] = [
       formatNumber(chainId),
@@ -155,7 +156,7 @@ export abstract class ParentToChildMessage {
       formatNumber(maxFeePerGas),
       formatNumber(gasLimit),
       // when destAddress is 0x0, arbos treat that as nil
-      destAddress === ethers.constants.AddressZero ? '0x' : destAddress,
+      destAddress === ZeroAddress ? '0x' : destAddress,
       formatNumber(chainCallValue),
       callValueRefundAddress,
       formatNumber(maxSubmissionFee),
@@ -164,28 +165,25 @@ export abstract class ParentToChildMessage {
     ]
 
     // arbitrum submit retry transactions have type 0x69
-    const rlpEnc = ethers.utils.hexConcat([
-      '0x69',
-      ethers.utils.RLP.encode(fields),
-    ])
+    const rlpEnc = hexConcat(['0x69', encodeRlp(fields)])
 
-    return ethers.utils.keccak256(rlpEnc)
+    return keccak256(rlpEnc)
   }
 
   public static fromEventComponents<T extends SignerOrProvider>(
     chainSignerOrProvider: T,
     chainId: number,
     sender: string,
-    messageNumber: BigNumber,
-    parentChainBaseFee: BigNumber,
+    messageNumber: bigint,
+    parentChainBaseFee: bigint,
     messageData: RetryableMessageParams
   ): ParentToChildMessageReaderOrWriter<T>
   public static fromEventComponents<T extends SignerOrProvider>(
     chainSignerOrProvider: T,
     chainId: number,
     sender: string,
-    messageNumber: BigNumber,
-    parentChainBaseFee: BigNumber,
+    messageNumber: bigint,
+    parentChainBaseFee: bigint,
     messageData: RetryableMessageParams
   ): ParentToChildMessageReader | ParentToChildMessageWriter {
     return SignerProviderUtils.isSigner(chainSignerOrProvider)
@@ -210,8 +208,8 @@ export abstract class ParentToChildMessage {
   protected constructor(
     public readonly chainId: number,
     public readonly sender: string,
-    public readonly messageNumber: BigNumber,
-    public readonly parentChainBaseFee: BigNumber,
+    public readonly messageNumber: bigint,
+    public readonly parentChainBaseFee: bigint,
     public readonly messageData: RetryableMessageParams
   ) {
     this.retryableCreationId = ParentToChildMessage.calculateSubmitRetryableId(
@@ -258,8 +256,8 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
     public readonly chainProvider: Provider,
     chainId: number,
     sender: string,
-    messageNumber: BigNumber,
-    parentChainBaseFee: BigNumber,
+    messageNumber: bigint,
+    parentChainBaseFee: bigint,
     messageData: RetryableMessageParams
   ) {
     super(chainId, sender, messageNumber, parentChainBaseFee, messageData)
@@ -449,7 +447,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
   }
 
   private async retryableExists(): Promise<boolean> {
-    const currentTimestamp = BigNumber.from(
+    const currentTimestamp = BigInt(
       (await this.chainProvider.getBlock('latest')).timestamp
     )
     try {
@@ -519,7 +517,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
    * The minimium lifetime of a retryable tx
    * @returns
    */
-  public static async getLifetime(chainProvider: Provider): Promise<BigNumber> {
+  public static async getLifetime(chainProvider: Provider): Promise<BigInt> {
     const arbRetryableTx = ArbRetryableTx__factory.connect(
       ARB_RETRYABLE_TX_ADDRESS,
       chainProvider
@@ -531,7 +529,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
    * Timestamp at which this message expires
    * @returns
    */
-  public async getTimeout(): Promise<BigNumber> {
+  public async getTimeout(): Promise<BigInt> {
     const arbRetryableTx = ArbRetryableTx__factory.connect(
       ARB_RETRYABLE_TX_ADDRESS,
       this.chainProvider
@@ -555,24 +553,20 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
 
 export class ParentToChildMessageReaderClassic {
   private retryableCreationReceipt: TransactionReceipt | undefined | null
-  public readonly messageNumber: BigNumber
+  public readonly messageNumber: bigint
   public readonly retryableCreationId: string
   public readonly autoRedeemId: string
   public readonly chainTxHash: string
   public readonly chainProvider: Provider
 
-  constructor(
-    chainProvider: Provider,
-    chainId: number,
-    messageNumber: BigNumber
-  ) {
-    const bitFlip = (num: BigNumber) => num.or(BigNumber.from(1).shl(255))
+  constructor(chainProvider: Provider, chainId: number, messageNumber: bigint) {
+    const bitFlip = (num: bigint) => num.or(BigInt(1).shl(255))
     this.messageNumber = messageNumber
     this.chainProvider = chainProvider
 
     this.retryableCreationId = keccak256(
       concat([
-        zeroPad(BigNumber.from(chainId).toHexString(), 32),
+        zeroPad(BigInt(chainId).toHexString(), 32),
         zeroPad(bitFlip(this.messageNumber).toHexString(), 32),
       ])
     )
@@ -580,14 +574,14 @@ export class ParentToChildMessageReaderClassic {
     this.autoRedeemId = keccak256(
       concat([
         zeroPad(this.retryableCreationId, 32),
-        zeroPad(BigNumber.from(1).toHexString(), 32),
+        zeroPad(BigInt(1).toHexString(), 32),
       ])
     )
 
     this.chainTxHash = keccak256(
       concat([
         zeroPad(this.retryableCreationId, 32),
-        zeroPad(BigNumber.from(0).toHexString(), 32),
+        zeroPad(BigInt(0).toHexString(), 32),
       ])
     )
   }
@@ -597,7 +591,7 @@ export class ParentToChildMessageReaderClassic {
       concat([
         zeroPad(retryableCreationId, 32),
         // BN 0 meaning Chain TX
-        zeroPad(BigNumber.from(0).toHexString(), 32),
+        zeroPad(BigInt(0).toHexString(), 32),
       ])
     )
   }
@@ -655,8 +649,8 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
     public readonly chainSigner: Signer,
     chainId: number,
     sender: string,
-    messageNumber: BigNumber,
-    parentChainBaseFee: BigNumber,
+    messageNumber: bigint,
+    parentChainBaseFee: bigint,
     messageData: RetryableMessageParams
   ) {
     super(
@@ -764,17 +758,17 @@ export class EthDepositMessage {
 
   public static calculateDepositTxId(
     chainChainId: number,
-    messageNumber: BigNumber,
+    messageNumber: bigint,
     fromAddress: string,
     toAddress: string,
-    value: BigNumber
+    value: bigint
   ): string {
-    const formatNumber = (numberVal: BigNumber): Uint8Array => {
-      return ethers.utils.stripZeros(numberVal.toHexString())
+    const formatNumber = (numberVal: bigint): Uint8Array => {
+      return stripZeros(numberVal.toHexString())
     }
 
-    const chainId = BigNumber.from(chainChainId)
-    const msgNum = BigNumber.from(messageNumber)
+    const chainId = BigInt(chainChainId)
+    const msgNum = BigInt(messageNumber)
 
     // https://github.com/OffchainLabs/go-ethereum/blob/07e017aa73e32be92aadb52fa327c552e1b7b118/core/types/arb_types.go#L302-L308
     const fields = [
@@ -786,12 +780,9 @@ export class EthDepositMessage {
     ]
 
     // arbitrum eth deposit transactions have type 0x64
-    const rlpEnc = ethers.utils.hexConcat([
-      '0x64',
-      ethers.utils.RLP.encode(fields),
-    ])
+    const rlpEnc = hexConcat(['0x64', encodeRlp(fields)])
 
-    return ethers.utils.keccak256(rlpEnc)
+    return keccak256(rlpEnc)
   }
 
   /**
@@ -802,13 +793,13 @@ export class EthDepositMessage {
    */
   private static parseEthDepositData(eventData: string): {
     to: string
-    value: BigNumber
+    value: bigint
   } {
     // https://github.com/OffchainLabs/nitro/blob/aa84e899cbc902bf6da753b1d66668a1def2c106/contracts/src/bridge/Inbox.sol#Chain42
     // ethers.defaultAbiCoder doesnt decode packed args, so we do a hardcoded parsing
     const addressEnd = 2 + 20 * 2
     const to = getAddress('0x' + eventData.substring(2, addressEnd))
-    const value = BigNumber.from('0x' + eventData.substring(addressEnd))
+    const value = BigInt('0x' + eventData.substring(addressEnd))
 
     return { to, value }
   }
@@ -823,7 +814,7 @@ export class EthDepositMessage {
    */
   public static async fromEventComponents(
     chainProvider: Provider,
-    messageNumber: BigNumber,
+    messageNumber: bigint,
     senderAddr: string,
     inboxMessageEventData: string
   ) {
@@ -853,10 +844,10 @@ export class EthDepositMessage {
   constructor(
     private readonly chainProvider: Provider,
     public readonly chainChainId: number,
-    public readonly messageNumber: BigNumber,
+    public readonly messageNumber: bigint,
     public readonly from: string,
     public readonly to: string,
-    public readonly value: BigNumber
+    public readonly value: bigint
   ) {
     this.chainDepositTxHash = EthDepositMessage.calculateDepositTxId(
       chainChainId,

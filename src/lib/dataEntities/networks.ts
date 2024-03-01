@@ -22,7 +22,7 @@ import {
   SEVEN_DAYS_IN_SECONDS,
   ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
 } from './constants'
-import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__factory'
+import { RollupAdminLogic__factory } from '../abi/factories/nitro-contracts/build/contracts/src/rollup'
 
 export interface Network {
   chainID: number
@@ -479,9 +479,9 @@ export const getNetwork = async (
   let network: L1Network | L2Network | undefined = undefined
 
   if (layer === 1) {
-    network = getL1Chains()[chainID]
+    network = getL1Chains()[chainID.toString()]
   } else {
-    network = getArbitrumChains()[chainID]
+    network = getArbitrumChains()[chainID.toString()]
   }
 
   if (!network) {

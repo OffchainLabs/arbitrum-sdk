@@ -1,4 +1,4 @@
-import { StaticJsonRpcProvider } from '@ethersproject/providers'
+import { JsonRpcProvider } from 'ethers'
 import { Signer, Wallet, ethers, utils } from 'ethers'
 
 import {
@@ -7,11 +7,11 @@ import {
   getLocalNetworksFromFile,
 } from '../../../scripts/testSetup'
 import { Erc20Bridger, EthBridger } from '../../../src'
-import { ERC20__factory } from '../../../src/lib/abi/factories/ERC20__factory'
+import { ERC20__factory } from '../../../src/lib/abi/factories/nitro-contracts/build/contracts/@openzeppelin/contracts/token/ERC20'
 
 // `config` isn't initialized yet, so we have to wrap these in functions
-const ethProvider = () => new StaticJsonRpcProvider(config.ethUrl)
-const arbProvider = () => new StaticJsonRpcProvider(config.arbUrl)
+const ethProvider = () => new JsonRpcProvider(config.ethUrl)
+const arbProvider = () => new JsonRpcProvider(config.arbUrl)
 const localNetworks = () => getLocalNetworksFromFile()
 
 export function isL2NetworkWithCustomFeeToken(): boolean {

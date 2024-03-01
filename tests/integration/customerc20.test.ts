@@ -18,8 +18,8 @@
 
 import { expect } from 'chai'
 import { Signer, Wallet, constants, utils, ethers } from 'ethers'
-import { BigNumber } from '@ethersproject/bignumber'
-import { Logger, LogLevel } from '@ethersproject/logger'
+
+import { Logger, LogLevel } from 'ethers'
 Logger.setLogLevel(LogLevel.ERROR)
 import { L1CustomGateway__factory } from '../../src/lib/abi/factories/L1CustomGateway__factory'
 import { L1GatewayRouter__factory } from '../../src/lib/abi/factories/L1GatewayRouter__factory'
@@ -47,8 +47,8 @@ import {
   isL2NetworkWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
 
-const depositAmount = BigNumber.from(100)
-const withdrawalAmount = BigNumber.from(10)
+const depositAmount = BigInt(100)
+const withdrawalAmount = BigInt(10)
 
 describe('Custom ERC20', () => {
   beforeEach('skipIfMainnet', async function () {

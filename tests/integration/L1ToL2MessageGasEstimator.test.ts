@@ -17,7 +17,6 @@
 'use strict'
 
 import { expect } from 'chai'
-import { BigNumber } from 'ethers'
 
 import { skipIfMainnet } from './testHelpers'
 import { testSetup } from '../../scripts/testSetup'
@@ -45,7 +44,7 @@ describe('L1ToL2MessageGasEstimator', () => {
         123456
       )
 
-      expect(submissionFee.toString()).to.not.eq(BigNumber.from(0).toString())
+      expect(submissionFee.toString()).to.not.eq(BigInt(0).toString())
     }
   )
 
@@ -62,7 +61,7 @@ describe('L1ToL2MessageGasEstimator', () => {
         123456
       )
 
-      expect(submissionFee.toString()).to.eq(BigNumber.from(0).toString())
+      expect(submissionFee.toString()).to.eq(BigInt(0).toString())
     }
   )
 })

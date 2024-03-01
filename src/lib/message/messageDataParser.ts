@@ -1,7 +1,7 @@
-import { getAddress } from '@ethersproject/address'
-import { defaultAbiCoder } from '@ethersproject/abi'
-import { BigNumber } from '@ethersproject/bignumber'
-import { hexZeroPad } from '@ethersproject/bytes'
+import { getAddress } from 'ethers'
+import { AbiCoder } from 'ethers'
+
+import { zeroPadValue } from 'ethers'
 
 export class SubmitRetryableMessageDataParser {
   /**
@@ -12,7 +12,7 @@ export class SubmitRetryableMessageDataParser {
    */
   public parse(eventData: string) {
     // decode the data field - is been packed so we cant decode the bytes field this way
-    const parsed = defaultAbiCoder.decode(
+    const parsed = AbiCoder.defaultAbiCoder().decode(
       [
         'uint256', // dest
         'uint256', // l2 call balue
@@ -25,23 +25,23 @@ export class SubmitRetryableMessageDataParser {
         'uint256', // data length
       ],
       eventData
-    ) as BigNumber[]
+    ) as BigInt[]
 
-    const addressFromBigNumber = (bn: BigNumber) =>
-      getAddress(hexZeroPad(bn.toHexString(), 20))
+    const addressFromBigInt = (bn: bigint) =>
+      getAddress(zeroPadValue(bn.toString(16), 20))
 
-    const destAddress = addressFromBigNumber(parsed[0])
+    const destAddress = addressFromBigInt(parsed[0])
     const l2CallValue = parsed[1]
     const l1Value = parsed[2]
     const maxSubmissionFee = parsed[3]
-    const excessFeeRefundAddress = addressFromBigNumber(parsed[4])
-    const callValueRefundAddress = addressFromBigNumber(parsed[5])
+    const excessFeeRefundAddress = addressFromBigInt(parsed[4])
+    const callValueRefundAddress = addressFromBigInt(parsed[5])
     const gasLimit = parsed[6]
     const maxFeePerGas = parsed[7]
     const callDataLength = parsed[8]
     const data =
       '0x' +
-      eventData.substring(eventData.length - callDataLength.mul(2).toNumber())
+      eventData.substring(eventData.length - (callDataLength * 2).toNumber())
 
     return {
       destAddress,

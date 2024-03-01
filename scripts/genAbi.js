@@ -40,13 +40,12 @@ async function main() {
     `${nitroPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
   ])
 
-  // TODO: generate files into different subfolders (ie `/nitro/*`) to avoid overwrite of contracts with the same name
   await runTypeChain({
     cwd,
     filesToProcess: nitroFiles,
     allFiles: nitroFiles,
     outDir: './src/lib/abi/',
-    target: 'ethers-v5',
+    target: 'ethers-v6',
   })
 
   const classicFiles = glob(cwd, [
@@ -59,7 +58,7 @@ async function main() {
     filesToProcess: classicFiles,
     allFiles: classicFiles,
     outDir: './src/lib/abi/classic',
-    target: 'ethers-v5',
+    target: 'ethers-v6',
   })
 
   // we delete the index file since it doesn't play well with tree shaking

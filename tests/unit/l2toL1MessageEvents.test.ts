@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { Logger, LogLevel } from '@ethersproject/logger'
+import { Logger, LogLevel } from 'ethers'
 Logger.setLogLevel(LogLevel.ERROR)
 import { ChildToParentMessage } from '../../src/lib/message/L2ToL1Message'
 import { getChildChain as getL2Network } from '../../src/lib/dataEntities/networks'

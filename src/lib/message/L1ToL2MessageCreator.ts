@@ -1,16 +1,14 @@
 import { constants } from 'ethers'
-import { Signer } from '@ethersproject/abstract-signer'
-import { Provider } from '@ethersproject/abstract-provider'
+import { Signer } from 'ethers'
+import { Provider } from 'ethers'
 
 import {
   GasOverrides,
   L1ToL2MessageGasEstimator,
 } from './L1ToL2MessageGasEstimator'
 import { L1ContractTransaction, L1TransactionReceipt } from './L1Transaction'
-import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { getChildChain } from '../dataEntities/networks'
-import { ERC20Inbox__factory } from '../abi/factories/ERC20Inbox__factory'
-import { PayableOverrides } from '@ethersproject/contracts'
+import { PayableOverrides } from 'ethers'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getBaseFee } from '../utils/lib'
@@ -20,6 +18,10 @@ import {
 } from '../dataEntities/transactionRequest'
 import { RetryableData } from '../dataEntities/retryableData'
 import { OmitTyped, PartialPick } from '../utils/types'
+import {
+  ERC20Inbox__factory,
+  Inbox__factory,
+} from '../abi/factories/nitro-contracts/build/contracts/src/bridge'
 
 type L1ToL2GasKeys =
   | 'maxSubmissionCost'
@@ -161,7 +163,7 @@ export class L1ToL2MessageCreator {
       txRequest: {
         to: l2Network.ethBridge.inbox,
         data,
-        value: nativeTokenIsEth ? estimates.deposit : constants.Zero,
+        value: nativeTokenIsEth ? estimates.deposit : 0n,
         from: params.from,
       },
       retryableData: {

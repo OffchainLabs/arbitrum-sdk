@@ -1,5 +1,5 @@
-import { Provider } from '@ethersproject/abstract-provider'
-import { Signer } from '@ethersproject/abstract-signer'
+import { Provider } from 'ethers'
+import { Signer } from 'ethers'
 import { ArbSdkError, MissingProviderArbSdkError } from '../dataEntities/errors'
 import { isDefined } from '../utils/lib'
 
@@ -23,7 +23,7 @@ export class SignerProviderUtils {
    */
   public static getProvider(
     signerOrProvider: SignerOrProvider
-  ): Provider | undefined {
+  ): Provider | null {
     return this.isSigner(signerOrProvider)
       ? signerOrProvider.provider
       : signerOrProvider
@@ -60,7 +60,7 @@ export class SignerProviderUtils {
     const provider = this.getProvider(signerOrProvider)
     if (!provider) throw new MissingProviderArbSdkError('signerOrProvider')
 
-    const providerChainId = (await provider.getNetwork()).chainId
+    const providerChainId = Number((await provider.getNetwork()).chainId)
     if (providerChainId !== chainId) {
       throw new ArbSdkError(
         `Signer/provider chain id: ${providerChainId} doesn't match provided chain id: ${chainId}.`

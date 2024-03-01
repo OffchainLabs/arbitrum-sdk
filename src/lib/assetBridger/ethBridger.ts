@@ -16,14 +16,13 @@
 /* eslint-env node */
 'use strict'
 
-import { Signer } from '@ethersproject/abstract-signer'
-import { Provider, TransactionRequest } from '@ethersproject/abstract-provider'
-import { PayableOverrides, Overrides } from '@ethersproject/contracts'
-import { BigNumber, constants } from 'ethers'
+import { MaxUint256, Signer, TransactionResponse } from 'ethers'
+import { Provider, TransactionRequest } from 'ethers'
+import { Overrides } from 'ethers'
 
-import { Inbox__factory } from '../abi/factories/Inbox__factory'
-import { ERC20Inbox__factory } from '../abi/factories/ERC20Inbox__factory'
-import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
+// import { Inbox__factory } from '../abi/factories/Inbox__factory'
+// import { ERC20Inbox__factory } from '../abi/factories/ERC20Inbox__factory'
+// import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 import { AssetBridger } from './assetBridger'
 import {
@@ -47,18 +46,24 @@ import { OmitTyped } from '../utils/types'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getL2Network as getChildChain } from '../dataEntities/networks'
-import { ERC20__factory } from '../abi/factories/ERC20__factory'
+// import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { isArbitrumChain } from '../utils/lib'
+import {
+  ERC20Inbox__factory,
+  Inbox__factory,
+} from '../abi/factories/nitro-contracts/build/contracts/src/bridge'
+import { ArbSys__factory } from '../abi/factories/nitro-contracts/build/contracts/src/precompiles'
+import { ERC20__factory } from '../abi/factories/nitro-contracts/build/contracts/@openzeppelin/contracts/token/ERC20'
 
 export type ApproveGasTokenParams = {
   /**
    * Amount to approve. Defaults to max int.
    */
-  amount?: BigNumber
+  amount?: bigint
   /**
    * Transaction overrides
    */
-  overrides?: PayableOverrides
+  overrides?: Overrides
 }
 
 export type ApproveGasTokenTxRequest = {
@@ -84,7 +89,7 @@ export interface EthWithdrawParams {
   /**
    * The amount of ETH or tokens to be withdrawn
    */
-  amount: BigNumber
+  amount: bigint
   /**
    * The L1 address to receive the value.
    */
@@ -96,7 +101,7 @@ export interface EthWithdrawParams {
   /**
    * Transaction overrides
    */
-  overrides?: PayableOverrides
+  overrides?: Overrides
 }
 
 export type EthDepositParams = {
@@ -107,11 +112,11 @@ export type EthDepositParams = {
   /**
    * The amount of ETH or tokens to be deposited
    */
-  amount: BigNumber
+  amount: bigint
   /**
    * Transaction overrides
    */
-  overrides?: PayableOverrides
+  overrides?: Overrides
 }
 
 export type EthDepositToParams = EthDepositParams & {
@@ -201,14 +206,14 @@ export class EthBridger extends AssetBridger<
         // spender
         this.l2Network.ethBridge.inbox,
         // value
-        params?.amount ?? constants.MaxUint256,
+        params?.amount ?? MaxUint256,
       ]
     )
 
     return {
       to: this.nativeToken!,
       data,
-      value: BigNumber.from(0),
+      value: 0n,
     }
   }
 
@@ -244,7 +249,7 @@ export class EthBridger extends AssetBridger<
         ERC20Inbox__factory.createInterface() as unknown as {
           encodeFunctionData(
             functionFragment: 'depositERC20(uint256)',
-            values: [BigNumber]
+            values: [BigInt]
           ): string
         }
       ).encodeFunctionData('depositERC20(uint256)', [params.amount])
@@ -301,6 +306,7 @@ export class EthBridger extends AssetBridger<
       ...params.overrides,
     })
 
+    // @ts-expect-error - TODO: fix inconsistent types
     return L1TransactionReceipt.monkeyPatchEthDepositWait(tx)
   }
 
@@ -357,6 +363,7 @@ export class EthBridger extends AssetBridger<
       ...params.overrides,
     })
 
+    // @ts-expect-error - TODO: fix inconsistent types
     return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
@@ -387,11 +394,11 @@ export class EthBridger extends AssetBridger<
           // however, this is only an estimate used for display, so should be good enough
           //
           // measured with withdrawals from Xai and Rari then added some padding
-          return BigNumber.from(4_000_000)
+          return BigInt(4_000_000)
         }
 
         // measured 126998 - add some padding
-        return BigNumber.from(130000)
+        return BigInt(130000)
       },
     }
   }
@@ -419,6 +426,7 @@ export class EthBridger extends AssetBridger<
       ...request.txRequest,
       ...params.overrides,
     })
+    // @ts-expect-error - TODO: fix inconsistent types
     return L2TransactionReceipt.monkeyPatchWait(tx)
   }
 }

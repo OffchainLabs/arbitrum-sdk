@@ -16,9 +16,9 @@
 /* eslint-env node */
 'use strict'
 
-import { JsonRpcProvider } from '@ethersproject/providers'
-import { Wallet } from '@ethersproject/wallet'
-import { Provider } from '@ethersproject/abstract-provider'
+import { JsonRpcProvider } from 'ethers'
+import { Wallet } from 'ethers'
+import { Provider } from 'ethers'
 import dotenv from 'dotenv'
 
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'

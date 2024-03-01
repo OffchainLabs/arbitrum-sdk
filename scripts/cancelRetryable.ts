@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { ContractReceipt } from '@ethersproject/contracts'
+import { ContractReceipt } from 'ethers'
 
 import { instantiateBridge } from './instantiate_bridge'
 import args from './getCLargs'

@@ -16,10 +16,10 @@
 /* eslint-env node */
 'use strict'
 
-import { TransactionReceipt } from '@ethersproject/providers'
-import { Log, Provider } from '@ethersproject/abstract-provider'
-import { ContractTransaction } from '@ethersproject/contracts'
-import { BigNumber } from '@ethersproject/bignumber'
+import { ContractTransactionResponse, TransactionReceipt } from 'ethers'
+import { Log, Provider } from 'ethers'
+import { ContractTransaction } from 'ethers'
+
 import {
   ParentToChildMessage as L1ToL2Message,
   ParentToChildMessageReaderOrWriter as L1ToL2MessageReaderOrWriter,
@@ -32,25 +32,25 @@ import {
   EthDepositMessageWaitResult,
 } from './L1ToL2Message'
 
-import { L1ERC20Gateway__factory } from '../abi/factories/L1ERC20Gateway__factory'
 import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
-import { Inbox__factory } from '../abi/factories/Inbox__factory'
-import { InboxMessageDeliveredEvent } from '../abi/Inbox'
 import { InboxMessageKind } from '../dataEntities/message'
-import { Bridge__factory } from '../abi/factories/Bridge__factory'
-import { MessageDeliveredEvent } from '../abi/Bridge'
 import { EventArgs, parseTypedLogs } from '../dataEntities/event'
 import { isDefined } from '../utils/lib'
 import { SubmitRetryableMessageDataParser } from './messageDataParser'
 import { getL2Network as getChildChain } from '../dataEntities/networks'
+import {
+  Bridge__factory,
+  Inbox__factory,
+} from '../abi/factories/nitro-contracts/build/contracts/src/bridge'
+import { L1ERC20Gateway__factory } from '../abi/factories/token-bridge-contracts/build/contracts/contracts/tokenbridge/ethereum/gateway'
 
 export interface L1ContractTransaction<
   TReceipt extends L1TransactionReceipt = L1TransactionReceipt
-> extends ContractTransaction {
+> extends ContractTransactionResponse {
   wait(confirmations?: number): Promise<TReceipt>
 }
 // some helper interfaces to reduce the verbosity elsewhere
@@ -59,30 +59,31 @@ export type L1EthDepositTransaction =
 export type L1ContractCallTransaction =
   L1ContractTransaction<L1ContractCallTransactionReceipt>
 
-export class L1TransactionReceipt implements TransactionReceipt {
-  public readonly to: string
+export class L1TransactionReceipt extends TransactionReceipt {
+  public readonly to: string | null
   public readonly from: string
-  public readonly contractAddress: string
+  public readonly contractAddress: string | null
   public readonly transactionIndex: number
-  public readonly root?: string
-  public readonly gasUsed: BigNumber
+  public readonly root: string | null
+  public readonly gasUsed: bigint
   public readonly logsBloom: string
   public readonly blockHash: string
   public readonly transactionHash: string
   public readonly logs: Array<Log>
   public readonly blockNumber: number
-  public readonly confirmations: number
-  public readonly cumulativeGasUsed: BigNumber
-  public readonly effectiveGasPrice: BigNumber
+  public readonly confirmations: () => Promise<number>
+  public readonly cumulativeGasUsed: bigint
+  public readonly effectiveGasPrice: bigint
   public readonly byzantium: boolean
   public readonly type: number
-  public readonly status?: number
+  public readonly status: number | null
 
   constructor(tx: TransactionReceipt) {
+    super()
     this.to = tx.to
     this.from = tx.from
     this.contractAddress = tx.contractAddress
-    this.transactionIndex = tx.transactionIndex
+    this.transactionIndex = tx.index
     this.root = tx.root
     this.gasUsed = tx.gasUsed
     this.logsBloom = tx.logsBloom
@@ -226,7 +227,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
       messageNum =>
         new L1ToL2MessageReaderClassic(
           l2Provider,
-          BigNumber.from(chainID).toNumber(),
+          parseInt(chainID),
           messageNum
         )
     )
@@ -271,7 +272,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
 
         return L1ToL2Message.fromEventComponents(
           l2SignerOrProvider,
-          BigNumber.from(chainID).toNumber(),
+          parseInt(chainID),
           mn.bridgeMessageEvent.sender,
           mn.inboxMessageEvent.messageNum,
           mn.bridgeMessageEvent.baseFeeL1,
@@ -314,7 +315,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
    * @returns
    */
   public static monkeyPatchEthDepositWait = (
-    contractTransaction: ContractTransaction
+    contractTransaction: ContractTransactionResponse
   ): L1EthDepositTransaction => {
     const wait = contractTransaction.wait
     contractTransaction.wait = async (confirmations?: number) => {

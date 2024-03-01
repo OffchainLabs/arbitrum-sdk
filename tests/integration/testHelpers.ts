@@ -19,9 +19,8 @@
 import { expect } from 'chai'
 import chalk from 'chalk'
 
-import { BigNumber } from '@ethersproject/bignumber'
-import { JsonRpcProvider } from '@ethersproject/providers'
-import { parseEther } from '@ethersproject/units'
+import { JsonRpcProvider } from 'ethers'
+import { parseEther } from 'ethers'
 
 import { config, getSigner, testSetup } from '../../scripts/testSetup'
 
@@ -34,9 +33,9 @@ import {
 import { L2Network } from '../../src/lib/dataEntities/networks'
 import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
 import { ArbSdkError } from '../../src/lib/dataEntities/errors'
-import { ERC20 } from '../../src/lib/abi/ERC20'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
-import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
+import { ERC20__factory } from '../../src/lib/abi/factories/nitro-contracts/build/contracts/@openzeppelin/contracts/token/ERC20'
+import { ERC20 } from '../../src/lib/abi/nitro-contracts/build/contracts/@openzeppelin/contracts/token/ERC20'
 
 export const preFundAmount = parseEther('0.1')
 
@@ -57,8 +56,8 @@ export enum GatewayType {
 }
 
 interface WithdrawalParams {
-  startBalance: BigNumber
-  amount: BigNumber
+  startBalance: bigint
+  amount: bigint
   erc20Bridger: Erc20Bridger
   l1Token: ERC20
   l2Signer: Signer
@@ -127,7 +126,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   expect(
     testWalletL2Balance.toNumber(),
     'token withdraw balance not deducted'
-  ).to.eq(params.startBalance.sub(params.amount).toNumber())
+  ).to.eq(params.startBalance - params.amount)
   const walletAddress = await params.l1Signer.getAddress()
 
   const gatewayAddress = await params.erc20Bridger.getL2GatewayAddress(
@@ -237,8 +236,8 @@ export const depositToken = async ({
   retryableOverrides,
   destinationAddress,
 }: {
-  depositAmount: BigNumber
-  ethDepositAmount?: BigNumber
+  depositAmount: bigint
+  ethDepositAmount?: bigint
   l1TokenAddress: string
   erc20Bridger: Erc20Bridger
   l1Signer: Signer
@@ -324,7 +323,7 @@ export const depositToken = async ({
   )
   const tokenBalL1After = await l1Token.balanceOf(senderAddress)
   expect(tokenBalL1After.toString(), 'user bal after').to.eq(
-    tokenBalL1Before.sub(depositAmount).toString()
+    (tokenBalL1Before - depositAmount).toString()
   )
 
   const waitRes = await depositRec.waitForL2(l2Signer)
@@ -398,11 +397,7 @@ export const depositToken = async ({
   return { l1Token, waitRes, l2Token }
 }
 
-const fund = async (
-  signer: Signer,
-  amount?: BigNumber,
-  fundingKey?: string
-) => {
+const fund = async (signer: Signer, amount?: bigint, fundingKey?: string) => {
   const wallet = getSigner(signer.provider! as JsonRpcProvider, fundingKey)
   await (
     await wallet.sendTransaction({
@@ -414,14 +409,14 @@ const fund = async (
 
 export const fundL1 = async (
   l1Signer: Signer,
-  amount?: BigNumber
+  amount?: bigint
 ): Promise<void> => {
   await fund(l1Signer, amount, config.ethKey)
 }
 
 export const fundL2 = async (
   l2Signer: Signer,
-  amount?: BigNumber
+  amount?: bigint
 ): Promise<void> => {
   await fund(l2Signer, amount, config.arbKey)
 }

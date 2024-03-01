@@ -16,12 +16,12 @@
 /* eslint-env node */
 'use strict'
 
-import { Provider } from '@ethersproject/abstract-provider'
-import { BigNumber, utils } from 'ethers'
+import { Provider } from 'ethers'
+import { BigInt, utils } from 'ethers'
 
-import { ERC20__factory } from '../abi/factories/ERC20__factory'
-import { Multicall2 } from '../abi/Multicall2'
-import { Multicall2__factory } from '../abi/factories/Multicall2__factory'
+import { ERC20__factory } from '../abi/factories/nitro-contracts/build/contracts/@openzeppelin/contracts/token/ERC20'
+import { Multicall2__factory } from '../abi/factories/token-bridge-contracts/build/contracts/contracts/rpc-utils/MulticallV2.sol'
+import { Multicall2 } from '../abi/token-bridge-contracts/build/contracts/contracts/rpc-utils/MulticallV2.sol'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
   isL1Network,
@@ -73,10 +73,10 @@ type DecoderReturnType<
 type AllowanceInputOutput<T> = T extends {
   allowance: { owner: string; spender: string }
 }
-  ? { allowance: BigNumber | undefined }
+  ? { allowance: bigint | undefined }
   : Record<string, never>
 type BalanceInputOutput<T> = T extends { balanceOf: { account: string } }
-  ? { balance: BigNumber | undefined }
+  ? { balance: bigint | undefined }
   : Record<string, never>
 type DecimalsInputOutput<T> = T extends { decimals: true }
   ? { decimals: number | undefined }
@@ -269,8 +269,8 @@ export class MultiCaller {
   ): Promise<
     | { name: string }[]
     | {
-        balance?: BigNumber
-        allowance?: BigNumber
+        balance?: bigint
+        allowance?: bigint
         symbol?: string
         decimals?: number
         name?: string
@@ -297,7 +297,7 @@ export class MultiCaller {
             erc20Iface.decodeFunctionResult(
               'allowance',
               returnData
-            )[0] as BigNumber,
+            )[0] as BigInt,
         })
       }
 
@@ -312,7 +312,7 @@ export class MultiCaller {
             erc20Iface.decodeFunctionResult(
               'balanceOf',
               returnData
-            )[0] as BigNumber,
+            )[0] as BigInt,
         })
       }
 
@@ -372,11 +372,9 @@ export class MultiCaller {
     while (i < res.length) {
       tokens.push({
         allowance: defaultedOptions.allowance
-          ? (res[i++] as BigNumber)
+          ? (res[i++] as BigInt)
           : undefined,
-        balance: defaultedOptions.balanceOf
-          ? (res[i++] as BigNumber)
-          : undefined,
+        balance: defaultedOptions.balanceOf ? (res[i++] as BigInt) : undefined,
         decimals: defaultedOptions.decimals ? (res[i++] as number) : undefined,
         name: defaultedOptions.name ? (res[i++] as string) : undefined,
         symbol: defaultedOptions.symbol ? (res[i++] as string) : undefined,
