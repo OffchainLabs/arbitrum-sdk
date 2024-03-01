@@ -71,6 +71,19 @@
     // we don't use oz/merkle-trees anywhere
     // from @arbitrum/nitro-contracts>@offchainlabs/upgrade-executor>@openzeppelin/contracts-upgradeable
     // from @arbitrum/nitro-contracts>@offchainlabs/upgrade-executor>@openzeppelin/contracts
-    "GHSA-wprv-93r4-jj2p"
+    "GHSA-wprv-93r4-jj2p",
+    // https://github.com/advisories/GHSA-9vx6-7xxf-x967
+    // OpenZeppelin Contracts base64 encoding may read from potentially dirty memory
+    // from: @arbitrum/nitro-contracts>@offchainlabs/upgrade-executor>@openzeppelin/contracts-upgradeable
+    // from: @arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>@offchainlabs/upgrade-executor>@openzeppelin/contracts-upgradeable
+    // from: @arbitrum/nitro-contracts>@openzeppelin/contracts-upgradeable
+    // from: @arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>@openzeppelin/contracts-upgradeable
+    // from: @arbitrum/token-bridge-contracts>@openzeppelin/contracts-upgradeable
+    // from: @arbitrum/nitro-contracts>@offchainlabs/upgrade-executor>@openzeppelin/contracts
+    // from: @arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>@offchainlabs/upgrade-executor>@openzeppelin/contracts
+    // from: @arbitrum/nitro-contracts>@openzeppelin/contracts
+    // from: @arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>@openzeppelin/contracts
+    // from: @arbitrum/token-bridge-contracts>@openzeppelin/contracts
+    "GHSA-9vx6-7xxf-x967"
   ]
 }
