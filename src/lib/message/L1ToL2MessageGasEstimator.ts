@@ -306,14 +306,14 @@ export class L1ToL2MessageGasEstimator {
     })
 
     let retryable: RetryableData | null
+    const res = await l1Provider.call({
+      to: to,
+      data: nullData,
+      value: value,
+      from: from,
+    })
     try {
       // get retryable data from the null call
-      const res = await l1Provider.call({
-        to: to,
-        data: nullData,
-        value: value,
-        from: from,
-      })
       retryable = RetryableDataTools.tryParseError(res)
       if (!isDefined(retryable)) {
         throw new ArbSdkError(`No retryable data found in error: ${res}`)
@@ -324,7 +324,7 @@ export class L1ToL2MessageGasEstimator {
       // behaviour and we dont pick up on it
       retryable = RetryableDataTools.tryParseError(err as Error)
       if (!isDefined(retryable)) {
-        throw new ArbSdkError('No retryable data found in error', err as Error)
+        throw new ArbSdkError(`No retryable data found in error: ${res}`, err as Error)
       }
     }
 
