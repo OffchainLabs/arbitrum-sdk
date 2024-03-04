@@ -1367,7 +1367,9 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
    * @return Information regarding each step of the deposit
    * and `EthDepositStatus.completed` which indicates whether the deposit has fully completed.
    */
-  public async getDepositMessages(params: GetDepositMessagesParams): Promise<EthDepositStatus> {
+  public async getDepositMessages(
+    params: GetDepositMessagesParams
+  ): Promise<EthDepositStatus> {
     await this._checkL1Network(params.l1Provider)
     await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
