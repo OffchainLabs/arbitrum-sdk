@@ -349,18 +349,20 @@ export class L2ToL1MessageReaderClassic extends L2ToL1MessageClassic {
    * WARNING: Outbox entries are only created when the corresponding node is confirmed. Which
    * can take 1 week+, so waiting here could be a very long operation.
    * @param retryDelay
-   * @returns
+   * @returns outbox entry status (either executed or confirmed but not pending)
    */
   public async waitUntilOutboxEntryCreated(
     l2Provider: Provider,
     retryDelay = 500
-  ): Promise<void> {
+  ): Promise<L2ToL1MessageStatus.EXECUTED | L2ToL1MessageStatus.CONFIRMED> {
     const exists = await this.outboxEntryExists(l2Provider)
     if (exists) {
-      return
+      return (await this.hasExecuted(l2Provider))
+        ? L2ToL1MessageStatus.EXECUTED
+        : L2ToL1MessageStatus.CONFIRMED
     } else {
       await wait(retryDelay)
-      await this.waitUntilOutboxEntryCreated(l2Provider, retryDelay)
+      return await this.waitUntilOutboxEntryCreated(l2Provider, retryDelay)
     }
   }
 
