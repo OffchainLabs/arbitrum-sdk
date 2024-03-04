@@ -28,7 +28,10 @@ import {
   skipIfMainnet,
   wait,
 } from '../testHelpers'
-import { L2ToL1Message, L2ToL1MessageStatus } from '../../../src'
+import {
+  L2ToL1Message,
+  ChildToParentMessageStatus as L2ToL1MessageStatus,
+} from '../../../src'
 import { describeOnlyWhenCustomGasToken } from './mochaExtensions'
 
 dotenv.config()

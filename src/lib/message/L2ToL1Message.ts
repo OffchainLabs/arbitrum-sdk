@@ -34,7 +34,7 @@ import {
 } from '../abi/ArbSys'
 import { isDefined } from '../utils/lib'
 import { EventArgs } from '../dataEntities/event'
-import { L2ToL1MessageStatus as ChildToParentMessageStatus } from '../dataEntities/message'
+import { ChildToParentMessageStatus } from '../dataEntities/message'
 import { getChildChain } from '../dataEntities/networks'
 import { ArbSdkError } from '../dataEntities/errors'
 
@@ -250,8 +250,7 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
     childChainProvider: Provider,
     retryDelay = 500
   ): Promise<
-    | ChildToParentChainMessageStatus.EXECUTED
-    | ChildToParentChainMessageStatus.CONFIRMED
+    ChildToParentMessageStatus.EXECUTED | ChildToParentMessageStatus.CONFIRMED
   > {
     if (this.nitroReader)
       return this.nitroReader.waitUntilReadyToExecute(

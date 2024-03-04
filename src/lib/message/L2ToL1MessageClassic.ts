@@ -39,7 +39,7 @@ import {
 import { isDefined, wait } from '../utils/lib'
 import { ArbSdkError } from '../dataEntities/errors'
 import { EventArgs } from '../dataEntities/event'
-import { L2ToL1MessageStatus as ChildToParentMessageStatus } from '../dataEntities/message'
+import { ChildToParentMessageStatus } from '../dataEntities/message'
 import { getChildChain } from '../dataEntities/networks'
 
 export interface MessageBatchProofInfo {

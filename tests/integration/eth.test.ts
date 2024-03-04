@@ -30,7 +30,7 @@ import {
   skipIfMainnet,
 } from './testHelpers'
 import { ChildToParentMessage } from '../../src/lib/message/L2ToL1Message'
-import { L2ToL1MessageStatus } from '../../src/lib/dataEntities/message'
+import { ChildToParentMessageStatus as L2ToL1MessageStatus } from '../../src/lib/dataEntities/message'
 import { L2TransactionReceipt } from '../../src/lib/message/L2Transaction'
 import { ParentToChildMessageStatus } from '../../src/lib/message/L1ToL2Message'
 import { testSetup } from '../../scripts/testSetup'

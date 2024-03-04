@@ -46,7 +46,7 @@ import { ArbitrumProvider } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { EventArgs } from '../dataEntities/event'
-import { L2ToL1MessageStatus as ChildToParentChainMessageStatus } from '../dataEntities/message'
+import { ChildToParentMessageStatus } from '../dataEntities/message'
 
 /**
  * Conditional type for Signer or Provider. If T is of type Provider
@@ -238,12 +238,12 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
    */
   public async status(
     childProvider: Provider
-  ): Promise<ChildToParentChainMessageStatus> {
+  ): Promise<ChildToParentMessageStatus> {
     const { sendRootConfirmed } = await this.getSendProps(childProvider)
-    if (!sendRootConfirmed) return ChildToParentChainMessageStatus.UNCONFIRMED
+    if (!sendRootConfirmed) return ChildToParentMessageStatus.UNCONFIRMED
     return (await this.hasExecuted(childProvider))
-      ? ChildToParentChainMessageStatus.EXECUTED
-      : ChildToParentChainMessageStatus.CONFIRMED
+      ? ChildToParentMessageStatus.EXECUTED
+      : ChildToParentMessageStatus.CONFIRMED
   }
 
   private parseNodeCreatedAssertion(event: FetchedEvent<NodeCreatedEvent>) {
@@ -434,13 +434,12 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
     childProvider: Provider,
     retryDelay = 500
   ): Promise<
-    | ChildToParentChainMessageStatus.EXECUTED
-    | ChildToParentChainMessageStatus.CONFIRMED
+    ChildToParentMessageStatus.EXECUTED | ChildToParentMessageStatus.CONFIRMED
   > {
     const status = await this.status(childProvider)
     if (
-      status === ChildToParentChainMessageStatus.CONFIRMED ||
-      status === ChildToParentChainMessageStatus.EXECUTED
+      status === ChildToParentMessageStatus.CONFIRMED ||
+      status === ChildToParentMessageStatus.EXECUTED
     ) {
       return status
     } else {
@@ -466,11 +465,11 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
     )
 
     const status = await this.status(childProvider)
-    if (status === ChildToParentChainMessageStatus.EXECUTED) return null
-    if (status === ChildToParentChainMessageStatus.CONFIRMED) return null
+    if (status === ChildToParentMessageStatus.EXECUTED) return null
+    if (status === ChildToParentMessageStatus.CONFIRMED) return null
 
     // consistency check in case we change the enum in the future
-    if (status !== ChildToParentChainMessageStatus.UNCONFIRMED)
+    if (status !== ChildToParentMessageStatus.UNCONFIRMED)
       throw new ArbSdkError('ChildToParentChainMsg expected to be unconfirmed')
 
     const latestBlock = await this.parentProvider.getBlockNumber()
@@ -569,9 +568,9 @@ export class ChildToParentChainMessageWriterNitro extends ChildToParentChainMess
     overrides?: Overrides
   ): Promise<ContractTransaction> {
     const status = await this.status(childProvider)
-    if (status !== ChildToParentChainMessageStatus.CONFIRMED) {
+    if (status !== ChildToParentMessageStatus.CONFIRMED) {
       throw new ArbSdkError(
-        `Cannot execute message. Status is: ${status} but must be ${ChildToParentChainMessageStatus.CONFIRMED}.`
+        `Cannot execute message. Status is: ${status} but must be ${ChildToParentMessageStatus.CONFIRMED}.`
       )
     }
     const proof = await this.getOutboxProof(childProvider)
