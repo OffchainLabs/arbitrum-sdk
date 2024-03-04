@@ -157,6 +157,14 @@ export type Erc20DepositRequestParams = {
    */
   l3Provider: Provider
   /**
+   * If the L3 uses a custom fee token, skip payment for L2 to L3 retryable even if the fee token is available on L1
+   *
+   * If payment is skipped, the teleportation will not be completed until the L2 to L3 retryable is manually redeemed
+   *
+   * Defaults to false
+   */
+  skipFeeToken?: boolean
+  /**
    * Optional recipient on L3, defaults to signer's address
    */
   to?: string
@@ -369,16 +377,14 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
   /**
    * If the L3 network uses a custom fee token, return the address of that token on L1.
-   * If the L3 network uses ETH for fees, return undefined.
-   * If the L3 network uses a custom fee token that is not available on L1, return the magic address.
-   * If the L3 network uses a custom fee token that doesn't use 18 decimals on L1 and L2, return the magic address.
+   * If the fee token is not available on L1 or the L3 network uses ETH for fees, return the zero address.
    */
   public async l1FeeTokenAddress(
     l1Provider: Provider,
     l2Provider: Provider
-  ): Promise<string | undefined> {
-    // if the L3 network uses ETH for fees, early return undefined
-    if (!this.l2FeeTokenAddress) return undefined
+  ): Promise<string> {
+    // if the L3 network uses ETH for fees, early return zero
+    if (!this.l2FeeTokenAddress) return ethers.constants.AddressZero
 
     // if we've already fetched the L1 fee token address, early return it
     if (this._l1FeeTokenAddress) return this._l1FeeTokenAddress
@@ -406,7 +412,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       !l1FeeTokenAddress ||
       l1FeeTokenAddress === ethers.constants.AddressZero
     ) {
-      return (this._l1FeeTokenAddress = this.skipL1FeeTokenMagic)
+      return (this._l1FeeTokenAddress = ethers.constants.AddressZero)
     }
 
     // make sure both the L1 and L2 tokens have 18 decimals
@@ -416,7 +422,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         l1Provider
       ).decimals()) !== 18
     ) {
-      return (this._l1FeeTokenAddress = this.skipL1FeeTokenMagic)
+      return (this._l1FeeTokenAddress = ethers.constants.AddressZero)
     }
     if (
       (await ERC20__factory.connect(
@@ -424,7 +430,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         l2Provider
       ).decimals()) !== 18
     ) {
-      return (this._l1FeeTokenAddress = this.skipL1FeeTokenMagic)
+      return (this._l1FeeTokenAddress = ethers.constants.AddressZero)
     }
 
     return (this._l1FeeTokenAddress = l1FeeTokenAddress)
@@ -665,17 +671,30 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     const from =
       'from' in params ? params.from : await params.l1Signer.getAddress()
 
-    const l1FeeToken = await this.l1FeeTokenAddress(
-      l1Provider,
-      params.l2Provider
-    )
+    let l1FeeToken
+    // if the l3 uses eth for fees, set to zero
+    if (!this.l2FeeTokenAddress) {
+      l1FeeToken = ethers.constants.AddressZero
+    }
+    // if the l3 uses custom fee but the user opts to skip payment, set to magic address
+    else if (params.skipFeeToken) {
+      l1FeeToken = this.skipL1FeeTokenMagic
+    }
+    // if the l3 uses custom fee and the user opts to not skip, try to get the token
+    // if the token is unavailable set to magic address
+    else {
+      l1FeeToken = await this.l1FeeTokenAddress(l1Provider, params.l2Provider)
+      if (l1FeeToken === ethers.constants.AddressZero) {
+        l1FeeToken = this.skipL1FeeTokenMagic
+      }
+    }
 
     const partialTeleportParams: OmitTyped<
       IL1Teleporter.TeleportParamsStruct,
       'gasParams'
     > = {
       l1Token: params.erc20L1Address,
-      l3FeeTokenL1Addr: l1FeeToken || ethers.constants.AddressZero,
+      l3FeeTokenL1Addr: l1FeeToken,
       l1l2Router: this.l2Network.tokenBridge.l1GatewayRouter,
       l2l3RouterOrInbox:
         l1FeeToken &&
@@ -902,15 +921,12 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   protected async _getL1L2FeeTokenBridgeGasEstimates(params: {
     l1GasPrice: BigNumber
     feeTokenAmount: BigNumber
+    l3FeeTokenL1Addr: string
     l2ForwarderAddress: string
     l1Provider: Provider
     l2Provider: Provider
   }): Promise<RetryableGasValues> {
-    const l1FeeTokenAddress = await this._l1FeeTokenAddressOrThrow(
-      params.l1Provider,
-      params.l2Provider
-    )
-    if (l1FeeTokenAddress === this.skipL1FeeTokenMagic) {
+    if (params.l3FeeTokenL1Addr === this.skipL1FeeTokenMagic) {
       return {
         gasLimit: BigNumber.from(0),
         maxSubmissionFee: BigNumber.from(0),
@@ -920,9 +936,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       parentProvider: params.l1Provider,
       childProvider: params.l2Provider,
       parentGasPrice: params.l1GasPrice,
-      parentErc20Address: l1FeeTokenAddress,
+      parentErc20Address: params.l3FeeTokenL1Addr,
       parentGatewayAddress: await this.getL1L2GatewayAddress(
-        l1FeeTokenAddress,
+        params.l3FeeTokenL1Addr,
         params.l1Provider
       ),
       from: this.teleporterAddresses.l1Teleporter,
@@ -971,13 +987,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     const teleportationType = this.teleportationType(
       params.partialTeleportParams
     )
-    const l1FeeTokenAddress = await this.l1FeeTokenAddress(
-      params.l1Provider,
-      params.l2Provider
-    )
     if (
       teleportationType === TeleportationType.NonFeeTokenToCustomFee &&
-      l1FeeTokenAddress === this.skipL1FeeTokenMagic
+      params.partialTeleportParams.l3FeeTokenL1Addr === this.skipL1FeeTokenMagic
     ) {
       // we aren't paying for the retryable to L3
       return {
@@ -1089,11 +1101,6 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       )
     }
 
-    const l1FeeTokenAddress = await this.l1FeeTokenAddress(
-      l1Provider,
-      l2Provider
-    )
-
     const l1GasPrice = await applyGasPercentIncrease(
       retryableOverrides.l1GasPrice,
       () => l1Provider.getGasPrice()
@@ -1103,7 +1110,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       () => l2Provider.getGasPrice()
     )
     const l3GasPrice =
-      l1FeeTokenAddress === this.skipL1FeeTokenMagic
+      partialTeleportParams.l3FeeTokenL1Addr === this.skipL1FeeTokenMagic
         ? BigNumber.from(0)
         : await applyGasPercentIncrease(retryableOverrides.l3GasPrice, () =>
             l3Provider.getGasPrice()
@@ -1158,6 +1165,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
             feeTokenAmount: l2l3TokenBridgeGasValues.gasLimit
               .mul(l3GasPrice)
               .add(l2l3TokenBridgeGasValues.maxSubmissionFee),
+            l3FeeTokenL1Addr: partialTeleportParams.l3FeeTokenL1Addr,
             l2ForwarderAddress: fakeRandomL2Forwarder,
             l1Provider,
             l2Provider,

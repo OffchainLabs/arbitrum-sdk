@@ -384,7 +384,7 @@ describe('L1 to L3 Bridging', () => {
     )
 
     itOnlyWhenCustomGasToken(
-      'should return magic value for l1 fee token address when it is unavailable',
+      'should return zero address for l1 fee token address when it is unavailable',
       async () => {
         const networkCopy = JSON.parse(JSON.stringify(l3Network)) as L2Network
         networkCopy.nativeToken = ethers.utils.hexlify(
@@ -395,12 +395,12 @@ describe('L1 to L3 Bridging', () => {
             l1Signer.provider!,
             l2Signer.provider!
           )
-        ).to.eq(l1l3Bridger.skipL1FeeTokenMagic)
+        ).to.eq(ethers.constants.AddressZero)
       }
     )
 
     itOnlyWhenCustomGasToken(
-      'should throw when the fee token does not use 18 decimals on L1 or L2',
+      'should return zero address when the fee token does not use 18 decimals on L1 or L2',
       async () => {
         const hackedL1Provider = new ethers.providers.JsonRpcProvider(
           process.env['ETH_URL']
@@ -432,7 +432,7 @@ describe('L1 to L3 Bridging', () => {
             hackedL1Provider,
             hackedL2Provider
           )
-        ).to.eq(l1l3Bridger.skipL1FeeTokenMagic)
+        ).to.eq(ethers.constants.AddressZero)
 
         // incorrect L1 fee token decimals
         unhackProvider(hackedL2Provider)
@@ -447,7 +447,7 @@ describe('L1 to L3 Bridging', () => {
             hackedL1Provider,
             hackedL2Provider
           )
-        ).to.eq(l1l3Bridger.skipL1FeeTokenMagic)
+        ).to.eq(ethers.constants.AddressZero)
       }
     )
     itOnlyWhenEth('should not have l1 and l2 fee token addresses', async () => {
@@ -458,7 +458,7 @@ describe('L1 to L3 Bridging', () => {
           l1Signer.provider!,
           l2Signer.provider!
         )
-      ).to.be.undefined
+      ).to.eq(ethers.constants.AddressZero)
     })
 
     it('getL2ERC20Address', async () => {
@@ -760,12 +760,6 @@ describe('L1 to L3 Bridging', () => {
     })
 
     itOnlyWhenCustomGasToken('happy path skip fee token', async () => {
-      const networkCopy = JSON.parse(JSON.stringify(l3Network)) as L2Network
-      networkCopy.nativeToken = ethers.utils.hexlify(
-        ethers.utils.randomBytes(20)
-      )
-      const bridger = new Erc20L1L3Bridger(networkCopy)
-
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
 
       const depositParams = {
@@ -775,9 +769,12 @@ describe('L1 to L3 Bridging', () => {
         l1Signer,
         l2Provider: l2Signer.provider!,
         l3Provider,
+        skipFeeToken: true
       }
 
-      const depositTxRequest = await bridger.getDepositRequest(depositParams)
+      const depositTxRequest = await l1l3Bridger.getDepositRequest(depositParams)
+
+      assert(depositTxRequest.feeTokenAmount.eq(0))
 
       const depositTx = await l1l3Bridger.deposit({
         l1Signer,
