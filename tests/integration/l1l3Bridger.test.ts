@@ -270,12 +270,13 @@ describe('L1 to L3 Bridging', () => {
       )
       // getDepositMessages
       await checkNetworkGuards(
-        false,
         true,
         true,
-        async (_l1Signer, l2Signer, l3Signer) => {
+        true,
+        async (l1Signer, l2Signer, l3Signer) => {
           return new EthL1L3Bridger(l3Network).getDepositMessages({
-            l1TxReceipt: '' as any,
+            txReceipt: '' as any,
+            l1Provider: l1Signer.provider!,
             l2Provider: l2Signer.provider!,
             l3Provider: l3Signer.provider!,
           })
@@ -320,7 +321,8 @@ describe('L1 to L3 Bridging', () => {
       // poll status
       await poll(async () => {
         const status = await l1l3Bridger.getDepositMessages({
-          l1TxReceipt: depositReceipt,
+          txReceipt: depositReceipt,
+          l1Provider: l1Signer.provider!,
           l2Provider: l2Signer.provider!,
           l3Provider,
         })

@@ -174,7 +174,7 @@ export type Erc20DepositRequestParams = {
   retryableOverrides?: Erc20DepositRequestRetryableOverrides
 }
 
-export type Erc20DepositMessagesParams = {
+export type GetDepositMessagesParams = {
   l1Provider: Provider
   l2Provider: Provider
   l3Provider: Provider
@@ -760,7 +760,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    * Can provide either the txHash, the tx, or the txReceipt
    */
   public async getDepositMessages(
-    params: Erc20DepositMessagesParams
+    params: GetDepositMessagesParams
   ): Promise<Erc20DepositMessages> {
     await this._checkL1Network(params.l1Provider)
     await this._checkL2Network(params.l2Provider)
@@ -1367,16 +1367,26 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
    * @return Information regarding each step of the deposit
    * and `EthDepositStatus.completed` which indicates whether the deposit has fully completed.
    */
-  public async getDepositMessages(params: {
-    l1TxReceipt: L1ContractCallTransactionReceipt
-    l2Provider: Provider
-    l3Provider: Provider
-  }): Promise<EthDepositStatus> {
+  public async getDepositMessages(params: GetDepositMessagesParams): Promise<EthDepositStatus> {
+    await this._checkL1Network(params.l1Provider)
     await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
 
+    let l1TxReceipt: L1ContractCallTransactionReceipt
+    if ('txHash' in params) {
+      l1TxReceipt = new L1ContractCallTransactionReceipt(
+        await params.l1Provider.getTransactionReceipt(params.txHash)
+      )
+    } else if ('tx' in params) {
+      l1TxReceipt = new L1ContractCallTransactionReceipt(
+        await params.l1Provider.getTransactionReceipt(params.tx.hash)
+      )
+    } else {
+      l1TxReceipt = params.txReceipt
+    }
+
     const l1l2Message = (
-      await params.l1TxReceipt.getL1ToL2Messages(params.l2Provider)
+      await l1TxReceipt.getL1ToL2Messages(params.l2Provider)
     )[0]
     const l1l2Redeem = await l1l2Message.getSuccessfulRedeem()
 
