@@ -769,10 +769,12 @@ describe('L1 to L3 Bridging', () => {
         l1Signer,
         l2Provider: l2Signer.provider!,
         l3Provider,
-        skipFeeToken: true
+        skipFeeToken: true,
       }
 
-      const depositTxRequest = await l1l3Bridger.getDepositRequest(depositParams)
+      const depositTxRequest = await l1l3Bridger.getDepositRequest(
+        depositParams
+      )
 
       assert(depositTxRequest.feeTokenAmount.eq(0))
 
