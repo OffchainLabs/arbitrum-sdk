@@ -18,18 +18,18 @@
 
 import { expect } from 'chai'
 import { providers, utils } from 'ethers'
-import { fundL1, skipIfMainnet } from './testHelpers'
+import { fundL1 as fundParentChain, skipIfMainnet } from './testHelpers'
 import { testSetup } from '../../scripts/testSetup'
-import { L1ToL2MessageCreator } from '../../src/lib/message/L1ToL2MessageCreator'
-import { L1ToL2MessageStatus } from '../../src'
+import { ParentToChildMessageCreator } from '../../src/lib/message/L1ToL2MessageCreator'
+import { ParentToChildMessageStatus } from '../../src/lib/message/L1ToL2Message'
 
 import {
-  fundL1CustomFeeToken,
-  approveL1CustomFeeToken,
-  isL2NetworkWithCustomFeeToken,
+  fundL1CustomFeeToken as fundParentChainCustomFeeToken,
+  approveL1CustomFeeToken as approveParentChainCustomFeeToken,
+  isL2NetworkWithCustomFeeToken as isChildChainWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
 
-describe('L1ToL2MessageCreator', () => {
+describe('ParentToChildMessageCreator', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
@@ -38,23 +38,25 @@ describe('L1ToL2MessageCreator', () => {
   const testAmount = utils.parseEther('0.01')
 
   it('allows the creation of Retryable Tickets sending parameters', async () => {
-    const { l1Signer, l2Signer } = await testSetup()
-    const signerAddress = await l1Signer.getAddress()
-    const arbProvider = l2Signer.provider as providers.Provider
+    const { l1Signer: parentSigner, l2Signer: childSigner } = await testSetup()
+    const signerAddress = await parentSigner.getAddress()
+    const arbProvider = childSigner.provider as providers.Provider
 
-    // Funding L1 wallet
-    await fundL1(l1Signer)
+    // Funding parent chain wallet
+    await fundParentChain(parentSigner)
 
-    if (isL2NetworkWithCustomFeeToken()) {
-      await fundL1CustomFeeToken(l1Signer)
-      await approveL1CustomFeeToken(l1Signer)
+    if (isChildChainWithCustomFeeToken()) {
+      await fundParentChainCustomFeeToken(parentSigner)
+      await approveParentChainCustomFeeToken(parentSigner)
     }
 
     // Instantiate the object
-    const l1ToL2MessageCreator = new L1ToL2MessageCreator(l1Signer)
+    const parentToChildMessageCreator = new ParentToChildMessageCreator(
+      parentSigner
+    )
 
     // Getting balances
-    const initialL2Balance = await l2Signer.getBalance()
+    const initialChildChainBalance = await childSigner.getBalance()
 
     // Define parameters for Retryable
     const retryableTicketParams = {
@@ -66,56 +68,60 @@ describe('L1ToL2MessageCreator', () => {
     }
 
     // And submitting the ticket
-    const l1SubmissionTx = await l1ToL2MessageCreator.createRetryableTicket(
-      retryableTicketParams,
-      arbProvider
-    )
-    const l1SubmissionTxReceipt = await l1SubmissionTx.wait()
+    const parentChainSubmissionTx =
+      await parentToChildMessageCreator.createRetryableTicket(
+        retryableTicketParams,
+        arbProvider
+      )
+    const parentChainSubmissionTxReceipt = await parentChainSubmissionTx.wait()
 
-    // Getting the L1ToL2Message
-    const l1ToL2messages = await l1SubmissionTxReceipt.getL1ToL2Messages(
-      arbProvider
-    )
-    expect(l1ToL2messages.length).to.eq(1)
-    const l1ToL2message = l1ToL2messages[0]
+    // Getting the ParentToChildMessage
+    const parentToChildMessages =
+      await parentChainSubmissionTxReceipt.getL1ToL2Messages(arbProvider)
+    expect(parentToChildMessages.length).to.eq(1)
+    const parentToChildMessage = parentToChildMessages[0]
 
     // And waiting for it to be redeemed
-    const retryableTicketResult = await l1ToL2message.waitForStatus()
-    expect(retryableTicketResult.status).to.eq(L1ToL2MessageStatus.REDEEMED)
+    const retryableTicketResult = await parentToChildMessage.waitForStatus()
+    expect(retryableTicketResult.status).to.eq(
+      ParentToChildMessageStatus.REDEEMED
+    )
 
     // Getting and checking updated balances
-    const finalL2Balance = await l2Signer.getBalance()
+    const finalChildChainBalance = await childSigner.getBalance()
 
     // When sending ETH through retryables, the same address will receive the ETH sent through the callvalue
     // plus any gas that was not used in the operation.
     expect(
-      initialL2Balance.add(testAmount).lt(finalL2Balance),
-      'L2 balance not updated'
+      initialChildChainBalance.add(testAmount).lt(finalChildChainBalance),
+      'Child chain balance not updated'
     ).to.be.true
   })
 
   it('allows the creation of Retryable Tickets sending a request', async () => {
-    const { l1Signer, l2Signer } = await testSetup()
-    const signerAddress = await l1Signer.getAddress()
-    const ethProvider = l1Signer.provider as providers.Provider
-    const arbProvider = l2Signer.provider as providers.Provider
+    const { l1Signer: parentSigner, l2Signer: childSigner } = await testSetup()
+    const signerAddress = await parentSigner.getAddress()
+    const ethProvider = parentSigner.provider as providers.Provider
+    const arbProvider = childSigner.provider as providers.Provider
 
-    // Funding L1 wallet
-    await fundL1(l1Signer)
+    // Funding parent chain wallet
+    await fundParentChain(parentSigner)
 
-    if (isL2NetworkWithCustomFeeToken()) {
-      await fundL1CustomFeeToken(l1Signer)
-      await approveL1CustomFeeToken(l1Signer)
+    if (isChildChainWithCustomFeeToken()) {
+      await fundParentChainCustomFeeToken(parentSigner)
+      await approveParentChainCustomFeeToken(parentSigner)
     }
 
     // Instantiate the object
-    const l1ToL2MessageCreator = new L1ToL2MessageCreator(l1Signer)
+    const parentToChildMessageCreator = new ParentToChildMessageCreator(
+      parentSigner
+    )
 
     // Getting balances
-    const initialL2Balance = await l2Signer.getBalance()
+    const initialChildChainBalance = await childSigner.getBalance()
 
-    // In this case, we will try to send directly an L1ToL2TransactionRequest
-    const l1ToL2TransactionRequestParams = {
+    // In this case, we will try to send directly an ParentToChildTransactionRequest
+    const parentToChildTransactionRequestParams = {
       from: signerAddress,
       to: signerAddress,
       l2CallValue: testAmount,
@@ -123,39 +129,41 @@ describe('L1ToL2MessageCreator', () => {
       data: '0x',
     }
 
-    const l1ToL2TransactionRequest =
-      await L1ToL2MessageCreator.getTicketCreationRequest(
-        l1ToL2TransactionRequestParams,
+    const parentToChildTransactionRequest =
+      await ParentToChildMessageCreator.getTicketCreationRequest(
+        parentToChildTransactionRequestParams,
         ethProvider,
         arbProvider
       )
 
     // And create the retryable ticket
-    const l1SubmissionTx = await l1ToL2MessageCreator.createRetryableTicket(
-      l1ToL2TransactionRequest,
-      arbProvider
-    )
-    const l1SubmissionTxReceipt = await l1SubmissionTx.wait()
+    const parentChainSubmissionTx =
+      await parentToChildMessageCreator.createRetryableTicket(
+        parentToChildTransactionRequest,
+        arbProvider
+      )
+    const parentChainSubmissionTxReceipt = await parentChainSubmissionTx.wait()
 
-    // Getting the L1ToL2Message
-    const l1ToL2messages = await l1SubmissionTxReceipt.getL1ToL2Messages(
-      arbProvider
-    )
-    expect(l1ToL2messages.length).to.eq(1)
-    const l1ToL2message = l1ToL2messages[0]
+    // Getting the ParentToChildMessage
+    const parentToChildMessages =
+      await parentChainSubmissionTxReceipt.getL1ToL2Messages(arbProvider)
+    expect(parentToChildMessages.length).to.eq(1)
+    const parentToChildMessage = parentToChildMessages[0]
 
     // And waiting for it to be redeemed
-    const retryableTicketResult = await l1ToL2message.waitForStatus()
-    expect(retryableTicketResult.status).to.eq(L1ToL2MessageStatus.REDEEMED)
+    const retryableTicketResult = await parentToChildMessage.waitForStatus()
+    expect(retryableTicketResult.status).to.eq(
+      ParentToChildMessageStatus.REDEEMED
+    )
 
     // Getting and checking updated balances
-    const finalL2Balance = await l2Signer.getBalance()
+    const finalChildChainBalance = await childSigner.getBalance()
 
     // When sending ETH through retryables, the same address will receive the ETH sent through the callvalue
     // plus any gas that was not used in the operation.
     expect(
-      initialL2Balance.add(testAmount).lt(finalL2Balance),
-      'L2 balance not updated'
+      initialChildChainBalance.add(testAmount).lt(finalChildChainBalance),
+      'Child chain balance not updated'
     ).to.be.true
   })
 })
