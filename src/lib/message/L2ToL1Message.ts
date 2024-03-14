@@ -34,7 +34,7 @@ import {
 } from '../abi/ArbSys'
 import { isDefined } from '../utils/lib'
 import { EventArgs } from '../dataEntities/event'
-import { L2ToL1MessageStatus as ChildToParentChainMessageStatus } from '../dataEntities/message'
+import { ChildToParentMessageStatus } from '../dataEntities/message'
 import { getChildChain } from '../dataEntities/networks'
 import { ArbSdkError } from '../dataEntities/errors'
 
@@ -160,7 +160,7 @@ export class ChildToParentMessage {
     const logQueries = []
     if (classicFilter.fromBlock !== classicFilter.toBlock) {
       logQueries.push(
-        classic.L2ToL1MessageClassic.getL2ToL1Events(
+        classic.ChildToParentMessageClassic.getChildToParentEvents(
           childChainProvider,
           classicFilter,
           position,
@@ -195,7 +195,7 @@ export class ChildToParentMessage {
  * Provides read-only access for Chain-to-ParentChain-messages
  */
 export class ChildToParentMessageReader extends ChildToParentMessage {
-  private readonly classicReader?: classic.L2ToL1MessageReaderClassic
+  private readonly classicReader?: classic.ChildToParentMessageReaderClassic
   private readonly nitroReader?: nitro.ChildToParentChainMessageReaderNitro
 
   constructor(
@@ -204,7 +204,7 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
   ) {
     super()
     if (this.isClassic(event)) {
-      this.classicReader = new classic.L2ToL1MessageReaderClassic(
+      this.classicReader = new classic.ChildToParentMessageReaderClassic(
         parentChainProvider,
         event.batchNumber,
         event.indexInBatch
@@ -232,7 +232,7 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
    */
   public async status(
     childChainProvider: Provider
-  ): Promise<ChildToParentChainMessageStatus> {
+  ): Promise<ChildToParentMessageStatus> {
     // can we create an ChildToParentmessage here, we need to - the constructor is what we need
     if (this.nitroReader)
       return await this.nitroReader.status(childChainProvider)
@@ -250,8 +250,7 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
     childChainProvider: Provider,
     retryDelay = 500
   ): Promise<
-    | ChildToParentChainMessageStatus.EXECUTED
-    | ChildToParentChainMessageStatus.CONFIRMED
+    ChildToParentMessageStatus.EXECUTED | ChildToParentMessageStatus.CONFIRMED
   > {
     if (this.nitroReader)
       return this.nitroReader.waitUntilReadyToExecute(
@@ -284,7 +283,7 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
  * Provides read and write access for Chain-to-ParentChain-messages
  */
 export class ChildToParentMessageWriter extends ChildToParentMessageReader {
-  private readonly classicWriter?: classic.L2ToL1MessageWriterClassic
+  private readonly classicWriter?: classic.ChildToParentMessageWriterClassic
   private readonly nitroWriter?: nitro.ChildToParentChainMessageWriterNitro
 
   /**
@@ -302,7 +301,7 @@ export class ChildToParentMessageWriter extends ChildToParentMessageReader {
     super(parentChainProvider ?? parentChainSigner.provider!, event)
 
     if (this.isClassic(event)) {
-      this.classicWriter = new classic.L2ToL1MessageWriterClassic(
+      this.classicWriter = new classic.ChildToParentMessageWriterClassic(
         parentChainSigner,
         event.batchNumber,
         event.indexInBatch,

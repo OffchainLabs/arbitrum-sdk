@@ -29,7 +29,7 @@ import { Signer, Wallet } from 'ethers'
 import {
   Erc20Bridger,
   L1ToL2MessageStatus,
-  L2ToL1MessageStatus,
+  ChildToParentMessageStatus as L2ToL1MessageStatus,
 } from '../../src'
 import { L2Network } from '../../src/lib/dataEntities/networks'
 import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
