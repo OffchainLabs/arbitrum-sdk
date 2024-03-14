@@ -14,8 +14,8 @@ import { L1ToL2TransactionRequest as ParentToChildTransactionRequest } from '../
 import { getBaseFee, isDefined } from '../utils/lib'
 import { OmitTyped } from '../utils/types'
 import {
-  L1ToL2MessageGasParams as ParentToChildMessageGasParams,
-  L1ToL2MessageNoGasParams as ParentToChildMessageNoGasParams,
+  ParentToChildMessageGasParams,
+  ParentToChildMessageNoGasParams,
 } from './L1ToL2MessageCreator'
 
 /**
