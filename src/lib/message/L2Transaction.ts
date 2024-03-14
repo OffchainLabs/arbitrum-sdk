@@ -1,4 +1,3 @@
-import { L2TransactionReceipt } from './L2Transaction'
 /*
  * Copyright 2021, Offchain Labs, Inc.
  *
@@ -15,7 +14,7 @@ import { L2TransactionReceipt } from './L2Transaction'
  * limitations under the License.
  */
 /* eslint-env node */
-;('use strict')
+'use strict'
 
 import { TransactionReceipt } from '@ethersproject/providers'
 import { BigNumber } from '@ethersproject/bignumber'
