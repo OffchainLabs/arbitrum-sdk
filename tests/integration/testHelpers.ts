@@ -105,7 +105,9 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   const withdrawRec = await withdrawRes.wait()
   expect(withdrawRec.status).to.equal(1, 'initiate token withdraw txn failed')
 
-  const message = (await withdrawRec.getL2ToL1Messages(params.l1Signer))[0]
+  const message = (
+    await withdrawRec.getChildToParentMessages(params.l1Signer)
+  )[0]
   expect(message, 'withdraw message not found').to.exist
 
   const messageStatus = await message.status(params.l2Signer.provider!)

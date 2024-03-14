@@ -201,7 +201,9 @@ describeOnlyWhenCustomGasToken(
         'initiate withdrawal tx failed'
       )
 
-      const messages = await withdrawalTxReceipt.getL2ToL1Messages(l1Signer)
+      const messages = await withdrawalTxReceipt.getChildToParentMessages(
+        l1Signer
+      )
       expect(messages.length).to.equal(
         1,
         'custom fee token withdraw getWithdrawalsInL2Transaction query came back empty'
