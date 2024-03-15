@@ -90,7 +90,7 @@ When assets are moved by the L1 and L2 cross chain messages are sent. The lifecy
 
 ### Networks
 
-Arbitrum SDK comes pre-configured for Mainnet and Goerli, and their Arbitrum counterparts. However, the networks functionality can be used to register networks for custom Arbitrum instances. Most of the classes in Arbitrum SDK depend on network objects so this must be configured before using other Arbitrum SDK functionality.
+Arbitrum SDK comes pre-configured for Mainnet and Sepolia, and their Arbitrum counterparts. However, the networks functionality can be used to register networks for custom Arbitrum instances. Most of the classes in Arbitrum SDK depend on network objects so this must be configured before using other Arbitrum SDK functionality.
 
 ### Inbox tools
 
@@ -110,9 +110,9 @@ As part of normal operation the Arbitrum sequencer will send messages into the r
 
 3. Once done, finally run `yarn test:integration` to run the integration tests.
 
-Defaults to `Arbitrum Goerli`, for custom network use `--network` flag.
+Defaults to `Arbitrum Sepolia`, for custom network use `--network` flag.
 
-`Arbitrum Goerli` expects env var `ARB_KEY` to be prefunded with at least 0.02 ETH, and env var `INFURA_KEY` to be set.
+`Arbitrum Sepolia` expects env var `ARB_KEY` to be prefunded with at least 0.02 ETH, and env var `INFURA_KEY` to be set.
 (see `integration_test/config.ts`)
 
 ### Bridge A Standard Token
@@ -134,4 +134,4 @@ Required CL params:
 `l1TokenAddress`:string — address of L1 token to be bridged
 
 Ex:
-`yarn bridgeStandardToken --networkID 421611 --l1TokenAddress 0xdf032bc4b9dc2782bb09352007d4c57b75160b15 --amount 3`
+`yarn bridgeStandardToken --networkID 421614 --l1TokenAddress 0xdf032bc4b9dc2782bb09352007d4c57b75160b15 --amount 3`
