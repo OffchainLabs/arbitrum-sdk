@@ -24,6 +24,8 @@ import { Multicall2 } from '../abi/Multicall2'
 import { Multicall2__factory } from '../abi/factories/Multicall2__factory'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
+  isChildChain,
+  isL1Chain,
   isL1Network,
   L1Network,
   l1Networks,
@@ -142,15 +144,17 @@ export class MultiCaller {
     }
 
     let multiCallAddr: string
-    if (isL1Network(network)) {
+    if (isL1Chain(network)) {
       const firstL2 = l2Networks[network.partnerChainIDs[0]]
       if (!firstL2)
         throw new ArbSdkError(
           `No partner chain found l1 network: ${network.chainID} : partner chain ids ${network.partnerChainIDs}`
         )
       multiCallAddr = firstL2.tokenBridge.l1MultiCall
-    } else {
+    } else if (isChildChain(network)) {
       multiCallAddr = network.tokenBridge.l2Multicall
+    } else {
+      throw new ArbSdkError('Cannot be used without token bridge')
     }
 
     return new MultiCaller(provider, multiCallAddr)
