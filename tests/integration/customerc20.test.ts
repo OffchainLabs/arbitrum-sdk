@@ -229,7 +229,9 @@ const registerCustomToken = async (
   const regRec = await regTx.wait()
 
   // wait on messages
-  const l1ToL2Messages = await regRec.getL1ToL2Messages(l2Signer.provider!)
+  const l1ToL2Messages = await regRec.getParentToChildMessages(
+    l2Signer.provider!
+  )
   expect(l1ToL2Messages.length, 'Should be 2 messages.').to.eq(2)
 
   const setTokenTx = await l1ToL2Messages[0].waitForStatus()

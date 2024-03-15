@@ -329,7 +329,7 @@ export const depositToken = async ({
     tokenBalL1Before.sub(depositAmount).toString()
   )
 
-  const waitRes = await depositRec.waitForL2(l2Signer)
+  const waitRes = await depositRec.waitForChildTx(l2Signer)
 
   const ethBalL2After = await l2Signer.provider!.getBalance(
     destinationAddress || senderAddress

@@ -21,13 +21,13 @@ import { Log, Provider } from '@ethersproject/abstract-provider'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
 import {
-  ParentToChildMessage as L1ToL2Message,
-  ParentToChildMessageReaderOrWriter as L1ToL2MessageReaderOrWriter,
-  ParentToChildMessageReader as L1ToL2MessageReader,
-  ParentToChildMessageReaderClassic as L1ToL2MessageReaderClassic,
-  ParentToChildMessageWriter as L1ToL2MessageWriter,
-  ParentToChildMessageStatus as L1ToL2MessageStatus,
-  ParentToChildMessageWaitResult as L1ToL2MessageWaitResult,
+  ParentToChildMessage,
+  ParentToChildMessageReaderOrWriter,
+  ParentToChildMessageReader,
+  ParentToChildMessageReaderClassic,
+  ParentToChildMessageWriter,
+  ParentToChildMessageStatus,
+  ParentToChildMessageWaitResult,
   EthDepositMessage,
   EthDepositMessageWaitResult,
 } from './L1ToL2Message'
@@ -48,18 +48,18 @@ import { isDefined } from '../utils/lib'
 import { SubmitRetryableMessageDataParser } from './messageDataParser'
 import { getL2Network as getChildChain } from '../dataEntities/networks'
 
-export interface L1ContractTransaction<
-  TReceipt extends L1TransactionReceipt = L1TransactionReceipt
+export interface ParentChainContractTransaction<
+  TReceipt extends ParentChainTransactionReceipt = ParentChainTransactionReceipt
 > extends ContractTransaction {
   wait(confirmations?: number): Promise<TReceipt>
 }
 // some helper interfaces to reduce the verbosity elsewhere
-export type L1EthDepositTransaction =
-  L1ContractTransaction<L1EthDepositTransactionReceipt>
-export type L1ContractCallTransaction =
-  L1ContractTransaction<L1ContractCallTransactionReceipt>
+export type ParentChainEthDepositTransaction =
+  ParentChainContractTransaction<ParentChainEthDepositTransactionReceipt>
+export type ParentChainContractCallTransaction =
+  ParentChainContractTransaction<ParentChainContractCallTransactionReceipt>
 
-export class L1TransactionReceipt implements TransactionReceipt {
+export class ParentChainTransactionReceipt implements TransactionReceipt {
   public readonly to: string
   public readonly from: string
   public readonly contractAddress: string
@@ -100,12 +100,14 @@ export class L1TransactionReceipt implements TransactionReceipt {
 
   /**
    * Check if is a classic transaction
-   * @param l2SignerOrProvider
+   * @param childSignerOrProvider
    */
   public async isClassic<T extends SignerOrProvider>(
-    l2SignerOrProvider: T
+    childSignerOrProvider: T
   ): Promise<boolean> {
-    const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
+    const provider = SignerProviderUtils.getProviderOrThrow(
+      childSignerOrProvider
+    )
     const network = await getChildChain(provider)
     return this.blockNumber < network.nitroGenesisL1Block
   }
@@ -177,10 +179,10 @@ export class L1TransactionReceipt implements TransactionReceipt {
 
   /**
    * Get any eth deposit messages created by this transaction
-   * @param l2SignerOrProvider
+   * @param childSignerOrProvider
    */
   public async getEthDeposits(
-    l2Provider: Provider
+    childProvider: Provider
   ): Promise<EthDepositMessage[]> {
     return Promise.all(
       this.getMessageEvents()
@@ -191,7 +193,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
         )
         .map(m =>
           EthDepositMessage.fromEventComponents(
-            l2Provider,
+            childProvider,
             m.inboxMessageEvent.messageNum,
             m.bridgeMessageEvent.sender,
             m.inboxMessageEvent.data
@@ -201,20 +203,20 @@ export class L1TransactionReceipt implements TransactionReceipt {
   }
 
   /**
-   * Get classic l1tol2 messages created by this transaction
-   * @param l2Provider
+   * Get classic parent-to-child messages created by this transaction
+   * @param childProvider
    */
-  public async getL1ToL2MessagesClassic(
-    l2Provider: Provider
-  ): Promise<L1ToL2MessageReaderClassic[]> {
-    const network = await getChildChain(l2Provider)
+  public async getParentToChildMessagesClassic(
+    childProvider: Provider
+  ): Promise<ParentToChildMessageReaderClassic[]> {
+    const network = await getChildChain(childProvider)
     const chainID = network.chainID.toString()
-    const isClassic = await this.isClassic(l2Provider)
+    const isClassic = await this.isClassic(childProvider)
 
     // throw on nitro events
     if (!isClassic) {
       throw new Error(
-        "This method is only for classic transactions. Use 'getL1ToL2Messages' for nitro transactions."
+        "This method is only for classic transactions. Use 'getParentToChildMessages' for nitro transactions."
       )
     }
 
@@ -224,8 +226,8 @@ export class L1TransactionReceipt implements TransactionReceipt {
 
     return messageNums.map(
       messageNum =>
-        new L1ToL2MessageReaderClassic(
-          l2Provider,
+        new ParentToChildMessageReaderClassic(
+          childProvider,
           BigNumber.from(chainID).toNumber(),
           messageNum
         )
@@ -233,16 +235,18 @@ export class L1TransactionReceipt implements TransactionReceipt {
   }
 
   /**
-   * Get any l1tol2 messages created by this transaction
-   * @param l2SignerOrProvider
+   * Get any parent-to-child messages created by this transaction
+   * @param childSignerOrProvider
    */
-  public async getL1ToL2Messages<T extends SignerOrProvider>(
-    l2SignerOrProvider: T
-  ): Promise<L1ToL2MessageReaderOrWriter<T>[]>
-  public async getL1ToL2Messages<T extends SignerOrProvider>(
-    l2SignerOrProvider: T
-  ): Promise<L1ToL2MessageReader[] | L1ToL2MessageWriter[]> {
-    const provider = SignerProviderUtils.getProviderOrThrow(l2SignerOrProvider)
+  public async getParentToChildMessages<T extends SignerOrProvider>(
+    childSignerOrProvider: T
+  ): Promise<ParentToChildMessageReaderOrWriter<T>[]>
+  public async getParentToChildMessages<T extends SignerOrProvider>(
+    childSignerOrProvider: T
+  ): Promise<ParentToChildMessageReader[] | ParentToChildMessageWriter[]> {
+    const provider = SignerProviderUtils.getProviderOrThrow(
+      childSignerOrProvider
+    )
     const network = await getChildChain(provider)
     const chainID = network.chainID.toString()
     const isClassic = await this.isClassic(provider)
@@ -250,7 +254,7 @@ export class L1TransactionReceipt implements TransactionReceipt {
     // throw on classic events
     if (isClassic) {
       throw new Error(
-        "This method is only for nitro transactions. Use 'getL1ToL2MessagesClassic' for classic transactions."
+        "This method is only for nitro transactions. Use 'getParentToChildMessagesClassic' for classic transactions."
       )
     }
 
@@ -269,8 +273,8 @@ export class L1TransactionReceipt implements TransactionReceipt {
           mn.inboxMessageEvent.data
         )
 
-        return L1ToL2Message.fromEventComponents(
-          l2SignerOrProvider,
+        return ParentToChildMessage.fromEventComponents(
+          childSignerOrProvider,
           BigNumber.from(chainID).toNumber(),
           mn.bridgeMessageEvent.sender,
           mn.inboxMessageEvent.messageNum,
@@ -293,70 +297,70 @@ export class L1TransactionReceipt implements TransactionReceipt {
   }
 
   /**
-   * Replaces the wait function with one that returns an L1TransactionReceipt
+   * Replaces the wait function with one that returns an ParentChainTransactionReceipt
    * @param contractTransaction
    * @returns
    */
   public static monkeyPatchWait = (
     contractTransaction: ContractTransaction
-  ): L1ContractTransaction => {
+  ): ParentChainContractTransaction => {
     const wait = contractTransaction.wait
     contractTransaction.wait = async (confirmations?: number) => {
       const result = await wait(confirmations)
-      return new L1TransactionReceipt(result)
+      return new ParentChainTransactionReceipt(result)
     }
-    return contractTransaction as L1ContractTransaction
+    return contractTransaction as ParentChainContractTransaction
   }
 
   /**
-   * Replaces the wait function with one that returns an L1EthDepositTransactionReceipt
+   * Replaces the wait function with one that returns an ParentChainEthDepositTransactionReceipt
    * @param contractTransaction
    * @returns
    */
   public static monkeyPatchEthDepositWait = (
     contractTransaction: ContractTransaction
-  ): L1EthDepositTransaction => {
+  ): ParentChainEthDepositTransaction => {
     const wait = contractTransaction.wait
     contractTransaction.wait = async (confirmations?: number) => {
       const result = await wait(confirmations)
-      return new L1EthDepositTransactionReceipt(result)
+      return new ParentChainEthDepositTransactionReceipt(result)
     }
-    return contractTransaction as L1EthDepositTransaction
+    return contractTransaction as ParentChainEthDepositTransaction
   }
 
   /**
-   * Replaces the wait function with one that returns an L1ContractCallTransactionReceipt
+   * Replaces the wait function with one that returns an ParentChainContractCallTransactionReceipt
    * @param contractTransaction
    * @returns
    */
   public static monkeyPatchContractCallWait = (
     contractTransaction: ContractTransaction
-  ): L1ContractCallTransaction => {
+  ): ParentChainContractCallTransaction => {
     const wait = contractTransaction.wait
     contractTransaction.wait = async (confirmations?: number) => {
       const result = await wait(confirmations)
-      return new L1ContractCallTransactionReceipt(result)
+      return new ParentChainContractCallTransactionReceipt(result)
     }
-    return contractTransaction as L1ContractCallTransaction
+    return contractTransaction as ParentChainContractCallTransaction
   }
 }
 
 /**
- * An L1TransactionReceipt with additional functionality that only exists
+ * An ParentChainTransactionReceipt with additional functionality that only exists
  * if the transaction created a single eth deposit.
  */
-export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
+export class ParentChainEthDepositTransactionReceipt extends ParentChainTransactionReceipt {
   /**
-   * Wait for the funds to arrive on L2
+   * Wait for the funds to arrive on the child chain
    * @param confirmations Amount of confirmations the retryable ticket and the auto redeem receipt should have
    * @param timeout Amount of time to wait for the retryable ticket to be created
-   * Defaults to 15 minutes, as by this time all transactions are expected to be included on L2. Throws on timeout.
-   * @returns The wait result contains `complete`, a `status`, the L1ToL2Message and optionally the `l2TxReceipt`
+   * Defaults to 15 minutes, as by this time all transactions are expected to be included on the child chain. Throws on timeout.
+   * @returns The wait result contains `complete`, a `status`, the ParentToChildMessage and optionally the `childChainTxReceipt`
    * If `complete` is true then this message is in the terminal state.
    * For eth deposits complete this is when the status is FUNDS_DEPOSITED, EXPIRED or REDEEMED.
    */
-  public async waitForL2(
-    l2Provider: Provider,
+  public async waitForChildTx(
+    childProvider: Provider,
     confirmations?: number,
     timeout?: number
   ): Promise<
@@ -365,7 +369,7 @@ export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
       message: EthDepositMessage
     } & EthDepositMessageWaitResult
   > {
-    const message = (await this.getEthDeposits(l2Provider))[0]
+    const message = (await this.getEthDeposits(childProvider))[0]
     if (!message)
       throw new ArbSdkError('Unexpected missing Eth Deposit message.')
     const res = await message.wait(confirmations, timeout)
@@ -379,38 +383,51 @@ export class L1EthDepositTransactionReceipt extends L1TransactionReceipt {
 }
 
 /**
- * An L1TransactionReceipt with additional functionality that only exists
- * if the transaction created a single call to an L2 contract - this includes
+ * An ParentChainTransactionReceipt with additional functionality that only exists
+ * if the transaction created a single call to a child chain contract - this includes
  * token deposits.
  */
-export class L1ContractCallTransactionReceipt extends L1TransactionReceipt {
+export class ParentChainContractCallTransactionReceipt extends ParentChainTransactionReceipt {
   /**
-   * Wait for the transaction to arrive and be executed on L2
+   * Wait for the transaction to arrive and be executed on the child chain
    * @param confirmations Amount of confirmations the retryable ticket and the auto redeem receipt should have
    * @param timeout Amount of time to wait for the retryable ticket to be created
-   * Defaults to 15 minutes, as by this time all transactions are expected to be included on L2. Throws on timeout.
-   * @returns The wait result contains `complete`, a `status`, an L1ToL2Message and optionally the `l2TxReceipt`.
+   * Defaults to 15 minutes, as by this time all transactions are expected to be included on the child chain. Throws on timeout.
+   * @returns The wait result contains `complete`, a `status`, an ParentToChildMessage and optionally the `childChainTxReceipt`.
    * If `complete` is true then this message is in the terminal state.
    * For contract calls this is true only if the status is REDEEMED.
    */
-  public async waitForL2<T extends SignerOrProvider>(
-    l2SignerOrProvider: T,
+  public async waitForChildTx<T extends SignerOrProvider>(
+    childSignerOrProvider: T,
     confirmations?: number,
     timeout?: number
   ): Promise<
     {
       complete: boolean
-      message: L1ToL2MessageReaderOrWriter<T>
-    } & L1ToL2MessageWaitResult
+      message: ParentToChildMessageReaderOrWriter<T>
+    } & ParentToChildMessageWaitResult
   > {
-    const message = (await this.getL1ToL2Messages(l2SignerOrProvider))[0]
-    if (!message) throw new ArbSdkError('Unexpected missing L1ToL2 message.')
+    const message = (
+      await this.getParentToChildMessages(childSignerOrProvider)
+    )[0]
+    if (!message)
+      throw new ArbSdkError('Unexpected missing Parent-to-child message.')
     const res = await message.waitForStatus(confirmations, timeout)
 
     return {
-      complete: res.status === L1ToL2MessageStatus.REDEEMED,
+      complete: res.status === ParentToChildMessageStatus.REDEEMED,
       ...res,
       message,
     }
   }
+}
+
+// TODO: remove when all consumers have been renamed
+export {
+  ParentChainTransactionReceipt as L1TransactionReceipt,
+  ParentChainContractCallTransactionReceipt as L1ContractCallTransactionReceipt,
+  ParentChainEthDepositTransactionReceipt as L1EthDepositTransactionReceipt,
+  ParentChainContractTransaction as L1ContractTransaction,
+  ParentChainEthDepositTransaction as L1EthDepositTransaction,
+  ParentChainContractCallTransaction as L1ContractCallTransaction,
 }
