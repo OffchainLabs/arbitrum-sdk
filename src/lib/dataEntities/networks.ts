@@ -165,15 +165,6 @@ export const networks: Networks = {
     isCustom: false,
     isArbitrum: false,
   },
-  5: {
-    blockTime: 15,
-    chainID: 5,
-    explorerUrl: 'https://goerli.etherscan.io',
-    isCustom: false,
-    name: 'Goerli',
-    partnerChainIDs: [421613],
-    isArbitrum: false,
-  },
   11155111: {
     chainID: 11155111,
     name: 'Sepolia',
@@ -203,48 +194,6 @@ export const networks: Networks = {
      * (Total timeout: 30 minutes)
      */
     depositTimeout: 1800000,
-    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
-  },
-  421613: {
-    chainID: 421613,
-    confirmPeriodBlocks: 20,
-    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
-    ethBridge: {
-      bridge: '0xaf4159A80B6Cc41ED517DB1c453d1Ef5C2e4dB72',
-      inbox: '0x6BEbC4925716945D46F0Ec336D5C2564F419682C',
-      outbox: '0x45Af9Ed1D03703e480CE7d328fB684bb67DA5049',
-      rollup: '0x45e5cAea8768F42B385A366D3551Ad1e0cbFAb17',
-      sequencerInbox: '0x0484A87B144745A2E5b7c359552119B6EA2917A9',
-    },
-    explorerUrl: 'https://goerli.arbiscan.io',
-    isArbitrum: true,
-    isCustom: false,
-    name: 'Arbitrum Rollup Goerli Testnet',
-    partnerChainID: 5,
-    partnerChainIDs: [],
-    tokenBridge: {
-      l1CustomGateway: '0x9fDD1C4E4AA24EEc1d913FABea925594a20d43C7',
-      l1ERC20Gateway: '0x715D99480b77A8d9D603638e593a539E21345FdF',
-      l1GatewayRouter: '0x4c7708168395aEa569453Fc36862D2ffcDaC588c',
-      l1MultiCall: '0xa0A8537a683B49ba4bbE23883d984d4684e0acdD',
-      l1ProxyAdmin: '0x16101A84B00344221E2983190718bFAba30D9CeE',
-      l1Weth: '0xB4FBF271143F4FBf7B91A5ded31805e42b2208d6',
-      l1WethGateway: '0x6e244cD02BBB8a6dbd7F626f05B2ef82151Ab502',
-      l2CustomGateway: '0x8b6990830cF135318f75182487A4D7698549C717',
-      l2ERC20Gateway: '0x2eC7Bc552CE8E51f098325D2FcF0d3b9d3d2A9a2',
-      l2GatewayRouter: '0xE5B9d8d42d656d1DcB8065A6c012FE3780246041',
-      l2Multicall: '0x108B25170319f38DbED14cA9716C54E5D1FF4623',
-      l2ProxyAdmin: '0xeC377B42712608B0356CC54Da81B2be1A4982bAb',
-      l2Weth: '0xe39Ab88f8A4777030A534146A9Ca3B52bd5D43A3',
-      l2WethGateway: '0xf9F2e89c8347BD96742Cc07095dee490e64301d6',
-    },
-    nitroGenesisBlock: 0,
-    nitroGenesisL1Block: 0,
-    /**
-     * Low validator participation on goerli means that it can take a long time to finalise
-     * Wait 10 epochs there on goerli = 320 blocks. Each block is 12 seconds.
-     */
-    depositTimeout: 3960000,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   42170: {
