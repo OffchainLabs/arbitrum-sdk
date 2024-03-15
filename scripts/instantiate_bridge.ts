@@ -37,7 +37,7 @@ dotenv.config()
 const arbKey = process.env['ARB_KEY'] as string
 const ethKey = process.env['ETH_KEY'] as string
 
-const defaultNetworkId = 421613
+const defaultNetworkId = 421614
 
 export const instantiateBridge = (
   l1PkParam?: string,

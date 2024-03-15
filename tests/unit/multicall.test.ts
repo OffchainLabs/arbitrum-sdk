@@ -63,7 +63,7 @@ describe('Multicall', () => {
   }
 
   it('returns parsed data from bytes32', async function () {
-    const { l2Provider } = await createProviderMock(421613)
+    const { l2Provider } = await createProviderMock(421614)
     const multicaller = await MultiCaller.fromProvider(l2Provider)
     const [data] = await multicaller.getTokenData(
       // Maker mainnet address
@@ -80,7 +80,7 @@ describe('Multicall', () => {
   })
 
   it('returns parsed data from byte string', async function () {
-    const { l2Provider } = await createProviderMock(421613)
+    const { l2Provider } = await createProviderMock(421614)
     const multicaller = await MultiCaller.fromProvider(l2Provider)
     const [data] = await multicaller.getTokenData(
       // Uniswap mainnet address
