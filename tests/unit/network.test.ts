@@ -296,7 +296,7 @@ describe('Networks', async () => {
       const l1NetworksEntries = Object.entries(l1Networks)
       const l1NetworksKeys = l1NetworksEntries.map(([key]) => key)
 
-      const expected = [1, 1338, 5, 11155111].map(id => id.toString())
+      const expected = [1, 1338, 11155111].map(id => id.toString())
 
       expect(l1NetworksKeys).to.have.length(expected.length)
       expect(l1NetworksKeys).to.have.members(expected)
