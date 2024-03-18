@@ -129,7 +129,7 @@ describe('Custom ERC20', () => {
     })
   })
 
-  it('deposits erc20 with extra ETH to a specific L2 address', async () => {
+  it('deposits erc20 with extra ETH to a specific child chain address', async () => {
     const randomAddress = Wallet.createRandom().address
     await depositToken({
       depositAmount,

@@ -74,11 +74,14 @@ export async function getL1CustomFeeTokenAllowance(
 
 export async function approveL1CustomFeeTokenForErc20Deposit(
   l1Signer: Signer,
-  erc20L1Address: string
+  erc20ParentAddress: string
 ) {
   const erc20Bridger = await Erc20Bridger.fromProvider(arbProvider())
 
-  const tx = await erc20Bridger.approveGasToken({ erc20L1Address, l1Signer })
+  const tx = await erc20Bridger.approveGasToken({
+    erc20ParentAddress: erc20ParentAddress,
+    l1Signer,
+  })
   await tx.wait()
 }
 

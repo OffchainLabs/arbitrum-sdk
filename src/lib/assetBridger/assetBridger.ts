@@ -22,8 +22,8 @@ import { L1ContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'
 
 import {
-  L1Network,
-  L2Network,
+  ParentChain,
+  ChildChain,
   getParentForNetwork,
 } from '../dataEntities/networks'
 import {
@@ -32,13 +32,13 @@ import {
 } from '../dataEntities/signerOrProvider'
 
 /**
- * Base for bridging assets from l1 to l2 and back
+ * Base for bridging assets from parent-to-child and back
  */
 export abstract class AssetBridger<DepositParams, WithdrawParams> {
   /**
    * Parent chain for the given Arbitrum chain, can be an L1 or an L2
    */
-  public readonly l1Network: L1Network | L2Network
+  public readonly parentChain: ParentChain | ChildChain
 
   /**
    * In case of a chain that uses ETH as its native/gas token, this is either `undefined` or the zero address
@@ -47,25 +47,25 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    */
   public readonly nativeToken?: string
 
-  public constructor(public readonly l2Network: L2Network) {
-    this.l1Network = getParentForNetwork(l2Network)
-    this.nativeToken = l2Network.nativeToken
+  public constructor(public readonly childChain: ChildChain) {
+    this.parentChain = getParentForNetwork(childChain)
+    this.nativeToken = childChain.nativeToken
   }
 
   /**
-   * Check the signer/provider matches the l1Network, throws if not
+   * Check the signer/provider matches the parentChain, throws if not
    * @param sop
    */
-  protected async checkL1Network(sop: SignerOrProvider): Promise<void> {
-    await SignerProviderUtils.checkNetworkMatches(sop, this.l1Network.chainID)
+  protected async checkParentChain(sop: SignerOrProvider): Promise<void> {
+    await SignerProviderUtils.checkNetworkMatches(sop, this.parentChain.chainID)
   }
 
   /**
-   * Check the signer/provider matches the l2Network, throws if not
+   * Check the signer/provider matches the childChain, throws if not
    * @param sop
    */
-  protected async checkL2Network(sop: SignerOrProvider): Promise<void> {
-    await SignerProviderUtils.checkNetworkMatches(sop, this.l2Network.chainID)
+  protected async checkChildChain(sop: SignerOrProvider): Promise<void> {
+    await SignerProviderUtils.checkNetworkMatches(sop, this.childChain.chainID)
   }
 
   /**
@@ -77,13 +77,13 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   }
 
   /**
-   * Transfer assets from L1 to L2
+   * Transfer assets from parent-to-child
    * @param params
    */
   public abstract deposit(params: DepositParams): Promise<L1ContractTransaction>
 
   /**
-   * Transfer assets from L2 to L1
+   * Transfer assets from child-to-parent
    * @param params
    */
   public abstract withdraw(

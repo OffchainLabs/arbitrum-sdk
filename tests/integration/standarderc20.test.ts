@@ -103,7 +103,7 @@ describe('standard ERC20', () => {
 
       const tx = await erc20Bridger.approveGasToken({
         l1Signer: l1Signer,
-        erc20L1Address: testState.l1Token.address,
+        erc20ParentAddress: testState.l1Token.address,
       })
       await tx.wait()
 
@@ -271,7 +271,7 @@ describe('standard ERC20', () => {
       testState.l1Token.address,
       testState.l1Signer.provider!
     )
-    const l2Token = testState.erc20Bridger.getL2TokenContract(
+    const l2Token = testState.erc20Bridger.getChildTokenContract(
       testState.l2Signer.provider!,
       l2TokenAddr
     )
@@ -309,7 +309,7 @@ describe('standard ERC20', () => {
     })
   })
 
-  it('deposits erc20 with extra ETH to a specific L2 address', async () => {
+  it('deposits erc20 with extra ETH to a specific child chain address', async () => {
     const randomAddress = Wallet.createRandom().address
     await depositToken({
       depositAmount,
