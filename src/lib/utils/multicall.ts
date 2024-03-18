@@ -26,7 +26,6 @@ import { ArbSdkError } from '../dataEntities/errors'
 import {
   isChildChain,
   isL1Chain,
-  isL1Network,
   L1Network,
   l1Networks,
   L2Network,
