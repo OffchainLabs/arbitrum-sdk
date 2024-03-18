@@ -1,4 +1,3 @@
-import { isArbitrumChain } from './../utils/lib'
 /*
  * Copyright 2021, Offchain Labs, Inc.
  *
@@ -505,7 +504,7 @@ export const getChain = async (
   }
 
   if (!network) {
-    throw new ArbSdkError(`Unrecognized network ${chainID}.`)
+    throw new ArbSdkError(`Unrecognized chain ${chainID}.`)
   }
 
   return network
@@ -587,7 +586,7 @@ const addChain = (network: ParentChain | ChildChain) => {
 
     if (!parent) {
       throw new ArbSdkError(
-        `Network ${network.chainID}'s parent network ${network.partnerChainID} is not recognized`
+        `Chain ${network.chainID}'s parent chain ${network.partnerChainID} is not recognized`
       )
     }
 
@@ -614,18 +613,16 @@ export const addCustomChain = ({
   if (customL1Network) {
     if (customL1Network.chainID !== customL2Network.partnerChainID) {
       throw new ArbSdkError(
-        `Partner chain id for L2 network ${customL2Network.chainID} doesn't match the provided L1 network. Expected ${customL1Network.chainID} but got ${customL2Network.partnerChainID}.`
+        `Partner chain id for parent chain ${customL2Network.chainID} doesn't match the provided L1 chain. Expected ${customL1Network.chainID} but got ${customL2Network.partnerChainID}.`
       )
     }
 
     // check the if the parent chain is in any of the lists
     if (parentChains[customL1Network.chainID]) {
-      throw new ArbSdkError(
-        `Network ${customL1Network.chainID} already included`
-      )
+      throw new ArbSdkError(`Chain ${customL1Network.chainID} already included`)
     } else if (!customL1Network.isCustom) {
       throw new ArbSdkError(
-        `Custom network ${customL1Network.chainID} must have isCustom flag set to true`
+        `Custom chain ${customL1Network.chainID} must have isCustom flag set to true`
       )
     }
 
@@ -633,10 +630,10 @@ export const addCustomChain = ({
   }
 
   if (childChains[customL2Network.chainID]) {
-    throw new ArbSdkError(`Network ${customL2Network.chainID} already included`)
+    throw new ArbSdkError(`Chain ${customL2Network.chainID} already included`)
   } else if (!customL2Network.isCustom) {
     throw new ArbSdkError(
-      `Custom network ${customL2Network.chainID} must have isCustom flag set to true`
+      `Custom chain ${customL2Network.chainID} must have isCustom flag set to true`
     )
   }
 
@@ -644,7 +641,7 @@ export const addCustomChain = ({
 }
 
 /**
- * Registers a custom network that matches the one created by a Nitro local node. Useful in development.
+ * Registers a custom chain that matches the one created by a Nitro local node. Useful in development.
  *
  * @see {@link https://github.com/OffchainLabs/nitro}
  */
@@ -713,7 +710,7 @@ export const addDefaultLocalNetwork = (): {
 }
 
 /**
- * Creates a function that resets the networks index to default. Useful in development.
+ * Creates a function that resets the chains index to default. Useful in development.
  */
 const createNetworkStateHandler = () => {
   const initialState = JSON.parse(JSON.stringify(chains))
