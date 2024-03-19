@@ -110,7 +110,7 @@ export const setGateWays = async (
   }
 
   console.log('redeeming retryable ticket:')
-  const l2Tx = (await rec.getL1ToL2Messages(l2Signer))[0]
+  const l2Tx = (await rec.getParentToChildMessages(l2Signer))[0]
   if (!l2Tx) throw new Error('No l1 to l2 message found.')
   const messageRes = await l2Tx.waitForStatus()
   if (messageRes.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
@@ -128,7 +128,7 @@ export const checkRetryableStatus = async (l1Hash: string): Promise<void> => {
   const l2Provider = l2Signer.provider!
   const rec = await l1Provider.getTransactionReceipt(l1Hash)
   if (!rec) throw new Error('L1 tx not found!')
-  const messages = await new L1TransactionReceipt(rec).getL1ToL2Messages(
+  const messages = await new L1TransactionReceipt(rec).getParentToChildMessages(
     l2Provider
   )
 

@@ -77,7 +77,7 @@ describe('ParentToChildMessageCreator', () => {
 
     // Getting the ParentToChildMessage
     const parentToChildMessages =
-      await parentChainSubmissionTxReceipt.getL1ToL2Messages(arbProvider)
+      await parentChainSubmissionTxReceipt.getParentToChildMessages(arbProvider)
     expect(parentToChildMessages.length).to.eq(1)
     const parentToChildMessage = parentToChildMessages[0]
 
@@ -146,7 +146,7 @@ describe('ParentToChildMessageCreator', () => {
 
     // Getting the ParentToChildMessage
     const parentToChildMessages =
-      await parentChainSubmissionTxReceipt.getL1ToL2Messages(arbProvider)
+      await parentChainSubmissionTxReceipt.getParentToChildMessages(arbProvider)
     expect(parentToChildMessages.length).to.eq(1)
     const parentToChildMessage = parentToChildMessages[0]
 
