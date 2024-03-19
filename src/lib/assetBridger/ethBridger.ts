@@ -117,10 +117,6 @@ export type EthDepositParams = {
 
 export type EthDepositToParams = EthDepositParams & {
   /**
-   * An L1 provider
-   */
-  l1Provider: Provider
-  /**
    * An L2 provider
    */
   l2Provider: Provider
@@ -306,6 +302,12 @@ export class EthBridger extends AssetBridger<
     await this.checkL1Network(params.l1Signer)
     await this.checkL2Network(params.l2Provider)
 
+    const l1Provider = params.l1Signer.provider
+
+    if (!l1Provider) {
+      throw new Error('l1Provider not found')
+    }
+
     const inbox = Inbox__factory.connect(
       this.l2Network.ethBridge.inbox,
       params.l2Provider
@@ -327,8 +329,8 @@ export class EthBridger extends AssetBridger<
         callValueRefundAddress: params.destinationAddress,
         data: '0x',
       },
-      await getBaseFee(params.l1Provider),
-      params.l1Provider,
+      await getBaseFee(l1Provider),
+      l1Provider,
       params.retryableGasOverrides
     )
 
