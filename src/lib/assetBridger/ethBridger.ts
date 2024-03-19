@@ -297,7 +297,9 @@ export class EthBridger extends AssetBridger<
    * @returns
    */
   public async depositTo(
-    params: EthDepositToParams
+    params:
+      | EthDepositToParams
+      | (L1ToL2TxReqAndSigner & { l2Provider: Provider })
   ): Promise<L1ContractCallTransaction> {
     await this.checkL1Network(params.l1Signer)
     await this.checkL2Network(params.l2Provider)
@@ -320,32 +322,55 @@ export class EthBridger extends AssetBridger<
       params.l2Provider
     )
 
+    const destinationAddress = isL1ToL2TransactionRequest(params)
+      ? params.txRequest.to
+      : params.destinationAddress
+
+    const amount = isL1ToL2TransactionRequest(params)
+      ? BigNumber.from(params.txRequest.value)
+      : params.amount
+
+    const gasOverrides = isL1ToL2TransactionRequest(params)
+      ? {
+          gasLimit: {
+            base: params.overrides?.gasLimit
+              ? BigNumber.from(params.overrides.gasLimit)
+              : undefined,
+          },
+          maxFeePerGas: {
+            base: params.overrides?.maxFeePerGas
+              ? BigNumber.from(params.overrides.maxFeePerGas)
+              : undefined,
+          },
+        }
+      : params.retryableGasOverrides
+
     const gasEstimation = await l1ToL2MessageGasEstimator.estimateAll(
       {
         from: signerAliasedAddress.value,
-        to: params.destinationAddress,
-        l2CallValue: params.amount,
-        excessFeeRefundAddress: params.destinationAddress,
-        callValueRefundAddress: params.destinationAddress,
+        to: destinationAddress,
+        l2CallValue: amount,
+        excessFeeRefundAddress: destinationAddress,
+        callValueRefundAddress: destinationAddress,
         data: '0x',
       },
       await getBaseFee(l1Provider),
       l1Provider,
-      params.retryableGasOverrides
+      gasOverrides
     )
 
     const tx = await inbox.connect(params.l1Signer).createRetryableTicket(
-      params.destinationAddress, // to,
-      params.amount, // l2CallValue
+      destinationAddress, // to,
+      amount, // l2CallValue
       gasEstimation.maxSubmissionCost, // maxSubmissionCost
-      params.destinationAddress, // excessFeeRefundAddress
-      params.destinationAddress, // callValueRefundAddress
+      destinationAddress, // excessFeeRefundAddress
+      destinationAddress, // callValueRefundAddress
       gasEstimation.gasLimit, // maxLimit
       gasEstimation.maxFeePerGas, // maxFeePerGas
       '0x', // data,
       {
         from: signerAddress.value,
-        value: params.amount,
+        value: amount,
       }
     )
 

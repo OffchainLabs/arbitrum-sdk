@@ -158,7 +158,6 @@ describe('Ether', async () => {
       amount: ethToDeposit,
       l1Signer: l1Signer,
       destinationAddress: destWallet.address,
-      l1Provider: l1Signer.provider!,
       l2Provider: l2Signer.provider!,
     })
     const rec = await res.wait()
