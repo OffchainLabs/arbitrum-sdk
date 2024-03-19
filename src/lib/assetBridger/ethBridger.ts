@@ -332,7 +332,7 @@ export class EthBridger extends AssetBridger<
       params.retryableGasOverrides
     )
 
-    const tx = await inbox.connect(params.l1Signer).unsafeCreateRetryableTicket(
+    const tx = await inbox.connect(params.l1Signer).createRetryableTicket(
       params.destinationAddress, // to,
       params.amount, // l2CallValue
       gasEstimation.maxSubmissionCost, // maxSubmissionCost
