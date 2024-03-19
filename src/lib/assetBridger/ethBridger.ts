@@ -149,20 +149,6 @@ type EthDepositRequestParams = OmitTyped<
   'overrides' | 'l1Signer'
 > & { from: string }
 
-type EthDepositToRequestParams = OmitTyped<
-  EthDepositToParams,
-  'overrides' | 'l1Signer'
-> & {
-  /**
-   * The L1 provider
-   */
-  l1Provider: Provider
-  /**
-   * Address that is depositing the ETH
-   */
-  from: string
-}
-
 /**
  * Bridger for moving ETH back and forth between L1 to L2
  */
