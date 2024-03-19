@@ -35,7 +35,7 @@ import {
   L2ContractTransaction,
   L2TransactionReceipt,
 } from '../message/L2Transaction'
-import { L1ToL2MessageCreator } from '../message/L1ToL2MessageCreator'
+import { L1ToL2MessageGasEstimator } from '../message/L1ToL2MessageGasEstimator'
 import { GasOverrides } from '../message/L1ToL2MessageGasEstimator'
 import {
   isL1ToL2TransactionRequest,
@@ -48,7 +48,8 @@ import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getL2Network } from '../dataEntities/networks'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
-import { isArbitrumChain } from '../utils/lib'
+import { isArbitrumChain, getBaseFee } from '../utils/lib'
+import { Address } from '../dataEntities/address'
 
 export type ApproveGasTokenParams = {
   /**
@@ -115,6 +116,10 @@ export type EthDepositParams = {
 }
 
 export type EthDepositToParams = EthDepositParams & {
+  /**
+   * An L1 provider
+   */
+  l1Provider: Provider
   /**
    * An L2 provider
    */
@@ -305,57 +310,56 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Get a transaction request for an ETH deposit to a different L2 address using Retryables
-   * @param params
-   * @returns
-   */
-  public async getDepositToRequest(
-    params: EthDepositToRequestParams
-  ): Promise<L1ToL2TransactionRequest> {
-    const requestParams = {
-      ...params,
-      to: params.destinationAddress,
-      l2CallValue: params.amount,
-      callValueRefundAddress: params.destinationAddress,
-      data: '0x',
-    }
-
-    // Gas overrides can be passed in the parameters
-    const gasOverrides = params.retryableGasOverrides || undefined
-
-    return L1ToL2MessageCreator.getTicketCreationRequest(
-      requestParams,
-      params.l1Provider,
-      params.l2Provider,
-      gasOverrides
-    )
-  }
-
-  /**
    * Deposit ETH from L1 onto a different L2 address
    * @param params
    * @returns
    */
   public async depositTo(
-    params:
-      | EthDepositToParams
-      | (L1ToL2TxReqAndSigner & { l2Provider: Provider })
+    params: EthDepositToParams
   ): Promise<L1ContractCallTransaction> {
     await this.checkL1Network(params.l1Signer)
     await this.checkL2Network(params.l2Provider)
 
-    const retryableTicketRequest = isL1ToL2TransactionRequest(params)
-      ? params
-      : await this.getDepositToRequest({
-          ...params,
-          from: await params.l1Signer.getAddress(),
-          l1Provider: params.l1Signer.provider!,
-        })
+    const inbox = Inbox__factory.connect(
+      this.l2Network.ethBridge.inbox,
+      params.l2Provider
+    )
 
-    const tx = await params.l1Signer.sendTransaction({
-      ...retryableTicketRequest.txRequest,
-      ...params.overrides,
-    })
+    const signerAddress = new Address(await params.l1Signer.getAddress())
+    const signerAliasedAddress = signerAddress.applyAlias()
+
+    const l1ToL2MessageGasEstimator = new L1ToL2MessageGasEstimator(
+      params.l2Provider
+    )
+
+    const gasEstimation = await l1ToL2MessageGasEstimator.estimateAll(
+      {
+        from: signerAliasedAddress.value,
+        to: params.destinationAddress,
+        l2CallValue: params.amount,
+        excessFeeRefundAddress: params.destinationAddress,
+        callValueRefundAddress: params.destinationAddress,
+        data: '0x',
+      },
+      await getBaseFee(params.l1Provider),
+      params.l1Provider,
+      params.retryableGasOverrides
+    )
+
+    const tx = await inbox.connect(params.l1Signer).unsafeCreateRetryableTicket(
+      params.destinationAddress, // to,
+      params.amount, // l2CallValue
+      gasEstimation.maxSubmissionCost, // maxSubmissionCost
+      params.destinationAddress, // excessFeeRefundAddress
+      params.destinationAddress, // callValueRefundAddress
+      gasEstimation.gasLimit, // maxLimit
+      gasEstimation.maxFeePerGas, // maxFeePerGas
+      '0x', // data,
+      {
+        from: signerAddress.value,
+        value: params.amount,
+      }
+    )
 
     return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
   }
