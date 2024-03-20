@@ -350,7 +350,7 @@ export class EthBridger extends AssetBridger<
         from: signerAliasedAddress.value,
         to: destinationAddress,
         l2CallValue: amount,
-        excessFeeRefundAddress: destinationAddress,
+        excessFeeRefundAddress: signerAddress.value,
         callValueRefundAddress: destinationAddress,
         data: '0x',
       },
@@ -363,7 +363,7 @@ export class EthBridger extends AssetBridger<
       destinationAddress, // to,
       amount, // l2CallValue
       gasEstimation.maxSubmissionCost, // maxSubmissionCost
-      destinationAddress, // excessFeeRefundAddress
+      signerAddress.value, // excessFeeRefundAddress
       destinationAddress, // callValueRefundAddress
       gasEstimation.gasLimit, // maxLimit
       gasEstimation.maxFeePerGas, // maxFeePerGas
