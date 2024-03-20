@@ -206,9 +206,7 @@ describe('Ether', async () => {
     const testWalletL2EthBalance = await l2Signer.provider!.getBalance(
       destWallet.address
     )
-    expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(
-      ethToDeposit.toString()
-    )
+    expect(testWalletL2EthBalance.gte(ethToDeposit), 'final balance').to.be.true
   })
 
   it('withdraw Ether transaction succeeds', async () => {
