@@ -177,7 +177,7 @@ export const networks: Networks = {
   17000: {
     chainID: 17000,
     name: 'Holesky',
-    explorerUrl: 'https://holesky.beaconcha.in',
+    explorerUrl: 'https://holesky.etherscan.io',
     partnerChainIDs: [],
     blockTime: 12,
     isCustom: false,
