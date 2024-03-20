@@ -370,7 +370,7 @@ export class EthBridger extends AssetBridger<
       '0x', // data,
       {
         from: signerAddress.value,
-        value: amount,
+        value: gasEstimation.deposit,
       }
     )
 
