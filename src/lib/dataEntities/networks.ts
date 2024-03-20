@@ -174,6 +174,15 @@ export const networks: Networks = {
     isCustom: false,
     isArbitrum: false,
   },
+  17000: {
+    chainID: 17000,
+    name: 'Holesky',
+    explorerUrl: 'https://holesky.etherscan.io',
+    partnerChainIDs: [],
+    blockTime: 12,
+    isCustom: false,
+    isArbitrum: false,
+  },
   42161: {
     chainID: 42161,
     name: 'Arbitrum One',
