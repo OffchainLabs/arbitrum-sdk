@@ -436,7 +436,7 @@ export const skipIfMainnet = (() => {
   let chainId: number
   return async (testContext: Mocha.Context) => {
     if (!chainId) {
-      const { l1Network } = await testSetup()
+      const { parentChain: l1Network } = await testSetup()
       chainId = l1Network.chainID
     }
     if (chainId === 1) {

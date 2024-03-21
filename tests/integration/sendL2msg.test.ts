@@ -19,21 +19,21 @@
 
 import { BigNumber, ethers, Signer } from 'ethers'
 import { InboxTools } from '../../src/lib/inbox/inbox'
-import { getL2Network, L2Network } from '../../src/lib/dataEntities/networks'
+import { getChildChain, ChildChain } from '../../src/lib/dataEntities/networks'
 import { testSetup } from '../../scripts/testSetup'
 import { greeter } from './helper/greeter'
 import { expect } from 'chai'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 
 const sendSignedTx = async (testState: any, info?: any) => {
-  const { l1Deployer, l2Deployer } = testState
-  const l2Network = await getL2Network(await l2Deployer.getChainId())
-  const inbox = new InboxTools(l1Deployer, l2Network)
+  const { parentDeployer, childDeployer } = testState
+  const childChain = await getChildChain(await childDeployer.getChainId())
+  const inbox = new InboxTools(parentDeployer, childChain)
   const message = {
     ...info,
     value: BigNumber.from(0),
   }
-  const signedTx = await inbox.signChildChainTx(message, l2Deployer)
+  const signedTx = await inbox.signChildChainTx(message, childDeployer)
 
   const l1Tx = await inbox.sendChildChainSignedTx(signedTx)
   return {
@@ -45,10 +45,10 @@ const sendSignedTx = async (testState: any, info?: any) => {
 describe('Send signedTx to l2 using inbox', async () => {
   // test globals
   let testState: {
-    l1Deployer: Signer
-    l2Deployer: Signer
+    parentDeployer: Signer
+    childDeployer: Signer
     adminErc20Bridger: AdminErc20Bridger
-    l2Network: L2Network
+    childChain: ChildChain
   }
 
   before('init', async () => {
@@ -56,11 +56,11 @@ describe('Send signedTx to l2 using inbox', async () => {
   })
 
   it('can deploy contract', async () => {
-    const l2Deployer = testState.l2Deployer
+    const childDeployer = testState.childDeployer
     const Greeter = new ethers.ContractFactory(
       greeter.abi,
       greeter.bytecode
-    ).connect(l2Deployer)
+    ).connect(childDeployer)
 
     const info = {
       value: BigNumber.from(0),
@@ -74,7 +74,9 @@ describe('Send signedTx to l2 using inbox', async () => {
     expect(l1Status).to.equal(1, 'l1 txn failed')
     const l2Tx = ethers.utils.parseTransaction(signedMsg)
     const l2Txhash = l2Tx.hash!
-    const l2TxReceipt = await l2Deployer.provider!.waitForTransaction(l2Txhash)
+    const l2TxReceipt = await childDeployer.provider!.waitForTransaction(
+      l2Txhash
+    )
     const l2Status = l2TxReceipt.status
     expect(l2Status).to.equal(1, 'l2 txn failed')
     const contractAddress = ethers.ContractFactory.getContractAddress({
@@ -87,10 +89,10 @@ describe('Send signedTx to l2 using inbox', async () => {
   })
 
   it('should confirm the same tx on l2', async () => {
-    const l2Deployer = testState.l2Deployer
+    const childDeployer = testState.childDeployer
     const info = {
       data: '0x12',
-      to: await l2Deployer.getAddress(),
+      to: await childDeployer.getAddress(),
     }
     const { signedMsg, l1TransactionReceipt } = await sendSignedTx(
       testState,
@@ -99,19 +101,21 @@ describe('Send signedTx to l2 using inbox', async () => {
     const l1Status = l1TransactionReceipt?.status
     expect(l1Status).to.equal(1)
     const l2Txhash = ethers.utils.parseTransaction(signedMsg).hash!
-    const l2TxReceipt = await l2Deployer.provider!.waitForTransaction(l2Txhash)
+    const l2TxReceipt = await childDeployer.provider!.waitForTransaction(
+      l2Txhash
+    )
     const l2Status = l2TxReceipt.status
     expect(l2Status).to.equal(1)
   })
 
   it('send two tx share the same nonce but with different gas price, should confirm the one which gas price higher than l2 base price', async () => {
-    const l2Deployer = testState.l2Deployer
-    const currentNonce = await l2Deployer.getTransactionCount()
+    const childDeployer = testState.childDeployer
+    const currentNonce = await childDeployer.getTransactionCount()
 
     const lowFeeInfo = {
       data: '0x12',
       nonce: currentNonce,
-      to: await l2Deployer.getAddress(),
+      to: await childDeployer.getAddress(),
       maxFeePerGas: BigNumber.from(10000000), //0.01gwei
       maxPriorityFeePerGas: BigNumber.from(1000000), //0.001gwei
     }
@@ -120,7 +124,7 @@ describe('Send signedTx to l2 using inbox', async () => {
     expect(lowFeeL1Status).to.equal(1)
     const info = {
       data: '0x12',
-      to: await l2Deployer.getAddress(),
+      to: await childDeployer.getAddress(),
       nonce: currentNonce,
     }
     const enoughFeeTx = await sendSignedTx(testState, info)
@@ -132,12 +136,13 @@ describe('Send signedTx to l2 using inbox', async () => {
       enoughFeeTx.signedMsg
     ).hash!
 
-    const l2TEnoughFeeReceipt = await l2Deployer.provider!.waitForTransaction(
-      l2EnoughFeeTxhash
-    )
+    const l2TEnoughFeeReceipt =
+      await childDeployer.provider!.waitForTransaction(l2EnoughFeeTxhash)
     const l2Status = l2TEnoughFeeReceipt.status
     expect(l2Status).to.equal(1)
-    const res = await l2Deployer.provider?.getTransactionReceipt(l2LowFeeTxhash)
+    const res = await childDeployer.provider?.getTransactionReceipt(
+      l2LowFeeTxhash
+    )
     expect(res).to.be.null
   })
 })

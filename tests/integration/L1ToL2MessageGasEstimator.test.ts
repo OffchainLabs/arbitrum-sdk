@@ -35,13 +35,13 @@ describe('L1ToL2MessageGasEstimator', () => {
   itOnlyWhenEth(
     `"estimateSubmissionFee" returns non-0 for eth chain`,
     async () => {
-      const { l1Provider, l2Provider } = await testSetup()
+      const { parentProvider, childProvider } = await testSetup()
 
       const submissionFee = await new L1ToL2MessageGasEstimator(
-        l2Provider
+        childProvider
       ).estimateSubmissionFee(
-        l1Provider,
-        await l1Provider.getGasPrice(),
+        parentProvider,
+        await parentProvider.getGasPrice(),
         123456
       )
 
@@ -52,13 +52,13 @@ describe('L1ToL2MessageGasEstimator', () => {
   itOnlyWhenCustomGasToken(
     `"estimateSubmissionFee" returns 0 for custom gas token chain`,
     async () => {
-      const { l1Provider, l2Provider } = await testSetup()
+      const { parentProvider, childProvider } = await testSetup()
 
       const submissionFee = await new L1ToL2MessageGasEstimator(
-        l2Provider
+        childProvider
       ).estimateSubmissionFee(
-        l1Provider,
-        await l1Provider.getGasPrice(),
+        parentProvider,
+        await parentProvider.getGasPrice(),
         123456
       )
 
