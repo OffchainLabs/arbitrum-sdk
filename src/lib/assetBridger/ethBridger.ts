@@ -312,7 +312,7 @@ export class EthBridger extends AssetBridger<
 
     const inbox = Inbox__factory.connect(
       this.l2Network.ethBridge.inbox,
-      params.l2Provider
+      l1Provider
     )
 
     const signerAddress = new Address(await params.l1Signer.getAddress())
@@ -370,7 +370,7 @@ export class EthBridger extends AssetBridger<
       '0x', // data,
       {
         from: signerAddress.value,
-        value: gasEstimation.deposit,
+        value: this.nativeTokenIsEth ? gasEstimation.deposit : 0,
       }
     )
 
