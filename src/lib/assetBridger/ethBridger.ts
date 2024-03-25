@@ -35,7 +35,6 @@ import {
   L2ContractTransaction,
   L2TransactionReceipt,
 } from '../message/L2Transaction'
-import { L1ToL2MessageGasEstimator } from '../message/L1ToL2MessageGasEstimator'
 import { GasOverrides } from '../message/L1ToL2MessageGasEstimator'
 import {
   isL1ToL2TransactionRequest,
@@ -48,8 +47,9 @@ import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getL2Network } from '../dataEntities/networks'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
-import { isArbitrumChain, getBaseFee } from '../utils/lib'
+import { isArbitrumChain } from '../utils/lib'
 import { Address } from '../dataEntities/address'
+import { L1ToL2MessageCreator } from '../message/L1ToL2MessageCreator'
 
 export type ApproveGasTokenParams = {
   /**
@@ -310,17 +310,7 @@ export class EthBridger extends AssetBridger<
       throw new Error('l1Provider not found')
     }
 
-    const inbox = Inbox__factory.connect(
-      this.l2Network.ethBridge.inbox,
-      l1Provider
-    )
-
     const signerAddress = new Address(await params.l1Signer.getAddress())
-    const signerAliasedAddress = signerAddress.applyAlias()
-
-    const l1ToL2MessageGasEstimator = new L1ToL2MessageGasEstimator(
-      params.l2Provider
-    )
 
     const destinationAddress = isL1ToL2TransactionRequest(params)
       ? params.txRequest.to
@@ -330,48 +320,25 @@ export class EthBridger extends AssetBridger<
       ? BigNumber.from(params.txRequest.value)
       : params.amount
 
-    const gasOverrides = isL1ToL2TransactionRequest(params)
-      ? {
-          gasLimit: {
-            base: params.overrides?.gasLimit
-              ? BigNumber.from(params.overrides.gasLimit)
-              : undefined,
-          },
-          maxFeePerGas: {
-            base: params.overrides?.maxFeePerGas
-              ? BigNumber.from(params.overrides.maxFeePerGas)
-              : undefined,
-          },
-        }
-      : params.retryableGasOverrides
+    const l1ToL2MessageCreator = new L1ToL2MessageCreator(params.l1Signer)
 
-    const gasEstimation = await l1ToL2MessageGasEstimator.estimateAll(
-      {
-        from: signerAliasedAddress.value,
-        to: destinationAddress,
-        l2CallValue: amount,
-        excessFeeRefundAddress: destinationAddress,
-        callValueRefundAddress: destinationAddress,
-        data: '0x',
-      },
-      await getBaseFee(l1Provider),
+    const l1ToL2TransactionRequestParams = {
+      from: signerAddress.value,
+      to: destinationAddress,
+      l2CallValue: amount,
+      callValueRefundAddress: destinationAddress,
+      data: '0x',
+    }
+
+    const txRequest = await L1ToL2MessageCreator.getTicketCreationRequest(
+      l1ToL2TransactionRequestParams,
       l1Provider,
-      gasOverrides
+      params.l2Provider
     )
 
-    const tx = await inbox.connect(params.l1Signer).createRetryableTicket(
-      destinationAddress, // to,
-      amount, // l2CallValue
-      gasEstimation.maxSubmissionCost, // maxSubmissionCost
-      destinationAddress, // excessFeeRefundAddress
-      destinationAddress, // callValueRefundAddress
-      gasEstimation.gasLimit, // maxLimit
-      gasEstimation.maxFeePerGas, // maxFeePerGas
-      '0x', // data,
-      {
-        from: signerAddress.value,
-        value: this.nativeTokenIsEth ? gasEstimation.deposit : 0,
-      }
+    const tx = await l1ToL2MessageCreator.createRetryableTicket(
+      txRequest,
+      params.l2Provider
     )
 
     return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
