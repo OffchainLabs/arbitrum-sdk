@@ -23,8 +23,8 @@ import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
 
 import {
-  fundL1,
-  fundL2,
+  fundParentSigner,
+  fundChildSigner,
   mineUntilStop,
   prettyLog,
   skipIfMainnet,
@@ -48,7 +48,7 @@ describe('Ether', async () => {
   it('transfers ether on l2', async () => {
     const { childSigner } = await testSetup()
 
-    await fundL2(childSigner)
+    await fundChildSigner(childSigner)
     const randomAddress = Wallet.createRandom().address
     const amountToSend = parseEther('0.000005')
 
@@ -99,7 +99,7 @@ describe('Ether', async () => {
   it('deposits ether', async () => {
     const { ethBridger, parentSigner, childSigner } = await testSetup()
 
-    await fundL1(parentSigner)
+    await fundParentSigner(parentSigner)
     const inboxAddress = ethBridger.childChain.ethBridge.inbox
 
     const initialInboxBalance = await parentSigner.provider!.getBalance(
@@ -148,7 +148,7 @@ describe('Ether', async () => {
   it('deposits ether to a specific L2 address', async () => {
     const { ethBridger, parentSigner, childSigner } = await testSetup()
 
-    await fundL1(parentSigner)
+    await fundParentSigner(parentSigner)
     const inboxAddress = ethBridger.childChain.ethBridge.inbox
     const destWallet = Wallet.createRandom()
 
@@ -220,8 +220,8 @@ describe('Ether', async () => {
 
   it('withdraw Ether transaction succeeds', async () => {
     const { childSigner, parentSigner, ethBridger } = await testSetup()
-    await fundL2(childSigner)
-    await fundL1(parentSigner)
+    await fundChildSigner(childSigner)
+    await fundParentSigner(parentSigner)
 
     const ethToWithdraw = parseEther('0.00000002')
     const randomAddress = Wallet.createRandom().address
@@ -288,8 +288,8 @@ describe('Ether', async () => {
     // run a miner whilst withdrawing
     const miner1 = Wallet.createRandom().connect(parentSigner.provider!)
     const miner2 = Wallet.createRandom().connect(childSigner.provider!)
-    await fundL1(miner1, parseEther('1'))
-    await fundL2(miner2, parseEther('1'))
+    await fundParentSigner(miner1, parseEther('1'))
+    await fundChildSigner(miner2, parseEther('1'))
     const state = { mining: true }
     await Promise.race([
       mineUntilStop(miner1, state),
