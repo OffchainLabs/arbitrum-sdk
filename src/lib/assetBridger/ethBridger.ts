@@ -35,6 +35,7 @@ import {
   L2ContractTransaction,
   L2TransactionReceipt,
 } from '../message/L2Transaction'
+import { L1ToL2MessageCreator } from '../message/L1ToL2MessageCreator'
 import { GasOverrides } from '../message/L1ToL2MessageGasEstimator'
 import {
   isL1ToL2TransactionRequest,
@@ -48,8 +49,6 @@ import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getL2Network } from '../dataEntities/networks'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { isArbitrumChain } from '../utils/lib'
-import { Address } from '../dataEntities/address'
-import { L1ToL2MessageCreator } from '../message/L1ToL2MessageCreator'
 
 export type ApproveGasTokenParams = {
   /**
