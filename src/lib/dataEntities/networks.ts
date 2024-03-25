@@ -43,14 +43,8 @@ export interface Chain {
 /**
  * Represents an L1 chain, e.g. Ethereum Mainnet or Sepolia.
  */
-export interface L1Chain extends Chain {
-  isArbitrum: false
-}
-
 export interface ParentChain extends Chain {
-  partnerChainID?: number
-  tokenBridge?: TokenBridge
-  isArbitrum: boolean
+  isArbitrum: false
 }
 
 /**
@@ -106,10 +100,6 @@ export interface EthBridge {
   classicOutboxes?: {
     [addr: string]: number
   }
-}
-
-export interface L1Chains {
-  [id: string]: L1Chain
 }
 
 export interface ParentChains {
@@ -381,16 +371,8 @@ export const chains: Chains = {
 /**
  * Determines if a chain is a parent of *any* other chain. Could be an L1 or an L2 chain.
  */
-const isParentChain = (chain: Chain): boolean => {
+const isParentChain = (chain: ParentChain | ChildChain): boolean => {
   return chain.partnerChainIDs.length > 0
-}
-
-/**
- * Determines if a chain is specifically an L1 chain (not L2 or L3).
- */
-export const isChildChain = (chain: Chain): chain is ChildChain => {
-  // @ts-expect-error - we are ok checking this value
-  return chain.partnerChainID && chain.tokenBridge
 }
 
 /**
@@ -406,8 +388,8 @@ const isArbitrumNetwork = (
  * Determines if a chain is specifically an L1 chain (not L2 or L3).
  */
 export const isL1Chain = (
-  chain: L1Chain | ParentChain | ChildChain
-): chain is L1Chain => {
+  chain: ParentChain | ChildChain
+): chain is ParentChain => {
   return !chain.isArbitrum
 }
 
@@ -417,7 +399,7 @@ export const isL1Chain = (
  * @return An object with only the filtered chains.
  */
 const getChainsByType = <T extends typeof chains>(
-  filterFn: (chain: L1Chain | ParentChain | ChildChain) => boolean
+  filterFn: (chain: ParentChain | ChildChain) => boolean
 ): T => {
   return Object.entries(chains).reduce<typeof chains>(
     (accumulator, [chainId, chainData]) => {
@@ -430,8 +412,7 @@ const getChainsByType = <T extends typeof chains>(
   ) as T
 }
 
-const getL1Chains = () => getChainsByType<L1Chains>(isL1Chain)
-const getParentChains = () => getChainsByType<ParentChains>(isParentChain)
+const getL1Chains = () => getChainsByType<ParentChains>(isL1Chain)
 const getArbitrumChains = () => getChainsByType<ChildChains>(isArbitrumNetwork)
 
 /**
@@ -593,7 +574,7 @@ const addChain = (network: ParentChain | ChildChain) => {
     parent.partnerChainIDs = [...parent.partnerChainIDs, network.chainID]
   }
 
-  parentChains = getParentChains()
+  parentChains = getL1Chains()
   childChains = getArbitrumChains()
 }
 
@@ -737,7 +718,7 @@ export {
   Chains as Networks,
   chains as networks,
   addCustomChain as addCustomNetwork,
-  isParentChain as isL1Network,
+  isL1Chain as isL1Network,
   parentChains as l1Networks,
   childChains as l2Networks,
   getChain as getNetwork,
