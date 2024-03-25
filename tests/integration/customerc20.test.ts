@@ -31,8 +31,8 @@ import { TestCustomTokenL1 } from '../../src/lib/abi/TestCustomTokenL1'
 import { TestCustomTokenL1__factory } from '../../src/lib/abi/factories/TestCustomTokenL1__factory'
 
 import {
-  fundL1,
-  fundL2,
+  fundParentSigner,
+  fundChildSigner,
   skipIfMainnet,
   depositToken,
   GatewayType,
@@ -70,8 +70,8 @@ describe('Custom ERC20', () => {
       ...(await testSetup()),
       l1CustomToken: {} as any,
     }
-    await fundL1(testState.parentSigner)
-    await fundL2(testState.childSigner)
+    await fundParentSigner(testState.parentSigner)
+    await fundChildSigner(testState.childSigner)
 
     if (isL2NetworkWithCustomFeeToken()) {
       await fundL1CustomFeeToken(testState.parentSigner)
@@ -96,8 +96,8 @@ describe('Custom ERC20', () => {
       depositAmount,
       l1TokenAddress: testState.l1CustomToken.address,
       erc20Bridger: testState.adminErc20Bridger,
-      l1Signer: testState.parentSigner,
-      l2Signer: testState.childSigner,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
       expectedStatus: L1ToL2MessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.CUSTOM,
     })
@@ -106,13 +106,13 @@ describe('Custom ERC20', () => {
   it('withdraws erc20', async function () {
     await withdrawToken({
       ...testState,
-      l1Signer: testState.parentSigner,
-      l2Signer: testState.childSigner,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
       erc20Bridger: testState.adminErc20Bridger,
       amount: withdrawalAmount,
       gatewayType: GatewayType.CUSTOM,
       startBalance: depositAmount,
-      l1Token: ERC20__factory.connect(
+      parentChainToken: ERC20__factory.connect(
         testState.l1CustomToken.address,
         testState.parentSigner.provider!
       ),
@@ -125,8 +125,8 @@ describe('Custom ERC20', () => {
       ethDepositAmount: utils.parseEther('0.0005'),
       l1TokenAddress: testState.l1CustomToken.address,
       erc20Bridger: testState.adminErc20Bridger,
-      l1Signer: testState.parentSigner,
-      l2Signer: testState.childSigner,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
       expectedStatus: L1ToL2MessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.CUSTOM,
     })
@@ -139,8 +139,8 @@ describe('Custom ERC20', () => {
       ethDepositAmount: utils.parseEther('0.0005'),
       l1TokenAddress: testState.l1CustomToken.address,
       erc20Bridger: testState.adminErc20Bridger,
-      l1Signer: testState.parentSigner,
-      l2Signer: testState.childSigner,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
       expectedStatus: L1ToL2MessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.CUSTOM,
       destinationAddress: randomAddress,

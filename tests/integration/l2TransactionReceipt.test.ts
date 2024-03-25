@@ -19,8 +19,8 @@
 import { expect } from 'chai'
 
 import {
-  fundL1,
-  fundL2,
+  fundParentSigner,
+  fundChildSigner,
   mineUntilStop,
   skipIfMainnet,
   wait,
@@ -43,13 +43,13 @@ describe('ArbProvider', () => {
     // set up miners
     const miner1 = Wallet.createRandom().connect(parentSigner.provider!)
     const miner2 = Wallet.createRandom().connect(childSigner.provider!)
-    await fundL1(miner1, parseEther('0.1'))
-    await fundL2(miner2, parseEther('0.1'))
+    await fundParentSigner(miner1, parseEther('0.1'))
+    await fundChildSigner(miner2, parseEther('0.1'))
     const state = { mining: true }
     mineUntilStop(miner1, state)
     mineUntilStop(miner2, state)
 
-    await fundL2(childSigner)
+    await fundChildSigner(childSigner)
     const randomAddress = Wallet.createRandom().address
     const amountToSend = parseEther('0.000005')
 

@@ -26,12 +26,9 @@ import { parseEther } from '@ethersproject/units'
 import { config, getSigner, testSetup } from '../../scripts/testSetup'
 
 import { Signer, Wallet } from 'ethers'
-import {
-  Erc20Bridger,
-  L1ToL2MessageStatus,
-  ChildToParentMessageStatus as L2ToL1MessageStatus,
-} from '../../src'
-import { L2Network } from '../../src/lib/dataEntities/networks'
+import { Erc20Bridger, ChildToParentMessageStatus } from '../../src'
+import { ParentToChildMessageStatus } from '../../src/lib/message/L1ToL2Message'
+import { ChildChain } from '../../src/lib/dataEntities/networks'
 import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
 import { ArbSdkError } from '../../src/lib/dataEntities/errors'
 import { ERC20 } from '../../src/lib/abi/ERC20'
@@ -60,9 +57,9 @@ interface WithdrawalParams {
   startBalance: BigNumber
   amount: BigNumber
   erc20Bridger: Erc20Bridger
-  l1Token: ERC20
-  l2Signer: Signer
-  l1Signer: Signer
+  parentChainToken: ERC20
+  childSigner: Signer
+  parentSigner: Signer
   gatewayType: GatewayType
 }
 
@@ -88,53 +85,53 @@ export const mineUntilStop = async (
 export const withdrawToken = async (params: WithdrawalParams) => {
   const withdrawalParams = await params.erc20Bridger.getWithdrawalRequest({
     amount: params.amount,
-    erc20ParentAddress: params.l1Token.address,
-    destinationAddress: await params.l2Signer.getAddress(),
-    from: await params.l2Signer.getAddress(),
+    erc20ParentAddress: params.parentChainToken.address,
+    destinationAddress: await params.childSigner.getAddress(),
+    from: await params.childSigner.getAddress(),
   })
   const l1GasEstimate = await withdrawalParams.estimateL1GasLimit(
-    params.l1Signer.provider!
+    params.parentSigner.provider!
   )
 
   const withdrawRes = await params.erc20Bridger.withdraw({
-    destinationAddress: await params.l2Signer.getAddress(),
+    destinationAddress: await params.childSigner.getAddress(),
     amount: params.amount,
-    erc20ParentAddress: params.l1Token.address,
-    l2Signer: params.l2Signer,
+    erc20ParentAddress: params.parentChainToken.address,
+    l2Signer: params.childSigner,
   })
   const withdrawRec = await withdrawRes.wait()
   expect(withdrawRec.status).to.equal(1, 'initiate token withdraw txn failed')
 
   const message = (
-    await withdrawRec.getChildToParentMessages(params.l1Signer)
+    await withdrawRec.getChildToParentMessages(params.parentSigner)
   )[0]
   expect(message, 'withdraw message not found').to.exist
 
-  const messageStatus = await message.status(params.l2Signer.provider!)
+  const messageStatus = await message.status(params.childSigner.provider!)
   expect(messageStatus, `invalid withdraw status`).to.eq(
-    L2ToL1MessageStatus.UNCONFIRMED
+    ChildToParentMessageStatus.UNCONFIRMED
   )
 
   const l2TokenAddr = await params.erc20Bridger.getL2ERC20Address(
-    params.l1Token.address,
-    params.l1Signer.provider!
+    params.parentChainToken.address,
+    params.parentSigner.provider!
   )
   const l2Token = params.erc20Bridger.getChildTokenContract(
-    params.l2Signer.provider!,
+    params.childSigner.provider!,
     l2TokenAddr
   )
   const testWalletL2Balance = await l2Token.balanceOf(
-    await params.l2Signer.getAddress()
+    await params.childSigner.getAddress()
   )
   expect(
     testWalletL2Balance.toNumber(),
     'token withdraw balance not deducted'
   ).to.eq(params.startBalance.sub(params.amount).toNumber())
-  const walletAddress = await params.l1Signer.getAddress()
+  const walletAddress = await params.parentSigner.getAddress()
 
   const gatewayAddress = await params.erc20Bridger.getL2GatewayAddress(
-    params.l1Token.address,
-    params.l2Signer.provider!
+    params.parentChainToken.address,
+    params.childSigner.provider!
   )
 
   const { expectedL2Gateway } = getGateways(
@@ -146,37 +143,37 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   )
 
   const gatewayWithdrawEvents = await params.erc20Bridger.getL2WithdrawalEvents(
-    params.l2Signer.provider!,
+    params.childSigner.provider!,
     gatewayAddress,
     { fromBlock: withdrawRec.blockNumber, toBlock: 'latest' },
-    params.l1Token.address,
+    params.parentChainToken.address,
     walletAddress
   )
   expect(gatewayWithdrawEvents.length).to.equal(1, 'token query failed')
 
-  const balBefore = await params.l1Token.balanceOf(
-    await params.l1Signer.getAddress()
+  const balBefore = await params.parentChainToken.balanceOf(
+    await params.parentSigner.getAddress()
   )
 
   // whilst waiting for status we miner on both l1 and l2
-  const miner1 = Wallet.createRandom().connect(params.l1Signer.provider!)
-  const miner2 = Wallet.createRandom().connect(params.l2Signer.provider!)
-  await fundL1(miner1, parseEther('1'))
-  await fundL2(miner2, parseEther('1'))
+  const miner1 = Wallet.createRandom().connect(params.parentSigner.provider!)
+  const miner2 = Wallet.createRandom().connect(params.childSigner.provider!)
+  await fundParentSigner(miner1, parseEther('1'))
+  await fundChildSigner(miner2, parseEther('1'))
   const state = { mining: true }
   await Promise.race([
     mineUntilStop(miner1, state),
     mineUntilStop(miner2, state),
-    message.waitUntilReadyToExecute(params.l2Signer.provider!),
+    message.waitUntilReadyToExecute(params.childSigner.provider!),
   ])
   state.mining = false
 
   expect(
-    await message.status(params.l2Signer.provider!),
+    await message.status(params.childSigner.provider!),
     'confirmed status'
-  ).to.eq(L2ToL1MessageStatus.CONFIRMED)
+  ).to.eq(ChildToParentMessageStatus.CONFIRMED)
 
-  const execTx = await message.execute(params.l2Signer.provider!)
+  const execTx = await message.execute(params.childSigner.provider!)
   const execRec = await execTx.wait()
 
   expect(
@@ -185,19 +182,19 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   ).to.be.lessThan(l1GasEstimate.toNumber())
 
   expect(
-    await message.status(params.l2Signer.provider!),
+    await message.status(params.childSigner.provider!),
     'executed status'
-  ).to.eq(L2ToL1MessageStatus.EXECUTED)
+  ).to.eq(ChildToParentMessageStatus.EXECUTED)
 
-  const balAfter = await params.l1Token.balanceOf(
-    await params.l1Signer.getAddress()
+  const balAfter = await params.parentChainToken.balanceOf(
+    await params.parentSigner.getAddress()
   )
   expect(balBefore.add(params.amount).toString(), 'Not withdrawn').to.eq(
     balAfter.toString()
   )
 }
 
-const getGateways = (gatewayType: GatewayType, l2Network: L2Network) => {
+const getGateways = (gatewayType: GatewayType, l2Network: ChildChain) => {
   switch (gatewayType) {
     case GatewayType.CUSTOM:
       return {
@@ -224,7 +221,7 @@ const getGateways = (gatewayType: GatewayType, l2Network: L2Network) => {
  * @param depositAmount
  * @param l1TokenAddress
  * @param erc20Bridger
- * @param l1Signer
+ * @param parentSigner
  * @param l2Signer
  */
 export const depositToken = async ({
@@ -232,8 +229,8 @@ export const depositToken = async ({
   ethDepositAmount,
   l1TokenAddress,
   erc20Bridger,
-  l1Signer,
-  l2Signer,
+  parentSigner,
+  childSigner,
   expectedStatus,
   expectedGatewayType,
   retryableOverrides,
@@ -243,9 +240,9 @@ export const depositToken = async ({
   ethDepositAmount?: BigNumber
   l1TokenAddress: string
   erc20Bridger: Erc20Bridger
-  l1Signer: Signer
-  l2Signer: Signer
-  expectedStatus: L1ToL2MessageStatus
+  parentSigner: Signer
+  childSigner: Signer
+  expectedStatus: ParentToChildMessageStatus
   expectedGatewayType: GatewayType
   retryableOverrides?: GasOverrides
   destinationAddress?: string
@@ -253,20 +250,20 @@ export const depositToken = async ({
   await (
     await erc20Bridger.approveToken({
       erc20ParentAddress: l1TokenAddress,
-      l1Signer: l1Signer,
+      l1Signer: parentSigner,
     })
   ).wait()
 
-  const senderAddress = await l1Signer.getAddress()
+  const senderAddress = await parentSigner.getAddress()
   const expectedL1GatewayAddress = await erc20Bridger.getL1GatewayAddress(
     l1TokenAddress,
-    l1Signer.provider!
+    parentSigner.provider!
   )
-  const l1Token = erc20Bridger.getParentChainTokenContract(
-    l1Signer.provider!,
+  const parentChainToken = erc20Bridger.getParentChainTokenContract(
+    parentSigner.provider!,
     l1TokenAddress
   )
-  const allowance = await l1Token.allowance(
+  const allowance = await parentChainToken.allowance(
     senderAddress,
     expectedL1GatewayAddress
   )
@@ -276,15 +273,15 @@ export const depositToken = async ({
   if (isL2NetworkWithCustomFeeToken()) {
     await (
       await erc20Bridger.approveGasToken({
-        l1Signer,
+        l1Signer: parentSigner,
         erc20ParentAddress: l1TokenAddress,
       })
     ).wait()
 
     const feeTokenAllowance = await ERC20__factory.connect(
       erc20Bridger.nativeToken!,
-      l1Signer
-    ).allowance(await l1Signer.getAddress(), expectedL1GatewayAddress)
+      parentSigner
+    ).allowance(await parentSigner.getAddress(), expectedL1GatewayAddress)
 
     expect(
       feeTokenAllowance.eq(Erc20Bridger.MAX_APPROVAL),
@@ -292,17 +289,19 @@ export const depositToken = async ({
     ).to.be.true
   }
 
-  const initialBridgeTokenBalance = await l1Token.balanceOf(
+  const initialBridgeTokenBalance = await parentChainToken.balanceOf(
     expectedL1GatewayAddress
   )
-  const tokenBalL1Before = await l1Token.balanceOf(senderAddress)
-  const ethBalL2Before = await l2Signer.provider!.getBalance(
+  const parentTokenBalanceBefore = await parentChainToken.balanceOf(
+    senderAddress
+  )
+  const childChainEthBalanceBefore = await childSigner.provider!.getBalance(
     destinationAddress || senderAddress
   )
 
   const depositRes = await erc20Bridger.deposit({
-    l1Signer: l1Signer,
-    childProvider: l2Signer.provider!,
+    l1Signer: parentSigner,
+    childProvider: childSigner.provider!,
     erc20ParentAddress: l1TokenAddress,
     amount: depositAmount,
     retryableGasOverrides: retryableOverrides,
@@ -312,7 +311,7 @@ export const depositToken = async ({
   })
 
   const depositRec = await depositRes.wait()
-  const finalBridgeTokenBalance = await l1Token.balanceOf(
+  const finalBridgeTokenBalance = await parentChainToken.balanceOf(
     expectedL1GatewayAddress
   )
   expect(
@@ -324,21 +323,23 @@ export const depositToken = async ({
       ? 0
       : initialBridgeTokenBalance.add(depositAmount).toNumber()
   )
-  const tokenBalL1After = await l1Token.balanceOf(senderAddress)
-  expect(tokenBalL1After.toString(), 'user bal after').to.eq(
-    tokenBalL1Before.sub(depositAmount).toString()
+  const parentTokenBalanceAfter = await parentChainToken.balanceOf(
+    senderAddress
+  )
+  expect(parentTokenBalanceAfter.toString(), 'user bal after').to.eq(
+    parentTokenBalanceBefore.sub(depositAmount).toString()
   )
 
-  const waitRes = await depositRec.waitForChildTx(l2Signer)
+  const waitRes = await depositRec.waitForChildTx(childSigner)
 
-  const ethBalL2After = await l2Signer.provider!.getBalance(
+  const childChainEthBalanceAfter = await childSigner.provider!.getBalance(
     destinationAddress || senderAddress
   )
 
   expect(waitRes.status, 'Unexpected status').to.eq(expectedStatus)
   if (retryableOverrides) {
     return {
-      l1Token,
+      l1Token: parentChainToken,
       waitRes,
     }
   }
@@ -350,27 +351,27 @@ export const depositToken = async ({
 
   const l1Gateway = await erc20Bridger.getL1GatewayAddress(
     l1TokenAddress,
-    l1Signer.provider!
+    parentSigner.provider!
   )
   expect(l1Gateway, 'incorrect l1 gateway address').to.eq(expectedL1Gateway)
 
   const l2Gateway = await erc20Bridger.getL2GatewayAddress(
     l1TokenAddress,
-    l2Signer.provider!
+    childSigner.provider!
   )
   expect(l2Gateway, 'incorrect l2 gateway address').to.eq(expectedL2Gateway)
 
   const l2Erc20Addr = await erc20Bridger.getL2ERC20Address(
     l1TokenAddress,
-    l1Signer.provider!
+    parentSigner.provider!
   )
   const l2Token = erc20Bridger.getChildTokenContract(
-    l2Signer.provider!,
+    childSigner.provider!,
     l2Erc20Addr
   )
   const l1Erc20Addr = await erc20Bridger.getL1ERC20Address(
     l2Erc20Addr,
-    l2Signer.provider!
+    childSigner.provider!
   )
   expect(l1Erc20Addr).to.equal(
     l1TokenAddress,
@@ -392,12 +393,14 @@ export const depositToken = async ({
   // batched token+eth
   if (ethDepositAmount) {
     expect(
-      ethBalL2After.gte(ethBalL2Before.add(ethDepositAmount)),
+      childChainEthBalanceAfter.gte(
+        childChainEthBalanceBefore.add(ethDepositAmount)
+      ),
       'l2 wallet not updated with the extra eth deposit'
     ).to.be.true
   }
 
-  return { l1Token, waitRes, l2Token }
+  return { l1Token: parentChainToken, waitRes, l2Token }
 }
 
 const fund = async (
@@ -414,18 +417,18 @@ const fund = async (
   ).wait()
 }
 
-export const fundL1 = async (
-  l1Signer: Signer,
+export const fundParentSigner = async (
+  parentSigner: Signer,
   amount?: BigNumber
 ): Promise<void> => {
-  await fund(l1Signer, amount, config.ethKey)
+  await fund(parentSigner, amount, config.ethKey)
 }
 
-export const fundL2 = async (
-  l2Signer: Signer,
+export const fundChildSigner = async (
+  childSigner: Signer,
   amount?: BigNumber
 ): Promise<void> => {
-  await fund(l2Signer, amount, config.arbKey)
+  await fund(childSigner, amount, config.arbKey)
 }
 
 export const wait = (ms = 0): Promise<void> => {
