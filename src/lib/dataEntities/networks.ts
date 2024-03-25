@@ -53,6 +53,7 @@ export interface L1Network extends Network {
 export interface L2Network extends Network {
   tokenBridge: TokenBridge
   ethBridge: EthBridge
+  teleporterAddresses?: TeleporterAddresses
   /**
    * Chain id of the parent chain, i.e. the chain on which this chain settles to.
    */
@@ -72,6 +73,11 @@ export interface L2Network extends Network {
    * In case of a chain that uses an ERC-20 token from the parent chain as its native/gas token, this is the address of said token on the parent chain
    */
   nativeToken?: string
+}
+
+export interface TeleporterAddresses {
+  l1Teleporter: string
+  l2ForwarderFactory: string
 }
 
 export interface TokenBridge {
@@ -280,6 +286,10 @@ export const networks: Networks = {
       l2ProxyAdmin: '0x715D99480b77A8d9D603638e593a539E21345FdF',
       l2Weth: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73',
       l2WethGateway: '0xCFB1f08A4852699a979909e22c30263ca249556D',
+    },
+    teleporterAddresses: {
+      l1Teleporter: '0x9E86BbF020594D7FFe05bF32EEDE5b973579A968',
+      l2ForwarderFactory: '0x88feBaFBb4E36A4E7E8874E4c9Fd73A9D59C2E7c',
     },
     nitroGenesisBlock: 0,
     nitroGenesisL1Block: 0,
