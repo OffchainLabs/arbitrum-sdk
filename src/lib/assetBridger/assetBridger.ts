@@ -22,8 +22,8 @@ import { L1ContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'
 
 import {
-  ParentChain,
-  ChildChain,
+  L1Network,
+  ArbitrumNetwork,
   getParentForNetwork,
 } from '../dataEntities/networks'
 import {
@@ -38,7 +38,7 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   /**
    * Parent chain for the given Arbitrum chain, can be an L1 or an L2
    */
-  public readonly parentChain: ParentChain | ChildChain
+  public readonly parentChain: L1Network | ArbitrumNetwork
 
   /**
    * In case of a chain that uses ETH as its native/gas token, this is either `undefined` or the zero address
@@ -47,7 +47,7 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    */
   public readonly nativeToken?: string
 
-  public constructor(public readonly childChain: ChildChain) {
+  public constructor(public readonly childChain: ArbitrumNetwork) {
     this.parentChain = getParentForNetwork(childChain)
     this.nativeToken = childChain.nativeToken
   }
