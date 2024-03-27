@@ -21,13 +21,13 @@ import { BigNumber } from 'ethers'
 
 import { skipIfMainnet } from './testHelpers'
 import { testSetup } from '../../scripts/testSetup'
-import { L1ToL2MessageGasEstimator } from '../../src'
+import { ParentToChildMessageGasEstimator } from '../../src/lib/message/L1ToL2MessageGasEstimator'
 import {
   itOnlyWhenEth,
   itOnlyWhenCustomGasToken,
 } from './custom-fee-token/mochaExtensions'
 
-describe('L1ToL2MessageGasEstimator', () => {
+describe('ParentToChildMessageGasEstimator', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
@@ -35,13 +35,14 @@ describe('L1ToL2MessageGasEstimator', () => {
   itOnlyWhenEth(
     `"estimateSubmissionFee" returns non-0 for eth chain`,
     async () => {
-      const { l1Provider, l2Provider } = await testSetup()
+      const { l1Provider: parentProvider, l2Provider: childProvider } =
+        await testSetup()
 
-      const submissionFee = await new L1ToL2MessageGasEstimator(
-        l2Provider
+      const submissionFee = await new ParentToChildMessageGasEstimator(
+        childProvider
       ).estimateSubmissionFee(
-        l1Provider,
-        await l1Provider.getGasPrice(),
+        parentProvider,
+        await parentProvider.getGasPrice(),
         123456
       )
 
@@ -52,13 +53,14 @@ describe('L1ToL2MessageGasEstimator', () => {
   itOnlyWhenCustomGasToken(
     `"estimateSubmissionFee" returns 0 for custom gas token chain`,
     async () => {
-      const { l1Provider, l2Provider } = await testSetup()
+      const { l1Provider: parentProvider, l2Provider: childProvider } =
+        await testSetup()
 
-      const submissionFee = await new L1ToL2MessageGasEstimator(
-        l2Provider
+      const submissionFee = await new ParentToChildMessageGasEstimator(
+        childProvider
       ).estimateSubmissionFee(
-        l1Provider,
-        await l1Provider.getGasPrice(),
+        parentProvider,
+        await parentProvider.getGasPrice(),
         123456
       )
 

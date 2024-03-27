@@ -125,11 +125,11 @@ export const testSetup = async (): Promise<{
 
       addCustomNetwork({
         customL1Network: ethLocal,
-        customL2Network: _l1Network,
+        customArbitrumNetwork: _l1Network,
       })
 
       addCustomNetwork({
-        customL2Network: l2Network,
+        customArbitrumNetwork: l2Network,
       })
 
       setL1Network = l1Network
@@ -137,7 +137,7 @@ export const testSetup = async (): Promise<{
     } else {
       addCustomNetwork({
         customL1Network: l1Network as L1Network,
-        customL2Network: l2Network,
+        customArbitrumNetwork: l2Network,
       })
 
       setL1Network = l1Network
