@@ -100,7 +100,7 @@ describe('Ether', async () => {
     const { ethBridger, l1Signer, l2Signer } = await testSetup()
 
     await fundL1(l1Signer)
-    const inboxAddress = ethBridger.l2Network.ethBridge.inbox
+    const inboxAddress = ethBridger.childChain.ethBridge.inbox
 
     const initialInboxBalance = await l1Signer.provider!.getBalance(
       inboxAddress
@@ -147,7 +147,7 @@ describe('Ether', async () => {
     const { ethBridger, l1Signer, l2Signer } = await testSetup()
 
     await fundL1(l1Signer)
-    const inboxAddress = ethBridger.l2Network.ethBridge.inbox
+    const inboxAddress = ethBridger.childChain.ethBridge.inbox
     const destWallet = Wallet.createRandom()
 
     const initialInboxBalance = await l1Signer.provider!.getBalance(
