@@ -46,7 +46,7 @@ import {
 import { OmitTyped } from '../utils/types'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
-import { getL2Network } from '../dataEntities/networks'
+import { getL2Network as getChildChain } from '../dataEntities/networks'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { isArbitrumChain } from '../utils/lib'
 
@@ -171,7 +171,7 @@ export class EthBridger extends AssetBridger<
    * @returns
    */
   public static async fromProvider(l2Provider: Provider) {
-    return new EthBridger(await getL2Network(l2Provider))
+    return new EthBridger(await getChildChain(l2Provider))
   }
 
   /**
@@ -199,7 +199,7 @@ export class EthBridger extends AssetBridger<
       'approve',
       [
         // spender
-        this.l2Network.ethBridge.inbox,
+        this.childChain.ethBridge.inbox,
         // value
         params?.amount ?? constants.MaxUint256,
       ]
@@ -270,7 +270,7 @@ export class EthBridger extends AssetBridger<
   ): Promise<OmitTyped<L1ToL2TransactionRequest, 'retryableData'>> {
     return {
       txRequest: {
-        to: this.l2Network.ethBridge.inbox,
+        to: this.childChain.ethBridge.inbox,
         value: this.nativeTokenIsEth ? params.amount : 0,
         data: this.getDepositRequestData(params),
         from: params.from,
@@ -287,7 +287,7 @@ export class EthBridger extends AssetBridger<
   public async deposit(
     params: EthDepositParams | L1ToL2TxReqAndSigner
   ): Promise<L1EthDepositTransaction> {
-    await this.checkL1Network(params.l1Signer)
+    await this.checkParentChain(params.l1Signer)
 
     const ethDeposit = isL1ToL2TransactionRequest(params)
       ? params
@@ -341,8 +341,8 @@ export class EthBridger extends AssetBridger<
       | EthDepositToParams
       | (L1ToL2TxReqAndSigner & { l2Provider: Provider })
   ): Promise<L1ContractCallTransaction> {
-    await this.checkL1Network(params.l1Signer)
-    await this.checkL2Network(params.l2Provider)
+    await this.checkParentChain(params.l1Signer)
+    await this.checkChildChain(params.l2Provider)
 
     const retryableTicketRequest = isL1ToL2TransactionRequest(params)
       ? params
@@ -407,7 +407,7 @@ export class EthBridger extends AssetBridger<
     if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
       throw new MissingProviderArbSdkError('l2Signer')
     }
-    await this.checkL2Network(params.l2Signer)
+    await this.checkChildChain(params.l2Signer)
 
     const request = isL2ToL1TransactionRequest<
       EthWithdrawParams & { l2Signer: Signer }

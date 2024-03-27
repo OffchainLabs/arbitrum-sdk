@@ -103,7 +103,7 @@ describe('standard ERC20', () => {
 
       const tx = await erc20Bridger.approveGasToken({
         l1Signer: l1Signer,
-        erc20L1Address: testState.l1Token.address,
+        erc20ParentAddress: testState.l1Token.address,
       })
       await tx.wait()
 
@@ -155,7 +155,7 @@ describe('standard ERC20', () => {
     expect(retryRec.status, 'tx didnt fail').to.eq(expectedStatus)
     expect(await message.status(), 'message status').to.eq(
       expectedStatus === 0
-        ? L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+        ? L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN
         : L1ToL2MessageStatus.REDEEMED
     )
   }
@@ -167,7 +167,7 @@ describe('standard ERC20', () => {
       erc20Bridger: testState.erc20Bridger,
       l1Signer: testState.l1Signer,
       l2Signer: testState.l2Signer,
-      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
         gasLimit: { base: BigNumber.from(0) },
@@ -185,7 +185,7 @@ describe('standard ERC20', () => {
       erc20Bridger: testState.erc20Bridger,
       l1Signer: testState.l1Signer,
       l2Signer: testState.l2Signer,
-      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
         gasLimit: { base: BigNumber.from(5) },
@@ -205,7 +205,7 @@ describe('standard ERC20', () => {
       erc20Bridger: testState.erc20Bridger,
       l1Signer: testState.l1Signer,
       l2Signer: testState.l2Signer,
-      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
         gasLimit: { base: BigNumber.from(21000) },
@@ -237,7 +237,7 @@ describe('standard ERC20', () => {
       erc20Bridger: testState.erc20Bridger,
       l1Signer: testState.l1Signer,
       l2Signer: testState.l2Signer,
-      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
         gasLimit: { base: BigNumber.from(5) },
@@ -271,7 +271,7 @@ describe('standard ERC20', () => {
       testState.l1Token.address,
       testState.l1Signer.provider!
     )
-    const l2Token = testState.erc20Bridger.getL2TokenContract(
+    const l2Token = testState.erc20Bridger.getChildTokenContract(
       testState.l2Signer.provider!,
       l2TokenAddr
     )
@@ -309,7 +309,7 @@ describe('standard ERC20', () => {
     })
   })
 
-  it('deposits erc20 with extra ETH to a specific L2 address', async () => {
+  it('deposits erc20 with extra ETH to a specific child chain address', async () => {
     const randomAddress = Wallet.createRandom().address
     await depositToken({
       depositAmount,

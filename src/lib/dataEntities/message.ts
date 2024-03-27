@@ -53,7 +53,7 @@ export enum InboxMessageKind {
   L2MessageType_signedTx = 4,
 }
 
-export enum L2ToL1MessageStatus {
+export enum ChildToParentMessageStatus {
   /**
    * ArbSys.sendTxToL1 called, but assertion not yet confirmed
    */

@@ -29,10 +29,10 @@ import {
   prettyLog,
   skipIfMainnet,
 } from './testHelpers'
-import { L2ToL1Message } from '../../src/lib/message/L2ToL1Message'
-import { L2ToL1MessageStatus } from '../../src/lib/dataEntities/message'
+import { ChildToParentMessage } from '../../src/lib/message/L2ToL1Message'
+import { ChildToParentMessageStatus as L2ToL1MessageStatus } from '../../src/lib/dataEntities/message'
 import { L2TransactionReceipt } from '../../src/lib/message/L2Transaction'
-import { L1ToL2MessageStatus } from '../../src/lib/message/L1ToL2Message'
+import { ParentToChildMessageStatus } from '../../src/lib/message/L1ToL2Message'
 import { testSetup } from '../../scripts/testSetup'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
@@ -100,7 +100,7 @@ describe('Ether', async () => {
     const { ethBridger, l1Signer, l2Signer } = await testSetup()
 
     await fundL1(l1Signer)
-    const inboxAddress = ethBridger.l2Network.ethBridge.inbox
+    const inboxAddress = ethBridger.childChain.ethBridge.inbox
 
     const initialInboxBalance = await l1Signer.provider!.getBalance(
       inboxAddress
@@ -119,7 +119,7 @@ describe('Ether', async () => {
       'balance failed to update after eth deposit'
     )
 
-    const waitResult = await rec.waitForL2(l2Signer.provider!)
+    const waitResult = await rec.waitForChildTx(l2Signer.provider!)
 
     const l1ToL2Messages = await rec.getEthDeposits(l2Signer.provider!)
     expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
@@ -131,11 +131,11 @@ describe('Ether', async () => {
       ethToDeposit.toString()
     )
 
-    prettyLog('l2TxHash: ' + waitResult.message.l2DepositTxHash)
-    prettyLog('l2 transaction found!')
+    prettyLog('chainTxHash: ' + waitResult.message.chainDepositTxHash)
+    prettyLog('chain transaction found!')
     expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
-    expect(waitResult.l2TxReceipt).to.exist
-    expect(waitResult.l2TxReceipt).to.not.be.null
+    expect(waitResult.chainTxReceipt).to.exist
+    expect(waitResult.chainTxReceipt).to.not.be.null
 
     const testWalletL2EthBalance = await l2Signer.getBalance()
     expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(
@@ -147,7 +147,7 @@ describe('Ether', async () => {
     const { ethBridger, l1Signer, l2Signer } = await testSetup()
 
     await fundL1(l1Signer)
-    const inboxAddress = ethBridger.l2Network.ethBridge.inbox
+    const inboxAddress = ethBridger.childChain.ethBridge.inbox
     const destWallet = Wallet.createRandom()
 
     const initialInboxBalance = await l1Signer.provider!.getBalance(
@@ -169,7 +169,9 @@ describe('Ether', async () => {
       'balance failed to update after eth deposit'
     )
 
-    const l1ToL2Messages = await rec.getL1ToL2Messages(l2Signer.provider!)
+    const l1ToL2Messages = await rec.getParentToChildMessages(
+      l2Signer.provider!
+    )
     expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
     const l1ToL2Message = l1ToL2Messages[0]
 
@@ -184,7 +186,7 @@ describe('Ether', async () => {
 
     const retryableTicketResult = await l1ToL2Message.waitForStatus()
     expect(retryableTicketResult.status).to.eq(
-      L1ToL2MessageStatus.REDEEMED,
+      ParentToChildMessageStatus.REDEEMED,
       'Retryable ticket not redeemed'
     )
 
@@ -242,14 +244,14 @@ describe('Ether', async () => {
     )
 
     const withdrawMessage = (
-      await withdrawEthRec.getL2ToL1Messages(l1Signer)
+      await withdrawEthRec.getChildToParentMessages(l1Signer)
     )[0]
     expect(
       withdrawMessage,
       'eth withdraw getWithdrawalsInL2Transaction query came back empty'
     ).to.exist
 
-    const withdrawEvents = await L2ToL1Message.getL2ToL1Events(
+    const withdrawEvents = await ChildToParentMessage.getChildToParentEvents(
       l2Signer.provider!,
       { fromBlock: withdrawEthRec.blockNumber, toBlock: 'latest' },
       undefined,

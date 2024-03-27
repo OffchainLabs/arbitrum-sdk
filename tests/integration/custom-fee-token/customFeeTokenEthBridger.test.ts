@@ -28,7 +28,10 @@ import {
   skipIfMainnet,
   wait,
 } from '../testHelpers'
-import { L2ToL1Message, L2ToL1MessageStatus } from '../../../src'
+import {
+  L2ToL1Message,
+  ChildToParentMessageStatus as L2ToL1MessageStatus,
+} from '../../../src'
 import { describeOnlyWhenCustomGasToken } from './mochaExtensions'
 
 dotenv.config()
@@ -62,7 +65,7 @@ describeOnlyWhenCustomGasToken(
 
       const allowance = await nativeTokenContract.allowance(
         await l1Signer.getAddress(),
-        ethBridger.l2Network.ethBridge.inbox
+        ethBridger.childChain.ethBridge.inbox
       )
 
       expect(allowance.toString()).to.equal(
@@ -85,7 +88,7 @@ describeOnlyWhenCustomGasToken(
 
       const allowance = await nativeTokenContract.allowance(
         await l1Signer.getAddress(),
-        ethBridger.l2Network.ethBridge.inbox
+        ethBridger.childChain.ethBridge.inbox
       )
 
       expect(allowance.toString()).to.equal(
@@ -102,7 +105,7 @@ describeOnlyWhenCustomGasToken(
         l2Signer,
         l2Provider,
       } = await testSetup()
-      const bridge = ethBridger.l2Network.ethBridge.bridge
+      const bridge = ethBridger.childChain.ethBridge.bridge
       const amount = parseEther('2')
 
       await fundL1Ether(l1Signer)
@@ -161,7 +164,7 @@ describeOnlyWhenCustomGasToken(
         ethBridger,
         nativeTokenContract,
       } = await testSetup()
-      const bridge = ethBridger.l2Network.ethBridge.bridge
+      const bridge = ethBridger.childChain.ethBridge.bridge
       const amount = parseEther('0.2')
 
       await fundL1Ether(l1Signer)
@@ -198,13 +201,15 @@ describeOnlyWhenCustomGasToken(
         'initiate withdrawal tx failed'
       )
 
-      const messages = await withdrawalTxReceipt.getL2ToL1Messages(l1Signer)
+      const messages = await withdrawalTxReceipt.getChildToParentMessages(
+        l1Signer
+      )
       expect(messages.length).to.equal(
         1,
         'custom fee token withdraw getWithdrawalsInL2Transaction query came back empty'
       )
 
-      const withdrawalEvents = await L2ToL1Message.getL2ToL1Events(
+      const withdrawalEvents = await L2ToL1Message.getChildToParentEvents(
         l2Provider,
         { fromBlock: withdrawalTxReceipt.blockNumber, toBlock: 'latest' },
         undefined,

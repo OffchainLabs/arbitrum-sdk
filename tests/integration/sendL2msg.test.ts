@@ -33,9 +33,9 @@ const sendSignedTx = async (testState: any, info?: any) => {
     ...info,
     value: BigNumber.from(0),
   }
-  const signedTx = await inbox.signL2Tx(message, l2Deployer)
+  const signedTx = await inbox.signChildChainTx(message, l2Deployer)
 
-  const l1Tx = await inbox.sendL2SignedTx(signedTx)
+  const l1Tx = await inbox.sendChildChainSignedTx(signedTx)
   return {
     signedMsg: signedTx,
     l1TransactionReceipt: await l1Tx?.wait(),

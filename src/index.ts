@@ -23,21 +23,21 @@ export {
   L2ContractTransaction,
 } from './lib/message/L2Transaction'
 export {
-  L2ToL1Message,
-  L2ToL1MessageWriter,
-  L2ToL1MessageReader,
+  ChildToParentMessage as L2ToL1Message,
+  ChildToParentMessageWriter as L2ToL1MessageWriter,
+  ChildToParentMessageReader as L2ToL1MessageReader,
 } from './lib/message/L2ToL1Message'
 export {
   L1ContractTransaction,
   L1TransactionReceipt,
 } from './lib/message/L1Transaction'
 export {
-  L1ToL2MessageStatus,
+  ParentToChildMessageStatus as L1ToL2MessageStatus,
   EthDepositStatus,
-  L1ToL2Message,
-  L1ToL2MessageReader,
-  L1ToL2MessageReaderClassic,
-  L1ToL2MessageWriter,
+  ParentToChildMessage as L1ToL2Message,
+  ParentToChildMessageReader as L1ToL2MessageReader,
+  ParentToChildMessageReaderClassic as L1ToL2MessageReaderClassic,
+  ParentToChildMessageWriter as L1ToL2MessageWriter,
 } from './lib/message/L1ToL2Message'
 export { L1ToL2MessageGasEstimator } from './lib/message/L1ToL2MessageGasEstimator'
 export { argSerializerConstructor } from './lib/utils/byte_serialize_params'
@@ -56,7 +56,7 @@ export { InboxTools } from './lib/inbox/inbox'
 export { EventFetcher } from './lib/utils/eventFetcher'
 export { ArbitrumProvider } from './lib/utils/arbProvider'
 export * as constants from './lib/dataEntities/constants'
-export { L2ToL1MessageStatus } from './lib/dataEntities/message'
+export { ChildToParentMessageStatus } from './lib/dataEntities/message'
 export {
   RetryableData,
   RetryableDataTools,

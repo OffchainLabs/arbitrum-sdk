@@ -157,7 +157,7 @@ describe('RevertData', () => {
 
     await (
       await erc20Bridger.approveToken({
-        erc20L1Address: l1TokenAddress,
+        erc20ParentAddress: l1TokenAddress,
         l1Signer: l1Signer,
       })
     ).wait()
@@ -166,7 +166,7 @@ describe('RevertData', () => {
       // approve the custom fee token
       await (
         await erc20Bridger.approveGasToken({
-          erc20L1Address: l1TokenAddress,
+          erc20ParentAddress: l1TokenAddress,
           l1Signer: l1Signer,
         })
       ).wait()
@@ -188,22 +188,22 @@ describe('RevertData', () => {
       l1Signer: l1Signer,
       l2SignerOrProvider: l2Signer.provider!,
       from: await l1Signer.getAddress(),
-      erc20L1Address: l1TokenAddress,
+      erc20ParentAddress: l1TokenAddress,
       amount: depositAmount,
       retryableGasOverrides: retryableOverrides,
     }
 
     const depositParams = await erc20Bridger.getDepositRequest({
       ...erc20Params,
-      l1Provider: l1Signer.provider!,
-      l2Provider: l2Signer.provider!,
+      parentProvider: l1Signer.provider!,
+      childProvider: l2Signer.provider!,
     })
 
     try {
       await erc20Bridger.deposit({
         ...erc20Params,
         l1Signer: l1Signer,
-        l2Provider: l2Signer.provider!,
+        childProvider: l2Signer.provider!,
       })
       assert.fail('Expected estimateGas to fail')
     } catch (err) {

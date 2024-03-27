@@ -79,7 +79,7 @@ describeOnlyWhenEth('WETH', async () => {
     expect(l2WethGateway, 'l2 weth gateway').to.eq(
       l2Network.tokenBridge.l2WethGateway
     )
-    const l2Token = erc20Bridger.getL2TokenContract(
+    const l2Token = erc20Bridger.getChildTokenContract(
       l2Signer.provider!,
       l2Network.tokenBridge.l2Weth
     )
