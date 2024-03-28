@@ -21,13 +21,13 @@ import { BigNumber } from 'ethers'
 
 import { skipIfMainnet } from './testHelpers'
 import { testSetup } from '../../scripts/testSetup'
-import { L1ToL2MessageGasEstimator } from '../../src'
+import { ParentToChildMessageGasEstimator } from '../../src/lib/message/L1ToL2MessageGasEstimator'
 import {
   itOnlyWhenEth,
   itOnlyWhenCustomGasToken,
 } from './custom-fee-token/mochaExtensions'
 
-describe('L1ToL2MessageGasEstimator', () => {
+describe('ParentToChildMessageGasEstimator', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
@@ -37,7 +37,7 @@ describe('L1ToL2MessageGasEstimator', () => {
     async () => {
       const { parentProvider, childProvider } = await testSetup()
 
-      const submissionFee = await new L1ToL2MessageGasEstimator(
+      const submissionFee = await new ParentToChildMessageGasEstimator(
         childProvider
       ).estimateSubmissionFee(
         parentProvider,
@@ -54,7 +54,7 @@ describe('L1ToL2MessageGasEstimator', () => {
     async () => {
       const { parentProvider, childProvider } = await testSetup()
 
-      const submissionFee = await new L1ToL2MessageGasEstimator(
+      const submissionFee = await new ParentToChildMessageGasEstimator(
         childProvider
       ).estimateSubmissionFee(
         parentProvider,

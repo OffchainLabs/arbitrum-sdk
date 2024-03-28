@@ -45,11 +45,7 @@ import {
   L1ToL2MessageGasEstimator as ParentToChildMessageGasEstimator,
 } from '../message/L1ToL2MessageGasEstimator'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
-import {
-  L2Network as ChildChain,
-  getL2Network as getChildChain,
-  isChildChain,
-} from '../dataEntities/networks'
+import { ArbitrumNetwork, getArbitrumNetwork } from '../dataEntities/networks'
 import { ArbSdkError, MissingProviderArbSdkError } from '../dataEntities/errors'
 import { DISABLED_GATEWAY } from '../dataEntities/constants'
 import { EventFetcher } from '../utils/eventFetcher'
@@ -190,7 +186,7 @@ export class Erc20Bridger extends AssetBridger<
   /**
    * Bridger for moving ERC20 tokens back and forth between parent-to-child
    */
-  public constructor(childChain: ChildChain) {
+  public constructor(childChain: ArbitrumNetwork) {
     super(childChain)
   }
 
@@ -200,7 +196,7 @@ export class Erc20Bridger extends AssetBridger<
    * @returns
    */
   public static async fromProvider(childProvider: Provider) {
-    return new Erc20Bridger(await getChildChain(childProvider))
+    return new Erc20Bridger(await getArbitrumNetwork(childProvider))
   }
 
   /**
@@ -423,10 +419,6 @@ export class Erc20Bridger extends AssetBridger<
     gatewayAddress: string,
     parentProvider: Provider
   ): Promise<boolean> {
-    if (!isChildChain(this.childChain)) {
-      throw new ArbSdkError('Parent chain must have token bridge')
-    }
-
     const wethAddress = this.childChain.tokenBridge.l1WethGateway
     if (this.childChain.isCustom) {
       // For custom network, we do an ad-hoc check to see if it's a WETH gateway
@@ -549,10 +541,6 @@ export class Erc20Bridger extends AssetBridger<
   ): Promise<boolean> {
     await this.checkParentChain(parentProvider)
 
-    if (!isChildChain(this.childChain)) {
-      throw new ArbSdkError('Parent chain must have token bridge deployed')
-    }
-
     const l1GatewayRouter = L1GatewayRouter__factory.connect(
       this.childChain.tokenBridge.l1GatewayRouter,
       parentProvider
@@ -658,9 +646,6 @@ export class Erc20Bridger extends AssetBridger<
       parentProvider
     )
     let tokenGasOverrides: GasOverrides | undefined = retryableGasOverrides
-    if (!isChildChain(this.childChain)) {
-      throw new ArbSdkError('Parent chain must have token bridge deployed')
-    }
     // we also add a hardcoded minimum gas limit for custom gateway deposits
     if (l1GatewayAddress === this.childChain.tokenBridge.l1CustomGateway) {
       if (!tokenGasOverrides) tokenGasOverrides = {}

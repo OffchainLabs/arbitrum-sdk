@@ -28,6 +28,7 @@ import {
   addCustomNetwork,
   ChildChain,
   ParentChain,
+  L1Network,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
@@ -125,19 +126,19 @@ export const testSetup = async (): Promise<{
 
       addCustomNetwork({
         customL1Network: ethLocal,
-        customL2Network: _parentChain,
+        customArbitrumNetwork: _l1Network,
       })
 
       addCustomNetwork({
-        customL2Network: childChain,
+        customArbitrumNetwork: l2Network,
       })
 
       setParentChain = parentChain
       setChildChain = childChain
     } else {
       addCustomNetwork({
-        customL1Network: parentChain as ParentChain,
-        customL2Network: childChain,
+        customL1Network: l1Network as L1Network,
+        customArbitrumNetwork: l2Network,
       })
 
       setParentChain = parentChain
