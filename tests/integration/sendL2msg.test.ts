@@ -19,7 +19,10 @@
 
 import { BigNumber, ethers, Signer } from 'ethers'
 import { InboxTools } from '../../src/lib/inbox/inbox'
-import { getChildChain, ChildChain } from '../../src/lib/dataEntities/networks'
+import {
+  getChildChain,
+  ArbitrumNetwork,
+} from '../../src/lib/dataEntities/networks'
 import { testSetup } from '../../scripts/testSetup'
 import { greeter } from './helper/greeter'
 import { expect } from 'chai'
@@ -48,7 +51,7 @@ describe('Send signedTx to l2 using inbox', async () => {
     parentDeployer: Signer
     childDeployer: Signer
     adminErc20Bridger: AdminErc20Bridger
-    childChain: ChildChain
+    childChain: ArbitrumNetwork
   }
 
   before('init', async () => {

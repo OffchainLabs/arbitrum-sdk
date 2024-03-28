@@ -23,12 +23,11 @@ import dotenv from 'dotenv'
 
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
+  L1Network,
+  ArbitrumNetwork,
   getL1Network,
   getL2Network,
   addCustomNetwork,
-  ChildChain,
-  ParentChain,
-  L1Network,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
@@ -73,8 +72,8 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
 }
 
 export const testSetup = async (): Promise<{
-  parentChain: ParentChain | ChildChain
-  childChain: ChildChain
+  parentChain: L1Network | ArbitrumNetwork
+  childChain: ArbitrumNetwork
   parentSigner: Signer
   childSigner: Signer
   parentProvider: Provider
@@ -96,7 +95,8 @@ export const testSetup = async (): Promise<{
   const parentSigner = seed.connect(ethProvider)
   const childSigner = seed.connect(arbProvider)
 
-  let setParentChain: ParentChain, setChildChain: ChildChain
+  let setParentChain: L1Network | ArbitrumNetwork,
+    setChildChain: ArbitrumNetwork
   try {
     const l1Network = isTestingOrbitChains
       ? await getL2Network(parentDeployer)
@@ -113,8 +113,8 @@ export const testSetup = async (): Promise<{
     const { l1Network: parentChain, l2Network: childChain } = localNetworkFile
 
     if (isTestingOrbitChains) {
-      const _parentChain = parentChain as ChildChain
-      const ethLocal: ParentChain = {
+      const _parentChain = parentChain as ArbitrumNetwork
+      const ethLocal: L1Network = {
         blockTime: 10,
         chainID: _parentChain.partnerChainID,
         explorerUrl: '',
@@ -126,19 +126,19 @@ export const testSetup = async (): Promise<{
 
       addCustomNetwork({
         customL1Network: ethLocal,
-        customArbitrumNetwork: _l1Network,
+        customArbitrumNetwork: _parentChain,
       })
 
       addCustomNetwork({
-        customArbitrumNetwork: l2Network,
+        customArbitrumNetwork: childChain,
       })
 
       setParentChain = parentChain
       setChildChain = childChain
     } else {
       addCustomNetwork({
-        customL1Network: l1Network as L1Network,
-        customArbitrumNetwork: l2Network,
+        customL1Network: parentChain as L1Network,
+        customArbitrumNetwork: childChain,
       })
 
       setParentChain = parentChain
@@ -174,8 +174,8 @@ export const testSetup = async (): Promise<{
 }
 
 export function getLocalNetworksFromFile(): {
-  l1Network: ParentChain | ChildChain
-  l2Network: ChildChain
+  l1Network: L1Network | ArbitrumNetwork
+  l2Network: ArbitrumNetwork
 } {
   const pathToLocalNetworkFile = path.join(__dirname, '..', 'localNetwork.json')
   if (!fs.existsSync(pathToLocalNetworkFile)) {

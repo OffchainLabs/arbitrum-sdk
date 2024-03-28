@@ -34,7 +34,7 @@ import {
   L1ToL2MessageWriter,
   L2TransactionReceipt,
 } from '../../src'
-import { ChildChain } from '../../src/lib/dataEntities/networks'
+import { ArbitrumNetwork } from '../../src/lib/dataEntities/networks'
 import { TestERC20 } from '../../src/lib/abi/TestERC20'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
@@ -65,7 +65,7 @@ describe('standard ERC20', () => {
     parentSigner: Signer
     childSigner: Signer
     erc20Bridger: Erc20Bridger
-    childChain: ChildChain
+    childChain: ArbitrumNetwork
     parentToken: TestERC20
   }
 

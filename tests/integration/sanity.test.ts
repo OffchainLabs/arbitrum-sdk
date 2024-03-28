@@ -155,11 +155,7 @@ describe('sanity checks (read-only)', async () => {
   })
 
   itOnlyWhenEth('l1 gateway router points to right weth gateways', async () => {
-    const {
-      adminErc20Bridger,
-      parentSigner: parentSigner,
-      childChain: childChain,
-    } = await testSetup()
+    const { adminErc20Bridger, parentSigner, childChain } = await testSetup()
 
     const gateway = await adminErc20Bridger.getL1GatewayAddress(
       childChain.tokenBridge.l1Weth,

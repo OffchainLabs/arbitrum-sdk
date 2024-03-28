@@ -39,7 +39,7 @@ import {
   withdrawToken,
 } from './testHelpers'
 import { L1ToL2MessageStatus } from '../../src'
-import { ChildChain } from '../../src/lib/dataEntities/networks'
+import { ArbitrumNetwork } from '../../src/lib/dataEntities/networks'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
@@ -61,7 +61,7 @@ describe('Custom ERC20', () => {
     parentSigner: Signer
     childSigner: Signer
     adminErc20Bridger: AdminErc20Bridger
-    childChain: ChildChain
+    childChain: ArbitrumNetwork
     l1CustomToken: TestCustomTokenL1 | TestOrbitCustomTokenL1
   }
 
@@ -149,7 +149,7 @@ describe('Custom ERC20', () => {
 })
 
 const registerCustomToken = async (
-  childChain: ChildChain,
+  childChain: ArbitrumNetwork,
   parentSigner: Signer,
   childSigner: Signer,
   adminErc20Bridger: AdminErc20Bridger
