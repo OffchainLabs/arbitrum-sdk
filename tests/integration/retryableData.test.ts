@@ -185,7 +185,7 @@ describe('RevertData', () => {
     }
 
     const erc20Params = {
-      parentSigner: parentSigner,
+      parentSigner,
       childSignerOrProvider: childSigner.provider!,
       from: await parentSigner.getAddress(),
       erc20ParentAddress: l1TokenAddress,
