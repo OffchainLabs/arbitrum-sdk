@@ -38,7 +38,7 @@ describe('ParentToChildMessageCreator', () => {
   const testAmount = utils.parseEther('0.01')
 
   it('allows the creation of Retryable Tickets sending parameters', async () => {
-    const { l1Signer: parentSigner, l2Signer: childSigner } = await testSetup()
+    const { parentSigner, childSigner } = await testSetup()
     const signerAddress = await parentSigner.getAddress()
     const arbProvider = childSigner.provider as providers.Provider
 
@@ -99,7 +99,7 @@ describe('ParentToChildMessageCreator', () => {
   })
 
   it('allows the creation of Retryable Tickets sending a request', async () => {
-    const { l1Signer: parentSigner, l2Signer: childSigner } = await testSetup()
+    const { parentSigner, childSigner } = await testSetup()
     const signerAddress = await parentSigner.getAddress()
     const ethProvider = parentSigner.provider as providers.Provider
     const arbProvider = childSigner.provider as providers.Provider

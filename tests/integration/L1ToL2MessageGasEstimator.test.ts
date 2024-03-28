@@ -35,8 +35,7 @@ describe('ParentToChildMessageGasEstimator', () => {
   itOnlyWhenEth(
     `"estimateSubmissionFee" returns non-0 for eth chain`,
     async () => {
-      const { l1Provider: parentProvider, l2Provider: childProvider } =
-        await testSetup()
+      const { parentProvider, childProvider } = await testSetup()
 
       const submissionFee = await new ParentToChildMessageGasEstimator(
         childProvider
@@ -53,8 +52,7 @@ describe('ParentToChildMessageGasEstimator', () => {
   itOnlyWhenCustomGasToken(
     `"estimateSubmissionFee" returns 0 for custom gas token chain`,
     async () => {
-      const { l1Provider: parentProvider, l2Provider: childProvider } =
-        await testSetup()
+      const { parentProvider, childProvider } = await testSetup()
 
       const submissionFee = await new ParentToChildMessageGasEstimator(
         childProvider
