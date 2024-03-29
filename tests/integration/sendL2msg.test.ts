@@ -20,7 +20,7 @@
 import { BigNumber, ethers, Signer } from 'ethers'
 import { InboxTools } from '../../src/lib/inbox/inbox'
 import {
-  getChildChain,
+  getArbitrumNetwork,
   ArbitrumNetwork,
 } from '../../src/lib/dataEntities/networks'
 import { testSetup } from '../../scripts/testSetup'
@@ -30,7 +30,7 @@ import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 
 const sendSignedTx = async (testState: any, info?: any) => {
   const { parentDeployer, childDeployer } = testState
-  const childChain = await getChildChain(await childDeployer.getChainId())
+  const childChain = await getArbitrumNetwork(await childDeployer.getChainId())
   const inbox = new InboxTools(parentDeployer, childChain)
   const message = {
     ...info,

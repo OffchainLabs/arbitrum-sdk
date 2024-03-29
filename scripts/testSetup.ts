@@ -26,7 +26,7 @@ import {
   L1Network,
   ArbitrumNetwork,
   getL1Network,
-  getL2Network,
+  getArbitrumNetwork,
   addCustomNetwork,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
@@ -99,9 +99,9 @@ export const testSetup = async (): Promise<{
     setChildChain: ArbitrumNetwork
   try {
     const l1Network = isTestingOrbitChains
-      ? await getL2Network(parentDeployer)
+      ? await getArbitrumNetwork(parentDeployer)
       : await getL1Network(parentDeployer)
-    const l2Network = await getL2Network(childDeployer)
+    const l2Network = await getArbitrumNetwork(childDeployer)
     setParentChain = l1Network
     setChildChain = l2Network
   } catch (err) {
