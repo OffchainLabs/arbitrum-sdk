@@ -24,9 +24,9 @@ import dotenv from 'dotenv'
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
   L1Network,
-  L2Network,
+  ArbitrumNetwork,
   getL1Network,
-  getL2Network,
+  getArbitrumNetwork,
   addCustomNetwork,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
@@ -72,109 +72,110 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
 }
 
 export const testSetup = async (): Promise<{
-  l1Network: L1Network | L2Network
-  l2Network: L2Network
-  l1Signer: Signer
-  l2Signer: Signer
-  l1Provider: Provider
-  l2Provider: Provider
+  parentChain: L1Network | ArbitrumNetwork
+  childChain: ArbitrumNetwork
+  parentSigner: Signer
+  childSigner: Signer
+  parentProvider: Provider
+  childProvider: Provider
   erc20Bridger: Erc20Bridger
   ethBridger: EthBridger
   adminErc20Bridger: AdminErc20Bridger
   inboxTools: InboxTools
-  l1Deployer: Signer
-  l2Deployer: Signer
+  parentDeployer: Signer
+  childDeployer: Signer
 }> => {
   const ethProvider = new JsonRpcProvider(config.ethUrl)
   const arbProvider = new JsonRpcProvider(config.arbUrl)
 
-  const l1Deployer = getSigner(ethProvider, config.ethKey)
-  const l2Deployer = getSigner(arbProvider, config.arbKey)
+  const parentDeployer = getSigner(ethProvider, config.ethKey)
+  const childDeployer = getSigner(arbProvider, config.arbKey)
 
   const seed = Wallet.createRandom()
-  const l1Signer = seed.connect(ethProvider)
-  const l2Signer = seed.connect(arbProvider)
+  const parentSigner = seed.connect(ethProvider)
+  const childSigner = seed.connect(arbProvider)
 
-  let setL1Network: L1Network | L2Network, setL2Network: L2Network
+  let setParentChain: L1Network | ArbitrumNetwork,
+    setChildChain: ArbitrumNetwork
   try {
     const l1Network = isTestingOrbitChains
-      ? await getL2Network(l1Deployer)
-      : await getL1Network(l1Deployer)
-    const l2Network = await getL2Network(l2Deployer)
-    setL1Network = l1Network
-    setL2Network = l2Network
+      ? await getArbitrumNetwork(parentDeployer)
+      : await getL1Network(parentDeployer)
+    const l2Network = await getArbitrumNetwork(childDeployer)
+    setParentChain = l1Network
+    setChildChain = l2Network
   } catch (err) {
     // the networks havent been added yet
 
     // check if theres an existing network available
     const localNetworkFile = getLocalNetworksFromFile()
 
-    const { l1Network, l2Network } = localNetworkFile
+    const { l1Network: parentChain, l2Network: childChain } = localNetworkFile
 
     if (isTestingOrbitChains) {
-      const _l1Network = l1Network as L2Network
+      const _parentChain = parentChain as ArbitrumNetwork
       const ethLocal: L1Network = {
         blockTime: 10,
-        chainID: _l1Network.partnerChainID,
+        chainID: _parentChain.partnerChainID,
         explorerUrl: '',
         isCustom: true,
         name: 'EthLocal',
-        partnerChainIDs: [_l1Network.chainID],
+        partnerChainIDs: [_parentChain.chainID],
         isArbitrum: false,
       }
 
       addCustomNetwork({
         customL1Network: ethLocal,
-        customArbitrumNetwork: _l1Network,
+        customArbitrumNetwork: _parentChain,
       })
 
       addCustomNetwork({
-        customArbitrumNetwork: l2Network,
+        customArbitrumNetwork: childChain,
       })
 
-      setL1Network = l1Network
-      setL2Network = l2Network
+      setParentChain = parentChain
+      setChildChain = childChain
     } else {
       addCustomNetwork({
-        customL1Network: l1Network as L1Network,
-        customArbitrumNetwork: l2Network,
+        customL1Network: parentChain as L1Network,
+        customArbitrumNetwork: childChain,
       })
 
-      setL1Network = l1Network
-      setL2Network = l2Network
+      setParentChain = parentChain
+      setChildChain = childChain
     }
   }
 
-  const erc20Bridger = new Erc20Bridger(setL2Network)
-  const adminErc20Bridger = new AdminErc20Bridger(setL2Network)
-  const ethBridger = new EthBridger(setL2Network)
-  const inboxTools = new InboxTools(l1Signer, setL2Network)
+  const erc20Bridger = new Erc20Bridger(setChildChain)
+  const adminErc20Bridger = new AdminErc20Bridger(setChildChain)
+  const ethBridger = new EthBridger(setChildChain)
+  const inboxTools = new InboxTools(parentSigner, setChildChain)
 
   if (isL2NetworkWithCustomFeeToken()) {
-    await fundL1(l1Signer)
-    await fundL1CustomFeeToken(l1Signer)
-    await approveL1CustomFeeToken(l1Signer)
+    await fundL1(parentSigner)
+    await fundL1CustomFeeToken(parentSigner)
+    await approveL1CustomFeeToken(parentSigner)
   }
 
   return {
-    l1Signer,
-    l2Signer,
-    l1Provider: ethProvider,
-    l2Provider: arbProvider,
-    l1Network: setL1Network,
-    l2Network: setL2Network,
+    parentSigner,
+    childSigner,
+    parentProvider: ethProvider,
+    childProvider: arbProvider,
+    parentChain: setParentChain,
+    childChain: setChildChain,
     erc20Bridger,
     adminErc20Bridger,
     ethBridger,
     inboxTools,
-    l1Deployer,
-    l2Deployer,
+    parentDeployer,
+    childDeployer,
   }
 }
 
 export function getLocalNetworksFromFile(): {
-  l1Network: L1Network | L2Network
-  l2Network: L2Network
+  l1Network: L1Network | ArbitrumNetwork
+  l2Network: ArbitrumNetwork
 } {
   const pathToLocalNetworkFile = path.join(__dirname, '..', 'localNetwork.json')
   if (!fs.existsSync(pathToLocalNetworkFile)) {

@@ -21,10 +21,13 @@ export function isL2NetworkWithCustomFeeToken(): boolean {
 
 export async function testSetup() {
   const result = await _testSetup()
-  const { l2Network, l1Provider } = result
+  const { childChain, parentProvider } = result
 
-  const nativeToken = l2Network.nativeToken!
-  const nativeTokenContract = ERC20__factory.connect(nativeToken, l1Provider)
+  const nativeToken = childChain.nativeToken!
+  const nativeTokenContract = ERC20__factory.connect(
+    nativeToken,
+    parentProvider
+  )
 
   return { ...result, nativeTokenContract }
 }
