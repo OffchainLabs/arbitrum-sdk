@@ -18,7 +18,7 @@
 
 import { expect } from 'chai'
 import { providers, utils } from 'ethers'
-import { fundL1 as fundParentChain, skipIfMainnet } from './testHelpers'
+import { fundParentSigner, skipIfMainnet } from './testHelpers'
 import { testSetup } from '../../scripts/testSetup'
 import { ParentToChildMessageCreator } from '../../src/lib/message/L1ToL2MessageCreator'
 import { ParentToChildMessageStatus } from '../../src/lib/message/L1ToL2Message'
@@ -43,7 +43,7 @@ describe('ParentToChildMessageCreator', () => {
     const arbProvider = childSigner.provider as providers.Provider
 
     // Funding parent chain wallet
-    await fundParentChain(parentSigner)
+    await fundParentSigner(parentSigner)
 
     if (isChildChainWithCustomFeeToken()) {
       await fundParentChainCustomFeeToken(parentSigner)
@@ -105,7 +105,7 @@ describe('ParentToChildMessageCreator', () => {
     const arbProvider = childSigner.provider as providers.Provider
 
     // Funding parent chain wallet
-    await fundParentChain(parentSigner)
+    await fundParentSigner(parentSigner)
 
     if (isChildChainWithCustomFeeToken()) {
       await fundParentChainCustomFeeToken(parentSigner)

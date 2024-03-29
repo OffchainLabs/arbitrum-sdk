@@ -21,12 +21,12 @@ import { Signer, Wallet, utils, constants } from 'ethers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import {
-  fundL1,
+  fundParentSigner,
   skipIfMainnet,
   depositToken,
   GatewayType,
   withdrawToken,
-  fundL2,
+  fundChildSigner,
 } from './testHelpers'
 import {
   Erc20Bridger,
@@ -71,8 +71,8 @@ describe('standard ERC20', () => {
 
   before('init', async () => {
     const setup = await testSetup()
-    await fundL1(setup.parentSigner)
-    await fundL2(setup.childSigner)
+    await fundParentSigner(setup.parentSigner)
+    await fundChildSigner(setup.childSigner)
     const deployErc20 = new TestERC20__factory().connect(setup.parentSigner)
     const testToken = await deployErc20.deploy()
     await testToken.deployed()
@@ -132,8 +132,8 @@ describe('standard ERC20', () => {
       depositAmount,
       l1TokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
-      l1Signer: testState.parentSigner,
-      l2Signer: testState.childSigner,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
       expectedStatus: L1ToL2MessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.STANDARD,
     })
@@ -166,8 +166,8 @@ describe('standard ERC20', () => {
       depositAmount,
       l1TokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
-      l1Signer: testState.parentSigner,
-      l2Signer: testState.childSigner,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
       expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
@@ -184,8 +184,8 @@ describe('standard ERC20', () => {
       depositAmount,
       l1TokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
-      l1Signer: testState.parentSigner,
-      l2Signer: testState.childSigner,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
       expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
@@ -204,8 +204,8 @@ describe('standard ERC20', () => {
       depositAmount,
       l1TokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
-      l1Signer: testState.parentSigner,
-      l2Signer: testState.childSigner,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
       expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
@@ -236,8 +236,8 @@ describe('standard ERC20', () => {
       depositAmount,
       l1TokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
-      l1Signer: testState.parentSigner,
-      l2Signer: testState.childSigner,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
       expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
@@ -287,12 +287,12 @@ describe('standard ERC20', () => {
 
     await withdrawToken({
       ...testState,
-      l1Signer: testState.parentSigner,
-      l2Signer: testState.childSigner,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
       amount: withdrawalAmount,
       gatewayType: GatewayType.STANDARD,
       startBalance: startBalance,
-      l1Token: ERC20__factory.connect(
+      parentChainToken: ERC20__factory.connect(
         testState.parentToken.address,
         testState.parentSigner.provider!
       ),
@@ -305,8 +305,8 @@ describe('standard ERC20', () => {
       ethDepositAmount: utils.parseEther('0.0005'),
       l1TokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
-      l1Signer: testState.parentSigner,
-      l2Signer: testState.childSigner,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
       expectedStatus: L1ToL2MessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.STANDARD,
     })
@@ -319,8 +319,8 @@ describe('standard ERC20', () => {
       ethDepositAmount: utils.parseEther('0.0005'),
       l1TokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
-      l1Signer: testState.parentSigner,
-      l2Signer: testState.childSigner,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
       expectedStatus: L1ToL2MessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.STANDARD,
       destinationAddress: randomAddress,

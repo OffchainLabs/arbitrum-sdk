@@ -20,7 +20,7 @@ import { assert, expect } from 'chai'
 import { BigNumber } from '@ethersproject/bignumber'
 import { hexlify } from '@ethersproject/bytes'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
-import { fundL1, skipIfMainnet } from './testHelpers'
+import { fundParentSigner, skipIfMainnet } from './testHelpers'
 import { RetryableDataTools } from '../../src'
 import { Wallet } from 'ethers'
 import { testSetup } from '../../scripts/testSetup'
@@ -59,7 +59,7 @@ describe('RevertData', () => {
     func: 'estimateGas' | 'callStatic'
   ) => {
     const { parentSigner, childChain } = await testSetup()
-    await fundL1(parentSigner)
+    await fundParentSigner(parentSigner)
 
     const {
       to,
@@ -146,7 +146,7 @@ describe('RevertData', () => {
 
   it('is the same as what we estimate in erc20Bridger', async () => {
     const { erc20Bridger, parentSigner, childSigner } = await testSetup()
-    await fundL1(parentSigner, parseEther('2'))
+    await fundParentSigner(parentSigner, parseEther('2'))
 
     const deployErc20 = new TestERC20__factory().connect(parentSigner)
     const testToken = await deployErc20.deploy()

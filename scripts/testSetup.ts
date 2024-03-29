@@ -39,7 +39,7 @@ import {
   fundL1CustomFeeToken,
   isL2NetworkWithCustomFeeToken,
 } from '../tests/integration/custom-fee-token/customFeeTokenTestHelpers'
-import { fundL1 } from '../tests/integration/testHelpers'
+import { fundParentSigner } from '../tests/integration/testHelpers'
 
 dotenv.config()
 
@@ -152,7 +152,7 @@ export const testSetup = async (): Promise<{
   const inboxTools = new InboxTools(parentSigner, setChildChain)
 
   if (isL2NetworkWithCustomFeeToken()) {
-    await fundL1(parentSigner)
+    await fundParentSigner(parentSigner)
     await fundL1CustomFeeToken(parentSigner)
     await approveL1CustomFeeToken(parentSigner)
   }
