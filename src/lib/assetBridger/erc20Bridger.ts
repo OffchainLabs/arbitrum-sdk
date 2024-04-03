@@ -42,7 +42,7 @@ import { WithdrawalInitiatedEvent } from '../abi/L2ArbitrumGateway'
 import { GatewaySetEvent } from '../abi/L1GatewayRouter'
 import {
   GasOverrides,
-  L1ToL2MessageGasEstimator as ParentToChildMessageGasEstimator,
+  ParentToChildMessageGasEstimator,
 } from '../message/ParentToChildMessageGasEstimator'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { ArbitrumNetwork, getArbitrumNetwork } from '../dataEntities/networks'
@@ -52,13 +52,13 @@ import { EventFetcher } from '../utils/eventFetcher'
 import { EthDepositParams, EthWithdrawParams } from './ethBridger'
 import { AssetBridger } from './assetBridger'
 import {
-  L1ContractCallTransaction,
-  L1ContractTransaction,
-  L1TransactionReceipt,
+  ParentChainContractCallTransaction,
+  ParentChainContractTransaction,
+  ParentChainTransactionReceipt,
 } from '../message/ParentTransaction'
 import {
-  L2ContractTransaction,
-  L2TransactionReceipt,
+  ChildContractTransaction,
+  ChildTransactionReceipt,
 } from '../message/ChildTransaction'
 import {
   isParentToChildTransactionRequest,
@@ -733,7 +733,7 @@ export class Erc20Bridger extends AssetBridger<
    */
   public async deposit(
     params: Erc20DepositParams | ParentToChildTxReqAndSignerProvider
-  ): Promise<L1ContractCallTransaction> {
+  ): Promise<ParentChainContractCallTransaction> {
     await this.checkParentChain(params.parentSigner)
 
     // Although the types prevent should alert callers that value is not
@@ -762,7 +762,7 @@ export class Erc20Bridger extends AssetBridger<
       ...params.overrides,
     })
 
-    return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
+    return ParentChainTransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
   /**
@@ -837,7 +837,7 @@ export class Erc20Bridger extends AssetBridger<
     params:
       | (OmitTyped<Erc20WithdrawParams, 'from'> & { childSigner: Signer })
       | ChildToParentTxReqAndSigner
-  ): Promise<L2ContractTransaction> {
+  ): Promise<ChildContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(params.childSigner)) {
       throw new MissingProviderArbSdkError('childSigner')
     }
@@ -856,7 +856,7 @@ export class Erc20Bridger extends AssetBridger<
       ...withdrawalRequest.txRequest,
       ...params.overrides,
     })
-    return L2TransactionReceipt.monkeyPatchWait(tx)
+    return ChildTransactionReceipt.monkeyPatchWait(tx)
   }
 }
 
@@ -886,7 +886,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     l2TokenAddress: string,
     parentSigner: Signer,
     childProvider: Provider
-  ): Promise<L1ContractTransaction> {
+  ): Promise<ParentChainContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(parentSigner)) {
       throw new MissingProviderArbSdkError('parentSigner')
     }
@@ -997,7 +997,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
       value: setGatewayEstimates2.value,
     })
 
-    return L1TransactionReceipt.monkeyPatchWait(registerTx)
+    return ParentChainTransactionReceipt.monkeyPatchWait(registerTx)
   }
 
   /**
@@ -1067,7 +1067,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     childProvider: Provider,
     tokenGateways: TokenAndGateway[],
     options?: GasOverrides
-  ): Promise<L1ContractCallTransaction> {
+  ): Promise<ParentChainContractCallTransaction> {
     if (!SignerProviderUtils.signerHasProvider(parentSigner)) {
       throw new MissingProviderArbSdkError('parentSigner')
     }
@@ -1112,6 +1112,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
       value: estimates.estimates.deposit,
     })
 
-    return L1TransactionReceipt.monkeyPatchContractCallWait(res)
+    return ParentChainTransactionReceipt.monkeyPatchContractCallWait(res)
   }
 }

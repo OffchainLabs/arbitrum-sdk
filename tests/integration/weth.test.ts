@@ -27,7 +27,7 @@ import {
   GatewayType,
   depositToken,
 } from './testHelpers'
-import { L1ToL2MessageStatus } from '../../src'
+import { ParentToChildMessageStatus } from '../../src'
 import { Wallet } from 'ethers'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
@@ -69,7 +69,7 @@ describeOnlyWhenEth('WETH', async () => {
       erc20Bridger,
       parentSigner,
       childSigner,
-      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      expectedStatus: ParentToChildMessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.WETH,
     })
 

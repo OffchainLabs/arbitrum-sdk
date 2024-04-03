@@ -370,6 +370,3 @@ export class ParentToChildMessageGasEstimator {
     }
   }
 }
-
-// TODO: remove after all other files have their imports updated
-export { ParentToChildMessageGasEstimator as L1ToL2MessageGasEstimator }

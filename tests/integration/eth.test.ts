@@ -30,8 +30,8 @@ import {
   skipIfMainnet,
 } from './testHelpers'
 import { ChildToParentMessage } from '../../src/lib/message/ChildToParentMessage'
-import { ChildToParentMessageStatus as L2ToL1MessageStatus } from '../../src/lib/dataEntities/message'
-import { L2TransactionReceipt } from '../../src/lib/message/ChildTransaction'
+import { ChildToParentMessageStatus } from '../../src/lib/dataEntities/message'
+import { ChildTransactionReceipt } from '../../src/lib/message/ChildTransaction'
 import { ParentToChildMessageStatus } from '../../src/lib/message/ParentToChildMessage'
 import { testSetup } from '../../scripts/testSetup'
 import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
@@ -201,7 +201,7 @@ describe('Ether', async () => {
     expect(retryableTxReceipt).to.exist
     expect(retryableTxReceipt).to.not.be.null
 
-    const l2RetryableTxReceipt = new L2TransactionReceipt(retryableTxReceipt)
+    const l2RetryableTxReceipt = new ChildTransactionReceipt(retryableTxReceipt)
     const ticketRedeemEvents = l2RetryableTxReceipt.getRedeemScheduledEvents()
     expect(ticketRedeemEvents.length).to.eq(
       1,
@@ -274,7 +274,7 @@ describe('Ether', async () => {
     expect(
       messageStatus,
       `eth withdraw status returned ${messageStatus}`
-    ).to.be.eq(L2ToL1MessageStatus.UNCONFIRMED)
+    ).to.be.eq(ChildToParentMessageStatus.UNCONFIRMED)
 
     // CHRIS: TODO: comment this back in when fixed in nitro
     // const actualFinalBalance = await childSigner.getBalance()
@@ -301,7 +301,7 @@ describe('Ether', async () => {
     expect(
       await withdrawMessage.status(childSigner.provider!),
       'confirmed status'
-    ).to.eq(L2ToL1MessageStatus.CONFIRMED)
+    ).to.eq(ChildToParentMessageStatus.CONFIRMED)
 
     const execTx = await withdrawMessage.execute(childSigner.provider!)
     const execRec = await execTx.wait()
@@ -314,7 +314,7 @@ describe('Ether', async () => {
     expect(
       await withdrawMessage.status(childSigner.provider!),
       'executed status'
-    ).to.eq(L2ToL1MessageStatus.EXECUTED)
+    ).to.eq(ChildToParentMessageStatus.EXECUTED)
 
     const finalRandomBalance = isArbitrumNetworkWithCustomFeeToken()
       ? await ERC20__factory.connect(

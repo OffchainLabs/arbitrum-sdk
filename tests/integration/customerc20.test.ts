@@ -38,7 +38,7 @@ import {
   GatewayType,
   withdrawToken,
 } from './testHelpers'
-import { L1ToL2MessageStatus } from '../../src'
+import { ParentToChildMessageStatus } from '../../src'
 import { ArbitrumNetwork } from '../../src/lib/dataEntities/networks'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 import { testSetup } from '../../scripts/testSetup'
@@ -98,7 +98,7 @@ describe('Custom ERC20', () => {
       erc20Bridger: testState.adminErc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
-      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      expectedStatus: ParentToChildMessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.CUSTOM,
     })
   })
@@ -127,7 +127,7 @@ describe('Custom ERC20', () => {
       erc20Bridger: testState.adminErc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
-      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      expectedStatus: ParentToChildMessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.CUSTOM,
     })
   })
@@ -141,7 +141,7 @@ describe('Custom ERC20', () => {
       erc20Bridger: testState.adminErc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
-      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      expectedStatus: ParentToChildMessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.CUSTOM,
       destinationAddress: randomAddress,
     })
@@ -239,12 +239,12 @@ const registerCustomToken = async (
 
   const setTokenTx = await l1ToL2Messages[0].waitForStatus()
   expect(setTokenTx.status, 'Set token not redeemed.').to.eq(
-    L1ToL2MessageStatus.REDEEMED
+    ParentToChildMessageStatus.REDEEMED
   )
 
   const setGateways = await l1ToL2Messages[1].waitForStatus()
   expect(setGateways.status, 'Set gateways not redeemed.').to.eq(
-    L1ToL2MessageStatus.REDEEMED
+    ParentToChildMessageStatus.REDEEMED
   )
 
   // check end conditions

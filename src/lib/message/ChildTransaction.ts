@@ -40,18 +40,18 @@ import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { EventArgs, parseTypedLogs } from '../dataEntities/event'
 import { ArbitrumProvider } from '../utils/arbProvider'
 
-export interface L2ContractTransaction extends ContractTransaction {
-  wait(confirmations?: number): Promise<ChildChainTransactionReceipt>
+export interface ChildContractTransaction extends ContractTransaction {
+  wait(confirmations?: number): Promise<ChildTransactionReceipt>
 }
 
-export interface RedeemTransaction extends L2ContractTransaction {
+export interface RedeemTransaction extends ChildContractTransaction {
   waitForRedeem: () => Promise<TransactionReceipt>
 }
 
 /**
  * Extension of ethers-js TransactionReceipt, adding Arbitrum-specific functionality
  */
-export class ChildChainTransactionReceipt implements TransactionReceipt {
+export class ChildTransactionReceipt implements TransactionReceipt {
   public readonly to: string
   public readonly from: string
   public readonly contractAddress: string
@@ -186,7 +186,7 @@ export class ChildChainTransactionReceipt implements TransactionReceipt {
    */
   public static monkeyPatchWait = (
     contractTransaction: ContractTransaction
-  ): L2ContractTransaction => {
+  ): ChildContractTransaction => {
     const wait = contractTransaction.wait
     contractTransaction.wait = async (_confirmations?: number) => {
       // we ignore the confirmations for now since child chain transactions shouldn't re-org
@@ -194,9 +194,9 @@ export class ChildChainTransactionReceipt implements TransactionReceipt {
       // an child chain transaction - check if a batch is on a parent chain, if an assertion has been made, and if
       // it has been confirmed.
       const result = await wait()
-      return new ChildChainTransactionReceipt(result)
+      return new ChildTransactionReceipt(result)
     }
-    return contractTransaction as L2ContractTransaction
+    return contractTransaction as ChildContractTransaction
   }
 
   /**
@@ -206,7 +206,7 @@ export class ChildChainTransactionReceipt implements TransactionReceipt {
    * @returns
    */
   public static toRedeemTransaction(
-    redeemTx: L2ContractTransaction,
+    redeemTx: ChildContractTransaction,
     childProvider: providers.Provider
   ): RedeemTransaction {
     const returnRec = redeemTx as RedeemTransaction
@@ -228,5 +228,3 @@ export class ChildChainTransactionReceipt implements TransactionReceipt {
     return returnRec
   }
 }
-
-export { ChildChainTransactionReceipt as L2TransactionReceipt }

@@ -18,8 +18,8 @@
 
 import { constants } from 'ethers'
 
-import { L1ContractTransaction } from '../message/ParentTransaction'
-import { L2ContractTransaction } from '../message/ChildTransaction'
+import { ParentChainContractTransaction } from '../message/ParentTransaction'
+import { ChildContractTransaction } from '../message/ChildTransaction'
 
 import {
   L1Network,
@@ -80,7 +80,9 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    * Transfer assets from parent-to-child
    * @param params
    */
-  public abstract deposit(params: DepositParams): Promise<L1ContractTransaction>
+  public abstract deposit(
+    params: DepositParams
+  ): Promise<ParentChainContractTransaction>
 
   /**
    * Transfer assets from child-to-parent
@@ -88,5 +90,5 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    */
   public abstract withdraw(
     params: WithdrawParams
-  ): Promise<L2ContractTransaction>
+  ): Promise<ChildContractTransaction>
 }

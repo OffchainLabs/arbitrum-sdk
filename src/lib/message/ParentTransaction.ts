@@ -46,7 +46,7 @@ import { MessageDeliveredEvent } from '../abi/Bridge'
 import { EventArgs, parseTypedLogs } from '../dataEntities/event'
 import { isDefined } from '../utils/lib'
 import { SubmitRetryableMessageDataParser } from './messageDataParser'
-import { getL2Network as getChildChain } from '../dataEntities/networks'
+import { getArbitrumNetwork } from '../dataEntities/networks'
 
 export interface ParentChainContractTransaction<
   TReceipt extends ParentChainTransactionReceipt = ParentChainTransactionReceipt
@@ -108,7 +108,7 @@ export class ParentChainTransactionReceipt implements TransactionReceipt {
     const provider = SignerProviderUtils.getProviderOrThrow(
       childSignerOrProvider
     )
-    const network = await getChildChain(provider)
+    const network = await getArbitrumNetwork(provider)
     return this.blockNumber < network.nitroGenesisL1Block
   }
 
@@ -209,7 +209,7 @@ export class ParentChainTransactionReceipt implements TransactionReceipt {
   public async getParentToChildMessagesClassic(
     childProvider: Provider
   ): Promise<ParentToChildMessageReaderClassic[]> {
-    const network = await getChildChain(childProvider)
+    const network = await getArbitrumNetwork(childProvider)
     const chainID = network.chainID.toString()
     const isClassic = await this.isClassic(childProvider)
 
@@ -247,7 +247,7 @@ export class ParentChainTransactionReceipt implements TransactionReceipt {
     const provider = SignerProviderUtils.getProviderOrThrow(
       childSignerOrProvider
     )
-    const network = await getChildChain(provider)
+    const network = await getArbitrumNetwork(provider)
     const chainID = network.chainID.toString()
     const isClassic = await this.isClassic(provider)
 
@@ -420,14 +420,4 @@ export class ParentChainContractCallTransactionReceipt extends ParentChainTransa
       message,
     }
   }
-}
-
-// TODO: remove when all consumers have been renamed
-export {
-  ParentChainTransactionReceipt as L1TransactionReceipt,
-  ParentChainContractCallTransactionReceipt as L1ContractCallTransactionReceipt,
-  ParentChainEthDepositTransactionReceipt as L1EthDepositTransactionReceipt,
-  ParentChainContractTransaction as L1ContractTransaction,
-  ParentChainEthDepositTransaction as L1EthDepositTransaction,
-  ParentChainContractCallTransaction as L1ContractCallTransaction,
 }
