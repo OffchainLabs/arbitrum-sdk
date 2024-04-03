@@ -17,7 +17,6 @@ import {
   L1ToL2MessageGasParams,
   L1ToL2MessageNoGasParams,
 } from './L1ToL2MessageCreator'
-import { IERC20Bridge__factory } from '../abi/factories/IERC20Bridge__factory'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 
 /**
