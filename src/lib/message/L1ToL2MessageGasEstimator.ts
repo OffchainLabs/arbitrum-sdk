@@ -10,7 +10,7 @@ import {
   RetryableData,
   RetryableDataTools,
 } from '../dataEntities/retryableData'
-import { L1ToL2TransactionRequest as ParentToChildTransactionRequest } from '../dataEntities/transactionRequest'
+import { ParentToChildTransactionRequest } from '../dataEntities/transactionRequest'
 import { getBaseFee, isDefined } from '../utils/lib'
 import { OmitTyped } from '../utils/types'
 import {

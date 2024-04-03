@@ -61,9 +61,7 @@ export async function fundParentCustomFeeToken(
 export async function approveParentCustomFeeToken(parentSigner: Signer) {
   const ethBridger = await EthBridger.fromProvider(arbProvider())
 
-  const tx = await ethBridger.approveGasToken({
-    l1Signer: parentSigner,
-  })
+  const tx = await ethBridger.approveGasToken({ parentSigner })
   await tx.wait()
 }
 
@@ -87,7 +85,7 @@ export async function approveParentCustomFeeTokenForErc20Deposit(
 
   const tx = await erc20Bridger.approveGasToken({
     erc20ParentAddress: erc20ParentAddress,
-    l1Signer: parentSigner,
+    parentSigner,
   })
   await tx.wait()
 }

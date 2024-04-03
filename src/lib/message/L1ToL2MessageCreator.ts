@@ -18,8 +18,8 @@ import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getBaseFee } from '../utils/lib'
 import {
-  isL1ToL2TransactionRequest as isParentToChildTransactionRequest,
-  L1ToL2TransactionRequest as ParentToChildTransactionRequest,
+  isParentToChildTransactionRequest,
+  ParentToChildTransactionRequest,
 } from '../dataEntities/transactionRequest'
 import { RetryableData } from '../dataEntities/retryableData'
 import { OmitTyped, PartialPick } from '../utils/types'
@@ -203,7 +203,9 @@ export class ParentToChildMessageCreator {
   public async createRetryableTicket(
     params:
       | (ParentToChildMessageParams & { overrides?: PayableOverrides })
-      | (ParentToChildTransactionRequest & { overrides?: PayableOverrides }),
+      | (ParentToChildTransactionRequest & {
+          overrides?: PayableOverrides
+        }),
     childProvider: Provider,
     options?: GasOverrides
   ): Promise<ParentChainContractTransaction> {

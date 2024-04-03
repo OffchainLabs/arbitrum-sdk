@@ -89,7 +89,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
     destinationAddress: await params.childSigner.getAddress(),
     from: await params.childSigner.getAddress(),
   })
-  const parentChainGasEstimate = await withdrawalParams.estimateL1GasLimit(
+  const parentChainGasEstimate = await withdrawalParams.estimateParentGasLimit(
     params.parentSigner.provider!
   )
 
@@ -97,7 +97,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
     destinationAddress: await params.childSigner.getAddress(),
     amount: params.amount,
     erc20ParentAddress: params.parentChainToken.address,
-    l2Signer: params.childSigner,
+    childSigner: params.childSigner,
   })
   const withdrawRec = await withdrawRes.wait()
   expect(withdrawRec.status).to.equal(1, 'initiate token withdraw txn failed')
@@ -250,7 +250,7 @@ export const depositToken = async ({
   await (
     await erc20Bridger.approveToken({
       erc20ParentAddress: l1TokenAddress,
-      l1Signer: parentSigner,
+      parentSigner,
     })
   ).wait()
 
@@ -274,7 +274,7 @@ export const depositToken = async ({
   if (isArbitrumNetworkWithCustomFeeToken()) {
     await (
       await erc20Bridger.approveGasToken({
-        l1Signer: parentSigner,
+        parentSigner,
         erc20ParentAddress: l1TokenAddress,
       })
     ).wait()
@@ -304,7 +304,7 @@ export const depositToken = async ({
   )
 
   const depositRes = await erc20Bridger.deposit({
-    l1Signer: parentSigner,
+    parentSigner,
     childProvider: childSigner.provider!,
     erc20ParentAddress: l1TokenAddress,
     amount: depositAmount,

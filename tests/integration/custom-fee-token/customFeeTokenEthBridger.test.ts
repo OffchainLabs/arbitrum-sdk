@@ -59,7 +59,7 @@ describeOnlyWhenCustomGasToken(
 
       const approvalTx = await ethBridger.approveGasToken({
         amount,
-        l1Signer: parentSigner,
+        parentSigner,
       })
       await approvalTx.wait()
 
@@ -83,7 +83,7 @@ describeOnlyWhenCustomGasToken(
 
       const approvalTx = await ethBridger.approveGasToken({
         txRequest: ethBridger.getApproveGasTokenRequest(),
-        l1Signer: parentSigner,
+        parentSigner,
       })
       await approvalTx.wait()
 
@@ -119,7 +119,7 @@ describeOnlyWhenCustomGasToken(
       // perform the deposit
       const depositTx = await ethBridger.deposit({
         amount,
-        l1Signer: parentSigner,
+        parentSigner,
       })
       const depositTxReceipt = await depositTx.wait()
       expect(depositTxReceipt.status).to.equal(1, 'deposit tx failed')
@@ -187,7 +187,7 @@ describeOnlyWhenCustomGasToken(
         from,
       })
 
-      const l1GasEstimate = await withdrawalTxRequest.estimateL1GasLimit(
+      const l1GasEstimate = await withdrawalTxRequest.estimateParentGasLimit(
         parentProvider
       )
 
