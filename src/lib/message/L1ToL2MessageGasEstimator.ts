@@ -17,6 +17,8 @@ import {
   L1ToL2MessageGasParams,
   L1ToL2MessageNoGasParams,
 } from './L1ToL2MessageCreator'
+import { IERC20Bridge__factory } from '../abi/factories/IERC20Bridge__factory'
+import { ERC20__factory } from '../abi/factories/ERC20__factory'
 
 /**
  * The default amount to increase the maximum submission cost. Submission cost is calculated
@@ -217,8 +219,21 @@ export class L1ToL2MessageGasEstimator {
     l1Provider: Provider,
     options?: GasOverrides
   ): Promise<L1ToL2MessageGasParams> {
+    let decimals = 18
+
     const { data } = retryableEstimateData
     const gasLimitDefaults = this.applyGasLimitDefaults(options?.gasLimit)
+
+    const l2Network = await getL2Network(this.l2Provider)
+    const nativeTokenAddress = l2Network.nativeToken
+
+    if (nativeTokenAddress) {
+      const nativeTokenContract = ERC20__factory.connect(
+        nativeTokenAddress,
+        l1Provider
+      )
+      decimals = await nativeTokenContract.decimals()
+    }
 
     // estimate the l1 gas price
     const maxFeePerGasPromise = this.estimateMaxFeePerGas(options?.maxFeePerGas)
@@ -258,6 +273,8 @@ export class L1ToL2MessageGasEstimator {
         .mul(maxFeePerGas)
         .add(maxSubmissionFee)
         .add(retryableEstimateData.l2CallValue)
+        // we rescale gas for non-18 decimal tokens, for 18 decimals we divide by 1 so it remains unchanged
+        .div(BigNumber.from(10).pow(BigNumber.from(18 - decimals)))
 
     return {
       gasLimit,
