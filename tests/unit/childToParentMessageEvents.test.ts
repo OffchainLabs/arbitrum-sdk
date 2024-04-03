@@ -190,7 +190,7 @@ describe('ChildToParentMessage events', () => {
   })
 
   it('doesnt call classic when nitro genesis is 0', async () => {
-    const { l2Provider, l2ProviderMock } = await createProviderMock(421613)
+    const { l2Provider, l2ProviderMock } = await createProviderMock(421614)
     const fromBlock = 'earliest'
     const toBlock = 'latest'
 
@@ -199,7 +199,7 @@ describe('ChildToParentMessage events', () => {
       toBlock: toBlock,
     })
 
-    // we dont expect classic to be called ever on goerli
+    // we dont expect classic to be called ever on sepolia
     verify(l2ProviderMock.getLogs(anything())).once()
     verify(
       l2ProviderMock.getLogs(
