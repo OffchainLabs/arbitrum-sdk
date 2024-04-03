@@ -46,9 +46,9 @@ import { ArbRetryableTx__factory } from '../../src/lib/abi/factories/ArbRetryabl
 import { NodeInterface__factory } from '../../src/lib/abi/factories/NodeInterface__factory'
 import { isDefined } from '../../src/lib/utils/lib'
 import {
-  getL1CustomFeeTokenAllowance,
-  approveL1CustomFeeTokenForErc20Deposit,
-  isL2NetworkWithCustomFeeToken as isChildChainWithCustomFeeToken,
+  getParentCustomFeeTokenAllowance,
+  approveParentCustomFeeTokenForErc20Deposit,
+  isArbitrumNetworkWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
 import { itOnlyWhenCustomGasToken } from './custom-fee-token/mochaExtensions'
 
@@ -92,7 +92,7 @@ describe('standard ERC20', () => {
         parentSigner.provider!
       )
 
-      const initialAllowance = await getL1CustomFeeTokenAllowance(
+      const initialAllowance = await getParentCustomFeeTokenAllowance(
         await parentSigner.getAddress(),
         gatewayAddress
       )
@@ -108,7 +108,7 @@ describe('standard ERC20', () => {
       })
       await tx.wait()
 
-      const finalAllowance = await getL1CustomFeeTokenAllowance(
+      const finalAllowance = await getParentCustomFeeTokenAllowance(
         await parentSigner.getAddress(),
         gatewayAddress
       )
@@ -121,8 +121,8 @@ describe('standard ERC20', () => {
   )
 
   it('deposits erc20', async () => {
-    if (isChildChainWithCustomFeeToken()) {
-      await approveL1CustomFeeTokenForErc20Deposit(
+    if (isArbitrumNetworkWithCustomFeeToken()) {
+      await approveParentCustomFeeTokenForErc20Deposit(
         testState.parentSigner,
         testState.parentToken.address
       )

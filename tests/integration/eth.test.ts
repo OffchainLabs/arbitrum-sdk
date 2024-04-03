@@ -34,7 +34,7 @@ import { ChildToParentMessageStatus as L2ToL1MessageStatus } from '../../src/lib
 import { L2TransactionReceipt } from '../../src/lib/message/L2Transaction'
 import { ParentToChildMessageStatus } from '../../src/lib/message/L1ToL2Message'
 import { testSetup } from '../../scripts/testSetup'
-import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
+import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { itOnlyWhenEth } from './custom-fee-token/mochaExtensions'
 
@@ -316,7 +316,7 @@ describe('Ether', async () => {
       'executed status'
     ).to.eq(L2ToL1MessageStatus.EXECUTED)
 
-    const finalRandomBalance = isL2NetworkWithCustomFeeToken()
+    const finalRandomBalance = isArbitrumNetworkWithCustomFeeToken()
       ? await ERC20__factory.connect(
           ethBridger.nativeToken!,
           parentSigner.provider!

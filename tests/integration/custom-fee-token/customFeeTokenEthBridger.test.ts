@@ -28,11 +28,10 @@ import {
   skipIfMainnet,
   wait,
 } from '../testHelpers'
-import {
-  L2ToL1Message,
-  ChildToParentMessageStatus as L2ToL1MessageStatus,
-} from '../../../src'
+
 import { describeOnlyWhenCustomGasToken } from './mochaExtensions'
+import { ChildToParentMessageStatus } from '../../../src'
+import { ChildToParentMessage } from '../../../src/lib/message/L2ToL1Message'
 
 dotenv.config()
 
@@ -41,9 +40,9 @@ describeOnlyWhenCustomGasToken(
   async () => {
     const {
       testSetup,
-      fundL1CustomFeeToken,
-      fundL2CustomFeeToken,
-      approveL1CustomFeeToken,
+      fundParentCustomFeeToken,
+      fundChildCustomFeeToken,
+      approveParentCustomFeeToken,
     } = await import('./customFeeTokenTestHelpers')
 
     beforeEach('skipIfMainnet', async function () {
@@ -56,7 +55,7 @@ describeOnlyWhenCustomGasToken(
       const amount = ethers.utils.parseEther('1')
 
       await fundParentSignerEther(parentSigner)
-      await fundL1CustomFeeToken(parentSigner)
+      await fundParentCustomFeeToken(parentSigner)
 
       const approvalTx = await ethBridger.approveGasToken({
         amount,
@@ -80,7 +79,7 @@ describeOnlyWhenCustomGasToken(
         await testSetup()
 
       await fundParentSignerEther(parentSigner)
-      await fundL1CustomFeeToken(parentSigner)
+      await fundParentCustomFeeToken(parentSigner)
 
       const approvalTx = await ethBridger.approveGasToken({
         txRequest: ethBridger.getApproveGasTokenRequest(),
@@ -111,8 +110,8 @@ describeOnlyWhenCustomGasToken(
       const amount = parseEther('2')
 
       await fundParentSignerEther(parentSigner)
-      await fundL1CustomFeeToken(parentSigner)
-      await approveL1CustomFeeToken(parentSigner)
+      await fundParentCustomFeeToken(parentSigner)
+      await approveParentCustomFeeToken(parentSigner)
 
       const initialBalanceBridge = await nativeTokenContract.balanceOf(bridge)
       const initialBalanceDepositor = await childSigner.getBalance()
@@ -153,7 +152,7 @@ describeOnlyWhenCustomGasToken(
         // balance in the depositor account after the deposit
         (await childSigner.getBalance()).toString()
       ).to.equal(
-        // balance in the depositor account after the deposit should equal to the initial balance in th depositor account + the amount deposited
+        // balance in the depositor account after the deposit should equal to the initial balance in the depositor account + the amount deposited
         initialBalanceDepositor.add(amount).toString(),
         'incorrect balance in depositor account after deposit'
       )
@@ -172,7 +171,7 @@ describeOnlyWhenCustomGasToken(
       const amount = parseEther('0.2')
 
       await fundParentSignerEther(parentSigner)
-      await fundL2CustomFeeToken(childSigner)
+      await fundChildCustomFeeToken(childSigner)
 
       const from = await childSigner.getAddress()
       const destinationAddress = await parentSigner.getAddress()
@@ -213,12 +212,13 @@ describeOnlyWhenCustomGasToken(
         'custom fee token withdraw getWithdrawalsInL2Transaction query came back empty'
       )
 
-      const withdrawalEvents = await L2ToL1Message.getChildToParentEvents(
-        childProvider,
-        { fromBlock: withdrawalTxReceipt.blockNumber, toBlock: 'latest' },
-        undefined,
-        destinationAddress
-      )
+      const withdrawalEvents =
+        await ChildToParentMessage.getChildToParentEvents(
+          childProvider,
+          { fromBlock: withdrawalTxReceipt.blockNumber, toBlock: 'latest' },
+          undefined,
+          destinationAddress
+        )
 
       expect(withdrawalEvents.length).to.equal(
         1,
@@ -230,13 +230,13 @@ describeOnlyWhenCustomGasToken(
       expect(
         messageStatus,
         `custom fee token withdraw status returned ${messageStatus}`
-      ).to.be.eq(L2ToL1MessageStatus.UNCONFIRMED)
+      ).to.be.eq(ChildToParentMessageStatus.UNCONFIRMED)
 
       // run a miner whilst withdrawing
       const miner1 = Wallet.createRandom().connect(parentProvider)
       const miner2 = Wallet.createRandom().connect(childProvider)
       await fundParentSignerEther(miner1, parseEther('1'))
-      await fundL2CustomFeeToken(miner2)
+      await fundChildCustomFeeToken(miner2)
       const state = { mining: true }
       await Promise.race([
         mineUntilStop(miner1, state),
@@ -247,7 +247,7 @@ describeOnlyWhenCustomGasToken(
 
       expect(await message.status(childProvider), 'confirmed status')
         //
-        .to.eq(L2ToL1MessageStatus.CONFIRMED)
+        .to.eq(ChildToParentMessageStatus.CONFIRMED)
 
       const execTx = await message.execute(childProvider)
       const execTxReceipt = await execTx.wait()
@@ -259,7 +259,7 @@ describeOnlyWhenCustomGasToken(
 
       expect(await message.status(childProvider), 'executed status')
         //
-        .to.eq(L2ToL1MessageStatus.EXECUTED)
+        .to.eq(ChildToParentMessageStatus.EXECUTED)
 
       expect(
         // balance in the bridge after the withdrawal

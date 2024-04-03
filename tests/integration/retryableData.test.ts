@@ -29,7 +29,7 @@ import { Inbox__factory } from '../../src/lib/abi/factories/Inbox__factory'
 import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
 const depositAmount = BigNumber.from(100)
 import { ERC20Inbox__factory } from '../../src/lib/abi/factories/ERC20Inbox__factory'
-import { isL2NetworkWithCustomFeeToken as isChildChainWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
+import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 
 describe('RevertData', () => {
   beforeEach('skipIfMainnet', async function () {
@@ -74,7 +74,7 @@ describe('RevertData', () => {
     } = createRevertParams()
 
     try {
-      if (isChildChainWithCustomFeeToken()) {
+      if (isArbitrumNetworkWithCustomFeeToken()) {
         const inbox = ERC20Inbox__factory.connect(
           childChain.ethBridge.inbox,
           parentSigner
@@ -162,7 +162,7 @@ describe('RevertData', () => {
       })
     ).wait()
 
-    if (isChildChainWithCustomFeeToken()) {
+    if (isArbitrumNetworkWithCustomFeeToken()) {
       // approve the custom fee token
       await (
         await erc20Bridger.approveGasToken({
@@ -216,7 +216,7 @@ describe('RevertData', () => {
       )
       expect(parsed.data, 'data').to.eq(depositParams.retryableData.data)
       expect(parsed.deposit.toString(), 'deposit').to.eq(
-        isChildChainWithCustomFeeToken()
+        isArbitrumNetworkWithCustomFeeToken()
           ? depositParams.retryableData.deposit.toString()
           : depositParams.txRequest.value.toString()
       )
