@@ -5,11 +5,11 @@ import { Provider } from '@ethersproject/abstract-provider'
 import {
   GasOverrides,
   L1ToL2MessageGasEstimator as ParentToChildMessageGasEstimator,
-} from './L1ToL2MessageGasEstimator'
+} from './ParentToChildMessageGasEstimator'
 import {
   L1ContractTransaction as ParentChainContractTransaction,
   L1TransactionReceipt as ParentChainTransactionReceipt,
-} from './L1Transaction'
+} from './ParentTransaction'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { getChildChain } from '../dataEntities/networks'
 import { ERC20Inbox__factory } from '../abi/factories/ERC20Inbox__factory'

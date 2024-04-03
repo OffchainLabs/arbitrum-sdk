@@ -29,10 +29,10 @@ import {
   prettyLog,
   skipIfMainnet,
 } from './testHelpers'
-import { ChildToParentMessage } from '../../src/lib/message/L2ToL1Message'
+import { ChildToParentMessage } from '../../src/lib/message/ChildToParentMessage'
 import { ChildToParentMessageStatus as L2ToL1MessageStatus } from '../../src/lib/dataEntities/message'
-import { L2TransactionReceipt } from '../../src/lib/message/L2Transaction'
-import { ParentToChildMessageStatus } from '../../src/lib/message/L1ToL2Message'
+import { L2TransactionReceipt } from '../../src/lib/message/ChildTransaction'
+import { ParentToChildMessageStatus } from '../../src/lib/message/ParentToChildMessage'
 import { testSetup } from '../../scripts/testSetup'
 import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'

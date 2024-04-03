@@ -21,7 +21,7 @@ import { BigNumber } from 'ethers'
 
 import { skipIfMainnet } from './testHelpers'
 import { testSetup } from '../../scripts/testSetup'
-import { ParentToChildMessageGasEstimator } from '../../src/lib/message/L1ToL2MessageGasEstimator'
+import { ParentToChildMessageGasEstimator } from '../../src/lib/message/ParentToChildMessageGasEstimator'
 import {
   itOnlyWhenEth,
   itOnlyWhenCustomGasToken,

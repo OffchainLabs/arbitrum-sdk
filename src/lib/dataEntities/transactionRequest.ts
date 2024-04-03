@@ -3,7 +3,7 @@ import { BigNumber } from 'ethers'
 import {
   ParentToChildMessageGasParams,
   ParentToChildMessageParams,
-} from '../message/L1ToL2MessageCreator'
+} from '../message/ParentToChildMessageCreator'
 import { isDefined } from '../utils/lib'
 
 /**

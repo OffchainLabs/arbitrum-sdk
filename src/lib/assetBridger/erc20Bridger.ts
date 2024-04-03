@@ -43,7 +43,7 @@ import { GatewaySetEvent } from '../abi/L1GatewayRouter'
 import {
   GasOverrides,
   L1ToL2MessageGasEstimator as ParentToChildMessageGasEstimator,
-} from '../message/L1ToL2MessageGasEstimator'
+} from '../message/ParentToChildMessageGasEstimator'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { ArbitrumNetwork, getArbitrumNetwork } from '../dataEntities/networks'
 import { ArbSdkError, MissingProviderArbSdkError } from '../dataEntities/errors'
@@ -55,11 +55,11 @@ import {
   L1ContractCallTransaction,
   L1ContractTransaction,
   L1TransactionReceipt,
-} from '../message/L1Transaction'
+} from '../message/ParentTransaction'
 import {
   L2ContractTransaction,
   L2TransactionReceipt,
-} from '../message/L2Transaction'
+} from '../message/ChildTransaction'
 import {
   isParentToChildTransactionRequest,
   isChildToParentTransactionRequest,
@@ -70,7 +70,7 @@ import { defaultAbiCoder } from 'ethers/lib/utils'
 import { OmitTyped, RequiredPick } from '../utils/types'
 import { RetryableDataTools } from '../dataEntities/retryableData'
 import { EventArgs } from '../dataEntities/event'
-import { ParentToChildMessageGasParams } from '../message/L1ToL2MessageCreator'
+import { ParentToChildMessageGasParams } from '../message/ParentToChildMessageCreator'
 import { isArbitrumChain } from '../utils/lib'
 
 export interface TokenApproveParams {

@@ -26,8 +26,8 @@ import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
-import * as classic from './L2ToL1MessageClassic'
-import * as nitro from './L2ToL1MessageNitro'
+import * as classic from './ChildToParentMessageClassic'
+import * as nitro from './ChildToParentMessageNitro'
 import {
   L2ToL1TransactionEvent as ClassicChildToParentTransactionEvent,
   L2ToL1TxEvent as NitroChildToParentTransactionEvent,

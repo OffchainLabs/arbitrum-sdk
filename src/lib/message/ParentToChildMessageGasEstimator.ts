@@ -16,7 +16,7 @@ import { OmitTyped } from '../utils/types'
 import {
   ParentToChildMessageGasParams,
   ParentToChildMessageNoGasParams,
-} from './L1ToL2MessageCreator'
+} from './ParentToChildMessageCreator'
 
 /**
  * The default amount to increase the maximum submission cost. Submission cost is calculated

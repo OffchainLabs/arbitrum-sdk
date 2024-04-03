@@ -18,8 +18,8 @@
 
 import { constants } from 'ethers'
 
-import { L1ContractTransaction } from '../message/L1Transaction'
-import { L2ContractTransaction } from '../message/L2Transaction'
+import { L1ContractTransaction } from '../message/ParentTransaction'
+import { L2ContractTransaction } from '../message/ChildTransaction'
 
 import {
   L1Network,

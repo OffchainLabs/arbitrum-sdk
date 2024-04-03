@@ -30,7 +30,7 @@ import {
   ChildToParentMessage,
   ChildToParentMessageWriter,
   ChildToParentTransactionEvent,
-} from './L2ToL1Message'
+} from './ChildToParentMessage'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
