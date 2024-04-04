@@ -175,7 +175,7 @@ export const networks: Networks = {
     chainID: 11155111,
     name: 'Sepolia',
     explorerUrl: 'https://sepolia.etherscan.io',
-    partnerChainIDs: [421614],
+    partnerChainIDs: [421614, 23011913],
     blockTime: 12,
     isCustom: false,
     isArbitrum: false,
@@ -537,6 +537,19 @@ const addNetwork = (network: L1Network | L2Network) => {
       throw new ArbSdkError(
         `Network ${network.chainID}'s parent network ${network.partnerChainID} is not recognized`
       )
+    }
+
+    // if it's a orbit (L3) chain, add it to the l1-parent's list of children as well
+    if (isArbitrumNetwork(parent)) {
+      // ^ if parent network is an Arbitrum network, then the parent-of-parent should be L1
+      const l1Network: L1Network | L2Network | undefined =
+        networks[parent.partnerChainID]
+      if (l1Network) {
+        l1Network.partnerChainIDs = [
+          ...l1Network.partnerChainIDs,
+          network.chainID,
+        ]
+      }
     }
 
     parent.partnerChainIDs = [...parent.partnerChainIDs, network.chainID]
