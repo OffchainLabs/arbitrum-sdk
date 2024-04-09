@@ -20,8 +20,8 @@ import { expect } from 'chai'
 import { parseEther } from '@ethersproject/units'
 import { AeWETH__factory } from '../../src/lib/abi/factories/AeWETH__factory'
 import {
-  fundL1,
-  fundL2,
+  fundParentSigner,
+  fundChildSigner,
   skipIfMainnet,
   withdrawToken,
   GatewayType,
@@ -47,7 +47,7 @@ describeOnlyWhenEth('WETH', async () => {
     const wethToWrap = parseEther('0.00001')
     const wethToDeposit = parseEther('0.0000001')
 
-    await fundL1(parentSigner, parseEther('1'))
+    await fundParentSigner(parentSigner, parseEther('1'))
 
     const l2WETH = AeWETH__factory.connect(
       childChain.tokenBridge.l2Weth,
@@ -67,8 +67,8 @@ describeOnlyWhenEth('WETH', async () => {
       depositAmount: wethToDeposit,
       l1TokenAddress: l1WethAddress,
       erc20Bridger,
-      l1Signer: parentSigner,
-      l2Signer: childSigner,
+      parentSigner,
+      childSigner,
       expectedStatus: L1ToL2MessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.WETH,
     })
@@ -87,7 +87,7 @@ describeOnlyWhenEth('WETH', async () => {
     expect(l2Token.address, 'l2 weth').to.eq(childChain.tokenBridge.l2Weth)
 
     // now try to withdraw the funds
-    await fundL2(childSigner)
+    await fundChildSigner(childSigner)
     const l2Weth = AeWETH__factory.connect(l2Token.address, childSigner)
     const randomAddr = Wallet.createRandom().address
     await (
@@ -106,8 +106,8 @@ describeOnlyWhenEth('WETH', async () => {
 
     const { childChain, parentSigner, childSigner, erc20Bridger } =
       await testSetup()
-    await fundL1(parentSigner)
-    await fundL2(childSigner)
+    await fundParentSigner(parentSigner)
+    await fundChildSigner(childSigner)
 
     const l2Weth = AeWETH__factory.connect(
       childChain.tokenBridge.l2Weth,
@@ -123,12 +123,12 @@ describeOnlyWhenEth('WETH', async () => {
       amount: wethToWithdraw,
       erc20Bridger: erc20Bridger,
       gatewayType: GatewayType.WETH,
-      l1Signer: parentSigner,
-      l1Token: ERC20__factory.connect(
+      parentSigner: parentSigner,
+      parentChainToken: ERC20__factory.connect(
         childChain.tokenBridge.l1Weth,
         parentSigner.provider!
       ),
-      l2Signer: childSigner,
+      childSigner: childSigner,
       startBalance: wethToWrap,
     })
   })
