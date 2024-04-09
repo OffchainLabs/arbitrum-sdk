@@ -304,7 +304,7 @@ describe('Networks', async () => {
       const l1NetworksEntries = Object.entries(l1Networks)
       const l1NetworksKeys = l1NetworksEntries.map(([key]) => key)
 
-      const expected = [1, 1338, 5, 11155111].map(id => id.toString())
+      const expected = [1, 1338, 17000, 11155111].map(id => id.toString())
 
       expect(l1NetworksKeys).to.have.length(expected.length)
       expect(l1NetworksKeys).to.have.members(expected)
@@ -315,7 +315,7 @@ describe('Networks', async () => {
       const arbitrumNetworksEntries = Object.entries(arbitrumNetworks)
       const arbitrumNetworksKeys = arbitrumNetworksEntries.map(([key]) => key)
 
-      const expected = [42161, 421613, 42170, 421614, 23011913]
+      const expected = [42161, 42170, 421614, 23011913]
         //
         .map(id => id.toString())
 
