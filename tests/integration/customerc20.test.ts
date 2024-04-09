@@ -44,8 +44,8 @@ import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import {
-  fundL1CustomFeeToken,
-  isL2NetworkWithCustomFeeToken,
+  fundParentCustomFeeToken,
+  isArbitrumNetworkWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
 
 const depositAmount = BigNumber.from(100)
@@ -73,8 +73,8 @@ describe('Custom ERC20', () => {
     await fundParentSigner(testState.parentSigner)
     await fundChildSigner(testState.childSigner)
 
-    if (isL2NetworkWithCustomFeeToken()) {
-      await fundL1CustomFeeToken(testState.parentSigner)
+    if (isArbitrumNetworkWithCustomFeeToken()) {
+      await fundParentCustomFeeToken(testState.parentSigner)
     }
   })
 
@@ -155,7 +155,7 @@ const registerCustomToken = async (
   adminErc20Bridger: AdminErc20Bridger
 ) => {
   // create a custom token on L1 and L2
-  const l1CustomTokenFactory = isL2NetworkWithCustomFeeToken()
+  const l1CustomTokenFactory = isArbitrumNetworkWithCustomFeeToken()
     ? new TestOrbitCustomTokenL1__factory(parentSigner)
     : new TestCustomTokenL1__factory(parentSigner)
   const l1CustomToken = await l1CustomTokenFactory.deploy(
@@ -165,7 +165,7 @@ const registerCustomToken = async (
   await l1CustomToken.deployed()
   const amount = ethers.utils.parseEther('1')
 
-  if (isL2NetworkWithCustomFeeToken()) {
+  if (isArbitrumNetworkWithCustomFeeToken()) {
     const approvalTx = await ERC20__factory.connect(
       childChain.nativeToken!,
       parentSigner

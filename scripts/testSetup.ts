@@ -35,9 +35,9 @@ import * as path from 'path'
 import * as fs from 'fs'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import {
-  approveL1CustomFeeToken,
-  fundL1CustomFeeToken,
-  isL2NetworkWithCustomFeeToken,
+  approveParentCustomFeeToken,
+  fundParentCustomFeeToken,
+  isArbitrumNetworkWithCustomFeeToken,
 } from '../tests/integration/custom-fee-token/customFeeTokenTestHelpers'
 import { fundParentSigner } from '../tests/integration/testHelpers'
 
@@ -151,10 +151,10 @@ export const testSetup = async (): Promise<{
   const ethBridger = new EthBridger(setChildChain)
   const inboxTools = new InboxTools(parentSigner, setChildChain)
 
-  if (isL2NetworkWithCustomFeeToken()) {
+  if (isArbitrumNetworkWithCustomFeeToken()) {
     await fundParentSigner(parentSigner)
-    await fundL1CustomFeeToken(parentSigner)
-    await approveL1CustomFeeToken(parentSigner)
+    await fundParentCustomFeeToken(parentSigner)
+    await approveParentCustomFeeToken(parentSigner)
   }
 
   return {

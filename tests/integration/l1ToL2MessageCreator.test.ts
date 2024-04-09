@@ -24,9 +24,9 @@ import { ParentToChildMessageCreator } from '../../src/lib/message/L1ToL2Message
 import { ParentToChildMessageStatus } from '../../src/lib/message/L1ToL2Message'
 
 import {
-  fundL1CustomFeeToken as fundParentChainCustomFeeToken,
-  approveL1CustomFeeToken as approveParentChainCustomFeeToken,
-  isL2NetworkWithCustomFeeToken as isChildChainWithCustomFeeToken,
+  fundParentCustomFeeToken,
+  approveParentCustomFeeToken,
+  isArbitrumNetworkWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
 
 describe('ParentToChildMessageCreator', () => {
@@ -45,9 +45,9 @@ describe('ParentToChildMessageCreator', () => {
     // Funding parent chain wallet
     await fundParentSigner(parentSigner)
 
-    if (isChildChainWithCustomFeeToken()) {
-      await fundParentChainCustomFeeToken(parentSigner)
-      await approveParentChainCustomFeeToken(parentSigner)
+    if (isArbitrumNetworkWithCustomFeeToken()) {
+      await fundParentCustomFeeToken(parentSigner)
+      await approveParentCustomFeeToken(parentSigner)
     }
 
     // Instantiate the object
@@ -107,9 +107,9 @@ describe('ParentToChildMessageCreator', () => {
     // Funding parent chain wallet
     await fundParentSigner(parentSigner)
 
-    if (isChildChainWithCustomFeeToken()) {
-      await fundParentChainCustomFeeToken(parentSigner)
-      await approveParentChainCustomFeeToken(parentSigner)
+    if (isArbitrumNetworkWithCustomFeeToken()) {
+      await fundParentCustomFeeToken(parentSigner)
+      await approveParentCustomFeeToken(parentSigner)
     }
 
     // Instantiate the object

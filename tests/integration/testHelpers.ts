@@ -32,7 +32,7 @@ import { ArbitrumNetwork } from '../../src/lib/dataEntities/networks'
 import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
 import { ArbSdkError } from '../../src/lib/dataEntities/errors'
 import { ERC20 } from '../../src/lib/abi/ERC20'
-import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
+import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 
 export const preFundAmount = parseEther('0.1')
@@ -271,7 +271,7 @@ export const depositToken = async ({
   expect(allowance.eq(Erc20Bridger.MAX_APPROVAL), 'set token allowance failed')
     .to.be.true
 
-  if (isL2NetworkWithCustomFeeToken()) {
+  if (isArbitrumNetworkWithCustomFeeToken()) {
     await (
       await erc20Bridger.approveGasToken({
         l1Signer: parentSigner,
