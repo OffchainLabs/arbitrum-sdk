@@ -84,6 +84,16 @@
     // axios can leak auth headers when using `Proxy-Authentication` header. We do not use that header.
     // from: axios>follow-redirects
     // from: hardhat>solc>follow-redirects
-    "GHSA-cxjh-pqwp-8mfp"
+    "GHSA-cxjh-pqwp-8mfp",
+    // https://github.com/advisories/GHSA-9qxr-qj54-h672
+    // Undici's fetch with integrity option is too lax when algorithm is specified but hash value is incorrect
+    // hardhat requests are only done during development
+    // from: hardhat>undici
+    "GHSA-9qxr-qj54-h672",
+    // https://github.com/advisories/GHSA-m4v8-wqvr-p9f7
+    // Undici's Proxy-Authorization header not cleared on cross-origin redirect for dispatch, request, stream, pipeline
+    // hardhat requests are only done during development
+    // from: hardhat>undici
+    "GHSA-m4v8-wqvr-p9f7"
   ]
 }
