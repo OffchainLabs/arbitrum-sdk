@@ -30,7 +30,7 @@ const DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE = BigNumber.from(300)
  * When submitting a retryable we need to estimate what the gas price for it will be when we actually come
  * to execute it. Since the l2 price can move due to congestion we should provide some padding here
  */
-const DEFAULT_GAS_PRICE_PERCENT_INCREASE = BigNumber.from(200)
+const DEFAULT_GAS_PRICE_PERCENT_INCREASE = BigNumber.from(500)
 
 /**
  * An optional big number percentage increase
