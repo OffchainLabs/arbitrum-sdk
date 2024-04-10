@@ -30,13 +30,13 @@ import {
   L1EthDepositTransaction,
   L1ContractCallTransaction,
   L1TransactionReceipt,
-} from '../message/L1Transaction'
+} from '../message/ParentTransaction'
 import {
   L2ContractTransaction,
   ChildChainTransactionReceipt,
-} from '../message/L2Transaction'
-import { L1ToL2MessageCreator } from '../message/L1ToL2MessageCreator'
-import { GasOverrides } from '../message/L1ToL2MessageGasEstimator'
+} from '../message/ChildTransaction'
+import { L1ToL2MessageCreator } from '../message/ParentToChildMessageCreator'
+import { GasOverrides } from '../message/ParentToChildMessageGasEstimator'
 import {
   isParentToChildTransactionRequest,
   isChildToParentTransactionRequest,

@@ -36,7 +36,7 @@ import { ethers, Overrides } from 'ethers'
 import {
   L2TransactionReceipt as ChainTransactionReceipt,
   RedeemTransaction,
-} from './L2Transaction'
+} from './ChildTransaction'
 import { getChildChain } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt, isDefined } from '../utils/lib'

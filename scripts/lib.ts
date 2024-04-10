@@ -19,8 +19,8 @@
 import { ContractReceipt } from '@ethersproject/contracts'
 
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
-import { L1ToL2MessageStatus } from '../src/lib/message/L1ToL2Message'
-import { L1TransactionReceipt } from '../src/lib/message/L1Transaction'
+import { L1ToL2MessageStatus } from '../src/lib/message/ParentToChildMessage'
+import { L1TransactionReceipt } from '../src/lib/message/ParentTransaction'
 import { testSetup } from '../scripts/testSetup'
 
 export const setStandardGateWays = async (

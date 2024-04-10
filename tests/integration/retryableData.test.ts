@@ -26,7 +26,7 @@ import { Wallet } from 'ethers'
 import { testSetup } from '../../scripts/testSetup'
 import { parseEther, randomBytes } from 'ethers/lib/utils'
 import { Inbox__factory } from '../../src/lib/abi/factories/Inbox__factory'
-import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
+import { GasOverrides } from '../../src/lib/message/ParentToChildMessageGasEstimator'
 const depositAmount = BigNumber.from(100)
 import { ERC20Inbox__factory } from '../../src/lib/abi/factories/ERC20Inbox__factory'
 import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'

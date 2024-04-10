@@ -30,7 +30,7 @@ import {
   ParentToChildMessageWaitResult,
   EthDepositMessage,
   EthDepositMessageWaitResult,
-} from './L1ToL2Message'
+} from './ParentToChildMessage'
 
 import { L1ERC20Gateway__factory } from '../abi/factories/L1ERC20Gateway__factory'
 import {

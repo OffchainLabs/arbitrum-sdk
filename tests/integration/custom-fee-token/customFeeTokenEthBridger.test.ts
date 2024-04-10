@@ -31,7 +31,7 @@ import {
 
 import { describeOnlyWhenCustomGasToken } from './mochaExtensions'
 import { ChildToParentMessageStatus } from '../../../src'
-import { ChildToParentMessage } from '../../../src/lib/message/L2ToL1Message'
+import { ChildToParentMessage } from '../../../src/lib/message/ChildToParentMessage'
 
 dotenv.config()
 

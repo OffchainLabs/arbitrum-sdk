@@ -1,4 +1,4 @@
-import { ParentChainTransactionReceipt } from './../../src/lib/message/L1Transaction'
+import { ParentChainTransactionReceipt } from './../../src/lib/message/ParentTransaction'
 import { BigNumber, constants, providers } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { expect } from 'chai'
