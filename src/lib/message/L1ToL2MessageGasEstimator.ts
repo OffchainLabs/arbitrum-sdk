@@ -11,7 +11,12 @@ import {
   RetryableDataTools,
 } from '../dataEntities/retryableData'
 import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
-import { getBaseFee, isDefined } from '../utils/lib'
+import {
+  getBaseFee,
+  getNativeTokenDecimals,
+  isDefined,
+  scaleToNativeDecimals,
+} from '../utils/lib'
 import { OmitTyped } from '../utils/types'
 import {
   L1ToL2MessageGasParams,
@@ -218,21 +223,11 @@ export class L1ToL2MessageGasEstimator {
     l1Provider: Provider,
     options?: GasOverrides
   ): Promise<L1ToL2MessageGasParams> {
-    let decimals = 18
-
     const { data } = retryableEstimateData
     const gasLimitDefaults = this.applyGasLimitDefaults(options?.gasLimit)
 
     const l2Network = await getL2Network(this.l2Provider)
-    const nativeTokenAddress = l2Network.nativeToken
-
-    if (nativeTokenAddress) {
-      const nativeTokenContract = ERC20__factory.connect(
-        nativeTokenAddress,
-        l1Provider
-      )
-      decimals = await nativeTokenContract.decimals()
-    }
+    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
 
     // estimate the l1 gas price
     const maxFeePerGasPromise = this.estimateMaxFeePerGas(options?.maxFeePerGas)
@@ -268,12 +263,13 @@ export class L1ToL2MessageGasEstimator {
 
     const deposit =
       options?.deposit?.base ||
-      gasLimit
-        .mul(maxFeePerGas)
-        .add(maxSubmissionFee)
-        .add(retryableEstimateData.l2CallValue)
-        // we rescale gas for non-18 decimal tokens, for 18 decimals we divide by 1 so it remains unchanged
-        .div(BigNumber.from(10).pow(BigNumber.from(18 - decimals)))
+      scaleToNativeDecimals({
+        amount: gasLimit
+          .mul(maxFeePerGas)
+          .add(maxSubmissionFee)
+          .add(retryableEstimateData.l2CallValue),
+        decimals,
+      })
 
     return {
       gasLimit,

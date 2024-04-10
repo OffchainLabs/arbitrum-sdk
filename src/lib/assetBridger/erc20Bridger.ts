@@ -71,7 +71,11 @@ import { OmitTyped, RequiredPick } from '../utils/types'
 import { RetryableDataTools } from '../dataEntities/retryableData'
 import { EventArgs } from '../dataEntities/event'
 import { L1ToL2MessageGasParams } from '../message/L1ToL2MessageCreator'
-import { isArbitrumChain } from '../utils/lib'
+import {
+  getNativeTokenDecimals,
+  isArbitrumChain,
+  scaleToNativeDecimals,
+} from '../utils/lib'
 
 export interface TokenApproveParams {
   /**
@@ -579,7 +583,8 @@ export class Erc20Bridger extends AssetBridger<
    * @returns
    */
   private getDepositRequestOutboundTransferInnerData(
-    depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
+    depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>,
+    decimals: number
   ) {
     if (!this.nativeTokenIsEth) {
       return defaultAbiCoder.encode(
@@ -589,10 +594,12 @@ export class Erc20Bridger extends AssetBridger<
           depositParams.maxSubmissionCost, // will be zero
           // callHookData
           '0x',
-          // nativeTokenTotalFee
-          depositParams.gasLimit
-            .mul(depositParams.maxFeePerGas)
-            .add(depositParams.maxSubmissionCost), // will be zero
+          scaleToNativeDecimals({
+            amount: depositParams.gasLimit
+              .mul(depositParams.maxFeePerGas)
+              .add(depositParams.maxSubmissionCost), // will be zero
+            decimals,
+          }),
         ]
       )
     }
@@ -644,6 +651,11 @@ export class Erc20Bridger extends AssetBridger<
       }
     }
 
+    const decimals = await getNativeTokenDecimals({
+      l1Provider,
+      l2Network: this.l2Network,
+    })
+
     const depositFunc = (
       depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
     ) => {
@@ -651,8 +663,10 @@ export class Erc20Bridger extends AssetBridger<
         params.maxSubmissionCost || depositParams.maxSubmissionCost
 
       const iGatewayRouter = L1GatewayRouter__factory.createInterface()
-      const innerData =
-        this.getDepositRequestOutboundTransferInnerData(depositParams)
+      const innerData = this.getDepositRequestOutboundTransferInnerData(
+        depositParams,
+        decimals
+      )
 
       const functionData =
         defaultedParams.excessFeeRefundAddress !== defaultedParams.from
