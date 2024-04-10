@@ -158,7 +158,7 @@ describe('RevertData', () => {
     await (
       await erc20Bridger.approveToken({
         erc20ParentAddress: l1TokenAddress,
-        l1Signer: parentSigner,
+        parentSigner,
       })
     ).wait()
 
@@ -167,7 +167,7 @@ describe('RevertData', () => {
       await (
         await erc20Bridger.approveGasToken({
           erc20ParentAddress: l1TokenAddress,
-          l1Signer: parentSigner,
+          parentSigner,
         })
       ).wait()
     }
@@ -202,7 +202,7 @@ describe('RevertData', () => {
     try {
       await erc20Bridger.deposit({
         ...erc20Params,
-        l1Signer: parentSigner,
+        parentSigner,
         childProvider: childSigner.provider!,
       })
       assert.fail('Expected estimateGas to fail')

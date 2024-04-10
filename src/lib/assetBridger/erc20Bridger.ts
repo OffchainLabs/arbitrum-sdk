@@ -61,11 +61,10 @@ import {
   L2TransactionReceipt,
 } from '../message/L2Transaction'
 import {
-  isL1ToL2TransactionRequest as isParentToChildTransactionRequest,
-  isL2ToL1TransactionRequest as isChildToParentTransactionRequest,
-  L1ToL2TransactionRequest,
-  L2ToL1TransactionRequest,
-  L1ToL2TransactionRequest as ParentToChildTransactionRequest,
+  isParentToChildTransactionRequest,
+  isChildToParentTransactionRequest,
+  ChildToParentTransactionRequest,
+  ParentToChildTransactionRequest,
 } from '../dataEntities/transactionRequest'
 import { defaultAbiCoder } from 'ethers/lib/utils'
 import { OmitTyped, RequiredPick } from '../utils/types'
@@ -131,17 +130,18 @@ export interface Erc20WithdrawParams extends EthWithdrawParams {
   erc20ParentAddress: string
 }
 
-export type ParentToChildTxReqAndSignerProvider = L1ToL2TransactionRequest & {
-  l1Signer: Signer
+export type ParentToChildTxReqAndSignerProvider =
+  ParentToChildTransactionRequest & {
+    parentSigner: Signer
+    overrides?: Overrides
+  }
+
+export type ChildToParentTxReqAndSigner = ChildToParentTransactionRequest & {
+  childSigner: Signer
   overrides?: Overrides
 }
 
-export type ChildToParentTxReqAndSigner = L2ToL1TransactionRequest & {
-  l2Signer: Signer
-  overrides?: Overrides
-}
-
-type SignerTokenApproveParams = TokenApproveParams & { l1Signer: Signer }
+type SignerTokenApproveParams = TokenApproveParams & { parentSigner: Signer }
 type ProviderTokenApproveParams = TokenApproveParams & {
   parentProvider: Provider
 }
@@ -149,17 +149,17 @@ export type ApproveParamsOrTxRequest =
   | SignerTokenApproveParams
   | {
       txRequest: Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
-      l1Signer: Signer
+      parentSigner: Signer
       overrides?: Overrides
     }
 
 /**
- * The deposit request takes the same args as the actual deposit. Except we dont require a signer object
+ * The deposit request takes the same args as the actual deposit. Except we don't require a signer object
  * only a provider
  */
 type DepositRequest = OmitTyped<
   Erc20DepositParams,
-  'overrides' | 'l1Signer'
+  'overrides' | 'parentSigner'
 > & {
   parentProvider: Provider
   /**
@@ -178,7 +178,7 @@ type DefaultedDepositRequest = RequiredPick<
  */
 export class Erc20Bridger extends AssetBridger<
   Erc20DepositParams | ParentToChildTxReqAndSignerProvider,
-  OmitTyped<Erc20WithdrawParams, 'from'> | L2ToL1TransactionRequest
+  OmitTyped<Erc20WithdrawParams, 'from'> | ChildToParentTransactionRequest
 > {
   public static MAX_APPROVAL: BigNumber = MaxUint256
   public static MIN_CUSTOM_DEPOSIT_GAS_LIMIT = BigNumber.from(275000)
@@ -262,18 +262,18 @@ export class Erc20Bridger extends AssetBridger<
       throw new Error('chain uses ETH as its native/gas token')
     }
 
-    await this.checkParentChain(params.l1Signer)
+    await this.checkParentChain(params.parentSigner)
 
     const approveGasTokenRequest = this.isApproveParams(params)
       ? await this.getApproveGasTokenRequest({
           ...params,
           parentProvider: SignerProviderUtils.getProviderOrThrow(
-            params.l1Signer
+            params.parentSigner
           ),
         })
       : params.txRequest
 
-    return params.l1Signer.sendTransaction({
+    return params.parentSigner.sendTransaction({
       ...approveGasTokenRequest,
       ...params.overrides,
     })
@@ -321,17 +321,17 @@ export class Erc20Bridger extends AssetBridger<
   public async approveToken(
     params: ApproveParamsOrTxRequest
   ): Promise<ethers.ContractTransaction> {
-    await this.checkParentChain(params.l1Signer)
+    await this.checkParentChain(params.parentSigner)
 
     const approveRequest = this.isApproveParams(params)
       ? await this.getApproveTokenRequest({
           ...params,
           parentProvider: SignerProviderUtils.getProviderOrThrow(
-            params.l1Signer
+            params.parentSigner
           ),
         })
       : params.txRequest
-    return await params.l1Signer.sendTransaction({
+    return await params.parentSigner.sendTransaction({
       ...approveRequest,
       ...params.overrides,
     })
@@ -734,7 +734,7 @@ export class Erc20Bridger extends AssetBridger<
   public async deposit(
     params: Erc20DepositParams | ParentToChildTxReqAndSignerProvider
   ): Promise<L1ContractCallTransaction> {
-    await this.checkParentChain(params.l1Signer)
+    await this.checkParentChain(params.parentSigner)
 
     // Although the types prevent should alert callers that value is not
     // a valid override, it is possible that they pass it in anyway as it's a common override
@@ -746,7 +746,7 @@ export class Erc20Bridger extends AssetBridger<
     }
 
     const parentProvider = SignerProviderUtils.getProviderOrThrow(
-      params.l1Signer
+      params.parentSigner
     )
 
     const tokenDeposit = isParentToChildTransactionRequest(params)
@@ -754,10 +754,10 @@ export class Erc20Bridger extends AssetBridger<
       : await this.getDepositRequest({
           ...params,
           parentProvider,
-          from: await params.l1Signer.getAddress(),
+          from: await params.parentSigner.getAddress(),
         })
 
-    const tx = await params.l1Signer.sendTransaction({
+    const tx = await params.parentSigner.sendTransaction({
       ...tokenDeposit.txRequest,
       ...params.overrides,
     })
@@ -772,7 +772,7 @@ export class Erc20Bridger extends AssetBridger<
    */
   public async getWithdrawalRequest(
     params: Erc20WithdrawParams
-  ): Promise<L2ToL1TransactionRequest> {
+  ): Promise<ChildToParentTransactionRequest> {
     const to = params.destinationAddress
 
     const routerInterface = L2GatewayRouter__factory.createInterface()
@@ -801,7 +801,7 @@ export class Erc20Bridger extends AssetBridger<
         from: params.from,
       },
       // todo: do proper estimation
-      estimateL1GasLimit: async (parentProvider: Provider) => {
+      estimateParentGasLimit: async (parentProvider: Provider) => {
         if (await isArbitrumChain(parentProvider)) {
           // values for L3 are dependent on the L1 base fee, so hardcoding can never be accurate
           // however, this is only an estimate used for display, so should be good enough
@@ -835,24 +835,24 @@ export class Erc20Bridger extends AssetBridger<
    */
   public async withdraw(
     params:
-      | (OmitTyped<Erc20WithdrawParams, 'from'> & { l2Signer: Signer })
+      | (OmitTyped<Erc20WithdrawParams, 'from'> & { childSigner: Signer })
       | ChildToParentTxReqAndSigner
   ): Promise<L2ContractTransaction> {
-    if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
-      throw new MissingProviderArbSdkError('l2Signer')
+    if (!SignerProviderUtils.signerHasProvider(params.childSigner)) {
+      throw new MissingProviderArbSdkError('childSigner')
     }
-    await this.checkChildChain(params.l2Signer)
+    await this.checkChildChain(params.childSigner)
 
     const withdrawalRequest = isChildToParentTransactionRequest<
-      OmitTyped<Erc20WithdrawParams, 'from'> & { l2Signer: Signer }
+      OmitTyped<Erc20WithdrawParams, 'from'> & { childSigner: Signer }
     >(params)
       ? params
       : await this.getWithdrawalRequest({
           ...params,
-          from: await params.l2Signer.getAddress(),
+          from: await params.childSigner.getAddress(),
         })
 
-    const tx = await params.l2Signer.sendTransaction({
+    const tx = await params.childSigner.sendTransaction({
       ...withdrawalRequest.txRequest,
       ...params.overrides,
     })

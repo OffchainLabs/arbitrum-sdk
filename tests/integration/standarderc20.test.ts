@@ -103,7 +103,7 @@ describe('standard ERC20', () => {
       )
 
       const tx = await erc20Bridger.approveGasToken({
-        l1Signer: parentSigner,
+        parentSigner,
         erc20ParentAddress: testState.parentToken.address,
       })
       await tx.wait()

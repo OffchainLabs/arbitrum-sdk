@@ -88,7 +88,7 @@ describe('Ether', async () => {
       const { ethBridger, parentSigner } = await testSetup()
 
       try {
-        await ethBridger.approveGasToken({ l1Signer: parentSigner })
+        await ethBridger.approveGasToken({ parentSigner })
         expect.fail(`"EthBridger.approveGasToken" should have thrown`)
       } catch (error: any) {
         expect(error.message).to.equal('chain uses ETH as its native/gas token')
@@ -108,7 +108,7 @@ describe('Ether', async () => {
     const ethToDeposit = parseEther('0.0002')
     const res = await ethBridger.deposit({
       amount: ethToDeposit,
-      l1Signer: parentSigner,
+      parentSigner: parentSigner,
     })
     const rec = await res.wait()
 
@@ -158,9 +158,9 @@ describe('Ether', async () => {
     const ethToDeposit = parseEther('0.0002')
     const res = await ethBridger.depositTo({
       amount: ethToDeposit,
-      l1Signer: parentSigner,
+      parentSigner: parentSigner,
       destinationAddress: destWallet.address,
-      l2Provider: childSigner.provider!,
+      childProvider: childSigner.provider!,
     })
     const rec = await res.wait()
 
@@ -232,13 +232,13 @@ describe('Ether', async () => {
       from: await childSigner.getAddress(),
     })
 
-    const l1GasEstimate = await request.estimateL1GasLimit(
+    const l1GasEstimate = await request.estimateParentGasLimit(
       parentSigner.provider!
     )
 
     const withdrawEthRes = await ethBridger.withdraw({
       amount: ethToWithdraw,
-      l2Signer: childSigner,
+      childSigner: childSigner,
       destinationAddress: randomAddress,
       from: await childSigner.getAddress(),
     })
