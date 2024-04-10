@@ -225,8 +225,6 @@ export function scaleToNativeDecimals({
   amount: BigNumber
   decimals: number
 }) {
-  let scaledAmount = amount
-
   // do nothing for 18 decimals
   if (decimals === 18) {
     return amount
@@ -235,7 +233,7 @@ export function scaleToNativeDecimals({
   const multiplier = BigNumber.from(10).pow(BigNumber.from(18 - decimals))
 
   if (decimals < 18) {
-    scaledAmount = amount.div(multiplier)
+    const scaledAmount = amount.div(multiplier)
     // round up if necessary
     if (scaledAmount.mul(multiplier).lt(amount)) {
       return scaledAmount.add(BigNumber.from(1))
