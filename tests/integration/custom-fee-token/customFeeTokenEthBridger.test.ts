@@ -193,7 +193,7 @@ describeOnlyWhenCustomGasToken(
 
       const withdrawalTx = await ethBridger.withdraw({
         amount,
-        l2Signer: childSigner,
+        childSigner,
         destinationAddress,
         from,
       })
