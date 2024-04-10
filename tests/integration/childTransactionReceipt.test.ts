@@ -25,7 +25,7 @@ import {
   skipIfMainnet,
   wait,
 } from './testHelpers'
-import { L2TransactionReceipt } from '../../src'
+import { ChildTransactionReceipt } from '../../src'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { BigNumber, Wallet } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
@@ -64,7 +64,7 @@ describe('ArbProvider', () => {
     // eslint-disable-next-line no-constant-condition
     while (true) {
       await wait(300)
-      const arbTxReceipt = new L2TransactionReceipt(rec)
+      const arbTxReceipt = new ChildTransactionReceipt(rec)
 
       const l1BatchNumber = (
         await arbTxReceipt.getBatchNumber(l2Provider).catch(() => {

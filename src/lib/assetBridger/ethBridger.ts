@@ -27,15 +27,15 @@ import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 import { AssetBridger } from './assetBridger'
 import {
-  L1EthDepositTransaction,
-  L1ContractCallTransaction,
-  L1TransactionReceipt,
+  ParentChainEthDepositTransaction,
+  ParentChainContractCallTransaction,
+  ParentChainTransactionReceipt,
 } from '../message/ParentTransaction'
 import {
-  L2ContractTransaction,
-  ChildChainTransactionReceipt,
+  ChildContractTransaction,
+  ChildTransactionReceipt,
 } from '../message/ChildTransaction'
-import { L1ToL2MessageCreator } from '../message/ParentToChildMessageCreator'
+import { ParentToChildMessageCreator } from '../message/ParentToChildMessageCreator'
 import { GasOverrides } from '../message/ParentToChildMessageGasEstimator'
 import {
   isParentToChildTransactionRequest,
@@ -46,7 +46,7 @@ import {
 import { OmitTyped } from '../utils/types'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
-import { getL2Network as getChildChain } from '../dataEntities/networks'
+import { getArbitrumNetwork } from '../dataEntities/networks'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { isArbitrumChain } from '../utils/lib'
 
@@ -171,7 +171,7 @@ export class EthBridger extends AssetBridger<
    * @returns
    */
   public static async fromProvider(childProvider: Provider) {
-    return new EthBridger(await getChildChain(childProvider))
+    return new EthBridger(await getArbitrumNetwork(childProvider))
   }
 
   /**
@@ -286,7 +286,7 @@ export class EthBridger extends AssetBridger<
    */
   public async deposit(
     params: EthDepositParams | ParentToChildTxReqAndSigner
-  ): Promise<L1EthDepositTransaction> {
+  ): Promise<ParentChainEthDepositTransaction> {
     await this.checkParentChain(params.parentSigner)
 
     const ethDeposit = isParentToChildTransactionRequest(params)
@@ -301,7 +301,7 @@ export class EthBridger extends AssetBridger<
       ...params.overrides,
     })
 
-    return L1TransactionReceipt.monkeyPatchEthDepositWait(tx)
+    return ParentChainTransactionReceipt.monkeyPatchEthDepositWait(tx)
   }
 
   /**
@@ -323,7 +323,7 @@ export class EthBridger extends AssetBridger<
     // Gas overrides can be passed in the parameters
     const gasOverrides = params.retryableGasOverrides || undefined
 
-    return L1ToL2MessageCreator.getTicketCreationRequest(
+    return ParentToChildMessageCreator.getTicketCreationRequest(
       requestParams,
       params.parentProvider,
       params.childProvider,
@@ -340,7 +340,7 @@ export class EthBridger extends AssetBridger<
     params:
       | EthDepositToParams
       | (ParentToChildTxReqAndSigner & { childProvider: Provider })
-  ): Promise<L1ContractCallTransaction> {
+  ): Promise<ParentChainContractCallTransaction> {
     await this.checkParentChain(params.parentSigner)
     await this.checkChildChain(params.childProvider)
 
@@ -357,7 +357,7 @@ export class EthBridger extends AssetBridger<
       ...params.overrides,
     })
 
-    return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
+    return ParentChainTransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
   /**
@@ -405,7 +405,7 @@ export class EthBridger extends AssetBridger<
     params:
       | (EthWithdrawParams & { childSigner: Signer })
       | ChildToParentTxReqAndSigner
-  ): Promise<L2ContractTransaction> {
+  ): Promise<ChildContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(params.childSigner)) {
       throw new MissingProviderArbSdkError('childSigner')
     }
@@ -421,6 +421,6 @@ export class EthBridger extends AssetBridger<
       ...request.txRequest,
       ...params.overrides,
     })
-    return ChildChainTransactionReceipt.monkeyPatchWait(tx)
+    return ChildTransactionReceipt.monkeyPatchWait(tx)
   }
 }

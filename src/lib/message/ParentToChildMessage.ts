@@ -33,10 +33,7 @@ import {
 } from '../dataEntities/signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
 import { ethers, Overrides } from 'ethers'
-import {
-  L2TransactionReceipt as ChainTransactionReceipt,
-  RedeemTransaction,
-} from './ChildTransaction'
+import { ChildTransactionReceipt, RedeemTransaction } from './ChildTransaction'
 import { getChildChain } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt, isDefined } from '../utils/lib'
@@ -296,7 +293,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
     const creationReceipt = await this.getRetryableCreationReceipt()
 
     if (creationReceipt) {
-      const chainReceipt = new ChainTransactionReceipt(creationReceipt)
+      const chainReceipt = new ChildTransactionReceipt(creationReceipt)
       const redeemEvents = chainReceipt.getRedeemScheduledEvents()
 
       if (redeemEvents.length === 1) {
@@ -687,8 +684,8 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
         ...overrides,
       })
 
-      return ChainTransactionReceipt.toRedeemTransaction(
-        ChainTransactionReceipt.monkeyPatchWait(redeemTx),
+      return ChildTransactionReceipt.toRedeemTransaction(
+        ChildTransactionReceipt.monkeyPatchWait(redeemTx),
         this.chainProvider
       )
     } else {

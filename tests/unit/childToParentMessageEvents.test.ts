@@ -19,7 +19,7 @@
 import { Logger, LogLevel } from '@ethersproject/logger'
 Logger.setLogLevel(LogLevel.ERROR)
 import { ChildToParentMessage } from '../../src/lib/message/ChildToParentMessage'
-import { getChildChain as getL2Network } from '../../src/lib/dataEntities/networks'
+import { getArbitrumNetwork } from '../../src/lib/dataEntities/networks'
 import { providers } from 'ethers'
 import { anything, deepEqual, instance, mock, verify, when } from 'ts-mockito'
 
@@ -34,7 +34,7 @@ describe('ChildToParentMessage events', () => {
   const arbSys = '0x0000000000000000000000000000000000000064'
 
   const createProviderMock = async (networkChoiceOverride?: number) => {
-    const l2Network = await getL2Network(networkChoiceOverride || 42161)
+    const l2Network = await getArbitrumNetwork(networkChoiceOverride || 42161)
 
     const l2ProviderMock = mock(providers.JsonRpcProvider)
     const latestBlock = l2Network.nitroGenesisBlock + 1000

@@ -30,9 +30,9 @@ import {
 } from './testHelpers'
 import {
   Erc20Bridger,
-  L1ToL2MessageStatus,
-  L1ToL2MessageWriter,
-  L2TransactionReceipt,
+  ParentToChildMessageStatus,
+  ParentToChildMessageWriter,
+  ChildTransactionReceipt,
 } from '../../src'
 import { ArbitrumNetwork } from '../../src/lib/dataEntities/networks'
 import { TestERC20 } from '../../src/lib/abi/TestERC20'
@@ -134,13 +134,13 @@ describe('standard ERC20', () => {
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
-      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      expectedStatus: ParentToChildMessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.STANDARD,
     })
   })
 
   const redeemAndTest = async (
-    message: L1ToL2MessageWriter,
+    message: ParentToChildMessageWriter,
     expectedStatus: 0 | 1,
     gasLimit?: BigNumber
   ) => {
@@ -156,8 +156,8 @@ describe('standard ERC20', () => {
     expect(retryRec.status, 'tx didnt fail').to.eq(expectedStatus)
     expect(await message.status(), 'message status').to.eq(
       expectedStatus === 0
-        ? L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN
-        : L1ToL2MessageStatus.REDEEMED
+        ? ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+        : ParentToChildMessageStatus.REDEEMED
     )
   }
 
@@ -168,7 +168,7 @@ describe('standard ERC20', () => {
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
-      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
+      expectedStatus: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
         gasLimit: { base: BigNumber.from(0) },
@@ -186,7 +186,7 @@ describe('standard ERC20', () => {
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
-      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
+      expectedStatus: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
         gasLimit: { base: BigNumber.from(5) },
@@ -206,7 +206,7 @@ describe('standard ERC20', () => {
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
-      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
+      expectedStatus: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
         gasLimit: { base: BigNumber.from(21000) },
@@ -218,7 +218,7 @@ describe('standard ERC20', () => {
       await waitRes.message.getRetryableCreationReceipt()
     if (!isDefined(retryableCreation))
       throw new Error('Missing retryable creation.')
-    const l2Receipt = new L2TransactionReceipt(retryableCreation)
+    const l2Receipt = new ChildTransactionReceipt(retryableCreation)
     const redeemsScheduled = l2Receipt.getRedeemScheduledEvents()
     expect(redeemsScheduled.length, 'Unexpected redeem length').to.eq(1)
     const retryReceipt =
@@ -238,7 +238,7 @@ describe('standard ERC20', () => {
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
-      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
+      expectedStatus: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
         gasLimit: { base: BigNumber.from(5) },
@@ -307,7 +307,7 @@ describe('standard ERC20', () => {
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
-      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      expectedStatus: ParentToChildMessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.STANDARD,
     })
   })
@@ -321,7 +321,7 @@ describe('standard ERC20', () => {
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
-      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      expectedStatus: ParentToChildMessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.STANDARD,
       destinationAddress: randomAddress,
     })

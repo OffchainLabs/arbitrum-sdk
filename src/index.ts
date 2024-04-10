@@ -19,27 +19,27 @@
 export { EthBridger } from './lib/assetBridger/ethBridger'
 export { Erc20Bridger } from './lib/assetBridger/erc20Bridger'
 export {
-  L2TransactionReceipt,
-  L2ContractTransaction,
+  ChildTransactionReceipt,
+  ChildContractTransaction,
 } from './lib/message/ChildTransaction'
 export {
-  ChildToParentMessage as L2ToL1Message,
-  ChildToParentMessageWriter as L2ToL1MessageWriter,
-  ChildToParentMessageReader as L2ToL1MessageReader,
+  ChildToParentMessage,
+  ChildToParentMessageWriter,
+  ChildToParentMessageReader,
 } from './lib/message/ChildToParentMessage'
 export {
-  L1ContractTransaction,
-  L1TransactionReceipt,
+  ParentChainContractTransaction,
+  ParentChainTransactionReceipt,
 } from './lib/message/ParentTransaction'
 export {
-  ParentToChildMessageStatus as L1ToL2MessageStatus,
+  ParentToChildMessageStatus,
   EthDepositStatus,
-  ParentToChildMessage as L1ToL2Message,
-  ParentToChildMessageReader as L1ToL2MessageReader,
-  ParentToChildMessageReaderClassic as L1ToL2MessageReaderClassic,
-  ParentToChildMessageWriter as L1ToL2MessageWriter,
+  ParentToChildMessage,
+  ParentToChildMessageReader,
+  ParentToChildMessageReaderClassic,
+  ParentToChildMessageWriter,
 } from './lib/message/ParentToChildMessage'
-export { L1ToL2MessageGasEstimator } from './lib/message/ParentToChildMessageGasEstimator'
+export { ParentToChildMessageGasEstimator } from './lib/message/ParentToChildMessageGasEstimator'
 export { argSerializerConstructor } from './lib/utils/byte_serialize_params'
 export { CallInput, MultiCaller } from './lib/utils/multicall'
 export {

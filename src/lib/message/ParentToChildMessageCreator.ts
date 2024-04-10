@@ -4,11 +4,11 @@ import { Provider } from '@ethersproject/abstract-provider'
 
 import {
   GasOverrides,
-  L1ToL2MessageGasEstimator as ParentToChildMessageGasEstimator,
+  ParentToChildMessageGasEstimator,
 } from './ParentToChildMessageGasEstimator'
 import {
-  L1ContractTransaction as ParentChainContractTransaction,
-  L1TransactionReceipt as ParentChainTransactionReceipt,
+  ParentChainContractTransaction,
+  ParentChainTransactionReceipt,
 } from './ParentTransaction'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { getChildChain } from '../dataEntities/networks'
@@ -228,12 +228,4 @@ export class ParentToChildMessageCreator {
 
     return ParentChainTransactionReceipt.monkeyPatchWait(tx)
   }
-}
-
-// TODO: remove after all other files have their imports updated
-export {
-  ParentToChildMessageCreator as L1ToL2MessageCreator,
-  ParentToChildMessageGasParams as L1ToL2MessageGasParams,
-  ParentToChildMessageNoGasParams as L1ToL2MessageNoGasParams,
-  ParentToChildMessageParams as L1ToL2MessageParams,
 }
