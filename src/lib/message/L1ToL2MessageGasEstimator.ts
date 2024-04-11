@@ -22,7 +22,6 @@ import {
   L1ToL2MessageGasParams,
   L1ToL2MessageNoGasParams,
 } from './L1ToL2MessageCreator'
-import { ERC20__factory } from '../abi/factories/ERC20__factory'
 
 /**
  * The default amount to increase the maximum submission cost. Submission cost is calculated
