@@ -53,6 +53,11 @@ export interface L1Network extends Network {
 export interface ArbitrumNetwork extends Network {
   tokenBridge: TokenBridge
   ethBridge: EthBridge
+
+  parentChain: {
+    id: number
+  }
+
   /**
    * Chain id of the parent chain, i.e. the chain on which this chain settles to.
    */
@@ -187,6 +192,9 @@ export const networks: Networks = {
     chainID: 42161,
     name: 'Arbitrum One',
     explorerUrl: 'https://arbiscan.io',
+    parentChain: {
+      id: 1
+    },
     partnerChainID: 1,
     partnerChainIDs: [],
     isArbitrum: true,
@@ -214,6 +222,9 @@ export const networks: Networks = {
       outbox: '0xD4B80C3D7240325D18E645B49e6535A3Bf95cc58',
       rollup: '0xFb209827c58283535b744575e11953DCC4bEAD88',
       sequencerInbox: '0x211E1c4c7f1bF5351Ac850Ed10FD68CFfCF6c21b',
+    },
+    parentChain: {
+      id: 1
     },
     explorerUrl: 'https://nova.arbiscan.io',
     isArbitrum: true,
@@ -263,6 +274,9 @@ export const networks: Networks = {
     isCustom: false,
     name: 'Arbitrum Rollup Sepolia Testnet',
     partnerChainID: 11155111,
+    parentChain: {
+      id: 11155111
+    },
     partnerChainIDs: [23011913],
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     tokenBridge: {
@@ -300,6 +314,9 @@ export const networks: Networks = {
     isArbitrum: true,
     isCustom: false,
     name: 'Stylus Testnet',
+    parentChain: {
+      id: 421614
+    },
     partnerChainID: 421614,
     partnerChainIDs: [],
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
@@ -619,6 +636,9 @@ export const addDefaultLocalNetwork = (): {
     isArbitrum: true,
     isCustom: true,
     name: 'ArbLocal',
+    parentChain: {
+      id: 1337
+    },
     partnerChainID: 1337,
     partnerChainIDs: [],
     retryableLifetimeSeconds: 604800,
