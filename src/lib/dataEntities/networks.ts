@@ -18,10 +18,7 @@
 
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
-import {
-  SEVEN_DAYS_IN_SECONDS,
-  ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
-} from './constants'
+import { ARB_MINIMUM_BLOCK_TIME_IN_SECONDS } from './constants'
 import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__factory'
 
 export interface Network {
