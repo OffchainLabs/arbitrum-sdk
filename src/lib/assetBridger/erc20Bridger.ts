@@ -513,7 +513,7 @@ export class Erc20Bridger extends AssetBridger<
     )
     const l1Address = await arbERC20.functions.l1Address().then(([res]) => res)
 
-    // check that this l1 address is indeed registered to this l2 token
+    // check that this l1 address is indeed registered to this child token
     const l2GatewayRouter = L2GatewayRouter__factory.connect(
       this.childChain.tokenBridge.l2GatewayRouter,
       childProvider
@@ -727,7 +727,7 @@ export class Erc20Bridger extends AssetBridger<
   }
 
   /**
-   * Execute a token deposit from parent-to-child
+   * Execute a token deposit from parent to child chain
    * @param params
    * @returns
    */
@@ -829,7 +829,7 @@ export class Erc20Bridger extends AssetBridger<
   }
 
   /**
-   * Withdraw tokens from L2 to L1
+   * Withdraw tokens from child to parent chain
    * @param params
    * @returns
    */
@@ -875,15 +875,15 @@ export class AdminErc20Bridger extends Erc20Bridger {
   /**
    * Register a custom token on the Arbitrum bridge
    * See https://developer.offchainlabs.com/docs/bridging_assets#the-arbitrum-generic-custom-gateway for more details
-   * @param parentTokenAddress Address of the already deployed l1 token. Must inherit from https://developer.offchainlabs.com/docs/sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/ethereum/icustomtoken.
-   * @param l2TokenAddress Address of the already deployed l2 token. Must inherit from https://developer.offchainlabs.com/docs/sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/arbitrum/iarbtoken.
-   * @param parentSigner The signer with the rights to call registerTokenOnL2 on the l1 token
+   * @param parentTokenAddress Address of the already deployed parent token. Must inherit from https://developer.offchainlabs.com/docs/sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/ethereum/icustomtoken.
+   * @param childTokenAddress Address of the already deployed child token. Must inherit from https://developer.offchainlabs.com/docs/sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/arbitrum/iarbtoken.
+   * @param parentSigner The signer with the rights to call registerTokenOnL2 on the parent token
    * @param childProvider Arbitrum rpc provider
    * @returns
    */
   public async registerCustomToken(
     parentTokenAddress: string,
-    l2TokenAddress: string,
+    childTokenAddress: string,
     parentSigner: Signer,
     childProvider: Provider
   ): Promise<ParentContractTransaction> {
@@ -893,22 +893,25 @@ export class AdminErc20Bridger extends Erc20Bridger {
     await this.checkParentChain(parentSigner)
     await this.checkChildChain(childProvider)
 
-    const l1SenderAddress = await parentSigner.getAddress()
+    const parentSenderAddress = await parentSigner.getAddress()
 
-    const l1Token = ICustomToken__factory.connect(
+    const parentToken = ICustomToken__factory.connect(
       parentTokenAddress,
       parentSigner
     )
-    const l2Token = IArbToken__factory.connect(l2TokenAddress, childProvider)
+    const childToken = IArbToken__factory.connect(
+      childTokenAddress,
+      childProvider
+    )
 
     // sanity checks
-    await l1Token.deployed()
-    await l2Token.deployed()
+    await parentToken.deployed()
+    await childToken.deployed()
 
-    const l1AddressFromL2 = await l2Token.l1Address()
-    if (l1AddressFromL2 !== parentTokenAddress) {
+    const l1AddressFromChildChain = await childToken.l1Address()
+    if (l1AddressFromChildChain !== parentTokenAddress) {
       throw new ArbSdkError(
-        `L2 token does not have l1 address set. Set address: ${l1AddressFromL2}, expected address: ${parentTokenAddress}.`
+        `L2 token does not have l1 address set. Set address: ${l1AddressFromChildChain}, expected address: ${parentTokenAddress}.`
       )
     }
 
@@ -937,22 +940,25 @@ export class AdminErc20Bridger extends Erc20Bridger {
         .mul(doubleFeePerGas)
         .add(setGatewayGas.maxSubmissionCost)
 
-      const data = l1Token.interface.encodeFunctionData('registerTokenOnL2', [
-        l2TokenAddress,
-        setTokenGas.maxSubmissionCost,
-        setGatewayGas.maxSubmissionCost,
-        setTokenGas.gasLimit,
-        setGatewayGas.gasLimit,
-        doubleFeePerGas,
-        setTokenDeposit,
-        setGatewayDeposit,
-        l1SenderAddress,
-      ])
+      const data = parentToken.interface.encodeFunctionData(
+        'registerTokenOnL2',
+        [
+          childTokenAddress,
+          setTokenGas.maxSubmissionCost,
+          setGatewayGas.maxSubmissionCost,
+          setTokenGas.gasLimit,
+          setGatewayGas.gasLimit,
+          doubleFeePerGas,
+          setTokenDeposit,
+          setGatewayDeposit,
+          parentSenderAddress,
+        ]
+      )
 
       return {
         data,
         value: setTokenDeposit.add(setGatewayDeposit),
-        to: l1Token.address,
+        to: parentToken.address,
         from,
       }
     }
@@ -992,7 +998,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     )
 
     const registerTx = await parentSigner.sendTransaction({
-      to: l1Token.address,
+      to: parentToken.address,
       data: setGatewayEstimates2.data,
       value: setGatewayEstimates2.value,
     })
