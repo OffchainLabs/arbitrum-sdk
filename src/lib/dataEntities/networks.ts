@@ -27,8 +27,6 @@ import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__fa
 export interface Network {
   chainID: number
   name: string
-  explorerUrl: string
-  gif?: string
   isCustom: boolean
   /**
    * Minimum possible block time for the chain (in seconds).
@@ -157,7 +155,6 @@ export const networks: Networks = {
   1: {
     chainID: 1,
     name: 'Mainnet',
-    explorerUrl: 'https://etherscan.io',
     partnerChainIDs: [42161, 42170],
     blockTime: 14,
     isCustom: false,
@@ -166,7 +163,6 @@ export const networks: Networks = {
   1338: {
     chainID: 1338,
     name: 'Hardhat_Mainnet_Fork',
-    explorerUrl: 'https://etherscan.io',
     partnerChainIDs: [42161],
     blockTime: 1,
     isCustom: false,
@@ -175,7 +171,6 @@ export const networks: Networks = {
   11155111: {
     chainID: 11155111,
     name: 'Sepolia',
-    explorerUrl: 'https://sepolia.etherscan.io',
     partnerChainIDs: [421614],
     blockTime: 12,
     isCustom: false,
@@ -184,7 +179,6 @@ export const networks: Networks = {
   17000: {
     chainID: 17000,
     name: 'Holesky',
-    explorerUrl: 'https://holesky.etherscan.io',
     partnerChainIDs: [],
     blockTime: 12,
     isCustom: false,
@@ -193,7 +187,6 @@ export const networks: Networks = {
   42161: {
     chainID: 42161,
     name: 'Arbitrum One',
-    explorerUrl: 'https://arbiscan.io',
     parentChain: {
       id: 1,
     },
@@ -226,7 +219,6 @@ export const networks: Networks = {
     parentChain: {
       id: 1,
     },
-    explorerUrl: 'https://nova.arbiscan.io',
     isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Nova',
@@ -267,7 +259,6 @@ export const networks: Networks = {
       rollup: '0xd80810638dbDF9081b72C1B33c65375e807281C8',
       sequencerInbox: '0x6c97864CE4bEf387dE0b3310A44230f7E3F1be0D',
     },
-    explorerUrl: 'https://sepolia-explorer.arbitrum.io',
     isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Rollup Sepolia Testnet',
@@ -306,7 +297,6 @@ export const networks: Networks = {
       rollup: '0x94db9E36d9336cD6F9FfcAd399dDa6Cc05299898',
       sequencerInbox: '0x00A0F15b79d1D3e5991929FaAbCF2AA65623530c',
     },
-    explorerUrl: 'https://stylus-testnet-explorer.arbitrum.io',
     isArbitrum: true,
     isCustom: false,
     name: 'Stylus Testnet',
@@ -609,7 +599,6 @@ export const addDefaultLocalNetwork = (): {
   const defaultLocalL1Network: L1Network = {
     blockTime: 10,
     chainID: 1337,
-    explorerUrl: '',
     isCustom: true,
     name: 'EthLocal',
     partnerChainIDs: [412346],
@@ -626,7 +615,6 @@ export const addDefaultLocalNetwork = (): {
       rollup: '0x65a59D67Da8e710Ef9A01eCa37f83f84AEdeC416',
       sequencerInbox: '0xE7362D0787b51d8C72D504803E5B1d6DcdA89540',
     },
-    explorerUrl: '',
     isArbitrum: true,
     isCustom: true,
     name: 'ArbLocal',

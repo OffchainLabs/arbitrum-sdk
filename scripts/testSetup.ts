@@ -117,7 +117,6 @@ export const testSetup = async (): Promise<{
       const ethLocal: L1Network = {
         blockTime: 10,
         chainID: _parentChain.parentChain.id,
-        explorerUrl: '',
         isCustom: true,
         name: 'EthLocal',
         partnerChainIDs: [_parentChain.chainID],
