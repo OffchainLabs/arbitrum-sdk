@@ -124,7 +124,7 @@ describeOnlyWhenEth('WETH', async () => {
       erc20Bridger: erc20Bridger,
       gatewayType: GatewayType.WETH,
       parentSigner: parentSigner,
-      parentChainToken: ERC20__factory.connect(
+      parentToken: ERC20__factory.connect(
         childChain.tokenBridge.l1Weth,
         parentSigner.provider!
       ),

@@ -210,7 +210,7 @@ export class ParentToChildMessageGasEstimator {
   }
 
   /**
-   * Get gas limit, gas price and submission price estimates for sending an Parent->Child message
+   * Get gas limit, gas price and submission price estimates for sending a Parent->Child message
    * @param retryableData Data of retryable ticket transaction
    * @param parentBaseFee Current parent chain base fee
    * @param parentProvider
@@ -274,7 +274,7 @@ export class ParentToChildMessageGasEstimator {
   }
 
   /**
-   * Transactions that make an Parent->Child message need to estimate L2 gas parameters
+   * Transactions that make a Parent->Child message need to estimate L2 gas parameters
    * This function does that, and populates those parameters into a transaction request
    * @param dataFunc
    * @param parentProvider
@@ -283,7 +283,7 @@ export class ParentToChildMessageGasEstimator {
    */
   public async populateFunctionParams(
     /**
-     * Function that will internally make an Parent->Child transaction
+     * Function that will internally make a Parent->Child transaction
      * Will initially be called with dummy values to trigger a special revert containing
      * the real params. Then called again with the real params to form the final data to be submitted
      */

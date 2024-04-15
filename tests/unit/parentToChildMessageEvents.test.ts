@@ -1,4 +1,4 @@
-import { ParentChainTransactionReceipt } from './../../src/lib/message/ParentTransaction'
+import { ParentTransactionReceipt } from './../../src/lib/message/ParentTransaction'
 import { BigNumber, constants, providers } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { expect } from 'chai'
@@ -150,12 +150,12 @@ describe('ParentToChildMessage events', () => {
     }
 
     const arbProvider = new JsonRpcProvider('https://arb1.arbitrum.io/rpc')
-    const parentChainTxnReceipt = new ParentChainTransactionReceipt(receipt)
+    const parentTxnReceipt = new ParentTransactionReceipt(receipt)
 
     let txReceipt
     try {
       // Try getting classic messages using a nitro tx
-      txReceipt = await parentChainTxnReceipt.getParentToChildMessagesClassic(
+      txReceipt = await parentTxnReceipt.getParentToChildMessagesClassic(
         arbProvider
       )
     } catch (err) {
@@ -172,9 +172,9 @@ describe('ParentToChildMessage events', () => {
       ).to.be.undefined
     }
 
-    const isClassic = await parentChainTxnReceipt.isClassic(arbProvider)
+    const isClassic = await parentTxnReceipt.isClassic(arbProvider)
     const msg = (
-      await parentChainTxnReceipt.getParentToChildMessages(arbProvider)
+      await parentTxnReceipt.getParentToChildMessages(arbProvider)
     )[0]
 
     expect(isClassic, 'incorrect tx type returned by isClassic call').to.be
@@ -290,14 +290,12 @@ describe('ParentToChildMessage events', () => {
     }
 
     const arbProvider = new JsonRpcProvider('https://arb1.arbitrum.io/rpc')
-    const parentChainTxnReceipt = new ParentChainTransactionReceipt(receipt)
+    const parentTxnReceipt = new ParentTransactionReceipt(receipt)
 
     let txReceipt
     try {
       // Try getting nitro messages using a classic tx
-      txReceipt = await parentChainTxnReceipt.getParentToChildMessages(
-        arbProvider
-      )
+      txReceipt = await parentTxnReceipt.getParentToChildMessages(arbProvider)
     } catch (err) {
       // This call should throw an error
       expect(err).to.be.an('error')
@@ -312,9 +310,9 @@ describe('ParentToChildMessage events', () => {
       ).to.be.undefined
     }
 
-    const isClassic = await parentChainTxnReceipt.isClassic(arbProvider)
+    const isClassic = await parentTxnReceipt.isClassic(arbProvider)
     const msg = (
-      await parentChainTxnReceipt.getParentToChildMessagesClassic(arbProvider)
+      await parentTxnReceipt.getParentToChildMessagesClassic(arbProvider)
     )[0]
     const status = await msg.status()
 

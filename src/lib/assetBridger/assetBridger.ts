@@ -18,7 +18,7 @@
 
 import { constants } from 'ethers'
 
-import { ParentChainContractTransaction } from '../message/ParentTransaction'
+import { ParentContractTransaction } from '../message/ParentTransaction'
 import { ChildContractTransaction } from '../message/ChildTransaction'
 
 import {
@@ -82,7 +82,7 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    */
   public abstract deposit(
     params: DepositParams
-  ): Promise<ParentChainContractTransaction>
+  ): Promise<ParentContractTransaction>
 
   /**
    * Transfer assets from child-to-parent

@@ -2,32 +2,32 @@ import { BigNumber } from 'ethers'
 import { expect } from 'chai'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import {
-  getBlockRangesForL1Block,
-  getFirstBlockForL1Block,
+  getBlockRangesForL1Block as getBlockRangesForParentBlock,
+  getFirstBlockForL1Block as getFirstBlockForParentBlock,
 } from '../../src/lib/utils/lib'
 import { ArbitrumProvider } from '../../src/lib/utils/arbProvider'
 import { ArbBlock } from '../../src/lib/dataEntities/rpc'
 
-describe('L2 blocks lookup for an L1 block', () => {
+describe('Child blocks lookup for a Parent block', () => {
   const provider = new JsonRpcProvider('https://arb1.arbitrum.io/rpc')
   const arbProvider = new ArbitrumProvider(provider)
 
-  async function validateL2Blocks({
-    l2Blocks,
-    l2BlocksCount,
+  async function validateChildBlocks({
+    childBlocks,
+    childBlocksCount,
     type = 'number',
   }: {
-    l2Blocks: (number | undefined)[]
-    l2BlocksCount: number
+    childBlocks: (number | undefined)[]
+    childBlocksCount: number
     type?: 'number' | 'undefined'
   }) {
-    if (l2Blocks.length !== l2BlocksCount) {
+    if (childBlocks.length !== childBlocksCount) {
       throw new Error(
-        `Expected L2 block range to have the array length of ${l2BlocksCount}, got ${l2Blocks.length}.`
+        `Expected Child block range to have the array length of ${childBlocksCount}, got ${childBlocks.length}.`
       )
     }
 
-    if (l2Blocks.some(block => typeof block !== type)) {
+    if (childBlocks.some(block => typeof block !== type)) {
       throw new Error(`Expected all blocks to be ${type}.`)
     }
 
@@ -37,14 +37,14 @@ describe('L2 blocks lookup for an L1 block', () => {
 
     const promises: Promise<ArbBlock>[] = []
 
-    l2Blocks.forEach((l2Block, index) => {
-      if (!l2Block) {
-        throw new Error('L2 block is undefined.')
+    childBlocks.forEach((childBlock, index) => {
+      if (!childBlock) {
+        throw new Error('Child block is undefined.')
       }
       const isStartBlock = index === 0
-      promises.push(arbProvider.getBlock(l2Block))
+      promises.push(arbProvider.getBlock(childBlock))
       // Search for previous or next block.
-      promises.push(arbProvider.getBlock(l2Block + (isStartBlock ? -1 : 1)))
+      promises.push(arbProvider.getBlock(childBlock + (isStartBlock ? -1 : 1)))
     })
 
     const [startBlock, blockBeforeStartBlock, endBlock, blockAfterEndBlock] =
@@ -55,48 +55,52 @@ describe('L2 blocks lookup for an L1 block', () => {
     if (startBlock && blockBeforeStartBlock) {
       const startBlockCondition = startBlock.gt(blockBeforeStartBlock)
 
-      // Check if Arbitrum start block is the first block for this L1 block.
+      // Check if Arbitrum start block is the first block for this parent block.
       expect(
         startBlockCondition,
-        `L2 block is not the first block in range for L1 block.`
+        `Child block is not the first block in range for parent block.`
       ).to.be.true
     }
 
     if (endBlock && blockAfterEndBlock) {
       const endBlockCondition = endBlock.lt(blockAfterEndBlock)
 
-      // Check if Arbitrum end block is the last block for this L1 block.
+      // Check if Arbitrum end block is the last block for this parent block.
       expect(
         endBlockCondition,
-        `L2 block is not the last block in range for L1 block.`
+        `Child block is not the last block in range for parent block.`
       ).to.be.true
     }
   }
 
-  it('successfully searches for an L2 block range', async function () {
-    const l2Blocks = await getBlockRangesForL1Block({
+  it('successfully searches for an Child block range', async function () {
+    const childBlocks = await getBlockRangesForParentBlock({
       provider: arbProvider,
       forL1Block: 17926532,
       // Expected result: 121907680. Narrows down the range to speed up the search.
       minL2Block: 121800000,
       maxL2Block: 122000000,
     })
-    await validateL2Blocks({ l2Blocks, l2BlocksCount: 2 })
+    await validateChildBlocks({ childBlocks, childBlocksCount: 2 })
   })
 
-  it('fails to search for an L2 block range', async function () {
-    const l2Blocks = await getBlockRangesForL1Block({
+  it('fails to search for an Child block range', async function () {
+    const childBlocks = await getBlockRangesForParentBlock({
       provider: arbProvider,
       forL1Block: 17926533,
       minL2Block: 121800000,
       maxL2Block: 122000000,
     })
-    await validateL2Blocks({ l2Blocks, l2BlocksCount: 2, type: 'undefined' })
+    await validateChildBlocks({
+      childBlocks,
+      childBlocksCount: 2,
+      type: 'undefined',
+    })
   })
 
-  it('successfully searches for the first L2 block', async function () {
-    const l2Blocks = [
-      await getFirstBlockForL1Block({
+  it('successfully searches for the first Child block', async function () {
+    const childBlocks = [
+      await getFirstBlockForParentBlock({
         provider: arbProvider,
         forL1Block: 17926532,
         // Expected result: 121907680. Narrows down the range to speed up the search.
@@ -104,12 +108,12 @@ describe('L2 blocks lookup for an L1 block', () => {
         maxL2Block: 122000000,
       }),
     ]
-    await validateL2Blocks({ l2Blocks, l2BlocksCount: 1 })
+    await validateChildBlocks({ childBlocks, childBlocksCount: 1 })
   })
 
-  it('fails to search for the first L2 block, while not using `allowGreater` flag', async function () {
-    const l2Blocks = [
-      await getFirstBlockForL1Block({
+  it('fails to search for the first Child block, while not using `allowGreater` flag', async function () {
+    const childBlocks = [
+      await getFirstBlockForParentBlock({
         provider: arbProvider,
         forL1Block: 17926533,
         allowGreater: false,
@@ -117,12 +121,16 @@ describe('L2 blocks lookup for an L1 block', () => {
         maxL2Block: 122000000,
       }),
     ]
-    await validateL2Blocks({ l2Blocks, l2BlocksCount: 1, type: 'undefined' })
+    await validateChildBlocks({
+      childBlocks,
+      childBlocksCount: 1,
+      type: 'undefined',
+    })
   })
 
-  it('successfully searches for the first L2 block, while using `allowGreater` flag', async function () {
-    const l2Blocks = [
-      await getFirstBlockForL1Block({
+  it('successfully searches for the first Child block, while using `allowGreater` flag', async function () {
+    const childBlocks = [
+      await getFirstBlockForParentBlock({
         provider: arbProvider,
         forL1Block: 17926533,
         allowGreater: true,
@@ -131,6 +139,6 @@ describe('L2 blocks lookup for an L1 block', () => {
         maxL2Block: 122000000,
       }),
     ]
-    await validateL2Blocks({ l2Blocks, l2BlocksCount: 1 })
+    await validateChildBlocks({ childBlocks, childBlocksCount: 1 })
   })
 })

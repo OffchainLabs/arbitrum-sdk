@@ -52,9 +52,9 @@ import { EventFetcher } from '../utils/eventFetcher'
 import { EthDepositParams, EthWithdrawParams } from './ethBridger'
 import { AssetBridger } from './assetBridger'
 import {
-  ParentChainContractCallTransaction,
-  ParentChainContractTransaction,
-  ParentChainTransactionReceipt,
+  ParentContractCallTransaction,
+  ParentContractTransaction,
+  ParentTransactionReceipt,
 } from '../message/ParentTransaction'
 import {
   ChildContractTransaction,
@@ -75,7 +75,7 @@ import { isArbitrumChain } from '../utils/lib'
 
 export interface TokenApproveParams {
   /**
-   * L1 address of the ERC20 token contract
+   * Parent chain address of the ERC20 token contract
    */
   erc20ParentAddress: string
   /**
@@ -94,11 +94,11 @@ export interface Erc20DepositParams extends EthDepositParams {
    */
   childProvider: Provider
   /**
-   * L1 address of the token ERC20 contract
+   * Parent chain address of the token ERC20 contract
    */
   erc20ParentAddress: string
   /**
-   * L2 address of the entity receiving the funds. Defaults to the l1FromAddress
+   * Child chain address of the entity receiving the funds. Defaults to the l1FromAddress
    */
   destinationAddress?: string
   /**
@@ -125,7 +125,7 @@ export interface Erc20DepositParams extends EthDepositParams {
 
 export interface Erc20WithdrawParams extends EthWithdrawParams {
   /**
-   * L1 address of the token ERC20 contract
+   * Parent chain address of the token ERC20 contract
    */
   erc20ParentAddress: string
 }
@@ -341,7 +341,7 @@ export class Erc20Bridger extends AssetBridger<
    * Get the child chain events created by a withdrawal
    * @param childProvider
    * @param gatewayAddress
-   * @param parentChainTokenAddress
+   * @param parentTokenAddress
    * @param fromAddress
    * @param filter
    * @returns
@@ -350,7 +350,7 @@ export class Erc20Bridger extends AssetBridger<
     childProvider: Provider,
     gatewayAddress: string,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
-    parentChainTokenAddress?: string,
+    parentTokenAddress?: string,
     fromAddress?: string,
     toAddress?: string
   ): Promise<(EventArgs<WithdrawalInitiatedEvent> & { txHash: string })[]> {
@@ -370,11 +370,11 @@ export class Erc20Bridger extends AssetBridger<
       )
     ).map(a => ({ txHash: a.transactionHash, ...a.event }))
 
-    return parentChainTokenAddress
+    return parentTokenAddress
       ? events.filter(
           log =>
             log.l1Token.toLocaleLowerCase() ===
-            parentChainTokenAddress.toLocaleLowerCase()
+            parentTokenAddress.toLocaleLowerCase()
         )
       : events
   }
@@ -433,7 +433,7 @@ export class Erc20Bridger extends AssetBridger<
   }
 
   /**
-   * Get the L2 token contract at the provided address
+   * Get the child chain token contract at the provided address
    * Note: This function just returns a typed ethers object for the provided address, it doesnt
    * check the underlying form of the contract bytecode to see if it's an erc20, and doesn't ensure the validity
    * of any of the underlying functions on that contract.
@@ -454,14 +454,14 @@ export class Erc20Bridger extends AssetBridger<
    * check the underlying form of the contract bytecode to see if it's an erc20, and doesn't ensure the validity
    * of any of the underlying functions on that contract.
    * @param parentProvider
-   * @param parentChainTokenAddr
+   * @param parentTokenAddr
    * @returns
    */
-  public getParentChainTokenContract(
+  public getParentTokenContract(
     parentProvider: Provider,
-    parentChainTokenAddr: string
+    parentTokenAddr: string
   ): ERC20 {
-    return ERC20__factory.connect(parentChainTokenAddr, parentProvider)
+    return ERC20__factory.connect(parentTokenAddr, parentProvider)
   }
 
   /**
@@ -470,7 +470,7 @@ export class Erc20Bridger extends AssetBridger<
    * @param parentProvider
    * @returns
    */
-  public async getL2ERC20Address(
+  public async getChildERC20Address(
     erc20ParentAddress: string,
     parentProvider: Provider
   ): Promise<string> {
@@ -493,7 +493,7 @@ export class Erc20Bridger extends AssetBridger<
    * @param childProvider
    * @returns
    */
-  public async getL1ERC20Address(
+  public async getParentERC20Address(
     erc20ChildChainAddress: string,
     childProvider: Provider
   ): Promise<string> {
@@ -531,12 +531,12 @@ export class Erc20Bridger extends AssetBridger<
 
   /**
    * Whether the token has been disabled on the router
-   * @param parentChainTokenAddress
+   * @param parentTokenAddress
    * @param parentProvider
    * @returns
    */
-  public async parentChainTokenIsDisabled(
-    parentChainTokenAddress: string,
+  public async parentTokenIsDisabled(
+    parentTokenAddress: string,
     parentProvider: Provider
   ): Promise<boolean> {
     await this.checkParentChain(parentProvider)
@@ -547,7 +547,7 @@ export class Erc20Bridger extends AssetBridger<
     )
 
     return (
-      (await l1GatewayRouter.l1TokenToGateway(parentChainTokenAddress)) ===
+      (await l1GatewayRouter.l1TokenToGateway(parentTokenAddress)) ===
       DISABLED_GATEWAY
     )
   }
@@ -733,7 +733,7 @@ export class Erc20Bridger extends AssetBridger<
    */
   public async deposit(
     params: Erc20DepositParams | ParentToChildTxReqAndSignerProvider
-  ): Promise<ParentChainContractCallTransaction> {
+  ): Promise<ParentContractCallTransaction> {
     await this.checkParentChain(params.parentSigner)
 
     // Although the types prevent should alert callers that value is not
@@ -762,7 +762,7 @@ export class Erc20Bridger extends AssetBridger<
       ...params.overrides,
     })
 
-    return ParentChainTransactionReceipt.monkeyPatchContractCallWait(tx)
+    return ParentTransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
   /**
@@ -875,18 +875,18 @@ export class AdminErc20Bridger extends Erc20Bridger {
   /**
    * Register a custom token on the Arbitrum bridge
    * See https://developer.offchainlabs.com/docs/bridging_assets#the-arbitrum-generic-custom-gateway for more details
-   * @param parentChainTokenAddress Address of the already deployed l1 token. Must inherit from https://developer.offchainlabs.com/docs/sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/ethereum/icustomtoken.
+   * @param parentTokenAddress Address of the already deployed l1 token. Must inherit from https://developer.offchainlabs.com/docs/sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/ethereum/icustomtoken.
    * @param l2TokenAddress Address of the already deployed l2 token. Must inherit from https://developer.offchainlabs.com/docs/sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/arbitrum/iarbtoken.
    * @param parentSigner The signer with the rights to call registerTokenOnL2 on the l1 token
    * @param childProvider Arbitrum rpc provider
    * @returns
    */
   public async registerCustomToken(
-    parentChainTokenAddress: string,
+    parentTokenAddress: string,
     l2TokenAddress: string,
     parentSigner: Signer,
     childProvider: Provider
-  ): Promise<ParentChainContractTransaction> {
+  ): Promise<ParentContractTransaction> {
     if (!SignerProviderUtils.signerHasProvider(parentSigner)) {
       throw new MissingProviderArbSdkError('parentSigner')
     }
@@ -896,7 +896,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     const l1SenderAddress = await parentSigner.getAddress()
 
     const l1Token = ICustomToken__factory.connect(
-      parentChainTokenAddress,
+      parentTokenAddress,
       parentSigner
     )
     const l2Token = IArbToken__factory.connect(l2TokenAddress, childProvider)
@@ -906,9 +906,9 @@ export class AdminErc20Bridger extends Erc20Bridger {
     await l2Token.deployed()
 
     const l1AddressFromL2 = await l2Token.l1Address()
-    if (l1AddressFromL2 !== parentChainTokenAddress) {
+    if (l1AddressFromL2 !== parentTokenAddress) {
       throw new ArbSdkError(
-        `L2 token does not have l1 address set. Set address: ${l1AddressFromL2}, expected address: ${parentChainTokenAddress}.`
+        `L2 token does not have l1 address set. Set address: ${l1AddressFromL2}, expected address: ${parentTokenAddress}.`
       )
     }
 
@@ -997,7 +997,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
       value: setGatewayEstimates2.value,
     })
 
-    return ParentChainTransactionReceipt.monkeyPatchWait(registerTx)
+    return ParentTransactionReceipt.monkeyPatchWait(registerTx)
   }
 
   /**
@@ -1067,7 +1067,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     childProvider: Provider,
     tokenGateways: TokenAndGateway[],
     options?: GasOverrides
-  ): Promise<ParentChainContractCallTransaction> {
+  ): Promise<ParentContractCallTransaction> {
     if (!SignerProviderUtils.signerHasProvider(parentSigner)) {
       throw new MissingProviderArbSdkError('parentSigner')
     }
@@ -1112,6 +1112,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
       value: estimates.estimates.deposit,
     })
 
-    return ParentChainTransactionReceipt.monkeyPatchContractCallWait(res)
+    return ParentTransactionReceipt.monkeyPatchContractCallWait(res)
   }
 }

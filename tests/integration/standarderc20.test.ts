@@ -268,7 +268,7 @@ describe('standard ERC20', () => {
   })
 
   it('withdraws erc20', async function () {
-    const l2TokenAddr = await testState.erc20Bridger.getL2ERC20Address(
+    const l2TokenAddr = await testState.erc20Bridger.getChildERC20Address(
       testState.parentToken.address,
       testState.parentSigner.provider!
     )
@@ -292,7 +292,7 @@ describe('standard ERC20', () => {
       amount: withdrawalAmount,
       gatewayType: GatewayType.STANDARD,
       startBalance: startBalance,
-      parentChainToken: ERC20__factory.connect(
+      parentToken: ERC20__factory.connect(
         testState.parentToken.address,
         testState.parentSigner.provider!
       ),

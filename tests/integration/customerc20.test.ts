@@ -112,7 +112,7 @@ describe('Custom ERC20', () => {
       amount: withdrawalAmount,
       gatewayType: GatewayType.CUSTOM,
       startBalance: depositAmount,
-      parentChainToken: ERC20__factory.connect(
+      parentToken: ERC20__factory.connect(
         testState.l1CustomToken.address,
         testState.parentSigner.provider!
       ),

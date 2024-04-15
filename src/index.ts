@@ -28,8 +28,8 @@ export {
   ChildToParentMessageReader,
 } from './lib/message/ChildToParentMessage'
 export {
-  ParentChainContractTransaction,
-  ParentChainTransactionReceipt,
+  ParentContractTransaction,
+  ParentTransactionReceipt,
 } from './lib/message/ParentTransaction'
 export {
   ParentToChildMessageStatus,
