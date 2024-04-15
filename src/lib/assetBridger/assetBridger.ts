@@ -21,9 +21,7 @@ import { constants } from 'ethers'
 import { ParentChainContractTransaction } from '../message/ParentTransaction'
 import { ChildContractTransaction } from '../message/ChildTransaction'
 
-import {
-  ArbitrumNetwork,
-} from '../dataEntities/networks'
+import { ArbitrumNetwork } from '../dataEntities/networks'
 import {
   SignerOrProvider,
   SignerProviderUtils,
@@ -49,7 +47,10 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    * @param sop
    */
   protected async checkParentChain(sop: SignerOrProvider): Promise<void> {
-    await SignerProviderUtils.checkNetworkMatches(sop, this.childChain.parentChain.id)
+    await SignerProviderUtils.checkNetworkMatches(
+      sop,
+      this.childChain.parentChain.id
+    )
   }
 
   /**
