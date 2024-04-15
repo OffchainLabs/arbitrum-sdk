@@ -121,16 +121,16 @@ describe('Send signedTx to child chain using inbox', async () => {
       maxPriorityFeePerGas: BigNumber.from(1000000), //0.001gwei
     }
     const lowFeeTx = await sendSignedTx(testState, lowFeeInfo)
-    const lowFeePARENTStatus = lowFeeTx.parentTransactionReceipt?.status
-    expect(lowFeePARENTStatus).to.equal(1)
+    const lowFeeParentStatus = lowFeeTx.parentTransactionReceipt?.status
+    expect(lowFeeParentStatus).to.equal(1)
     const info = {
       data: '0x12',
       to: await childDeployer.getAddress(),
       nonce: currentNonce,
     }
     const enoughFeeTx = await sendSignedTx(testState, info)
-    const enoughFeePARENTStatus = enoughFeeTx.parentTransactionReceipt?.status
-    expect(enoughFeePARENTStatus).to.equal(1)
+    const enoughFeeParentStatus = enoughFeeTx.parentTransactionReceipt?.status
+    expect(enoughFeeParentStatus).to.equal(1)
     const childLowFeeTxhash = ethers.utils.parseTransaction(lowFeeTx.signedMsg)
       .hash!
     const childEnoughFeeTxhash = ethers.utils.parseTransaction(
