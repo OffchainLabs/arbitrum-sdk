@@ -109,7 +109,14 @@ export class ParentChainTransactionReceipt implements TransactionReceipt {
       childSignerOrProvider
     )
     const network = await getArbitrumNetwork(provider)
-    return this.blockNumber < network.nitroGenesisL1Block
+
+    // all networks except Arbitrum One started off with Nitro
+    if (network.chainID !== 42161) {
+      return false
+    }
+
+    // https://etherscan.io/block/15447158
+    return this.blockNumber < 15447158
   }
 
   /**

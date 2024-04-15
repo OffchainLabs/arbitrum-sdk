@@ -63,7 +63,6 @@ export interface ArbitrumNetwork extends Network {
    */
   retryableLifetimeSeconds?: number
   nitroGenesisBlock: number
-  nitroGenesisL1Block: number
   /**
    * How long to wait (ms) for a deposit to arrive on l2 before timing out a request
    */
@@ -194,7 +193,6 @@ export const networks: Networks = {
     confirmPeriodBlocks: 45818,
     isCustom: false,
     nitroGenesisBlock: 22207817,
-    nitroGenesisL1Block: 15447158,
     /**
      * Finalisation on mainnet can be up to 2 epochs = 64 blocks on mainnet
      * We add 10 minutes for the system to create and redeem the ticket, plus some extra buffer of time
@@ -237,7 +235,6 @@ export const networks: Networks = {
       l2WethGateway: '0x7626841cB6113412F9c88D3ADC720C9FAC88D9eD',
     },
     nitroGenesisBlock: 0,
-    nitroGenesisL1Block: 0,
     /**
      * Finalisation on mainnet can be up to 2 epochs = 64 blocks on mainnet
      * We add 10 minutes for the system to create and redeem the ticket, plus some extra buffer of time
@@ -280,7 +277,6 @@ export const networks: Networks = {
       l2WethGateway: '0xCFB1f08A4852699a979909e22c30263ca249556D',
     },
     nitroGenesisBlock: 0,
-    nitroGenesisL1Block: 0,
     depositTimeout: 1800000,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
@@ -318,7 +314,6 @@ export const networks: Networks = {
       l2WethGateway: '0x7021B4Edd9f047772242fc948441d6e0b9121175',
     },
     nitroGenesisBlock: 0,
-    nitroGenesisL1Block: 0,
     depositTimeout: 900000,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
@@ -620,7 +615,6 @@ export const addDefaultLocalNetwork = (): {
     },
     partnerChainIDs: [],
     nitroGenesisBlock: 0,
-    nitroGenesisL1Block: 0,
     depositTimeout: 900000,
     tokenBridge: {
       l1CustomGateway: '0x3DF948c956e14175f43670407d5796b95Bb219D8',
