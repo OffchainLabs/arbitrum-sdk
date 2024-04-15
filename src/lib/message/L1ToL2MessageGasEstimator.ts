@@ -115,18 +115,24 @@ export class L1ToL2MessageGasEstimator {
    * @param l1BaseFee
    * @param callDataSize
    * @param options
+   * @param inboxAddressOverride
    * @returns
    */
   public async estimateSubmissionFee(
     l1Provider: Provider,
     l1BaseFee: BigNumber,
     callDataSize: BigNumber | number,
-    options?: PercentIncrease
+    options?: PercentIncrease,
+    inboxAddressOverride?: string
   ): Promise<L1ToL2MessageGasParams['maxSubmissionCost']> {
     const defaultedOptions = this.applySubmissionPriceDefaults(options)
 
-    const network = await getL2Network(this.l2Provider)
-    const inbox = Inbox__factory.connect(network.ethBridge.inbox, l1Provider)
+    const inboxAddress =
+      typeof inboxAddressOverride === 'string'
+        ? inboxAddressOverride
+        : (await getL2Network(this.l2Provider)).ethBridge.inbox
+
+    const inbox = Inbox__factory.connect(inboxAddress, l1Provider)
 
     return this.percentIncrease(
       defaultedOptions.base ||
@@ -209,13 +215,15 @@ export class L1ToL2MessageGasEstimator {
    * @param l1BaseFee Current l1 base fee
    * @param l1Provider
    * @param options
+   * @param inboxAddressOverride
    * @returns
    */
   public async estimateAll(
     retryableEstimateData: L1ToL2MessageNoGasParams,
     l1BaseFee: BigNumber,
     l1Provider: Provider,
-    options?: GasOverrides
+    options?: GasOverrides,
+    inboxAddressOverride?: string
   ): Promise<L1ToL2MessageGasParams> {
     const { data } = retryableEstimateData
     const gasLimitDefaults = this.applyGasLimitDefaults(options?.gasLimit)
@@ -228,7 +236,8 @@ export class L1ToL2MessageGasEstimator {
       l1Provider,
       l1BaseFee,
       utils.hexDataLength(data),
-      options?.maxSubmissionFee
+      options?.maxSubmissionFee,
+      inboxAddressOverride
     )
 
     // estimate the gas limit
