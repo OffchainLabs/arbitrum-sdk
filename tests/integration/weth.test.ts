@@ -65,7 +65,7 @@ describeOnlyWhenEth('WETH', async () => {
     await res.wait()
     await depositToken({
       depositAmount: wethToDeposit,
-      l1TokenAddress: l1WethAddress,
+      parentTokenAddress: l1WethAddress,
       erc20Bridger,
       parentSigner,
       childSigner,

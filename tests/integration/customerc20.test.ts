@@ -94,7 +94,7 @@ describe('Custom ERC20', () => {
     ).wait()
     await depositToken({
       depositAmount,
-      l1TokenAddress: testState.l1CustomToken.address,
+      parentTokenAddress: testState.l1CustomToken.address,
       erc20Bridger: testState.adminErc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
@@ -123,7 +123,7 @@ describe('Custom ERC20', () => {
     await depositToken({
       depositAmount,
       ethDepositAmount: utils.parseEther('0.0005'),
-      l1TokenAddress: testState.l1CustomToken.address,
+      parentTokenAddress: testState.l1CustomToken.address,
       erc20Bridger: testState.adminErc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
@@ -137,7 +137,7 @@ describe('Custom ERC20', () => {
     await depositToken({
       depositAmount,
       ethDepositAmount: utils.parseEther('0.0005'),
-      l1TokenAddress: testState.l1CustomToken.address,
+      parentTokenAddress: testState.l1CustomToken.address,
       erc20Bridger: testState.adminErc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,

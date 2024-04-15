@@ -153,11 +153,11 @@ describe('RevertData', () => {
     await testToken.deployed()
 
     await (await testToken.mint()).wait()
-    const l1TokenAddress = testToken.address
+    const parentTokenAddress = testToken.address
 
     await (
       await erc20Bridger.approveToken({
-        erc20ParentAddress: l1TokenAddress,
+        erc20ParentAddress: parentTokenAddress,
         parentSigner,
       })
     ).wait()
@@ -166,7 +166,7 @@ describe('RevertData', () => {
       // approve the custom fee token
       await (
         await erc20Bridger.approveGasToken({
-          erc20ParentAddress: l1TokenAddress,
+          erc20ParentAddress: parentTokenAddress,
           parentSigner,
         })
       ).wait()
@@ -188,7 +188,7 @@ describe('RevertData', () => {
       parentSigner,
       childSignerOrProvider: childSigner.provider!,
       from: await parentSigner.getAddress(),
-      erc20ParentAddress: l1TokenAddress,
+      erc20ParentAddress: parentTokenAddress,
       amount: depositAmount,
       retryableGasOverrides: retryableOverrides,
     }
