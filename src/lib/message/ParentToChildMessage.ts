@@ -26,7 +26,10 @@ import { getAddress } from '@ethersproject/address'
 import { keccak256 } from '@ethersproject/keccak256'
 
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
-import { ARB_RETRYABLE_TX_ADDRESS } from '../dataEntities/constants'
+import {
+  ARB_RETRYABLE_TX_ADDRESS,
+  SEVEN_DAYS_IN_SECONDS,
+} from '../dataEntities/constants'
 import {
   SignerProviderUtils,
   SignerOrProvider,
@@ -356,7 +359,9 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
     let fromBlock = await this.chainProvider.getBlock(
       creationReceipt.blockNumber
     )
-    let timeout = fromBlock.timestamp + chainNetwork.retryableLifetimeSeconds
+    let timeout =
+      fromBlock.timestamp +
+      (chainNetwork.retryableLifetimeSeconds ?? SEVEN_DAYS_IN_SECONDS)
     const queriedRange: { from: number; to: number }[] = []
     const maxBlock = await this.chainProvider.getBlockNumber()
     while (fromBlock.number < maxBlock) {

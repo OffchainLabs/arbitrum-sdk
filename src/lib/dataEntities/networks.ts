@@ -63,7 +63,10 @@ export interface ArbitrumNetwork extends Network {
 
   isArbitrum: true
   confirmPeriodBlocks: number
-  retryableLifetimeSeconds: number
+  /**
+   * Represents how long a retryable ticket lasts for before it expires (in seconds). Defaults to 7 days.
+   */
+  retryableLifetimeSeconds?: number
   nitroGenesisBlock: number
   nitroGenesisL1Block: number
   /**
@@ -200,7 +203,6 @@ export const networks: Networks = {
     ethBridge: mainnetETHBridge,
     confirmPeriodBlocks: 45818,
     isCustom: false,
-    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     nitroGenesisBlock: 22207817,
     nitroGenesisL1Block: 15447158,
     /**
@@ -229,7 +231,6 @@ export const networks: Networks = {
     isCustom: false,
     name: 'Arbitrum Nova',
     partnerChainIDs: [],
-    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     tokenBridge: {
       l1CustomGateway: '0x23122da8C581AA7E0d07A36Ff1f16F799650232f',
       l1ERC20Gateway: '0xB2535b988dcE19f9D71dfB22dB6da744aCac21bf',
@@ -274,7 +275,6 @@ export const networks: Networks = {
       id: 11155111,
     },
     partnerChainIDs: [23011913],
-    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     tokenBridge: {
       l1CustomGateway: '0xba2F7B6eAe1F9d174199C5E4867b563E0eaC40F3',
       l1ERC20Gateway: '0x902b3E5f8F19571859F4AB1003B960a5dF693aFF',
@@ -314,7 +314,6 @@ export const networks: Networks = {
       id: 421614,
     },
     partnerChainIDs: [],
-    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     tokenBridge: {
       l1CustomGateway: '0xd624D491A5Bc32de52a2e1481846752213bF7415',
       l1ERC20Gateway: '0x7348Fdf6F3e090C635b23D970945093455214F3B',
@@ -635,7 +634,6 @@ export const addDefaultLocalNetwork = (): {
       id: 1337,
     },
     partnerChainIDs: [],
-    retryableLifetimeSeconds: 604800,
     nitroGenesisBlock: 0,
     nitroGenesisL1Block: 0,
     depositTimeout: 900000,
