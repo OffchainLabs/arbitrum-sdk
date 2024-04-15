@@ -52,3 +52,13 @@ export const DISABLED_GATEWAY = '0x0000000000000000000000000000000000000001'
 export const CUSTOM_TOKEN_IS_ENABLED = 42161
 
 export const SEVEN_DAYS_IN_SECONDS = 7 * 24 * 60 * 60
+
+/**
+ * How long to wait (in milliseconds) for a deposit to arrive before timing out a request.
+ *
+ * Finalisation on mainnet can be up to 2 epochs = 64 blocks.
+ * We add 10 minutes for the system to create and redeem the ticket, plus some extra buffer of time.
+ *
+ * Total timeout: 30 minutes.
+ */
+export const DEFAULT_DEPOSIT_TIMEOUT = 30 * 60 * 1000

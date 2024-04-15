@@ -64,10 +64,6 @@ export interface ArbitrumNetwork extends Network {
   retryableLifetimeSeconds?: number
   nitroGenesisBlock: number
   /**
-   * How long to wait (ms) for a deposit to arrive on l2 before timing out a request
-   */
-  depositTimeout: number
-  /**
    * In case of a chain that uses ETH as its native/gas token, this is either `undefined` or the zero address
    *
    * In case of a chain that uses an ERC-20 token from the parent chain as its native/gas token, this is the address of said token on the parent chain
@@ -193,12 +189,6 @@ export const networks: Networks = {
     confirmPeriodBlocks: 45818,
     isCustom: false,
     nitroGenesisBlock: 22207817,
-    /**
-     * Finalisation on mainnet can be up to 2 epochs = 64 blocks on mainnet
-     * We add 10 minutes for the system to create and redeem the ticket, plus some extra buffer of time
-     * (Total timeout: 30 minutes)
-     */
-    depositTimeout: 1800000,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   42170: {
@@ -235,12 +225,6 @@ export const networks: Networks = {
       l2WethGateway: '0x7626841cB6113412F9c88D3ADC720C9FAC88D9eD',
     },
     nitroGenesisBlock: 0,
-    /**
-     * Finalisation on mainnet can be up to 2 epochs = 64 blocks on mainnet
-     * We add 10 minutes for the system to create and redeem the ticket, plus some extra buffer of time
-     * (Total timeout: 30 minutes)
-     */
-    depositTimeout: 1800000,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   421614: {
@@ -277,7 +261,6 @@ export const networks: Networks = {
       l2WethGateway: '0xCFB1f08A4852699a979909e22c30263ca249556D',
     },
     nitroGenesisBlock: 0,
-    depositTimeout: 1800000,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   23011913: {
@@ -314,7 +297,6 @@ export const networks: Networks = {
       l2WethGateway: '0x7021B4Edd9f047772242fc948441d6e0b9121175',
     },
     nitroGenesisBlock: 0,
-    depositTimeout: 900000,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
 }
@@ -615,7 +597,6 @@ export const addDefaultLocalNetwork = (): {
     },
     partnerChainIDs: [],
     nitroGenesisBlock: 0,
-    depositTimeout: 900000,
     tokenBridge: {
       l1CustomGateway: '0x3DF948c956e14175f43670407d5796b95Bb219D8',
       l1ERC20Gateway: '0x4A2bA922052bA54e29c5417bC979Daaf7D5Fe4f4',

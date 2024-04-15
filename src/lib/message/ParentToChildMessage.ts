@@ -28,6 +28,7 @@ import { keccak256 } from '@ethersproject/keccak256'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
 import {
   ARB_RETRYABLE_TX_ADDRESS,
+  DEFAULT_DEPOSIT_TIMEOUT,
   SEVEN_DAYS_IN_SECONDS,
 } from '../dataEntities/constants'
 import {
@@ -492,11 +493,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
     confirmations?: number,
     timeout?: number
   ): Promise<ParentToChildMessageWaitResult> {
-    const chainNetwork = await getChildChain(this.chainId)
-
-    const chosenTimeout = isDefined(timeout)
-      ? timeout
-      : chainNetwork.depositTimeout
+    const chosenTimeout = isDefined(timeout) ? timeout : DEFAULT_DEPOSIT_TIMEOUT
 
     // try to wait for the retryable ticket to be created
     const _retryableCreationReceipt = await this.getRetryableCreationReceipt(
@@ -878,11 +875,7 @@ export class EthDepositMessage {
   }
 
   public async wait(confirmations?: number, timeout?: number) {
-    const chainNetwork = await getChildChain(this.chainChainId)
-
-    const chosenTimeout = isDefined(timeout)
-      ? timeout
-      : chainNetwork.depositTimeout
+    const chosenTimeout = isDefined(timeout) ? timeout : DEFAULT_DEPOSIT_TIMEOUT
 
     if (!this.chainDepositTxReceipt) {
       this.chainDepositTxReceipt = await getTransactionReceipt(
