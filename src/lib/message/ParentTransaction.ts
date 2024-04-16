@@ -47,6 +47,7 @@ import { EventArgs, parseTypedLogs } from '../dataEntities/event'
 import { isDefined } from '../utils/lib'
 import { SubmitRetryableMessageDataParser } from './messageDataParser'
 import { getArbitrumNetwork } from '../dataEntities/networks'
+import { ARB1_NITRO_GENESIS_L1_BLOCK } from '../dataEntities/constants'
 
 export interface ParentChainContractTransaction<
   TReceipt extends ParentChainTransactionReceipt = ParentChainTransactionReceipt
@@ -115,8 +116,7 @@ export class ParentChainTransactionReceipt implements TransactionReceipt {
       return false
     }
 
-    // https://etherscan.io/block/15447158
-    return this.blockNumber < 15447158
+    return this.blockNumber < ARB1_NITRO_GENESIS_L1_BLOCK
   }
 
   /**
