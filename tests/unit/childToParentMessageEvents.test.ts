@@ -22,6 +22,7 @@ import { ChildToParentMessage } from '../../src/lib/message/ChildToParentMessage
 import { getArbitrumNetwork } from '../../src/lib/dataEntities/networks'
 import { providers } from 'ethers'
 import { anything, deepEqual, instance, mock, verify, when } from 'ts-mockito'
+import { getNitroGenesisBlock } from '../../src/lib/utils/nitroGenesisBlock'
 
 describe('ChildToParentMessage events', () => {
   // ChildToParentTransaction
@@ -37,7 +38,7 @@ describe('ChildToParentMessage events', () => {
     const l2Network = await getArbitrumNetwork(networkChoiceOverride || 42161)
 
     const l2ProviderMock = mock(providers.JsonRpcProvider)
-    const latestBlock = l2Network.nitroGenesisBlock + 1000
+    const latestBlock = getNitroGenesisBlock(l2Network) + 1000
     when(l2ProviderMock.getBlockNumber()).thenResolve(latestBlock)
     when(l2ProviderMock.getNetwork()).thenResolve({
       chainId: l2Network.chainID,
@@ -79,8 +80,8 @@ describe('ChildToParentMessage events', () => {
 
   it('does call for nitro events', async () => {
     const { l2Network, l2Provider, l2ProviderMock } = await createProviderMock()
-    const fromBlock = l2Network.nitroGenesisBlock
-    const toBlock = l2Network.nitroGenesisBlock + 500
+    const fromBlock = getNitroGenesisBlock(l2Network)
+    const toBlock = getNitroGenesisBlock(l2Network) + 500
 
     await ChildToParentMessage.getChildToParentEvents(l2Provider, {
       fromBlock: fromBlock,
@@ -103,7 +104,7 @@ describe('ChildToParentMessage events', () => {
   it('does call for classic and nitro events', async () => {
     const { l2Network, l2Provider, l2ProviderMock } = await createProviderMock()
     const fromBlock = 0
-    const toBlock = l2Network.nitroGenesisBlock + 500
+    const toBlock = getNitroGenesisBlock(l2Network) + 500
 
     await ChildToParentMessage.getChildToParentEvents(l2Provider, {
       fromBlock: fromBlock,
@@ -117,7 +118,7 @@ describe('ChildToParentMessage events', () => {
           address: arbSys,
           topics: [classicTopic],
           fromBlock: fromBlock,
-          toBlock: l2Network.nitroGenesisBlock,
+          toBlock: getNitroGenesisBlock(l2Network),
         })
       )
     ).once()
@@ -126,7 +127,7 @@ describe('ChildToParentMessage events', () => {
         deepEqual({
           address: arbSys,
           topics: [nitroTopic],
-          fromBlock: l2Network.nitroGenesisBlock,
+          fromBlock: getNitroGenesisBlock(l2Network),
           toBlock: toBlock,
         })
       )
@@ -150,7 +151,7 @@ describe('ChildToParentMessage events', () => {
           address: arbSys,
           topics: [classicTopic],
           fromBlock: 0,
-          toBlock: l2Network.nitroGenesisBlock,
+          toBlock: getNitroGenesisBlock(l2Network),
         })
       )
     ).once()
@@ -159,7 +160,7 @@ describe('ChildToParentMessage events', () => {
         deepEqual({
           address: arbSys,
           topics: [nitroTopic],
-          fromBlock: l2Network.nitroGenesisBlock,
+          fromBlock: getNitroGenesisBlock(l2Network),
           toBlock: 'latest',
         })
       )
@@ -168,7 +169,7 @@ describe('ChildToParentMessage events', () => {
 
   it('does call for only nitro for latest', async () => {
     const { l2Network, l2Provider, l2ProviderMock } = await createProviderMock()
-    const fromBlock = l2Network.nitroGenesisBlock + 2
+    const fromBlock = getNitroGenesisBlock(l2Network) + 2
     const toBlock = 'latest'
 
     await ChildToParentMessage.getChildToParentEvents(l2Provider, {

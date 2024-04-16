@@ -47,7 +47,7 @@ import { EventArgs, parseTypedLogs } from '../dataEntities/event'
 import { isDefined } from '../utils/lib'
 import { SubmitRetryableMessageDataParser } from './messageDataParser'
 import { getArbitrumNetwork } from '../dataEntities/networks'
-import { ARB1_NITRO_GENESIS_L1_BLOCK } from '../dataEntities/constants'
+import { getNitroGenesisParentBlock } from '../utils/nitroGenesisBlock'
 
 export interface ParentChainContractTransaction<
   TReceipt extends ParentChainTransactionReceipt = ParentChainTransactionReceipt
@@ -110,13 +110,7 @@ export class ParentChainTransactionReceipt implements TransactionReceipt {
       childSignerOrProvider
     )
     const network = await getArbitrumNetwork(provider)
-
-    // all networks except Arbitrum One started off with Nitro
-    if (network.chainID !== 42161) {
-      return false
-    }
-
-    return this.blockNumber < ARB1_NITRO_GENESIS_L1_BLOCK
+    return this.blockNumber < getNitroGenesisParentBlock(network)
   }
 
   /**

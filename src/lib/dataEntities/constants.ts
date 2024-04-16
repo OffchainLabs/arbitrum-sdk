@@ -62,17 +62,3 @@ export const SEVEN_DAYS_IN_SECONDS = 7 * 24 * 60 * 60
  * Total timeout: 30 minutes.
  */
 export const DEFAULT_DEPOSIT_TIMEOUT = 30 * 60 * 1000
-
-/**
- * The L1 block at which Nitro was activated for Arbitrum One.
- *
- * @see https://etherscan.io/block/15447158
- */
-export const ARB1_NITRO_GENESIS_L1_BLOCK = 15447158
-
-/**
- * The L2 block at which Nitro was activated for Arbitrum One.
- *
- * @see https://arbiscan.io/block/22207817
- */
-export const ARB1_NITRO_GENESIS_L2_BLOCK = 22207817

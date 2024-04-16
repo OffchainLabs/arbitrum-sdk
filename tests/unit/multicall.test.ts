@@ -6,13 +6,14 @@ import { mock, when, anything, instance, deepEqual } from 'ts-mockito'
 import { expect } from 'chai'
 
 import { MultiCaller } from '../../src'
+import { getNitroGenesisBlock } from '../../src/lib/utils/nitroGenesisBlock'
 
 describe('Multicall', () => {
   const createProviderMock = async (networkChoiceOverride?: number) => {
     const l2Network = await getL2Network(networkChoiceOverride || 42161)
 
     const l2ProviderMock = mock(providers.JsonRpcProvider)
-    const latestBlock = l2Network.nitroGenesisBlock + 1000
+    const latestBlock = getNitroGenesisBlock(l2Network) + 1000
     when(l2ProviderMock.getBlockNumber()).thenResolve(latestBlock)
     when(l2ProviderMock.getNetwork()).thenResolve({
       chainId: l2Network.chainID,
