@@ -47,7 +47,7 @@ import { EventArgs, parseTypedLogs } from '../dataEntities/event'
 import { isDefined } from '../utils/lib'
 import { SubmitRetryableMessageDataParser } from './messageDataParser'
 import { getArbitrumNetwork } from '../dataEntities/networks'
-import { getNitroGenesisParentBlock } from '../utils/nitroGenesisBlock'
+import { getNitroGenesisParentBlock } from '../utils/nitroGenesisUtils'
 
 export interface ParentChainContractTransaction<
   TReceipt extends ParentChainTransactionReceipt = ParentChainTransactionReceipt

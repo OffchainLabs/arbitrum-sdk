@@ -6,7 +6,7 @@ import { mock, when, anything, instance, deepEqual } from 'ts-mockito'
 import { expect } from 'chai'
 
 import { MultiCaller } from '../../src'
-import { getNitroGenesisBlock } from '../../src/lib/utils/nitroGenesisBlock'
+import { getNitroGenesisBlock } from '../../src/lib/utils/nitroGenesisUtils'
 
 describe('Multicall', () => {
   const createProviderMock = async (networkChoiceOverride?: number) => {

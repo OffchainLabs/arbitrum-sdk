@@ -6,7 +6,7 @@ import { l2Networks } from '../dataEntities/networks'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 import { BigNumber } from 'ethers'
-import { getNitroGenesisBlock } from './nitroGenesisBlock'
+import { getNitroGenesisBlock } from './nitroGenesisUtils'
 
 export const wait = (ms: number): Promise<void> =>
   new Promise(res => setTimeout(res, ms))
@@ -125,7 +125,7 @@ export async function getFirstBlockForL1Block({
 
   if (minL2Block < nitroGenesisBlock) {
     throw new Error(
-      `'minL2Block' (${minL2Block}) cannot be below 'nitroGenesisBlock', which is ${nitroGenesisBlock} for the current network.`
+      `'minL2Block' (${minL2Block}) cannot be below the Nitro genesis block, which is ${nitroGenesisBlock} for the current network.`
     )
   }
 
