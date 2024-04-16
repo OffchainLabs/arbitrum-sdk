@@ -48,13 +48,10 @@ export interface L1Network extends Network {
 export interface ArbitrumNetwork extends Network {
   tokenBridge: TokenBridge
   ethBridge: EthBridge
-
   /**
    * Chain id of the parent chain, i.e. the chain on which this chain settles to.
-   * Information about the parent chain, i.e. the chain on which this chain settles to.
    */
   partnerChainID: number
-
   isArbitrum: true
   confirmPeriodBlocks: number
   /**
@@ -196,10 +193,10 @@ export const networks: Networks = {
       rollup: '0xFb209827c58283535b744575e11953DCC4bEAD88',
       sequencerInbox: '0x211E1c4c7f1bF5351Ac850Ed10FD68CFfCF6c21b',
     },
-    partnerChainID: 1,
     isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Nova',
+    partnerChainID: 1,
     partnerChainIDs: [],
     tokenBridge: {
       l1CustomGateway: '0x23122da8C581AA7E0d07A36Ff1f16F799650232f',
