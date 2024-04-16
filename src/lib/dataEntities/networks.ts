@@ -61,7 +61,6 @@ export interface ArbitrumNetwork extends Network {
    * Represents how long a retryable ticket lasts for before it expires (in seconds). Defaults to 7 days.
    */
   retryableLifetimeSeconds?: number
-  nitroGenesisBlock: number
   /**
    * In case of a chain that uses ETH as its native/gas token, this is either `undefined` or the zero address
    *
@@ -185,7 +184,6 @@ export const networks: Networks = {
     ethBridge: mainnetETHBridge,
     confirmPeriodBlocks: 45818,
     isCustom: false,
-    nitroGenesisBlock: 22207817,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   42170: {
@@ -219,7 +217,6 @@ export const networks: Networks = {
       l2Weth: '0x722E8BdD2ce80A4422E880164f2079488e115365',
       l2WethGateway: '0x7626841cB6113412F9c88D3ADC720C9FAC88D9eD',
     },
-    nitroGenesisBlock: 0,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   421614: {
@@ -235,7 +232,7 @@ export const networks: Networks = {
     isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Rollup Sepolia Testnet',
-    partnerChainID: 11155111,    
+    partnerChainID: 11155111,
     partnerChainIDs: [23011913],
     tokenBridge: {
       l1CustomGateway: '0xba2F7B6eAe1F9d174199C5E4867b563E0eaC40F3',
@@ -253,7 +250,6 @@ export const networks: Networks = {
       l2Weth: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73',
       l2WethGateway: '0xCFB1f08A4852699a979909e22c30263ca249556D',
     },
-    nitroGenesisBlock: 0,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   23011913: {
@@ -287,7 +283,6 @@ export const networks: Networks = {
       l2Weth: '0x61Dc4b961D2165623A25EB775260785fE78BD37C',
       l2WethGateway: '0x7021B4Edd9f047772242fc948441d6e0b9121175',
     },
-    nitroGenesisBlock: 0,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
 }
@@ -585,7 +580,6 @@ export const addDefaultLocalNetwork = (): {
     name: 'ArbLocal',
     partnerChainID: 1337,
     partnerChainIDs: [],
-    nitroGenesisBlock: 0,
     tokenBridge: {
       l1CustomGateway: '0x3DF948c956e14175f43670407d5796b95Bb219D8',
       l1ERC20Gateway: '0x4A2bA922052bA54e29c5417bC979Daaf7D5Fe4f4',
