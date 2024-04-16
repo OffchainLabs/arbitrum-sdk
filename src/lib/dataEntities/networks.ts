@@ -50,11 +50,10 @@ export interface ArbitrumNetwork extends Network {
   ethBridge: EthBridge
 
   /**
+   * Chain id of the parent chain, i.e. the chain on which this chain settles to.
    * Information about the parent chain, i.e. the chain on which this chain settles to.
    */
-  parentChain: {
-    id: number
-  }
+  partnerChainID: number
 
   isArbitrum: true
   confirmPeriodBlocks: number
@@ -179,9 +178,7 @@ export const networks: Networks = {
   42161: {
     chainID: 42161,
     name: 'Arbitrum One',
-    parentChain: {
-      id: 1,
-    },
+    partnerChainID: 1,
     partnerChainIDs: [],
     isArbitrum: true,
     tokenBridge: mainnetTokenBridge,
@@ -201,9 +198,7 @@ export const networks: Networks = {
       rollup: '0xFb209827c58283535b744575e11953DCC4bEAD88',
       sequencerInbox: '0x211E1c4c7f1bF5351Ac850Ed10FD68CFfCF6c21b',
     },
-    parentChain: {
-      id: 1,
-    },
+    partnerChainID: 1,
     isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Nova',
@@ -240,9 +235,7 @@ export const networks: Networks = {
     isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Rollup Sepolia Testnet',
-    parentChain: {
-      id: 11155111,
-    },
+    partnerChainID: 11155111,    
     partnerChainIDs: [23011913],
     tokenBridge: {
       l1CustomGateway: '0xba2F7B6eAe1F9d174199C5E4867b563E0eaC40F3',
@@ -276,9 +269,7 @@ export const networks: Networks = {
     isArbitrum: true,
     isCustom: false,
     name: 'Stylus Testnet',
-    parentChain: {
-      id: 421614,
-    },
+    partnerChainID: 421614,
     partnerChainIDs: [],
     tokenBridge: {
       l1CustomGateway: '0xd624D491A5Bc32de52a2e1481846752213bF7415',
@@ -358,11 +349,11 @@ export const getParentForNetwork = (chain: L1Network | ArbitrumNetwork) => {
   }
 
   const parentChain: L1Network | ArbitrumNetwork | undefined =
-    networks[chain.parentChain.id]
+    networks[chain.partnerChainID]
 
   if (!parentChain || !isParentChain(parentChain)) {
     throw new ArbSdkError(
-      `Parent chain ${chain.parentChain.id} not recognized for chain ${chain.chainID}.`
+      `Parent chain ${chain.partnerChainID} not recognized for chain ${chain.chainID}.`
     )
   }
 
@@ -378,7 +369,7 @@ const getChildrenForNetwork = (
   const arbitrumChains = getArbitrumChains()
 
   return Object.values(arbitrumChains).filter(
-    arbitrumChain => arbitrumChain.parentChain.id === chain.chainID
+    arbitrumChain => arbitrumChain.partnerChainID === chain.chainID
   )
 }
 
@@ -492,18 +483,18 @@ const addNetwork = (network: L1Network | ArbitrumNetwork) => {
     const children = getChildrenForNetwork(network)
 
     children.forEach(child => {
-      child.parentChain.id = network.chainID
+      child.partnerChainID = network.chainID
     })
   }
 
   // if it's an arbitrum chain, add it to the parent's list of children
   if (isArbitrumNetwork(network)) {
     const parent: L1Network | ArbitrumNetwork | undefined =
-      networks[network.parentChain.id]
+      networks[network.partnerChainID]
 
     if (!parent) {
       throw new ArbSdkError(
-        `Network ${network.chainID}'s parent network ${network.parentChain.id} is not recognized`
+        `Network ${network.chainID}'s parent network ${network.partnerChainID} is not recognized`
       )
     }
 
@@ -528,9 +519,9 @@ export const addCustomNetwork = ({
   customArbitrumNetwork: ArbitrumNetwork
 }): void => {
   if (customL1Network) {
-    if (customL1Network.chainID !== customArbitrumNetwork.parentChain.id) {
+    if (customL1Network.chainID !== customArbitrumNetwork.partnerChainID) {
       throw new ArbSdkError(
-        `Partner chain id for Arbitrum network ${customArbitrumNetwork.chainID} doesn't match the provided L1 network. Expected ${customL1Network.chainID} but got ${customArbitrumNetwork.parentChain.id}.`
+        `Partner chain id for Arbitrum network ${customArbitrumNetwork.chainID} doesn't match the provided L1 network. Expected ${customL1Network.chainID} but got ${customArbitrumNetwork.partnerChainID}.`
       )
     }
 
@@ -592,9 +583,7 @@ export const addDefaultLocalNetwork = (): {
     isArbitrum: true,
     isCustom: true,
     name: 'ArbLocal',
-    parentChain: {
-      id: 1337,
-    },
+    partnerChainID: 1337,
     partnerChainIDs: [],
     nitroGenesisBlock: 0,
     tokenBridge: {

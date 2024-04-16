@@ -27,9 +27,7 @@ describe('Networks', async () => {
       const customArbitrumNetwork = {
         ...arbitrumOne,
         chainID: mockL2ChainId,
-        parentChain: {
-          id: ethereumMainnetChainId,
-        },
+        partnerChainID: ethereumMainnetChainId,
         isArbitrum: true,
         isCustom: true,
       } as const
@@ -39,13 +37,13 @@ describe('Networks', async () => {
       expect(await getArbitrumNetwork(mockL2ChainId)).to.be.ok
 
       // assert network was added as child
-      const l1Network = await getL1Network(customArbitrumNetwork.parentChain.id)
+      const l1Network = await getL1Network(customArbitrumNetwork.partnerChainID)
       expect(l1Network.partnerChainIDs).to.include(mockL2ChainId)
       // assert network has correct parent
       const arbitrumNetwork = await getArbitrumNetwork(
         customArbitrumNetwork.chainID
       )
-      expect(arbitrumNetwork.parentChain.id).to.equal(ethereumMainnetChainId)
+      expect(arbitrumNetwork.partnerChainID).to.equal(ethereumMainnetChainId)
     })
 
     it('adds a custom L1 and Arbitrum network', async function () {
@@ -61,9 +59,7 @@ describe('Networks', async () => {
 
       const customArbitrumNetwork = {
         ...arbitrumOne,
-        parentChain: {
-          id: mockL1ChainId,
-        },
+        partnerChainID: mockL1ChainId,
         chainID: mockL2ChainId,
         isArbitrum: true,
         isCustom: true,
@@ -81,7 +77,7 @@ describe('Networks', async () => {
       const arbitrumNetwork = await getArbitrumNetwork(
         customArbitrumNetwork.chainID
       )
-      expect(arbitrumNetwork.parentChain.id).to.equal(mockL1ChainId)
+      expect(arbitrumNetwork.partnerChainID).to.equal(mockL1ChainId)
     })
 
     it('adds a custom L3 network', async function () {
@@ -90,9 +86,7 @@ describe('Networks', async () => {
       const customArbitrumNetwork = {
         ...arbitrumOne,
         chainID: mockL3ChainId,
-        parentChain: {
-          id: arbitrumOneChainId,
-        },
+        partnerChainID: arbitrumOneChainId,
         isArbitrum: true,
         isCustom: true,
       } as const
@@ -103,12 +97,12 @@ describe('Networks', async () => {
 
       // assert network was added as child
       const arbitrumNetwork = await getArbitrumNetwork(
-        customArbitrumNetwork.parentChain.id
+        customArbitrumNetwork.partnerChainID
       )
       expect(arbitrumNetwork.partnerChainIDs).to.include(mockL3ChainId)
       // assert network has correct parent
       const l3Network = await getArbitrumNetwork(mockL3ChainId)
-      expect(l3Network.parentChain.id).to.equal(arbitrumOneChainId)
+      expect(l3Network.partnerChainID).to.equal(arbitrumOneChainId)
     })
 
     it('adds a custom L1, L2, and L3 network', async function () {
@@ -125,9 +119,7 @@ describe('Networks', async () => {
       const customArbitrumNetwork = {
         ...arbitrumOne,
         chainID: mockL2ChainId,
-        parentChain: {
-          id: mockL1ChainId,
-        },
+        partnerChainID: mockL1ChainId,
         isArbitrum: true,
         isCustom: true,
       } as const
@@ -142,14 +134,12 @@ describe('Networks', async () => {
       expect(l1Network.partnerChainIDs).to.include(mockL2ChainId)
       // assert network has correct parent
       const arbitrumNetwork = await getArbitrumNetwork(mockL2ChainId)
-      expect(arbitrumNetwork.parentChain.id).to.equal(mockL1ChainId)
+      expect(arbitrumNetwork.partnerChainID).to.equal(mockL1ChainId)
 
       const customL3Network = {
         ...arbitrumOne,
         chainID: mockL3ChainId,
-        parentChain: {
-          id: mockL2ChainId,
-        },
+        partnerChainID: mockL2ChainId,
         isArbitrum: true,
         isCustom: true,
       } as const
@@ -163,7 +153,7 @@ describe('Networks', async () => {
       expect(arbitrumNetworkAgain.partnerChainIDs).to.include(mockL3ChainId)
       // assert network has correct parent
       const l3Network = await getArbitrumNetwork(mockL3ChainId)
-      expect(l3Network.parentChain.id).to.equal(mockL2ChainId)
+      expect(l3Network.partnerChainID).to.equal(mockL2ChainId)
     })
 
     it('fails to add a custom L1 and Arbitrum network if they do not match', async function () {
@@ -181,9 +171,7 @@ describe('Networks', async () => {
 
       const customArbitrumNetwork = {
         ...arbitrumOne,
-        parentChain: {
-          id: wrongPartnerChainId,
-        },
+        partnerChainID: wrongPartnerChainId,
         chainID: mockL2ChainId,
         isArbitrum: true,
         isCustom: true,
@@ -208,9 +196,7 @@ describe('Networks', async () => {
           customArbitrumNetwork: {
             ...arbitrumOne,
             chainID: mockL3ChainId,
-            parentChain: {
-              id: mockL2ChainId,
-            },
+            partnerChainID: mockL2ChainId,
             isArbitrum: true,
             isCustom: true,
           },
@@ -266,9 +252,7 @@ describe('Networks', async () => {
       const customL3Network = {
         ...arbitrumOne,
         chainID: mockL3ChainId,
-        parentChain: {
-          id: arbitrumOneChainId,
-        },
+        partnerChainID: arbitrumOneChainId,
         isArbitrum: true,
         isCustom: true,
       } as const
@@ -278,11 +262,11 @@ describe('Networks', async () => {
       const l3Network = await getArbitrumNetwork(mockL3ChainId)
       expect(l3Network.chainID).to.be.eq(mockL3ChainId)
       // assert network has correct parent
-      expect(l3Network.parentChain.id).to.equal(arbitrumOneChainId)
+      expect(l3Network.partnerChainID).to.equal(arbitrumOneChainId)
 
       // assert network was added as child
       const arbitrumNetwork = await getArbitrumNetwork(
-        customL3Network.parentChain.id
+        customL3Network.partnerChainID
       )
       expect(arbitrumNetwork.partnerChainIDs).to.include(mockL3ChainId)
     })

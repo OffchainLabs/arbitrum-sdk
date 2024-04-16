@@ -116,7 +116,7 @@ export const testSetup = async (): Promise<{
       const _parentChain = parentChain as ArbitrumNetwork
       const ethLocal: L1Network = {
         blockTime: 10,
-        chainID: _parentChain.parentChain.id,
+        chainID: _parentChain.partnerChainID,
         isCustom: true,
         name: 'EthLocal',
         partnerChainIDs: [_parentChain.chainID],

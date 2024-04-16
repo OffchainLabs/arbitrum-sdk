@@ -49,7 +49,7 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   protected async checkParentChain(sop: SignerOrProvider): Promise<void> {
     await SignerProviderUtils.checkNetworkMatches(
       sop,
-      this.childChain.parentChain.id
+      this.childChain.partnerChainID
     )
   }
 
