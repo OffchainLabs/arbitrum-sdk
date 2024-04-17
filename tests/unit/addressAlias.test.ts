@@ -22,7 +22,7 @@ import { Address } from '../../src/lib/dataEntities/address'
 import { BigNumber } from 'ethers'
 import { ADDRESS_ALIAS_OFFSET } from '../../src/lib/dataEntities/constants'
 import { hexZeroPad } from '@ethersproject/bytes'
-import { getAddress } from '@ethersproject/address'
+import { getAddress } from 'ethers-v6'
 const offset = BigNumber.from(ADDRESS_ALIAS_OFFSET)
 const maxAddr = BigNumber.from('0xffffffffffffffffffffffffffffffffffffffff')
 
