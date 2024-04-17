@@ -18,7 +18,10 @@
 
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
-import { ARB_MINIMUM_BLOCK_TIME_IN_SECONDS } from './constants'
+import {
+  ARB1_NITRO_GENESIS_L2_BLOCK,
+  ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
+} from './constants'
 import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__factory'
 
 export interface Network {
@@ -621,6 +624,22 @@ const createNetworkStateHandler = () => {
       l2Networks = getArbitrumChains()
     },
   }
+}
+
+export function getNitroGenesisBlock(
+  arbitrumChainOrChainId: ArbitrumNetwork | number
+) {
+  const arbitrumChainId =
+    typeof arbitrumChainOrChainId === 'number'
+      ? arbitrumChainOrChainId
+      : arbitrumChainOrChainId.chainID
+
+  // all networks except Arbitrum One started off with Nitro
+  if (arbitrumChainId === 42161) {
+    return ARB1_NITRO_GENESIS_L2_BLOCK
+  }
+
+  return 0
 }
 
 const { resetNetworksToDefault } = createNetworkStateHandler()

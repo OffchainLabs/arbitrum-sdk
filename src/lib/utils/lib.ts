@@ -4,8 +4,8 @@ import { ArbSdkError } from '../dataEntities/errors'
 import { ArbitrumProvider } from './arbProvider'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
+import { getNitroGenesisBlock } from '../dataEntities/networks'
 import { BigNumber } from 'ethers'
-import { getNitroGenesisBlock } from './nitroGenesisUtils'
 
 export const wait = (ms: number): Promise<void> =>
   new Promise(res => setTimeout(res, ms))

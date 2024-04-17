@@ -19,10 +19,12 @@
 import { Logger, LogLevel } from '@ethersproject/logger'
 Logger.setLogLevel(LogLevel.ERROR)
 import { ChildToParentMessage } from '../../src/lib/message/ChildToParentMessage'
-import { getArbitrumNetwork } from '../../src/lib/dataEntities/networks'
+import {
+  getArbitrumNetwork,
+  getNitroGenesisBlock,
+} from '../../src/lib/dataEntities/networks'
 import { providers } from 'ethers'
 import { anything, deepEqual, instance, mock, verify, when } from 'ts-mockito'
-import { getNitroGenesisBlock } from '../../src/lib/utils/nitroGenesisUtils'
 
 describe('ChildToParentMessage events', () => {
   // ChildToParentTransaction

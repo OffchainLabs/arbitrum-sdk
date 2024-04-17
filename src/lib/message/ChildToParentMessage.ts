@@ -35,9 +35,8 @@ import {
 import { isDefined } from '../utils/lib'
 import { EventArgs } from '../dataEntities/event'
 import { ChildToParentMessageStatus } from '../dataEntities/message'
-import { getChildChain } from '../dataEntities/networks'
+import { getChildChain, getNitroGenesisBlock } from '../dataEntities/networks'
 import { ArbSdkError } from '../dataEntities/errors'
-import { getNitroGenesisBlock } from '../utils/nitroGenesisUtils'
 
 export type ChildToParentTransactionEvent =
   | EventArgs<ClassicChildToParentTransactionEvent>

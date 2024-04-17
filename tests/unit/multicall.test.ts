@@ -1,12 +1,14 @@
 'use strict'
 
-import { getChildChain as getL2Network } from '../../src/lib/dataEntities/networks'
+import {
+  getChildChain as getL2Network,
+  getNitroGenesisBlock,
+} from '../../src/lib/dataEntities/networks'
 import { providers } from 'ethers'
 import { mock, when, anything, instance, deepEqual } from 'ts-mockito'
 import { expect } from 'chai'
 
 import { MultiCaller } from '../../src'
-import { getNitroGenesisBlock } from '../../src/lib/utils/nitroGenesisUtils'
 
 describe('Multicall', () => {
   const createProviderMock = async (networkChoiceOverride?: number) => {
