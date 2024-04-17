@@ -44,25 +44,36 @@ import { fundL1 } from '../tests/integration/testHelpers'
 dotenv.config()
 
 const isTestingOrbitChains = process.env.ORBIT_TEST === '1'
+const isTestingNon18Decimals = process.env.NON_18_DECIMALS_TEST === '1'
 
 /**
  * The RPC urls and private keys using during testing
  *
  * @note When the `ORBIT_TEST` env variable is `true`, we treat `ethUrl` as the L2 and `arbUrl` as the L3
  */
-export const config = isTestingOrbitChains
-  ? {
+
+export const config = (function () {
+  if (isTestingOrbitChains) {
+    if (isTestingNon18Decimals) {
+      // TODO
+      return {}
+    }
+    // 18 decimals native token
+    return {
       arbUrl: process.env['ORBIT_URL'] as string,
       ethUrl: process.env['ARB_URL'] as string,
       arbKey: process.env['ORBIT_KEY'] as string,
       ethKey: process.env['ARB_KEY'] as string,
     }
-  : {
-      arbUrl: process.env['ARB_URL'] as string,
-      ethUrl: process.env['ETH_URL'] as string,
-      arbKey: process.env['ARB_KEY'] as string,
-      ethKey: process.env['ETH_KEY'] as string,
-    }
+  }
+  // Arbitrum core chain, not Orbit
+  return {
+    arbUrl: process.env['ARB_URL'] as string,
+    ethUrl: process.env['ETH_URL'] as string,
+    arbKey: process.env['ARB_KEY'] as string,
+    ethKey: process.env['ETH_KEY'] as string,
+  }
+})()
 
 export const getSigner = (provider: JsonRpcProvider, key?: string) => {
   if (!key && !provider)
