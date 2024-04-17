@@ -41,7 +41,7 @@ import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { InboxMessageKind } from '../dataEntities/message'
 import { isDefined } from '../utils/lib'
-import { ZeroAddress } from 'ethers-v6'
+import { ZeroAddress, hexlify, solidityPacked, toBeArray } from 'ethers-v6'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
@@ -368,9 +368,9 @@ export class InboxTools {
       this.parentChainSigner
     )
 
-    const sendData = ethers.utils.solidityPack(
+    const sendData = solidityPacked(
       ['uint8', 'bytes'],
-      [ethers.utils.hexlify(InboxMessageKind.L2MessageType_signedTx), signedTx]
+      [hexlify(toBeArray(InboxMessageKind.L2MessageType_signedTx)), signedTx]
     )
 
     return await delayedInbox.functions.sendL2Message(sendData)

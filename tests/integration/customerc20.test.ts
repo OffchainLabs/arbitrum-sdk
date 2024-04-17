@@ -47,7 +47,7 @@ import {
   fundParentCustomFeeToken,
   isArbitrumNetworkWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
-import { ZeroAddress } from 'ethers-v6'
+import { ZeroAddress, parseEther } from 'ethers-v6'
 
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
@@ -164,7 +164,7 @@ const registerCustomToken = async (
     childChain.tokenBridge.l1GatewayRouter
   )
   await l1CustomToken.deployed()
-  const amount = ethers.utils.parseEther('1')
+  const amount = parseEther('1')
 
   if (isArbitrumNetworkWithCustomFeeToken()) {
     const approvalTx = await ERC20__factory.connect(

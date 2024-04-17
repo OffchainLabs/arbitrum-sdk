@@ -17,10 +17,10 @@
 'use strict'
 
 import { expect } from 'chai'
-import { ethers, constants, Wallet } from 'ethers'
+import { constants, Wallet } from 'ethers'
 import dotenv from 'dotenv'
 
-import { parseEther } from '@ethersproject/units'
+import { parseEther } from 'ethers-v6'
 
 import {
   fundParentSigner as fundParentSignerEther,
@@ -52,7 +52,7 @@ describeOnlyWhenCustomGasToken(
     it('approves the custom fee token to be spent by the Inbox on the parent chain (arbitrary amount, using params)', async function () {
       const { ethBridger, nativeTokenContract, parentSigner } =
         await testSetup()
-      const amount = ethers.utils.parseEther('1')
+      const amount = parseEther('1')
 
       await fundParentSignerEther(parentSigner)
       await fundParentCustomFeeToken(parentSigner)

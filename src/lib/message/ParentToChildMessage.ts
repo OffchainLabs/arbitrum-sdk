@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 /* eslint-env node */
-'use strict'
+;('use strict')
 
 import { TransactionReceipt } from '@ethersproject/providers'
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
-import { concat, zeroPad } from '@ethersproject/bytes'
 import { getAddress } from '@ethersproject/address'
 import { keccak256 } from '@ethersproject/keccak256'
 
@@ -36,14 +35,22 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
-import { ethers, Overrides } from 'ethers'
+import { Overrides } from 'ethers'
 import { ChildTransactionReceipt, RedeemTransaction } from './ChildTransaction'
 import { getChildChain } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt, isDefined } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
 import { ErrorCode, Logger } from '@ethersproject/logger'
-import { ZeroAddress } from 'ethers-v6'
+import {
+  ZeroAddress,
+  concat,
+  encodeRlp,
+  toQuantity,
+  getBytes,
+  zeroPadValue,
+  hexlify,
+} from 'ethers-v6'
 
 export enum ParentToChildMessageStatus {
   /**
@@ -141,7 +148,7 @@ export abstract class ParentToChildMessage {
     data: string
   ): string {
     const formatNumber = (value: BigNumber): Uint8Array => {
-      return ethers.utils.stripZeros(value.toHexString())
+      return getBytes(hexlify(value.toHexString()))
     }
 
     const chainId = BigNumber.from(chainChainId)
@@ -149,7 +156,7 @@ export abstract class ParentToChildMessage {
 
     const fields: any[] = [
       formatNumber(chainId),
-      zeroPad(formatNumber(msgNum), 32),
+      zeroPadValue(formatNumber(msgNum), 32),
       fromAddress,
       formatNumber(parentChainBaseFee),
 
@@ -166,12 +173,10 @@ export abstract class ParentToChildMessage {
     ]
 
     // arbitrum submit retry transactions have type 0x69
-    const rlpEnc = ethers.utils.hexConcat([
-      '0x69',
-      ethers.utils.RLP.encode(fields),
-    ])
+    const rlpEnc = concat(['0x69', encodeRlp(fields)])
 
-    return ethers.utils.keccak256(rlpEnc)
+    const hash = keccak256(rlpEnc)
+    return hash
   }
 
   public static fromEventComponents<T extends SignerOrProvider>(
@@ -572,22 +577,22 @@ export class ParentToChildMessageReaderClassic {
 
     this.retryableCreationId = keccak256(
       concat([
-        zeroPad(BigNumber.from(chainId).toHexString(), 32),
-        zeroPad(bitFlip(this.messageNumber).toHexString(), 32),
+        zeroPadValue(BigNumber.from(chainId).toHexString(), 32),
+        zeroPadValue(bitFlip(this.messageNumber).toHexString(), 32),
       ])
     )
 
     this.autoRedeemId = keccak256(
       concat([
-        zeroPad(this.retryableCreationId, 32),
-        zeroPad(BigNumber.from(1).toHexString(), 32),
+        zeroPadValue(this.retryableCreationId, 32),
+        zeroPadValue(BigNumber.from(1).toHexString(), 32),
       ])
     )
 
     this.chainTxHash = keccak256(
       concat([
-        zeroPad(this.retryableCreationId, 32),
-        zeroPad(BigNumber.from(0).toHexString(), 32),
+        zeroPadValue(this.retryableCreationId, 32),
+        zeroPadValue(BigNumber.from(0).toHexString(), 32),
       ])
     )
   }
@@ -595,9 +600,9 @@ export class ParentToChildMessageReaderClassic {
   private calculateChainDerivedHash(retryableCreationId: string): string {
     return keccak256(
       concat([
-        zeroPad(retryableCreationId, 32),
+        zeroPadValue(retryableCreationId, 32),
         // BN 0 meaning Chain TX
-        zeroPad(BigNumber.from(0).toHexString(), 32),
+        zeroPadValue(BigNumber.from(0).toHexString(), 32),
       ])
     )
   }
@@ -770,7 +775,7 @@ export class EthDepositMessage {
     value: BigNumber
   ): string {
     const formatNumber = (numberVal: BigNumber): Uint8Array => {
-      return ethers.utils.stripZeros(numberVal.toHexString())
+      return getBytes(hexlify(numberVal.toHexString()))
     }
 
     const chainId = BigNumber.from(chainChainId)
@@ -779,19 +784,16 @@ export class EthDepositMessage {
     // https://github.com/OffchainLabs/go-ethereum/blob/07e017aa73e32be92aadb52fa327c552e1b7b118/core/types/arb_types.go#L302-L308
     const fields = [
       formatNumber(chainId),
-      zeroPad(formatNumber(msgNum), 32),
+      zeroPadValue(formatNumber(msgNum), 32),
       getAddress(fromAddress),
       getAddress(toAddress),
       formatNumber(value),
     ]
 
     // arbitrum eth deposit transactions have type 0x64
-    const rlpEnc = ethers.utils.hexConcat([
-      '0x64',
-      ethers.utils.RLP.encode(fields),
-    ])
+    const rlpEnc = concat(['0x64', encodeRlp(fields)])
 
-    return ethers.utils.keccak256(rlpEnc)
+    return keccak256(rlpEnc)
   }
 
   /**
