@@ -1,5 +1,6 @@
 import { StaticJsonRpcProvider } from '@ethersproject/providers'
-import { Signer, Wallet, ethers, utils } from 'ethers'
+import { Signer, Wallet, utils } from 'ethers'
+import { ZeroAddress } from 'ethers-v6'
 
 import {
   testSetup as _testSetup,
@@ -8,7 +9,6 @@ import {
 } from '../../../scripts/testSetup'
 import { Erc20Bridger, EthBridger } from '../../../src'
 import { ERC20__factory } from '../../../src/lib/abi/factories/ERC20__factory'
-import { ZeroAddress } from 'ethers-v6'
 
 // `config` isn't initialized yet, so we have to wrap these in functions
 const ethProvider = () => new StaticJsonRpcProvider(config.ethUrl)

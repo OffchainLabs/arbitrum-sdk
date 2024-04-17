@@ -17,7 +17,8 @@
 'use strict'
 
 import { expect } from 'chai'
-import { Signer, Wallet, constants, utils, ethers } from 'ethers'
+import { Signer, Wallet, utils } from 'ethers'
+import { ZeroAddress, parseEther } from 'ethers-v6'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Logger, LogLevel } from '@ethersproject/logger'
 Logger.setLogLevel(LogLevel.ERROR)
@@ -47,7 +48,6 @@ import {
   fundParentCustomFeeToken,
   isArbitrumNetworkWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
-import { ZeroAddress, parseEther } from 'ethers-v6'
 
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)

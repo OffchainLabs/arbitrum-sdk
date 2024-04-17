@@ -18,6 +18,7 @@
 ;('use strict')
 
 import { BigNumber, ethers, Signer } from 'ethers'
+import { Transaction } from 'ethers-v6'
 import { InboxTools } from '../../src/lib/inbox/inbox'
 import {
   getArbitrumNetwork,
@@ -27,7 +28,6 @@ import { testSetup } from '../../scripts/testSetup'
 import { greeter } from './helper/greeter'
 import { expect } from 'chai'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
-import { Transaction } from 'ethers-v6'
 
 const sendSignedTx = async (testState: any, info?: any) => {
   const { parentDeployer, childDeployer } = testState

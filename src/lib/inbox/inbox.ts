@@ -19,6 +19,7 @@
 import { Signer } from '@ethersproject/abstract-signer'
 import { Block, Provider } from '@ethersproject/abstract-provider'
 import { BigNumber, ContractTransaction, Overrides } from 'ethers'
+import { ZeroAddress, hexlify, solidityPacked, toBeArray } from 'ethers-v6'
 import { TransactionRequest } from '@ethersproject/providers'
 
 import { Bridge } from '../abi/Bridge'
@@ -41,7 +42,6 @@ import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { InboxMessageKind } from '../dataEntities/message'
 import { isDefined } from '../utils/lib'
-import { ZeroAddress, hexlify, solidityPacked, toBeArray } from 'ethers-v6'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string

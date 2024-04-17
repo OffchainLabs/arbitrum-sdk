@@ -16,6 +16,7 @@
 /* eslint-env node */
 'use strict'
 
+import { ZeroAddress } from 'ethers-v6'
 import { ParentContractTransaction } from '../message/ParentTransaction'
 import { ChildContractTransaction } from '../message/ChildTransaction'
 
@@ -28,7 +29,6 @@ import {
   SignerOrProvider,
   SignerProviderUtils,
 } from '../dataEntities/signerOrProvider'
-import { ZeroAddress } from 'ethers-v6'
 
 /**
  * Base for bridging assets from parent-to-child and back

@@ -18,10 +18,9 @@
 
 import { Provider, BlockTag, Filter } from '@ethersproject/abstract-provider'
 import { Contract, Event } from '@ethersproject/contracts'
-import { constants } from 'ethers'
+import { ZeroAddress } from 'ethers-v6'
 import { TypedEvent, TypedEventFilter } from '../abi/common'
 import { EventArgs, TypeChainContractFactory } from '../dataEntities/event'
-import { ZeroAddress } from 'ethers-v6'
 
 export type FetchedEvent<TEvent extends Event> = {
   event: EventArgs<TEvent>
