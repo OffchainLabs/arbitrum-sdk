@@ -49,18 +49,18 @@ import { SubmitRetryableMessageDataParser } from './messageDataParser'
 import { getArbitrumNetwork } from '../dataEntities/networks'
 import { ARB1_NITRO_GENESIS_L1_BLOCK } from '../dataEntities/constants'
 
-export interface ParentChainContractTransaction<
-  TReceipt extends ParentChainTransactionReceipt = ParentChainTransactionReceipt
+export interface ParentContractTransaction<
+  TReceipt extends ParentTransactionReceipt = ParentTransactionReceipt
 > extends ContractTransaction {
   wait(confirmations?: number): Promise<TReceipt>
 }
 // some helper interfaces to reduce the verbosity elsewhere
-export type ParentChainEthDepositTransaction =
-  ParentChainContractTransaction<ParentChainEthDepositTransactionReceipt>
-export type ParentChainContractCallTransaction =
-  ParentChainContractTransaction<ParentChainContractCallTransactionReceipt>
+export type ParentEthDepositTransaction =
+  ParentContractTransaction<ParentEthDepositTransactionReceipt>
+export type ParentContractCallTransaction =
+  ParentContractTransaction<ParentContractCallTransactionReceipt>
 
-export class ParentChainTransactionReceipt implements TransactionReceipt {
+export class ParentTransactionReceipt implements TransactionReceipt {
   public readonly to: string
   public readonly from: string
   public readonly contractAddress: string
@@ -304,59 +304,59 @@ export class ParentChainTransactionReceipt implements TransactionReceipt {
   }
 
   /**
-   * Replaces the wait function with one that returns an ParentChainTransactionReceipt
+   * Replaces the wait function with one that returns a {@link ParentTransactionReceipt}
    * @param contractTransaction
    * @returns
    */
   public static monkeyPatchWait = (
     contractTransaction: ContractTransaction
-  ): ParentChainContractTransaction => {
+  ): ParentContractTransaction => {
     const wait = contractTransaction.wait
     contractTransaction.wait = async (confirmations?: number) => {
       const result = await wait(confirmations)
-      return new ParentChainTransactionReceipt(result)
+      return new ParentTransactionReceipt(result)
     }
-    return contractTransaction as ParentChainContractTransaction
+    return contractTransaction as ParentContractTransaction
   }
 
   /**
-   * Replaces the wait function with one that returns an ParentChainEthDepositTransactionReceipt
+   * Replaces the wait function with one that returns a {@link ParentEthDepositTransactionReceipt}
    * @param contractTransaction
    * @returns
    */
   public static monkeyPatchEthDepositWait = (
     contractTransaction: ContractTransaction
-  ): ParentChainEthDepositTransaction => {
+  ): ParentEthDepositTransaction => {
     const wait = contractTransaction.wait
     contractTransaction.wait = async (confirmations?: number) => {
       const result = await wait(confirmations)
-      return new ParentChainEthDepositTransactionReceipt(result)
+      return new ParentEthDepositTransactionReceipt(result)
     }
-    return contractTransaction as ParentChainEthDepositTransaction
+    return contractTransaction as ParentEthDepositTransaction
   }
 
   /**
-   * Replaces the wait function with one that returns an ParentChainContractCallTransactionReceipt
+   * Replaces the wait function with one that returns a {@link ParentContractCallTransactionReceipt}
    * @param contractTransaction
    * @returns
    */
   public static monkeyPatchContractCallWait = (
     contractTransaction: ContractTransaction
-  ): ParentChainContractCallTransaction => {
+  ): ParentContractCallTransaction => {
     const wait = contractTransaction.wait
     contractTransaction.wait = async (confirmations?: number) => {
       const result = await wait(confirmations)
-      return new ParentChainContractCallTransactionReceipt(result)
+      return new ParentContractCallTransactionReceipt(result)
     }
-    return contractTransaction as ParentChainContractCallTransaction
+    return contractTransaction as ParentContractCallTransaction
   }
 }
 
 /**
- * An ParentChainTransactionReceipt with additional functionality that only exists
+ * A {@link ParentTransactionReceipt} with additional functionality that only exists
  * if the transaction created a single eth deposit.
  */
-export class ParentChainEthDepositTransactionReceipt extends ParentChainTransactionReceipt {
+export class ParentEthDepositTransactionReceipt extends ParentTransactionReceipt {
   /**
    * Wait for the funds to arrive on the child chain
    * @param confirmations Amount of confirmations the retryable ticket and the auto redeem receipt should have
@@ -390,17 +390,17 @@ export class ParentChainEthDepositTransactionReceipt extends ParentChainTransact
 }
 
 /**
- * An ParentChainTransactionReceipt with additional functionality that only exists
+ * A {@link ParentTransactionReceipt} with additional functionality that only exists
  * if the transaction created a single call to a child chain contract - this includes
  * token deposits.
  */
-export class ParentChainContractCallTransactionReceipt extends ParentChainTransactionReceipt {
+export class ParentContractCallTransactionReceipt extends ParentTransactionReceipt {
   /**
    * Wait for the transaction to arrive and be executed on the child chain
    * @param confirmations Amount of confirmations the retryable ticket and the auto redeem receipt should have
    * @param timeout Amount of time to wait for the retryable ticket to be created
    * Defaults to 15 minutes, as by this time all transactions are expected to be included on the child chain. Throws on timeout.
-   * @returns The wait result contains `complete`, a `status`, an ParentToChildMessage and optionally the `childChainTxReceipt`.
+   * @returns The wait result contains `complete`, a `status`, a {@link ParentToChildMessage} and optionally the `childChainTxReceipt`.
    * If `complete` is true then this message is in the terminal state.
    * For contract calls this is true only if the status is REDEEMED.
    */

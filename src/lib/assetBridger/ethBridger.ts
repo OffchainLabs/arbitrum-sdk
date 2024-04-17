@@ -27,9 +27,9 @@ import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 import { AssetBridger } from './assetBridger'
 import {
-  ParentChainEthDepositTransaction,
-  ParentChainContractCallTransaction,
-  ParentChainTransactionReceipt,
+  ParentEthDepositTransaction,
+  ParentContractCallTransaction,
+  ParentTransactionReceipt,
 } from '../message/ParentTransaction'
 import {
   ChildContractTransaction,
@@ -76,7 +76,7 @@ export type ApproveGasTokenParamsOrTxRequest =
   | ApproveGasTokenParams
   | ApproveGasTokenTxRequest
 
-type WithL1Signer<T extends ApproveGasTokenParamsOrTxRequest> = T & {
+type WithParentSigner<T extends ApproveGasTokenParamsOrTxRequest> = T & {
   parentSigner: Signer
 }
 
@@ -180,7 +180,7 @@ export class EthBridger extends AssetBridger<
    */
   private isApproveGasTokenParams(
     params: ApproveGasTokenParamsOrTxRequest
-  ): params is WithL1Signer<ApproveGasTokenParams> {
+  ): params is WithParentSigner<ApproveGasTokenParams> {
     return typeof (params as ApproveGasTokenTxRequest).txRequest === 'undefined'
   }
 
@@ -217,7 +217,7 @@ export class EthBridger extends AssetBridger<
    * @param params
    */
   public async approveGasToken(
-    params: WithL1Signer<ApproveGasTokenParamsOrTxRequest>
+    params: WithParentSigner<ApproveGasTokenParamsOrTxRequest>
   ) {
     if (this.nativeTokenIsEth) {
       throw new Error('chain uses ETH as its native/gas token')
@@ -286,7 +286,7 @@ export class EthBridger extends AssetBridger<
    */
   public async deposit(
     params: EthDepositParams | ParentToChildTxReqAndSigner
-  ): Promise<ParentChainEthDepositTransaction> {
+  ): Promise<ParentEthDepositTransaction> {
     await this.checkParentChain(params.parentSigner)
 
     const ethDeposit = isParentToChildTransactionRequest(params)
@@ -301,7 +301,7 @@ export class EthBridger extends AssetBridger<
       ...params.overrides,
     })
 
-    return ParentChainTransactionReceipt.monkeyPatchEthDepositWait(tx)
+    return ParentTransactionReceipt.monkeyPatchEthDepositWait(tx)
   }
 
   /**
@@ -340,7 +340,7 @@ export class EthBridger extends AssetBridger<
     params:
       | EthDepositToParams
       | (ParentToChildTxReqAndSigner & { childProvider: Provider })
-  ): Promise<ParentChainContractCallTransaction> {
+  ): Promise<ParentContractCallTransaction> {
     await this.checkParentChain(params.parentSigner)
     await this.checkChildChain(params.childProvider)
 
@@ -357,7 +357,7 @@ export class EthBridger extends AssetBridger<
       ...params.overrides,
     })
 
-    return ParentChainTransactionReceipt.monkeyPatchContractCallWait(tx)
+    return ParentTransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
   /**

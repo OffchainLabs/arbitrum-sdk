@@ -38,14 +38,14 @@ const sendSignedTx = async (testState: any, info?: any) => {
   }
   const signedTx = await inbox.signChildChainTx(message, childDeployer)
 
-  const l1Tx = await inbox.sendChildChainSignedTx(signedTx)
+  const parentTx = await inbox.sendChildChainSignedTx(signedTx)
   return {
     signedMsg: signedTx,
-    l1TransactionReceipt: await l1Tx?.wait(),
+    parentTransactionReceipt: await parentTx?.wait(),
   }
 }
 
-describe('Send signedTx to l2 using inbox', async () => {
+describe('Send signedTx to child chain using inbox', async () => {
   // test globals
   let testState: {
     parentDeployer: Signer
@@ -69,49 +69,47 @@ describe('Send signedTx to l2 using inbox', async () => {
       value: BigNumber.from(0),
     }
     const contractCreationData = Greeter.getDeployTransaction(info)
-    const { signedMsg, l1TransactionReceipt } = await sendSignedTx(
+    const { signedMsg, parentTransactionReceipt } = await sendSignedTx(
       testState,
       contractCreationData
     )
-    const l1Status = l1TransactionReceipt?.status
-    expect(l1Status).to.equal(1, 'l1 txn failed')
-    const l2Tx = ethers.utils.parseTransaction(signedMsg)
-    const l2Txhash = l2Tx.hash!
-    const l2TxReceipt = await childDeployer.provider!.waitForTransaction(
-      l2Txhash
+    const parentStatus = parentTransactionReceipt?.status
+    expect(parentStatus).to.equal(1, 'parent txn failed')
+    const childTx = ethers.utils.parseTransaction(signedMsg)
+    const childTxhash = childTx.hash!
+    const childTxReceipt = await childDeployer.provider!.waitForTransaction(
+      childTxhash
     )
-    const l2Status = l2TxReceipt.status
-    expect(l2Status).to.equal(1, 'l2 txn failed')
+    const childStatus = childTxReceipt.status
+    expect(childStatus).to.equal(1, 'child txn failed')
     const contractAddress = ethers.ContractFactory.getContractAddress({
-      from: l2Tx.from!,
-      nonce: l2Tx.nonce,
+      from: childTx.from!,
+      nonce: childTx.nonce,
     })
     const greeterImp = Greeter.attach(contractAddress)
     const greetResult = await greeterImp.greet()
     expect(greetResult).to.equal('hello world', 'contract returns not expected')
   })
 
-  it('should confirm the same tx on l2', async () => {
+  it('should confirm the same tx on child chain', async () => {
     const childDeployer = testState.childDeployer
     const info = {
       data: '0x12',
       to: await childDeployer.getAddress(),
     }
-    const { signedMsg, l1TransactionReceipt } = await sendSignedTx(
-      testState,
-      info
+    const { signedMsg, parentTransactionReceipt: parentTransactionReceipt } =
+      await sendSignedTx(testState, info)
+    const parentStatus = parentTransactionReceipt?.status
+    expect(parentStatus).to.equal(1)
+    const childTxhash = ethers.utils.parseTransaction(signedMsg).hash!
+    const childTxReceipt = await childDeployer.provider!.waitForTransaction(
+      childTxhash
     )
-    const l1Status = l1TransactionReceipt?.status
-    expect(l1Status).to.equal(1)
-    const l2Txhash = ethers.utils.parseTransaction(signedMsg).hash!
-    const l2TxReceipt = await childDeployer.provider!.waitForTransaction(
-      l2Txhash
-    )
-    const l2Status = l2TxReceipt.status
-    expect(l2Status).to.equal(1)
+    const childStatus = childTxReceipt.status
+    expect(childStatus).to.equal(1)
   })
 
-  it('send two tx share the same nonce but with different gas price, should confirm the one which gas price higher than l2 base price', async () => {
+  it('send two tx share the same nonce but with different gas price, should confirm the one which gas price higher than child base price', async () => {
     const childDeployer = testState.childDeployer
     const currentNonce = await childDeployer.getTransactionCount()
 
@@ -123,28 +121,28 @@ describe('Send signedTx to l2 using inbox', async () => {
       maxPriorityFeePerGas: BigNumber.from(1000000), //0.001gwei
     }
     const lowFeeTx = await sendSignedTx(testState, lowFeeInfo)
-    const lowFeeL1Status = lowFeeTx.l1TransactionReceipt?.status
-    expect(lowFeeL1Status).to.equal(1)
+    const lowFeeParentStatus = lowFeeTx.parentTransactionReceipt?.status
+    expect(lowFeeParentStatus).to.equal(1)
     const info = {
       data: '0x12',
       to: await childDeployer.getAddress(),
       nonce: currentNonce,
     }
     const enoughFeeTx = await sendSignedTx(testState, info)
-    const enoughFeeL1Status = enoughFeeTx.l1TransactionReceipt?.status
-    expect(enoughFeeL1Status).to.equal(1)
-    const l2LowFeeTxhash = ethers.utils.parseTransaction(lowFeeTx.signedMsg)
+    const enoughFeeParentStatus = enoughFeeTx.parentTransactionReceipt?.status
+    expect(enoughFeeParentStatus).to.equal(1)
+    const childLowFeeTxhash = ethers.utils.parseTransaction(lowFeeTx.signedMsg)
       .hash!
-    const l2EnoughFeeTxhash = ethers.utils.parseTransaction(
+    const childEnoughFeeTxhash = ethers.utils.parseTransaction(
       enoughFeeTx.signedMsg
     ).hash!
 
-    const l2TEnoughFeeReceipt =
-      await childDeployer.provider!.waitForTransaction(l2EnoughFeeTxhash)
-    const l2Status = l2TEnoughFeeReceipt.status
-    expect(l2Status).to.equal(1)
+    const childTEnoughFeeReceipt =
+      await childDeployer.provider!.waitForTransaction(childEnoughFeeTxhash)
+    const childStatus = childTEnoughFeeReceipt.status
+    expect(childStatus).to.equal(1)
     const res = await childDeployer.provider?.getTransactionReceipt(
-      l2LowFeeTxhash
+      childLowFeeTxhash
     )
     expect(res).to.be.null
   })

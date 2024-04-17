@@ -130,7 +130,7 @@ describe('standard ERC20', () => {
 
     await depositToken({
       depositAmount,
-      l1TokenAddress: testState.parentToken.address,
+      parentTokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
@@ -164,7 +164,7 @@ describe('standard ERC20', () => {
   it('deposit with no funds, manual redeem', async () => {
     const { waitRes } = await depositToken({
       depositAmount,
-      l1TokenAddress: testState.parentToken.address,
+      parentTokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
@@ -182,7 +182,7 @@ describe('standard ERC20', () => {
   it('deposit with low funds, manual redeem', async () => {
     const { waitRes } = await depositToken({
       depositAmount,
-      l1TokenAddress: testState.parentToken.address,
+      parentTokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
@@ -202,7 +202,7 @@ describe('standard ERC20', () => {
     // redeem transaction
     const { waitRes } = await depositToken({
       depositAmount,
-      l1TokenAddress: testState.parentToken.address,
+      parentTokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
@@ -234,7 +234,7 @@ describe('standard ERC20', () => {
   it('deposit with low funds, fails first redeem, succeeds seconds', async () => {
     const { waitRes } = await depositToken({
       depositAmount,
-      l1TokenAddress: testState.parentToken.address,
+      parentTokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
@@ -268,7 +268,7 @@ describe('standard ERC20', () => {
   })
 
   it('withdraws erc20', async function () {
-    const l2TokenAddr = await testState.erc20Bridger.getL2ERC20Address(
+    const l2TokenAddr = await testState.erc20Bridger.getChildERC20Address(
       testState.parentToken.address,
       testState.parentSigner.provider!
     )
@@ -292,7 +292,7 @@ describe('standard ERC20', () => {
       amount: withdrawalAmount,
       gatewayType: GatewayType.STANDARD,
       startBalance: startBalance,
-      parentChainToken: ERC20__factory.connect(
+      parentToken: ERC20__factory.connect(
         testState.parentToken.address,
         testState.parentSigner.provider!
       ),
@@ -303,7 +303,7 @@ describe('standard ERC20', () => {
     await depositToken({
       depositAmount,
       ethDepositAmount: utils.parseEther('0.0005'),
-      l1TokenAddress: testState.parentToken.address,
+      parentTokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
@@ -317,7 +317,7 @@ describe('standard ERC20', () => {
     await depositToken({
       depositAmount,
       ethDepositAmount: utils.parseEther('0.0005'),
-      l1TokenAddress: testState.parentToken.address,
+      parentTokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
