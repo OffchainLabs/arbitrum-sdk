@@ -35,7 +35,7 @@ export interface ArbitrumNetwork {
    * Chain id of the parent chain, i.e. the chain on which this chain settles to.
    */
   parentChainId: number
-  isArbitrum: true
+
   confirmPeriodBlocks: number
   /**
    * Represents how long a retryable ticket lasts for before it expires (in seconds). Defaults to 7 days.
@@ -122,7 +122,6 @@ export const networks: Networks = {
     chainID: 42161,
     name: 'Arbitrum One',
     parentChainId: 1,
-    isArbitrum: true,
     tokenBridge: mainnetTokenBridge,
     ethBridge: mainnetETHBridge,
     confirmPeriodBlocks: 45818,
@@ -138,7 +137,6 @@ export const networks: Networks = {
       rollup: '0xFb209827c58283535b744575e11953DCC4bEAD88',
       sequencerInbox: '0x211E1c4c7f1bF5351Ac850Ed10FD68CFfCF6c21b',
     },
-    isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Nova',
     parentChainId: 1,
@@ -169,7 +167,6 @@ export const networks: Networks = {
       rollup: '0xd80810638dbDF9081b72C1B33c65375e807281C8',
       sequencerInbox: '0x6c97864CE4bEf387dE0b3310A44230f7E3F1be0D',
     },
-    isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Rollup Sepolia Testnet',
     parentChainId: 11155111,
@@ -200,7 +197,6 @@ export const networks: Networks = {
       rollup: '0x94db9E36d9336cD6F9FfcAd399dDa6Cc05299898',
       sequencerInbox: '0x00A0F15b79d1D3e5991929FaAbCF2AA65623530c',
     },
-    isArbitrum: true,
     isCustom: false,
     name: 'Stylus Testnet',
     parentChainId: 421614,
@@ -350,7 +346,6 @@ export const addDefaultLocalNetwork = (): ArbitrumNetwork => {
       rollup: '0x65a59D67Da8e710Ef9A01eCa37f83f84AEdeC416',
       sequencerInbox: '0xE7362D0787b51d8C72D504803E5B1d6DcdA89540',
     },
-    isArbitrum: true,
     isCustom: true,
     name: 'ArbLocal',
     parentChainId: 1337,
