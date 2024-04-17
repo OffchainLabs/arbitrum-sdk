@@ -104,36 +104,10 @@ export const testSetup = async (): Promise<{
     // check if theres an existing network available
     const localNetworkFile = getLocalNetworksFromFile()
 
-    const { l1Network: parentChain, l2Network: childChain } = localNetworkFile
+    const { l2Network: childChain } = localNetworkFile
 
-    if (isTestingOrbitChains) {
-      const _parentChain = parentChain as ArbitrumNetwork
-      const ethLocal: L1Network = {
-        blockTime: 10,
-        chainID: _parentChain.parentChainId,
-        isCustom: true,
-        name: 'EthLocal',
-        isArbitrum: false,
-      }
-
-      addCustomNetwork({
-        customL1Network: ethLocal,
-        customArbitrumNetwork: _parentChain,
-      })
-
-      addCustomNetwork({
-        customArbitrumNetwork: childChain,
-      })
-
-      setChildChain = childChain
-    } else {
-      addCustomNetwork({
-        customL1Network: parentChain as L1Network,
-        customArbitrumNetwork: childChain,
-      })
-
-      setChildChain = childChain
-    }
+    addCustomNetwork(childChain)
+    setChildChain = childChain
   }
 
   const erc20Bridger = new Erc20Bridger(setChildChain)

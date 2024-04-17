@@ -494,45 +494,14 @@ const addNetwork = (network: L1Network | ArbitrumNetwork) => {
  * @param customL1Network the custom L1 chain (optional)
  * @param customArbitrumNetwork the custom L2 or L3 chain
  */
-export const addCustomNetwork = ({
-  customL1Network,
-  customArbitrumNetwork,
-}: {
-  customL1Network?: L1Network
-  customArbitrumNetwork: ArbitrumNetwork
-}): void => {
-  if (customL1Network) {
-    if (customL1Network.chainID !== customArbitrumNetwork.parentChainId) {
-      throw new ArbSdkError(
-        `Partner chain id for Arbitrum network ${customArbitrumNetwork.chainID} doesn't match the provided L1 network. Expected ${customL1Network.chainID} but got ${customArbitrumNetwork.parentChainId}.`
-      )
-    }
-
-    // check the if the parent chain is in any of the lists
-    if (l1Networks[customL1Network.chainID]) {
-      throw new ArbSdkError(
-        `Network ${customL1Network.chainID} already included`
-      )
-    } else if (!customL1Network.isCustom) {
-      throw new ArbSdkError(
-        `Custom network ${customL1Network.chainID} must have isCustom flag set to true`
-      )
-    }
-
-    addNetwork(customL1Network)
+export const addCustomNetwork = (network: ArbitrumNetwork): void => {
+  if (typeof networks[network.chainID] !== 'undefined') {
+    throw new Error(`Network ${network.chainID} already included`)
   }
 
-  if (l2Networks[customArbitrumNetwork.chainID]) {
-    throw new ArbSdkError(
-      `Network ${customArbitrumNetwork.chainID} already included`
-    )
-  } else if (!customArbitrumNetwork.isCustom) {
-    throw new ArbSdkError(
-      `Custom network ${customArbitrumNetwork.chainID} must have isCustom flag set to true`
-    )
-  }
-
-  addNetwork(customArbitrumNetwork)
+  // store the network with the rest of the networks
+  networks[network.chainID] = network
+  l2Networks = getArbitrumChains()
 }
 
 /**
@@ -585,10 +554,7 @@ export const addDefaultLocalNetwork = (): {
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   }
 
-  addCustomNetwork({
-    customL1Network: defaultLocalL1Network,
-    customArbitrumNetwork: defaultLocalL2Network,
-  })
+  addCustomNetwork(defaultLocalL2Network)
 
   return {
     l1Network: defaultLocalL1Network,
