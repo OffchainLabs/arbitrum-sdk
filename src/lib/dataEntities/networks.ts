@@ -15,6 +15,7 @@
  */
 /* eslint-env node */
 ;('use strict')
+import { Provider } from '@ethersproject/abstract-provider'
 
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
@@ -543,6 +544,29 @@ export function getNitroGenesisBlock(
   }
 
   return 0
+}
+
+export async function getMulticall(provider: Provider): Promise<string> {
+  const registeredChains = [...Object.values(l2Networks)]
+
+  const chainId = (await provider.getNetwork()).chainId
+  const chain = registeredChains.find(c => c.chainID === chainId)
+
+  // The provided chain is not a registered chain
+  if (typeof chain === 'undefined') {
+    // The provided chain could be a parent of a registered chain
+    const firstChild = registeredChains.find(c => c.parentChainId === chainId)
+
+    if (typeof firstChild === 'undefined') {
+      throw new Error(
+        `Failed to retrieve Multicall address for chain: ${chainId}`
+      )
+    }
+
+    return firstChild.tokenBridge.l1MultiCall
+  }
+
+  return chain.tokenBridge.l2Multicall
 }
 
 const { resetNetworksToDefault } = createNetworkStateHandler()

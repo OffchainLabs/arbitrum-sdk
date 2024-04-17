@@ -22,14 +22,7 @@ import { BigNumber, utils } from 'ethers'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { Multicall2 } from '../abi/Multicall2'
 import { Multicall2__factory } from '../abi/factories/Multicall2__factory'
-import { ArbSdkError } from '../dataEntities/errors'
-import {
-  isL1Network,
-  L1Network,
-  l1Networks,
-  L2Network,
-  l2Networks,
-} from '../dataEntities/networks'
+import { getMulticall } from '../dataEntities/networks'
 
 /**
  * Input to multicall aggregator
@@ -130,33 +123,7 @@ export class MultiCaller {
    * @returns
    */
   public static async fromProvider(provider: Provider): Promise<MultiCaller> {
-    const chainId = (await provider.getNetwork()).chainId
-    const l2Network = l2Networks[chainId] as L2Network | undefined
-    const l1Network = l1Networks[chainId] as L1Network | undefined
-
-    const network = l2Network || l1Network
-    if (!network) {
-      throw new ArbSdkError(
-        `Unexpected network id: ${chainId}. Ensure that chain ${chainId} has been added as a network.`
-      )
-    }
-
-    let multiCallAddr: string
-    if (isL1Network(network)) {
-      // If the network is an L1, just find a child L2 and pick up the multicall address from there
-      const firstL2 = [...Object.values(l2Networks)].find(
-        chain => chain.parentChainId === network.chainID
-      )
-      if (!firstL2)
-        throw new ArbSdkError(
-          `No children chains found for network: ${network.chainID}`
-        )
-      multiCallAddr = firstL2.tokenBridge.l1MultiCall
-    } else {
-      multiCallAddr = network.tokenBridge.l2Multicall
-    }
-
-    return new MultiCaller(provider, multiCallAddr)
+    return new MultiCaller(provider, await getMulticall(provider))
   }
 
   /**
