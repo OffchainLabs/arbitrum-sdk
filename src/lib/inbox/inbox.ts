@@ -18,7 +18,7 @@
 
 import { Signer } from '@ethersproject/abstract-signer'
 import { Block, Provider } from '@ethersproject/abstract-provider'
-import { BigNumber, ContractTransaction, ethers, Overrides } from 'ethers'
+import { BigNumber, ContractTransaction, Overrides } from 'ethers'
 import { TransactionRequest } from '@ethersproject/providers'
 
 import { Bridge } from '../abi/Bridge'

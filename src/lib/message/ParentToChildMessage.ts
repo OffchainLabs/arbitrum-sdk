@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 /* eslint-env node */
-;('use strict')
+'use strict'
 
 import { TransactionReceipt } from '@ethersproject/providers'
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
+import { concat } from '@ethersproject/bytes'
 import { getAddress } from '@ethersproject/address'
 import { keccak256 } from '@ethersproject/keccak256'
 
@@ -42,15 +43,7 @@ import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt, isDefined } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
 import { ErrorCode, Logger } from '@ethersproject/logger'
-import {
-  ZeroAddress,
-  concat,
-  encodeRlp,
-  toQuantity,
-  getBytes,
-  zeroPadValue,
-  hexlify,
-} from 'ethers-v6'
+import { ZeroAddress, toBeArray, encodeRlp, zeroPadValue } from 'ethers-v6'
 
 export enum ParentToChildMessageStatus {
   /**
@@ -148,7 +141,7 @@ export abstract class ParentToChildMessage {
     data: string
   ): string {
     const formatNumber = (value: BigNumber): Uint8Array => {
-      return getBytes(hexlify(value.toHexString()))
+      return toBeArray(value.toHexString())
     }
 
     const chainId = BigNumber.from(chainChainId)
@@ -775,7 +768,7 @@ export class EthDepositMessage {
     value: BigNumber
   ): string {
     const formatNumber = (numberVal: BigNumber): Uint8Array => {
-      return getBytes(hexlify(numberVal.toHexString()))
+      return toBeArray(numberVal.toHexString())
     }
 
     const chainId = BigNumber.from(chainChainId)
