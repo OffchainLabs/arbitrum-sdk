@@ -278,10 +278,18 @@ export const networks: Networks = {
 /**
  * Determines if a chain is a parent of *any* other chain. Could be an L1 or an L2 chain.
  */
-const isParentChain = (chain: L1Network | ArbitrumNetwork): boolean => {
-  const chains = [...Object.values(l2Networks)]
+export const isParentChain = (
+  parentChainOrChainId: L1Network | ArbitrumNetwork | number
+): boolean => {
+  const parentChainId =
+    typeof parentChainOrChainId === 'number'
+      ? parentChainOrChainId
+      : parentChainOrChainId.chainID
+
   // Check if there are any chains that have this chain as its parent chain
-  return chains.some(c => c.partnerChainID === chain.chainID)
+  return [...Object.values(l2Networks)].some(
+    c => c.partnerChainID === parentChainId
+  )
 }
 
 /**
