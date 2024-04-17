@@ -44,7 +44,7 @@ import { fundL1 } from '../tests/integration/testHelpers'
 dotenv.config()
 
 const isTestingOrbitChains = process.env.ORBIT_TEST === '1'
-const isTestingNon18Decimals = process.env.NON_18_DECIMALS_TEST === '1'
+// const isTestingNon18Decimals = process.env.NON_18_DECIMALS_TEST === '1'
 
 /**
  * The RPC urls and private keys using during testing
@@ -54,10 +54,10 @@ const isTestingNon18Decimals = process.env.NON_18_DECIMALS_TEST === '1'
 
 export const config = (function () {
   if (isTestingOrbitChains) {
-    if (isTestingNon18Decimals) {
-      // TODO
-      return {}
-    }
+    // TODO
+    // if (isTestingNon18Decimals) {
+    //   return {}
+    // }
     // 18 decimals native token
     return {
       arbUrl: process.env['ORBIT_URL'] as string,
