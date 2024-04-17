@@ -145,7 +145,7 @@ export class MultiCaller {
     if (isL1Network(network)) {
       // If the network is an L1, just find a child L2 and pick up the multicall address from there
       const firstL2 = [...Object.values(l2Networks)].find(
-        chain => chain.partnerChainID === network.chainID
+        chain => chain.parentChainId === network.chainID
       )
       if (!firstL2)
         throw new ArbSdkError(
