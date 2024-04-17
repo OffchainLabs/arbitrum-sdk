@@ -44,7 +44,6 @@ export { argSerializerConstructor } from './lib/utils/byte_serialize_params'
 export { CallInput, MultiCaller } from './lib/utils/multicall'
 export {
   L2Networks,
-  L1Network,
   L2Network,
   getL2Network,
   addCustomNetwork,

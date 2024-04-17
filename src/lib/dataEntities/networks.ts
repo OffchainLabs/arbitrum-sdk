@@ -22,23 +22,13 @@ import { ArbSdkError } from '../dataEntities/errors'
 import { ARB1_NITRO_GENESIS_L2_BLOCK } from './constants'
 import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__factory'
 
-export interface Network {
-  chainID: number
-  name: string
-  isCustom: boolean
-}
-
-/**
- * Represents an L1 chain, e.g. Ethereum Mainnet or Sepolia.
- */
-export interface L1Network extends Network {
-  isArbitrum: false
-}
-
 /**
  * Represents an Arbitrum chain, e.g. Arbitrum One, Arbitrum Sepolia, or an L3 chain.
  */
-export interface ArbitrumNetwork extends Network {
+export interface ArbitrumNetwork {
+  chainID: number
+  name: string
+  isCustom: boolean
   tokenBridge: TokenBridge
   ethBridge: EthBridge
   /**
@@ -233,79 +223,13 @@ export const networks: Networks = {
   },
 }
 
-/**
- * Determines if a chain is a parent of *any* other chain. Could be an L1 or an L2 chain.
- */
-export const isParentChain = (
-  parentChainOrChainId: L1Network | ArbitrumNetwork | number
-): boolean => {
-  const parentChainId =
-    typeof parentChainOrChainId === 'number'
-      ? parentChainOrChainId
-      : parentChainOrChainId.chainID
-
-  // Check if there are any chains that have this chain as its parent chain
-  return [...Object.values(l2Networks)].some(
-    c => c.parentChainId === parentChainId
-  )
-}
-
-/**
- * Determines if a chain is an Arbitrum chain. Could be an L2 or an L3 chain.
- */
-const isArbitrumNetwork = (
-  chain: L1Network | ArbitrumNetwork
-): chain is ArbitrumNetwork => {
-  return chain.isArbitrum
-}
-
-/**
- * Builds an object that is a list of chains filtered by the provided predicate function indexed by their chain id
- * @param filterFn - A predicate function to determine if a chain should be included.
- * @return An object with only the filtered chains.
- */
-const getChainsByType = <T extends typeof networks>(
-  filterFn: (chain: L1Network | ArbitrumNetwork) => boolean
-): T => {
-  return Object.entries(networks).reduce<typeof networks>(
-    (accumulator, [chainId, chainData]) => {
-      if (filterFn(chainData)) {
-        accumulator[chainId] = chainData
-      }
-      return accumulator
-    },
-    {}
-  ) as T
-}
-
-const getArbitrumChains = () =>
-  getChainsByType<ArbitrumNetworks>(isArbitrumNetwork)
-
-/**
- * Returns the parent chain for the given chain.
- */
-export const getParentForNetwork = (chain: L1Network | ArbitrumNetwork) => {
-  if (!isArbitrumNetwork(chain)) {
-    throw new ArbSdkError(`Chain ${chain.chainID} is not an Arbitrum chain.`)
-  }
-
-  const parentChain: L1Network | ArbitrumNetwork | undefined =
-    networks[chain.parentChainId]
-
-  if (!parentChain || !isParentChain(parentChain)) {
-    throw new ArbSdkError(
-      `Parent chain ${chain.parentChainId} not recognized for chain ${chain.chainID}.`
-    )
-  }
-
-  return parentChain
-}
+const getArbitrumChains = () => l2Networks
 
 /**
  * Returns a list of children chains for the given chain or chain id.
  */
 export const getChildrenForNetwork = (
-  parentChainOrChainId: L1Network | ArbitrumNetwork | number
+  parentChainOrChainId: ArbitrumNetwork | number
 ): ArbitrumNetwork[] => {
   const parentChainId =
     typeof parentChainOrChainId === 'number'
@@ -341,7 +265,7 @@ export const getNetwork = async (
     return chainId
   })()
 
-  let network: L1Network | ArbitrumNetwork | undefined = undefined
+  let network: ArbitrumNetwork | undefined = undefined
 
   network = getArbitrumChains()[chainID]
 
@@ -415,17 +339,7 @@ export const addCustomNetwork = (network: ArbitrumNetwork): void => {
  *
  * @see {@link https://github.com/OffchainLabs/nitro}
  */
-export const addDefaultLocalNetwork = (): {
-  l1Network: L1Network
-  l2Network: ArbitrumNetwork
-} => {
-  const defaultLocalL1Network: L1Network = {
-    chainID: 1337,
-    isCustom: true,
-    name: 'EthLocal',
-    isArbitrum: false,
-  }
-
+export const addDefaultLocalNetwork = (): ArbitrumNetwork => {
   const defaultLocalL2Network: ArbitrumNetwork = {
     chainID: 412346,
     confirmPeriodBlocks: 20,
@@ -460,10 +374,7 @@ export const addDefaultLocalNetwork = (): {
 
   addCustomNetwork(defaultLocalL2Network)
 
-  return {
-    l1Network: defaultLocalL1Network,
-    l2Network: defaultLocalL2Network,
-  }
+  return defaultLocalL2Network
 }
 
 /**

@@ -23,7 +23,6 @@ import dotenv from 'dotenv'
 
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
-  L1Network,
   ArbitrumNetwork,
   getArbitrumNetwork,
   addCustomNetwork,
@@ -137,7 +136,6 @@ export const testSetup = async (): Promise<{
 }
 
 export function getLocalNetworksFromFile(): {
-  l1Network: L1Network | ArbitrumNetwork
   l2Network: ArbitrumNetwork
 } {
   const pathToLocalNetworkFile = path.join(__dirname, '..', 'localNetwork.json')
