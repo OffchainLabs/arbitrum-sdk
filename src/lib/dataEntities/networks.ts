@@ -346,15 +346,18 @@ export const getParentForNetwork = (chain: L1Network | ArbitrumNetwork) => {
 }
 
 /**
- * Returns a list of children chains for the given chain.
+ * Returns a list of children chains for the given chain or chain id.
  */
-const getChildrenForNetwork = (
-  chain: L1Network | ArbitrumNetwork
+export const getChildrenForNetwork = (
+  parentChainOrChainId: L1Network | ArbitrumNetwork | number
 ): ArbitrumNetwork[] => {
-  const arbitrumChains = getArbitrumChains()
+  const parentChainId =
+    typeof parentChainOrChainId === 'number'
+      ? parentChainOrChainId
+      : parentChainOrChainId.chainID
 
-  return Object.values(arbitrumChains).filter(
-    arbitrumChain => arbitrumChain.partnerChainID === chain.chainID
+  return Object.values(getArbitrumChains()).filter(
+    arbitrumChain => arbitrumChain.partnerChainID === parentChainId
   )
 }
 

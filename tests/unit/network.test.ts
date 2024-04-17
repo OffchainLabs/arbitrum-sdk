@@ -6,6 +6,7 @@ import {
   getArbitrumNetwork,
   l1Networks,
   l2Networks as arbitrumNetworks,
+  getChildrenForNetwork,
 } from '../../src/lib/dataEntities/networks'
 
 const ethereumMainnetChainId = 1
@@ -298,6 +299,33 @@ describe('Networks', async () => {
 
       expect(arbitrumNetworksKeys).to.have.length(expected.length)
       expect(arbitrumNetworksKeys).to.have.members(expected)
+    })
+  })
+
+  describe('getChildrenForNetwork', () => {
+    it('returns correct children for ethereum mainnet', () => {
+      const children = getChildrenForNetwork(1).map(c => c.chainID)
+      expect(children).to.have.members([42161, 42170])
+    })
+
+    it('returns correct children for arbitrum one', () => {
+      const children = getChildrenForNetwork(42161).map(c => c.chainID)
+      expect(children).to.have.members([])
+    })
+
+    it('returns correct children for arbitrum nova', () => {
+      const children = getChildrenForNetwork(42170).map(c => c.chainID)
+      expect(children).to.have.members([])
+    })
+
+    it('returns correct children for sepolia', () => {
+      const children = getChildrenForNetwork(11155111).map(c => c.chainID)
+      expect(children).to.have.members([421614])
+    })
+
+    it('returns correct children for arbitrum sepolia', () => {
+      const children = getChildrenForNetwork(421614).map(c => c.chainID)
+      expect(children).to.have.members([23011913])
     })
   })
 })
