@@ -40,14 +40,12 @@ async function patchNetworks(
   l3Network: L2Network | undefined,
   l2Provider: ethers.providers.Provider | undefined
 ) {
-  // @ts-ignore
-  l2Network.parentChainId = l2Network.partnerChainID
+  l2Network.parentChainId = (l2Network as any).partnerChainID
   l2Network.blockTime = ARB_MINIMUM_BLOCK_TIME_IN_SECONDS
 
   // native token for l3
   if (l3Network && l2Provider) {
-    // @ts-ignore
-    l3Network.parentChainId = l3Network.partnerChainID
+    l3Network.parentChainId = (l3Network as any).partnerChainID
     l3Network.blockTime = ARB_MINIMUM_BLOCK_TIME_IN_SECONDS
 
     try {
