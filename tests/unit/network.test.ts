@@ -145,7 +145,7 @@ describe('Networks', async () => {
       const ethereumMainnet = await getL1Network(ethereumMainnetChainId)
       const arbitrumOne = await getArbitrumNetwork(arbitrumOneChainId)
 
-      const wrongparentChainId = 1241244
+      const wrongParentChainId = 1241244
 
       const customL1Network = {
         ...ethereumMainnet,
@@ -156,7 +156,7 @@ describe('Networks', async () => {
 
       const customArbitrumNetwork = {
         ...arbitrumOne,
-        parentChainId: wrongparentChainId,
+        parentChainId: wrongParentChainId,
         chainID: mockL2ChainId,
         isArbitrum: true,
         isCustom: true,
@@ -168,7 +168,7 @@ describe('Networks', async () => {
         // should fail
         expect(err).to.be.an('error')
         expect((err as Error).message).to.be.eq(
-          `Partner chain id for Arbitrum network ${customArbitrumNetwork.chainID} doesn't match the provided L1 network. Expected ${customL1Network.chainID} but got ${wrongparentChainId}.`
+          `Partner chain id for Arbitrum network ${customArbitrumNetwork.chainID} doesn't match the provided L1 network. Expected ${customL1Network.chainID} but got ${wrongParentChainId}.`
         )
       }
     })
