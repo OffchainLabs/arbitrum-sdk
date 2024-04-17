@@ -437,27 +437,36 @@ export function getNitroGenesisBlock(
   return 0
 }
 
-export async function getMulticall(provider: Provider): Promise<string> {
-  const registeredChains = [...Object.values(l2Networks)]
+export async function getMulticall(
+  providerOrChainId: Provider | number
+): Promise<string> {
+  const chains = [...Object.values(l2Networks)]
 
-  const chainId = (await provider.getNetwork()).chainId
-  const chain = registeredChains.find(c => c.chainID === chainId)
+  const chainId =
+    typeof providerOrChainId === 'number'
+      ? providerOrChainId
+      : (await providerOrChainId.getNetwork()).chainId
+  const chain = chains.find(c => c.chainID === chainId)
 
-  // The provided chain is not a registered chain
-  if (typeof chain === 'undefined') {
-    // The provided chain could be a parent of a registered chain
-    const firstChild = registeredChains.find(c => c.parentChainId === chainId)
-
-    if (typeof firstChild === 'undefined') {
-      throw new Error(
-        `Failed to retrieve Multicall address for chain: ${chainId}`
-      )
-    }
-
-    return firstChild.tokenBridge.l1MultiCall
+  // The provided chain is found in the list
+  if (typeof chain !== 'undefined') {
+    // Return the address of Multicall on the chain
+    return chain.tokenBridge.l2Multicall
   }
 
-  return chain.tokenBridge.l2Multicall
+  // The provided chain is not found in the list
+  // Try to find a chain that references this chain as its parent
+  const child = chains.find(c => c.parentChainId === chainId)
+
+  // No chains reference this chain as its parent
+  if (typeof child === 'undefined') {
+    throw new Error(
+      `Failed to retrieve Multicall address for chain: ${chainId}`
+    )
+  }
+
+  // Return the address of Multicall on the parent chain
+  return child.tokenBridge.l1MultiCall
 }
 
 const { resetNetworksToDefault } = createNetworkStateHandler()
