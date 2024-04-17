@@ -87,16 +87,12 @@ export interface EthBridge {
   }
 }
 
-export interface L1Networks {
-  [id: string]: L1Network
-}
-
 export interface ArbitrumNetworks {
   [id: string]: ArbitrumNetwork
 }
 
 export interface Networks {
-  [id: string]: L1Network | ArbitrumNetwork
+  [id: string]: ArbitrumNetwork
 }
 
 const mainnetTokenBridge: TokenBridge = {
@@ -132,30 +128,6 @@ const mainnetETHBridge: EthBridge = {
  * Storage for all networks, either L1, L2 or L3.
  */
 export const networks: Networks = {
-  1: {
-    chainID: 1,
-    name: 'Mainnet',
-    isCustom: false,
-    isArbitrum: false,
-  },
-  1338: {
-    chainID: 1338,
-    name: 'Hardhat_Mainnet_Fork',
-    isCustom: false,
-    isArbitrum: false,
-  },
-  11155111: {
-    chainID: 11155111,
-    name: 'Sepolia',
-    isCustom: false,
-    isArbitrum: false,
-  },
-  17000: {
-    chainID: 17000,
-    name: 'Holesky',
-    isCustom: false,
-    isArbitrum: false,
-  },
   42161: {
     chainID: 42161,
     name: 'Arbitrum One',
@@ -288,15 +260,6 @@ const isArbitrumNetwork = (
 }
 
 /**
- * Determines if a chain is specifically an L1 chain (not L2 or L3).
- */
-export const isL1Network = (
-  chain: L1Network | ArbitrumNetwork
-): chain is L1Network => {
-  return !chain.isArbitrum
-}
-
-/**
  * Builds an object that is a list of chains filtered by the provided predicate function indexed by their chain id
  * @param filterFn - A predicate function to determine if a chain should be included.
  * @return An object with only the filtered chains.
@@ -315,7 +278,6 @@ const getChainsByType = <T extends typeof networks>(
   ) as T
 }
 
-const getL1Chains = () => getChainsByType<L1Networks>(isL1Network)
 const getArbitrumChains = () =>
   getChainsByType<ArbitrumNetworks>(isArbitrumNetwork)
 
@@ -356,11 +318,6 @@ export const getChildrenForNetwork = (
 }
 
 /**
- * Index of *only* L1 chains that have been added.
- */
-export let l1Networks: L1Networks = getL1Chains()
-
-/**
  * Index of all Arbitrum chains that have been added.
  */
 export let l2Networks: ArbitrumNetworks = getArbitrumChains()
@@ -370,8 +327,7 @@ export let l2Networks: ArbitrumNetworks = getArbitrumChains()
  * @note Throws if the chain is not recognized.
  */
 export const getNetwork = async (
-  signerOrProviderOrChainID: SignerOrProvider | number,
-  layer: 1 | 2
+  signerOrProviderOrChainID: SignerOrProvider | number
 ) => {
   const chainID = await (async () => {
     if (typeof signerOrProviderOrChainID === 'number') {
@@ -387,11 +343,7 @@ export const getNetwork = async (
 
   let network: L1Network | ArbitrumNetwork | undefined = undefined
 
-  if (layer === 1) {
-    network = getL1Chains()[chainID]
-  } else {
-    network = getArbitrumChains()[chainID]
-  }
+  network = getArbitrumChains()[chainID]
 
   if (!network) {
     throw new ArbSdkError(`Unrecognized network ${chainID}.`)
@@ -408,7 +360,7 @@ export const getNetwork = async (
 export const getArbitrumNetwork = (
   signerOrProviderOrChainID: SignerOrProvider | number
 ): Promise<ArbitrumNetwork> => {
-  return getNetwork(signerOrProviderOrChainID, 2) as Promise<ArbitrumNetwork>
+  return getNetwork(signerOrProviderOrChainID) as Promise<ArbitrumNetwork>
 }
 
 /**
@@ -524,7 +476,6 @@ const createNetworkStateHandler = () => {
     resetNetworksToDefault: () => {
       Object.keys(networks).forEach(key => delete networks[key])
       Object.assign(networks, JSON.parse(JSON.stringify(initialState)))
-      l1Networks = getL1Chains()
       l2Networks = getArbitrumChains()
     },
   }

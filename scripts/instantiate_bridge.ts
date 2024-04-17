@@ -22,12 +22,7 @@ import { Wallet } from '@ethersproject/wallet'
 import dotenv from 'dotenv'
 import args from './getCLargs'
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
-import {
-  l1Networks,
-  l2Networks,
-  L1Network,
-  L2Network,
-} from '../src/lib/dataEntities/networks'
+import { l2Networks, L2Network } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { isDefined } from '../src/lib/utils/lib'
@@ -43,7 +38,6 @@ export const instantiateBridge = (
   l1PkParam?: string,
   l2PkParam?: string
 ): {
-  l1Network: L1Network
   l2Network: L2Network
   l1Signer: Signer
   l2Signer: Signer
@@ -68,21 +62,14 @@ export const instantiateBridge = (
 
     l2NetworkID = defaultNetworkId
   }
-  const isL1 = isDefined(l1Networks[l2NetworkID])
+
   const isL2 = isDefined(l2Networks[l2NetworkID])
-  if (!isL1 && !isL2) {
-    throw new Error(`Unrecognized network ID: ${l2NetworkID}`)
-  }
+
   if (!isL2) {
     throw new Error(`Tests must specify an L2 network ID: ${l2NetworkID}`)
   }
 
   const l2Network = l2Networks[l2NetworkID]
-  const l1Network = l1Networks[l2Network.parentChainId]
-
-  if (!l1Network) {
-    throw new Error(`Unrecognised parent chain id: ${l2Network.parentChainId}`)
-  }
 
   const l1Rpc = (() => {
     if (l2NetworkID === 42161) return process.env['MAINNET_RPC'] as string
@@ -138,7 +125,6 @@ export const instantiateBridge = (
   const inboxTools = new InboxTools(l1Signer, l2Network)
 
   return {
-    l1Network,
     l2Network,
     l1Signer,
     l2Signer,
