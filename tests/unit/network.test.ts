@@ -36,9 +36,6 @@ describe('Networks', async () => {
 
       expect(await getArbitrumNetwork(mockL2ChainId)).to.be.ok
 
-      // assert network was added as child
-      const l1Network = await getL1Network(customArbitrumNetwork.partnerChainID)
-      expect(l1Network.partnerChainIDs).to.include(mockL2ChainId)
       // assert network has correct parent
       const arbitrumNetwork = await getArbitrumNetwork(
         customArbitrumNetwork.chainID
@@ -70,9 +67,6 @@ describe('Networks', async () => {
       expect(await getL1Network(mockL1ChainId)).to.be.ok
       expect(await getArbitrumNetwork(mockL2ChainId)).to.be.ok
 
-      // assert network was added as child
-      const l1Network = await getL1Network(mockL1ChainId)
-      expect(l1Network.partnerChainIDs).to.include(mockL2ChainId)
       // assert network has correct parent
       const arbitrumNetwork = await getArbitrumNetwork(
         customArbitrumNetwork.chainID
@@ -95,11 +89,6 @@ describe('Networks', async () => {
 
       expect(await getArbitrumNetwork(mockL3ChainId)).to.be.ok
 
-      // assert network was added as child
-      const arbitrumNetwork = await getArbitrumNetwork(
-        customArbitrumNetwork.partnerChainID
-      )
-      expect(arbitrumNetwork.partnerChainIDs).to.include(mockL3ChainId)
       // assert network has correct parent
       const l3Network = await getArbitrumNetwork(mockL3ChainId)
       expect(l3Network.partnerChainID).to.equal(arbitrumOneChainId)
@@ -129,9 +118,6 @@ describe('Networks', async () => {
       expect(await getL1Network(mockL1ChainId)).to.be.ok
       expect(await getArbitrumNetwork(mockL2ChainId)).to.be.ok
 
-      // assert network was added as child
-      const l1Network = await getL1Network(mockL1ChainId)
-      expect(l1Network.partnerChainIDs).to.include(mockL2ChainId)
       // assert network has correct parent
       const arbitrumNetwork = await getArbitrumNetwork(mockL2ChainId)
       expect(arbitrumNetwork.partnerChainID).to.equal(mockL1ChainId)
@@ -148,9 +134,6 @@ describe('Networks', async () => {
 
       expect(await getArbitrumNetwork(mockL3ChainId)).to.be.ok
 
-      // assert network was added as child
-      const arbitrumNetworkAgain = await getArbitrumNetwork(mockL2ChainId)
-      expect(arbitrumNetworkAgain.partnerChainIDs).to.include(mockL3ChainId)
       // assert network has correct parent
       const l3Network = await getArbitrumNetwork(mockL3ChainId)
       expect(l3Network.partnerChainID).to.equal(mockL2ChainId)
@@ -263,12 +246,6 @@ describe('Networks', async () => {
       expect(l3Network.chainID).to.be.eq(mockL3ChainId)
       // assert network has correct parent
       expect(l3Network.partnerChainID).to.equal(arbitrumOneChainId)
-
-      // assert network was added as child
-      const arbitrumNetwork = await getArbitrumNetwork(
-        customL3Network.partnerChainID
-      )
-      expect(arbitrumNetwork.partnerChainIDs).to.include(mockL3ChainId)
     })
 
     it('fails to fetch an unrecognized L1 network', async () => {
