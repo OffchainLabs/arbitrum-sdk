@@ -8,6 +8,7 @@ import {
 } from '../../../scripts/testSetup'
 import { Erc20Bridger, EthBridger } from '../../../src'
 import { ERC20__factory } from '../../../src/lib/abi/factories/ERC20__factory'
+import { ZeroAddress } from 'ethers-v6'
 
 // `config` isn't initialized yet, so we have to wrap these in functions
 const ethProvider = () => new StaticJsonRpcProvider(config.ethUrl)
@@ -16,7 +17,7 @@ const localNetworks = () => getLocalNetworksFromFile()
 
 export function isArbitrumNetworkWithCustomFeeToken(): boolean {
   const nt = localNetworks().l2Network.nativeToken
-  return typeof nt !== 'undefined' && nt !== ethers.constants.AddressZero
+  return typeof nt !== 'undefined' && nt !== ZeroAddress
 }
 
 export async function testSetup() {

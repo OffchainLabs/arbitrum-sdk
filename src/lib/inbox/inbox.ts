@@ -41,6 +41,7 @@ import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { InboxMessageKind } from '../dataEntities/message'
 import { isDefined } from '../utils/lib'
+import { ZeroAddress } from 'ethers-v6'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
@@ -116,7 +117,7 @@ export class InboxTools {
     if (
       childChainTransactionRequest.to === '0x' ||
       !isDefined(childChainTransactionRequest.to) ||
-      childChainTransactionRequest.to === ethers.constants.AddressZero
+      childChainTransactionRequest.to === ZeroAddress
     ) {
       return true
     }
@@ -141,7 +142,7 @@ export class InboxTools {
       childChainTransactionRequest
     )
     const gasComponents = await nodeInterface.callStatic.gasEstimateComponents(
-      childChainTransactionRequest.to || ethers.constants.AddressZero,
+      childChainTransactionRequest.to || ZeroAddress,
       contractCreation,
       childChainTransactionRequest.data,
       {
@@ -419,7 +420,7 @@ export class InboxTools {
     // however, it is needed when we call to estimateArbitrumGas, so
     // we add a zero address here.
     if (!isDefined(tx.to)) {
-      tx.to = ethers.constants.AddressZero
+      tx.to = ZeroAddress
     }
 
     //estimate gas on child chain

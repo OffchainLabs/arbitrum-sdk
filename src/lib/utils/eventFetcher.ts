@@ -21,6 +21,7 @@ import { Contract, Event } from '@ethersproject/contracts'
 import { constants } from 'ethers'
 import { TypedEvent, TypedEventFilter } from '../abi/common'
 import { EventArgs, TypeChainContractFactory } from '../dataEntities/event'
+import { ZeroAddress } from 'ethers-v6'
 
 export type FetchedEvent<TEvent extends Event> = {
   event: EventArgs<TEvent>
@@ -67,7 +68,7 @@ export class EventFetcher {
     }
   ): Promise<FetchedEvent<TEventOf<TEventFilter>>[]> {
     const contract = contractFactory.connect(
-      filter.address || constants.AddressZero,
+      filter.address || ZeroAddress,
       this.provider
     )
     const eventFilter = topicGenerator(contract)

@@ -47,6 +47,7 @@ import {
   fundParentCustomFeeToken,
   isArbitrumNetworkWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
+import { ZeroAddress } from 'ethers-v6'
 
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
@@ -199,28 +200,28 @@ const registerCustomToken = async (
   expect(
     startL1GatewayAddress,
     'Start l1GatewayAddress not equal empty address'
-  ).to.eq(constants.AddressZero)
+  ).to.eq(ZeroAddress)
   const startL2GatewayAddress = await l2GatewayRouter.l1TokenToGateway(
     l2CustomToken.address
   )
   expect(
     startL2GatewayAddress,
     'Start l2GatewayAddress not equal empty address'
-  ).to.eq(constants.AddressZero)
+  ).to.eq(ZeroAddress)
   const startL1Erc20Address = await l1CustomGateway.l1ToL2Token(
     l1CustomToken.address
   )
   expect(
     startL1Erc20Address,
     'Start l1Erc20Address not equal empty address'
-  ).to.eq(constants.AddressZero)
+  ).to.eq(ZeroAddress)
   const startL2Erc20Address = await l2CustomGateway.l1ToL2Token(
     l1CustomToken.address
   )
   expect(
     startL2Erc20Address,
     'Start l2Erc20Address not equal empty address'
-  ).to.eq(constants.AddressZero)
+  ).to.eq(ZeroAddress)
 
   // send the messages
   const regTx = await adminErc20Bridger.registerCustomToken(

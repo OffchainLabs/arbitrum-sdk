@@ -39,6 +39,7 @@ import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt, isDefined } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
 import { ErrorCode, Logger } from '@ethersproject/logger'
+import { ZeroAddress } from 'ethers-v6'
 
 export enum ParentToChildMessageStatus {
   /**
@@ -152,7 +153,7 @@ export abstract class ParentToChildMessage {
       formatNumber(maxFeePerGas),
       formatNumber(gasLimit),
       // when destAddress is 0x0, arbos treat that as nil
-      destAddress === ethers.constants.AddressZero ? '0x' : destAddress,
+      destAddress === ZeroAddress ? '0x' : destAddress,
       formatNumber(chainCallValue),
       callValueRefundAddress,
       formatNumber(maxSubmissionFee),
