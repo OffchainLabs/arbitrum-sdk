@@ -143,7 +143,7 @@ export class MultiCaller {
 
     let multiCallAddr: string
     if (isL1Network(network)) {
-      // If the network is an L1, just find a child L2 and pick up the multicall address from there
+      // If the network is an L1, find one of its L2s and pick up the multicall address from there
       const firstL2 = [...Object.values(l2Networks)].find(
         chain => chain.parentChainId === network.chainID
       )
