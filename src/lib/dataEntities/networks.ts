@@ -15,6 +15,7 @@
  */
 /* eslint-env node */
 ;('use strict')
+
 import { Provider } from '@ethersproject/abstract-provider'
 
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
