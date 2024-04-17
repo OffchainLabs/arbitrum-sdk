@@ -8,6 +8,7 @@ import {
   l2Networks as arbitrumNetworks,
   getChildrenForNetwork,
   isParentChain,
+  getMulticall,
 } from '../../src/lib/dataEntities/networks'
 
 const ethereumMainnetChainId = 1
@@ -349,6 +350,33 @@ describe('Networks', async () => {
 
     it('returns correct value for arbitrum sepolia', () => {
       expect(isParentChain(421614)).to.equal(true)
+    })
+  })
+
+  describe('getMulticall', () => {
+    it('returns correct value for ethereum mainnet', async () => {
+      const multicall = await getMulticall(1)
+      expect(multicall).to.equal('0x5ba1e12693dc8f9c48aad8770482f4739beed696')
+    })
+
+    it('returns correct value for arbitrum one', async () => {
+      const multicall = await getMulticall(42161)
+      expect(multicall).to.equal('0x842eC2c7D803033Edf55E478F461FC547Bc54EB2')
+    })
+
+    it('returns correct value for arbitrum nova', async () => {
+      const multicall = await getMulticall(42170)
+      expect(multicall).to.equal('0x5e1eE626420A354BbC9a95FeA1BAd4492e3bcB86')
+    })
+
+    it('returns correct value for sepolia', async () => {
+      const multicall = await getMulticall(11155111)
+      expect(multicall).to.equal('0xded9AD2E65F3c4315745dD915Dbe0A4Df61b2320')
+    })
+
+    it('returns correct value for arbitrum sepolia', async () => {
+      const multicall = await getMulticall(421614)
+      expect(multicall).to.equal('0xA115146782b7143fAdB3065D86eACB54c169d092')
     })
   })
 })
