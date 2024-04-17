@@ -32,10 +32,6 @@ export interface Network {
    * Minimum possible block time for the chain (in seconds).
    */
   blockTime: number
-  /**
-   * Chain ids of children chains, i.e. chains that settle to this chain.
-   */
-  partnerChainIDs: number[]
 }
 
 /**
@@ -54,7 +50,7 @@ export interface ArbitrumNetwork extends Network {
   /**
    * Chain id of the parent chain, i.e. the chain on which this chain settles to.
    */
-  partnerChainID: number
+  parentChainId: number
   isArbitrum: true
   confirmPeriodBlocks: number
   /**
@@ -145,7 +141,6 @@ export const networks: Networks = {
   1: {
     chainID: 1,
     name: 'Mainnet',
-    partnerChainIDs: [42161, 42170],
     blockTime: 14,
     isCustom: false,
     isArbitrum: false,
@@ -153,7 +148,6 @@ export const networks: Networks = {
   1338: {
     chainID: 1338,
     name: 'Hardhat_Mainnet_Fork',
-    partnerChainIDs: [42161],
     blockTime: 1,
     isCustom: false,
     isArbitrum: false,
@@ -161,7 +155,6 @@ export const networks: Networks = {
   11155111: {
     chainID: 11155111,
     name: 'Sepolia',
-    partnerChainIDs: [421614],
     blockTime: 12,
     isCustom: false,
     isArbitrum: false,
@@ -169,7 +162,6 @@ export const networks: Networks = {
   17000: {
     chainID: 17000,
     name: 'Holesky',
-    partnerChainIDs: [],
     blockTime: 12,
     isCustom: false,
     isArbitrum: false,
@@ -177,8 +169,7 @@ export const networks: Networks = {
   42161: {
     chainID: 42161,
     name: 'Arbitrum One',
-    partnerChainID: 1,
-    partnerChainIDs: [],
+    parentChainId: 1,
     isArbitrum: true,
     tokenBridge: mainnetTokenBridge,
     ethBridge: mainnetETHBridge,
@@ -199,8 +190,7 @@ export const networks: Networks = {
     isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Nova',
-    partnerChainID: 1,
-    partnerChainIDs: [],
+    parentChainId: 1,
     tokenBridge: {
       l1CustomGateway: '0x23122da8C581AA7E0d07A36Ff1f16F799650232f',
       l1ERC20Gateway: '0xB2535b988dcE19f9D71dfB22dB6da744aCac21bf',
@@ -232,8 +222,7 @@ export const networks: Networks = {
     isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Rollup Sepolia Testnet',
-    partnerChainID: 11155111,
-    partnerChainIDs: [23011913],
+    parentChainId: 11155111,
     tokenBridge: {
       l1CustomGateway: '0xba2F7B6eAe1F9d174199C5E4867b563E0eaC40F3',
       l1ERC20Gateway: '0x902b3E5f8F19571859F4AB1003B960a5dF693aFF',
@@ -265,8 +254,7 @@ export const networks: Networks = {
     isArbitrum: true,
     isCustom: false,
     name: 'Stylus Testnet',
-    partnerChainID: 421614,
-    partnerChainIDs: [],
+    parentChainId: 421614,
     tokenBridge: {
       l1CustomGateway: '0xd624D491A5Bc32de52a2e1481846752213bF7415',
       l1ERC20Gateway: '0x7348Fdf6F3e090C635b23D970945093455214F3B',
@@ -290,8 +278,18 @@ export const networks: Networks = {
 /**
  * Determines if a chain is a parent of *any* other chain. Could be an L1 or an L2 chain.
  */
-const isParentChain = (chain: L1Network | ArbitrumNetwork): boolean => {
-  return chain.partnerChainIDs.length > 0
+export const isParentChain = (
+  parentChainOrChainId: L1Network | ArbitrumNetwork | number
+): boolean => {
+  const parentChainId =
+    typeof parentChainOrChainId === 'number'
+      ? parentChainOrChainId
+      : parentChainOrChainId.chainID
+
+  // Check if there are any chains that have this chain as its parent chain
+  return [...Object.values(l2Networks)].some(
+    c => c.parentChainId === parentChainId
+  )
 }
 
 /**
@@ -344,11 +342,11 @@ export const getParentForNetwork = (chain: L1Network | ArbitrumNetwork) => {
   }
 
   const parentChain: L1Network | ArbitrumNetwork | undefined =
-    networks[chain.partnerChainID]
+    networks[chain.parentChainId]
 
   if (!parentChain || !isParentChain(parentChain)) {
     throw new ArbSdkError(
-      `Parent chain ${chain.partnerChainID} not recognized for chain ${chain.chainID}.`
+      `Parent chain ${chain.parentChainId} not recognized for chain ${chain.chainID}.`
     )
   }
 
@@ -356,15 +354,18 @@ export const getParentForNetwork = (chain: L1Network | ArbitrumNetwork) => {
 }
 
 /**
- * Returns a list of children chains for the given chain.
+ * Returns a list of children chains for the given chain or chain id.
  */
-const getChildrenForNetwork = (
-  chain: L1Network | ArbitrumNetwork
+export const getChildrenForNetwork = (
+  parentChainOrChainId: L1Network | ArbitrumNetwork | number
 ): ArbitrumNetwork[] => {
-  const arbitrumChains = getArbitrumChains()
+  const parentChainId =
+    typeof parentChainOrChainId === 'number'
+      ? parentChainOrChainId
+      : parentChainOrChainId.chainID
 
-  return Object.values(arbitrumChains).filter(
-    arbitrumChain => arbitrumChain.partnerChainID === chain.chainID
+  return Object.values(getArbitrumChains()).filter(
+    arbitrumChain => arbitrumChain.parentChainId === parentChainId
   )
 }
 
@@ -478,22 +479,20 @@ const addNetwork = (network: L1Network | ArbitrumNetwork) => {
     const children = getChildrenForNetwork(network)
 
     children.forEach(child => {
-      child.partnerChainID = network.chainID
+      child.parentChainId = network.chainID
     })
   }
 
   // if it's an arbitrum chain, add it to the parent's list of children
   if (isArbitrumNetwork(network)) {
     const parent: L1Network | ArbitrumNetwork | undefined =
-      networks[network.partnerChainID]
+      networks[network.parentChainId]
 
     if (!parent) {
       throw new ArbSdkError(
-        `Network ${network.chainID}'s parent network ${network.partnerChainID} is not recognized`
+        `Network ${network.chainID}'s parent network ${network.parentChainId} is not recognized`
       )
     }
-
-    parent.partnerChainIDs = [...parent.partnerChainIDs, network.chainID]
   }
 
   l1Networks = getL1Chains()
@@ -514,9 +513,9 @@ export const addCustomNetwork = ({
   customArbitrumNetwork: ArbitrumNetwork
 }): void => {
   if (customL1Network) {
-    if (customL1Network.chainID !== customArbitrumNetwork.partnerChainID) {
+    if (customL1Network.chainID !== customArbitrumNetwork.parentChainId) {
       throw new ArbSdkError(
-        `Partner chain id for Arbitrum network ${customArbitrumNetwork.chainID} doesn't match the provided L1 network. Expected ${customL1Network.chainID} but got ${customArbitrumNetwork.partnerChainID}.`
+        `Partner chain id for Arbitrum network ${customArbitrumNetwork.chainID} doesn't match the provided L1 network. Expected ${customL1Network.chainID} but got ${customArbitrumNetwork.parentChainId}.`
       )
     }
 
@@ -561,7 +560,6 @@ export const addDefaultLocalNetwork = (): {
     chainID: 1337,
     isCustom: true,
     name: 'EthLocal',
-    partnerChainIDs: [412346],
     isArbitrum: false,
   }
 
@@ -578,8 +576,7 @@ export const addDefaultLocalNetwork = (): {
     isArbitrum: true,
     isCustom: true,
     name: 'ArbLocal',
-    partnerChainID: 1337,
-    partnerChainIDs: [],
+    parentChainId: 1337,
     tokenBridge: {
       l1CustomGateway: '0x3DF948c956e14175f43670407d5796b95Bb219D8',
       l1ERC20Gateway: '0x4A2bA922052bA54e29c5417bC979Daaf7D5Fe4f4',
