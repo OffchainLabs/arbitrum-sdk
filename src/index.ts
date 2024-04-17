@@ -47,7 +47,6 @@ export {
   L2Networks,
   L1Network,
   L2Network,
-  getL1Network,
   getL2Network,
   addCustomNetwork,
   addDefaultLocalNetwork,

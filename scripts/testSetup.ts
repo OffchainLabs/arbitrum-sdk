@@ -25,7 +25,6 @@ import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
   L1Network,
   ArbitrumNetwork,
-  getL1Network,
   getArbitrumNetwork,
   addCustomNetwork,
 } from '../src/lib/dataEntities/networks'
@@ -72,7 +71,6 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
 }
 
 export const testSetup = async (): Promise<{
-  parentChain: L1Network | ArbitrumNetwork
   childChain: ArbitrumNetwork
   parentSigner: Signer
   childSigner: Signer
@@ -95,14 +93,10 @@ export const testSetup = async (): Promise<{
   const parentSigner = seed.connect(ethProvider)
   const childSigner = seed.connect(arbProvider)
 
-  let setParentChain: L1Network | ArbitrumNetwork,
-    setChildChain: ArbitrumNetwork
+  let setChildChain: ArbitrumNetwork
+
   try {
-    const l1Network = isTestingOrbitChains
-      ? await getArbitrumNetwork(parentDeployer)
-      : await getL1Network(parentDeployer)
     const l2Network = await getArbitrumNetwork(childDeployer)
-    setParentChain = l1Network
     setChildChain = l2Network
   } catch (err) {
     // the networks havent been added yet
@@ -131,7 +125,6 @@ export const testSetup = async (): Promise<{
         customArbitrumNetwork: childChain,
       })
 
-      setParentChain = parentChain
       setChildChain = childChain
     } else {
       addCustomNetwork({
@@ -139,7 +132,6 @@ export const testSetup = async (): Promise<{
         customArbitrumNetwork: childChain,
       })
 
-      setParentChain = parentChain
       setChildChain = childChain
     }
   }
@@ -160,7 +152,6 @@ export const testSetup = async (): Promise<{
     childSigner,
     parentProvider: ethProvider,
     childProvider: arbProvider,
-    parentChain: setParentChain,
     childChain: setChildChain,
     erc20Bridger,
     adminErc20Bridger,

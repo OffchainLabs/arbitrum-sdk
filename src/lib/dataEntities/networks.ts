@@ -415,17 +415,6 @@ export const getNetwork = async (
 }
 
 /**
- * Returns the L1 chain associated with the given signer, provider or chain id.
- *
- * @note Throws if the chain is not an L1 chain.
- */
-export const getL1Network = (
-  signerOrProviderOrChainID: SignerOrProvider | number
-): Promise<L1Network> => {
-  return getNetwork(signerOrProviderOrChainID, 1) as Promise<L1Network>
-}
-
-/**
  * Returns the Arbitrum chain associated with the given signer, provider or chain id.
  *
  * @note Throws if the chain is not an Arbitrum chain.
