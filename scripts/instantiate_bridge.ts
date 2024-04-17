@@ -22,7 +22,7 @@ import { Wallet } from '@ethersproject/wallet'
 import dotenv from 'dotenv'
 import args from './getCLargs'
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
-import { l2Networks, L2Network } from '../src/lib/dataEntities/networks'
+import { L2Network, getL2Network } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 import { isDefined } from '../src/lib/utils/lib'
@@ -34,10 +34,10 @@ const ethKey = process.env['ETH_KEY'] as string
 
 const defaultNetworkId = 421614
 
-export const instantiateBridge = (
+export const instantiateBridge = async (
   l1PkParam?: string,
   l2PkParam?: string
-): {
+): Promise<{
   l2Network: L2Network
   l1Signer: Signer
   l2Signer: Signer
@@ -45,7 +45,7 @@ export const instantiateBridge = (
   ethBridger: EthBridger
   adminErc20Bridger: AdminErc20Bridger
   inboxTools: InboxTools
-} => {
+}> => {
   if (!l1PkParam && !ethKey) {
     throw new Error('need ARB_KEY var')
   }
@@ -63,13 +63,7 @@ export const instantiateBridge = (
     l2NetworkID = defaultNetworkId
   }
 
-  const isL2 = isDefined(l2Networks[l2NetworkID])
-
-  if (!isL2) {
-    throw new Error(`Tests must specify an L2 network ID: ${l2NetworkID}`)
-  }
-
-  const l2Network = l2Networks[l2NetworkID]
+  const l2Network = await getL2Network(l2NetworkID)
 
   const l1Rpc = (() => {
     if (l2NetworkID === 42161) return process.env['MAINNET_RPC'] as string
