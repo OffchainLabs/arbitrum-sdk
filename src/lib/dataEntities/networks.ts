@@ -18,20 +18,13 @@
 
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
-import {
-  ARB1_NITRO_GENESIS_L2_BLOCK,
-  ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
-} from './constants'
+import { ARB1_NITRO_GENESIS_L2_BLOCK } from './constants'
 import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__factory'
 
 export interface Network {
   chainID: number
   name: string
   isCustom: boolean
-  /**
-   * Minimum possible block time for the chain (in seconds).
-   */
-  blockTime: number
 }
 
 /**
@@ -141,28 +134,24 @@ export const networks: Networks = {
   1: {
     chainID: 1,
     name: 'Mainnet',
-    blockTime: 14,
     isCustom: false,
     isArbitrum: false,
   },
   1338: {
     chainID: 1338,
     name: 'Hardhat_Mainnet_Fork',
-    blockTime: 1,
     isCustom: false,
     isArbitrum: false,
   },
   11155111: {
     chainID: 11155111,
     name: 'Sepolia',
-    blockTime: 12,
     isCustom: false,
     isArbitrum: false,
   },
   17000: {
     chainID: 17000,
     name: 'Holesky',
-    blockTime: 12,
     isCustom: false,
     isArbitrum: false,
   },
@@ -175,7 +164,6 @@ export const networks: Networks = {
     ethBridge: mainnetETHBridge,
     confirmPeriodBlocks: 45818,
     isCustom: false,
-    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   42170: {
     chainID: 42170,
@@ -207,7 +195,6 @@ export const networks: Networks = {
       l2Weth: '0x722E8BdD2ce80A4422E880164f2079488e115365',
       l2WethGateway: '0x7626841cB6113412F9c88D3ADC720C9FAC88D9eD',
     },
-    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   421614: {
     chainID: 421614,
@@ -239,7 +226,6 @@ export const networks: Networks = {
       l2Weth: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73',
       l2WethGateway: '0xCFB1f08A4852699a979909e22c30263ca249556D',
     },
-    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   23011913: {
     chainID: 23011913,
@@ -271,7 +257,6 @@ export const networks: Networks = {
       l2Weth: '0x61Dc4b961D2165623A25EB775260785fE78BD37C',
       l2WethGateway: '0x7021B4Edd9f047772242fc948441d6e0b9121175',
     },
-    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
 }
 
@@ -514,7 +499,6 @@ export const addDefaultLocalNetwork = (): {
   l2Network: ArbitrumNetwork
 } => {
   const defaultLocalL1Network: L1Network = {
-    blockTime: 10,
     chainID: 1337,
     isCustom: true,
     name: 'EthLocal',
@@ -551,7 +535,6 @@ export const addDefaultLocalNetwork = (): {
       l2Weth: '0x408Da76E87511429485C32E4Ad647DD14823Fdc4',
       l2WethGateway: '0x4A2bA922052bA54e29c5417bC979Daaf7D5Fe4f4',
     },
-    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   }
 
   addCustomNetwork(defaultLocalL2Network)
