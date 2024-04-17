@@ -7,8 +7,8 @@ import {
   ParentToChildMessageGasEstimator,
 } from './ParentToChildMessageGasEstimator'
 import {
-  ParentChainContractTransaction,
-  ParentChainTransactionReceipt,
+  ParentContractTransaction,
+  ParentTransactionReceipt,
 } from './ParentTransaction'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { getChildChain } from '../dataEntities/networks'
@@ -208,7 +208,7 @@ export class ParentToChildMessageCreator {
         }),
     childProvider: Provider,
     options?: GasOverrides
-  ): Promise<ParentChainContractTransaction> {
+  ): Promise<ParentContractTransaction> {
     const parentProvider = SignerProviderUtils.getProviderOrThrow(
       this.parentSigner
     )
@@ -226,6 +226,6 @@ export class ParentToChildMessageCreator {
       ...params.overrides,
     })
 
-    return ParentChainTransactionReceipt.monkeyPatchWait(tx)
+    return ParentTransactionReceipt.monkeyPatchWait(tx)
   }
 }

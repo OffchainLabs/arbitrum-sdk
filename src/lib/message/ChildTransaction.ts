@@ -91,7 +91,7 @@ export class ChildTransactionReceipt implements TransactionReceipt {
   }
 
   /**
-   * Get an ChildToParentTxEvent events created by this transaction
+   * Get {@link ChildToParentTransactionEvent} events created by this transaction
    * @returns
    */
   public getChildToParentEvents(): ChildToParentTransactionEvent[] {

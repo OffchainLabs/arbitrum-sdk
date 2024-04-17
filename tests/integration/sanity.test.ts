@@ -171,7 +171,7 @@ describe('sanity checks (read-only)', async () => {
 
     const address = hexlify(randomBytes(20))
 
-    const erc20L2AddressAsPerL1 = await erc20Bridger.getL2ERC20Address(
+    const erc20L2AddressAsPerL1 = await erc20Bridger.getChildERC20Address(
       address,
       parentSigner.provider!
     )

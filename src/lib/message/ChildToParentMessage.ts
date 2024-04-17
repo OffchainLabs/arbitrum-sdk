@@ -233,7 +233,7 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
   public async status(
     childChainProvider: Provider
   ): Promise<ChildToParentMessageStatus> {
-    // can we create an ChildToParentmessage here, we need to - the constructor is what we need
+    // can we create a ChildToParentMessage here, we need to - the constructor is what we need
     if (this.nitroReader)
       return await this.nitroReader.status(childChainProvider)
     else return await this.classicReader!.status(childChainProvider)

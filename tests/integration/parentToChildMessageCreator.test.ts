@@ -120,7 +120,7 @@ describe('ParentToChildMessageCreator', () => {
     // Getting balances
     const initialChildChainBalance = await childSigner.getBalance()
 
-    // In this case, we will try to send directly an ParentToChildTransactionRequest
+    // In this case, we will try to send directly a ParentToChildTransactionRequest
     const parentToChildTransactionRequestParams = {
       from: signerAddress,
       to: signerAddress,

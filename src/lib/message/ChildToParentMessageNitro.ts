@@ -62,7 +62,7 @@ export type ChildToParentChainMessageReaderOrWriterNitro<
 
 // expected number of parent chain blocks that it takes for a Child chain tx to be included in a parent chain assertion
 const ASSERTION_CREATED_PADDING = 50
-// expected number of parent chain blocks that it takes for a validator to confirm an parent chain block after the node deadline is passed
+// expected number of parent chain blocks that it takes for a validator to confirm a parent chain block after the node deadline is passed
 const ASSERTION_CONFIRMED_PADDING = 20
 
 const childChainBlockRangeCache: { [key in string]: (number | undefined)[] } =
