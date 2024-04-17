@@ -26,16 +26,29 @@ import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__fa
  * Represents an Arbitrum chain, e.g. Arbitrum One, Arbitrum Sepolia, or an L3 chain.
  */
 export interface ArbitrumNetwork {
-  chainID: number
+  /**
+   * Name of the chain.
+   */
   name: string
-  isCustom: boolean
-  tokenBridge: TokenBridge
-  ethBridge: EthBridge
+  /**
+   * Id of the chain.
+   */
+  chainID: number
   /**
    * Chain id of the parent chain, i.e. the chain on which this chain settles to.
    */
   parentChainId: number
-
+  /**
+   * The core contracts
+   */
+  ethBridge: EthBridge
+  /**
+   * The token bridge contracts.
+   */
+  tokenBridge: TokenBridge
+  /**
+   * The time allowed for validators to dispute or challenge state assertions. Measured in L1 blocks.
+   */
   confirmPeriodBlocks: number
   /**
    * Represents how long a retryable ticket lasts for before it expires (in seconds). Defaults to 7 days.
@@ -47,6 +60,10 @@ export interface ArbitrumNetwork {
    * In case of a chain that uses an ERC-20 token from the parent chain as its native/gas token, this is the address of said token on the parent chain
    */
   nativeToken?: string
+  /**
+   * Whether or not the chain was registered by the user.
+   */
+  isCustom: boolean
 }
 
 export interface TokenBridge {
