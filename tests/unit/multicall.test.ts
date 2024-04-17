@@ -1,6 +1,9 @@
 'use strict'
 
-import { getChildChain as getL2Network } from '../../src/lib/dataEntities/networks'
+import {
+  getChildChain as getL2Network,
+  getNitroGenesisBlock,
+} from '../../src/lib/dataEntities/networks'
 import { providers } from 'ethers'
 import { mock, when, anything, instance, deepEqual } from 'ts-mockito'
 import { expect } from 'chai'
@@ -12,7 +15,7 @@ describe('Multicall', () => {
     const l2Network = await getL2Network(networkChoiceOverride || 42161)
 
     const l2ProviderMock = mock(providers.JsonRpcProvider)
-    const latestBlock = l2Network.nitroGenesisBlock + 1000
+    const latestBlock = getNitroGenesisBlock(l2Network) + 1000
     when(l2ProviderMock.getBlockNumber()).thenResolve(latestBlock)
     when(l2ProviderMock.getNetwork()).thenResolve({
       chainId: l2Network.chainID,
