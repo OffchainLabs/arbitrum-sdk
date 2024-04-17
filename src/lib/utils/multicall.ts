@@ -143,10 +143,13 @@ export class MultiCaller {
 
     let multiCallAddr: string
     if (isL1Network(network)) {
-      const firstL2 = l2Networks[network.partnerChainIDs[0]]
+      // If the network is an L1, find one of its L2s and pick up the multicall address from there
+      const firstL2 = [...Object.values(l2Networks)].find(
+        chain => chain.parentChainId === network.chainID
+      )
       if (!firstL2)
         throw new ArbSdkError(
-          `No partner chain found l1 network: ${network.chainID} : partner chain ids ${network.partnerChainIDs}`
+          `No children chains found for network: ${network.chainID}`
         )
       multiCallAddr = firstL2.tokenBridge.l1MultiCall
     } else {

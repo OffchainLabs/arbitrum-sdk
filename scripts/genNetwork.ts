@@ -40,14 +40,14 @@ async function patchNetworks(
   l3Network: L2Network | undefined,
   l2Provider: ethers.providers.Provider | undefined
 ) {
-  // we need to add partnerChainIDs to the L2 network
-  l2Network.partnerChainIDs = l3Network ? [l3Network.chainID] : []
+  l2Network.parentChainId = (l2Network as any).partnerChainID
   l2Network.blockTime = ARB_MINIMUM_BLOCK_TIME_IN_SECONDS
 
   // native token for l3
   if (l3Network && l2Provider) {
-    l3Network.partnerChainIDs = []
+    l3Network.parentChainId = (l3Network as any).partnerChainID
     l3Network.blockTime = ARB_MINIMUM_BLOCK_TIME_IN_SECONDS
+
     try {
       l3Network.nativeToken = await IERC20Bridge__factory.connect(
         l3Network.ethBridge.bridge,

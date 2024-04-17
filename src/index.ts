@@ -51,6 +51,7 @@ export {
   getL2Network,
   addCustomNetwork,
   addDefaultLocalNetwork,
+  getChildrenForNetwork,
 } from './lib/dataEntities/networks'
 export { InboxTools } from './lib/inbox/inbox'
 export { EventFetcher } from './lib/utils/eventFetcher'
