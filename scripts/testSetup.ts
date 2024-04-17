@@ -119,7 +119,6 @@ export const testSetup = async (): Promise<{
         chainID: _parentChain.partnerChainID,
         isCustom: true,
         name: 'EthLocal',
-        partnerChainIDs: [_parentChain.chainID],
         isArbitrum: false,
       }
 
