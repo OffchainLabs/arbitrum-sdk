@@ -1,7 +1,6 @@
-import { getAddress } from 'ethers-v6'
+import { getAddress, zeroPadValue } from 'ethers-v6'
 import { defaultAbiCoder } from '@ethersproject/abi'
 import { BigNumber } from '@ethersproject/bignumber'
-import { hexZeroPad } from '@ethersproject/bytes'
 
 export class SubmitRetryableMessageDataParser {
   /**
@@ -28,7 +27,7 @@ export class SubmitRetryableMessageDataParser {
     ) as BigNumber[]
 
     const addressFromBigNumber = (bn: BigNumber) =>
-      getAddress(hexZeroPad(bn.toHexString(), 20))
+      getAddress(zeroPadValue(bn.toHexString(), 20))
 
     const destAddress = addressFromBigNumber(parsed[0])
     const l2CallValue = parsed[1]

@@ -29,7 +29,7 @@ import { SequencerInbox__factory } from '../../src/lib/abi/factories/SequencerIn
 import { InboxTools } from '../../src'
 
 import { ethers, network } from 'hardhat'
-import { hexZeroPad } from '@ethersproject/bytes'
+import { zeroPadValue } from 'ethers-v6'
 import {
   ChildChain as L2Network,
   getChildChain as getL2Network,
@@ -217,7 +217,7 @@ describe('Inbox tools', () => {
         txParams.gasLimit,
         txParams.maxFeePerGas,
         txParams.nonce,
-        hexZeroPad(txParams.to, 32),
+        zeroPadValue(txParams.to, 32),
         txParams.value,
         '0x',
       ]

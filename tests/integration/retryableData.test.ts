@@ -18,7 +18,7 @@
 
 import { assert, expect } from 'chai'
 import { BigNumber } from '@ethersproject/bignumber'
-import { hexlify } from '@ethersproject/bytes'
+import { hexlify } from 'ethers-v6'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import { fundParentSigner, skipIfMainnet } from './testHelpers'
 import { RetryableDataTools } from '../../src'
