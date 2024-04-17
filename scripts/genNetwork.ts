@@ -3,7 +3,6 @@ dotenv.config()
 import { execSync } from 'child_process'
 import * as fs from 'fs'
 import { L2Network } from '../src'
-import { ARB_MINIMUM_BLOCK_TIME_IN_SECONDS } from '../src/lib/dataEntities/constants'
 import { IERC20Bridge__factory } from '../src/lib/abi/factories/IERC20Bridge__factory'
 import { ethers } from 'ethers'
 
