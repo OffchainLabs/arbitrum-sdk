@@ -35,7 +35,7 @@ import {
 import { isDefined } from '../utils/lib'
 import { EventArgs } from '../dataEntities/event'
 import { ChildToParentMessageStatus } from '../dataEntities/message'
-import { getChildChain } from '../dataEntities/networks'
+import { getChildChain, getNitroGenesisBlock } from '../dataEntities/networks'
 import { ArbSdkError } from '../dataEntities/errors'
 
 export type ChildToParentTransactionEvent =
@@ -112,6 +112,7 @@ export class ChildToParentMessage {
     indexInBatch?: BigNumber
   ): Promise<(ChildToParentTransactionEvent & { transactionHash: string })[]> {
     const childChain = await getChildChain(childChainProvider)
+    const childChainNitroGenesisBlock = getNitroGenesisBlock(childChain)
 
     const inClassicRange = (blockTag: BlockTag, nitroGenBlock: number) => {
       if (typeof blockTag === 'string') {
@@ -154,8 +155,8 @@ export class ChildToParentMessage {
 
     // only fetch nitro events after the genesis block
     const classicFilter = {
-      fromBlock: inClassicRange(filter.fromBlock, childChain.nitroGenesisBlock),
-      toBlock: inClassicRange(filter.toBlock, childChain.nitroGenesisBlock),
+      fromBlock: inClassicRange(filter.fromBlock, childChainNitroGenesisBlock),
+      toBlock: inClassicRange(filter.toBlock, childChainNitroGenesisBlock),
     }
     const logQueries = []
     if (classicFilter.fromBlock !== classicFilter.toBlock) {
@@ -172,8 +173,8 @@ export class ChildToParentMessage {
     }
 
     const nitroFilter = {
-      fromBlock: inNitroRange(filter.fromBlock, childChain.nitroGenesisBlock),
-      toBlock: inNitroRange(filter.toBlock, childChain.nitroGenesisBlock),
+      fromBlock: inNitroRange(filter.fromBlock, childChainNitroGenesisBlock),
+      toBlock: inNitroRange(filter.toBlock, childChainNitroGenesisBlock),
     }
     if (nitroFilter.fromBlock !== nitroFilter.toBlock) {
       logQueries.push(

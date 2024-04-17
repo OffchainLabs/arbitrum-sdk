@@ -19,7 +19,7 @@
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
-  SEVEN_DAYS_IN_SECONDS,
+  ARB1_NITRO_GENESIS_L2_BLOCK,
   ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
 } from './constants'
 import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__factory'
@@ -27,8 +27,6 @@ import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__fa
 export interface Network {
   chainID: number
   name: string
-  explorerUrl: string
-  gif?: string
   isCustom: boolean
   /**
    * Minimum possible block time for the chain (in seconds).
@@ -59,13 +57,10 @@ export interface ArbitrumNetwork extends Network {
   partnerChainID: number
   isArbitrum: true
   confirmPeriodBlocks: number
-  retryableLifetimeSeconds: number
-  nitroGenesisBlock: number
-  nitroGenesisL1Block: number
   /**
-   * How long to wait (ms) for a deposit to arrive on l2 before timing out a request
+   * Represents how long a retryable ticket lasts for before it expires (in seconds). Defaults to 7 days.
    */
-  depositTimeout: number
+  retryableLifetimeSeconds?: number
   /**
    * In case of a chain that uses ETH as its native/gas token, this is either `undefined` or the zero address
    *
@@ -150,7 +145,6 @@ export const networks: Networks = {
   1: {
     chainID: 1,
     name: 'Mainnet',
-    explorerUrl: 'https://etherscan.io',
     partnerChainIDs: [42161, 42170],
     blockTime: 14,
     isCustom: false,
@@ -159,7 +153,6 @@ export const networks: Networks = {
   1338: {
     chainID: 1338,
     name: 'Hardhat_Mainnet_Fork',
-    explorerUrl: 'https://etherscan.io',
     partnerChainIDs: [42161],
     blockTime: 1,
     isCustom: false,
@@ -168,7 +161,6 @@ export const networks: Networks = {
   11155111: {
     chainID: 11155111,
     name: 'Sepolia',
-    explorerUrl: 'https://sepolia.etherscan.io',
     partnerChainIDs: [421614],
     blockTime: 12,
     isCustom: false,
@@ -177,7 +169,6 @@ export const networks: Networks = {
   17000: {
     chainID: 17000,
     name: 'Holesky',
-    explorerUrl: 'https://holesky.etherscan.io',
     partnerChainIDs: [],
     blockTime: 12,
     isCustom: false,
@@ -186,7 +177,6 @@ export const networks: Networks = {
   42161: {
     chainID: 42161,
     name: 'Arbitrum One',
-    explorerUrl: 'https://arbiscan.io',
     partnerChainID: 1,
     partnerChainIDs: [],
     isArbitrum: true,
@@ -194,15 +184,6 @@ export const networks: Networks = {
     ethBridge: mainnetETHBridge,
     confirmPeriodBlocks: 45818,
     isCustom: false,
-    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
-    nitroGenesisBlock: 22207817,
-    nitroGenesisL1Block: 15447158,
-    /**
-     * Finalisation on mainnet can be up to 2 epochs = 64 blocks on mainnet
-     * We add 10 minutes for the system to create and redeem the ticket, plus some extra buffer of time
-     * (Total timeout: 30 minutes)
-     */
-    depositTimeout: 1800000,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   42170: {
@@ -215,13 +196,11 @@ export const networks: Networks = {
       rollup: '0xFb209827c58283535b744575e11953DCC4bEAD88',
       sequencerInbox: '0x211E1c4c7f1bF5351Ac850Ed10FD68CFfCF6c21b',
     },
-    explorerUrl: 'https://nova.arbiscan.io',
     isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Nova',
     partnerChainID: 1,
     partnerChainIDs: [],
-    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     tokenBridge: {
       l1CustomGateway: '0x23122da8C581AA7E0d07A36Ff1f16F799650232f',
       l1ERC20Gateway: '0xB2535b988dcE19f9D71dfB22dB6da744aCac21bf',
@@ -238,14 +217,6 @@ export const networks: Networks = {
       l2Weth: '0x722E8BdD2ce80A4422E880164f2079488e115365',
       l2WethGateway: '0x7626841cB6113412F9c88D3ADC720C9FAC88D9eD',
     },
-    nitroGenesisBlock: 0,
-    nitroGenesisL1Block: 0,
-    /**
-     * Finalisation on mainnet can be up to 2 epochs = 64 blocks on mainnet
-     * We add 10 minutes for the system to create and redeem the ticket, plus some extra buffer of time
-     * (Total timeout: 30 minutes)
-     */
-    depositTimeout: 1800000,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   421614: {
@@ -258,13 +229,11 @@ export const networks: Networks = {
       rollup: '0xd80810638dbDF9081b72C1B33c65375e807281C8',
       sequencerInbox: '0x6c97864CE4bEf387dE0b3310A44230f7E3F1be0D',
     },
-    explorerUrl: 'https://sepolia-explorer.arbitrum.io',
     isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Rollup Sepolia Testnet',
     partnerChainID: 11155111,
     partnerChainIDs: [23011913],
-    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     tokenBridge: {
       l1CustomGateway: '0xba2F7B6eAe1F9d174199C5E4867b563E0eaC40F3',
       l1ERC20Gateway: '0x902b3E5f8F19571859F4AB1003B960a5dF693aFF',
@@ -281,9 +250,6 @@ export const networks: Networks = {
       l2Weth: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73',
       l2WethGateway: '0xCFB1f08A4852699a979909e22c30263ca249556D',
     },
-    nitroGenesisBlock: 0,
-    nitroGenesisL1Block: 0,
-    depositTimeout: 1800000,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   23011913: {
@@ -296,13 +262,11 @@ export const networks: Networks = {
       rollup: '0x94db9E36d9336cD6F9FfcAd399dDa6Cc05299898',
       sequencerInbox: '0x00A0F15b79d1D3e5991929FaAbCF2AA65623530c',
     },
-    explorerUrl: 'https://stylus-testnet-explorer.arbitrum.io',
     isArbitrum: true,
     isCustom: false,
     name: 'Stylus Testnet',
     partnerChainID: 421614,
     partnerChainIDs: [],
-    retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     tokenBridge: {
       l1CustomGateway: '0xd624D491A5Bc32de52a2e1481846752213bF7415',
       l1ERC20Gateway: '0x7348Fdf6F3e090C635b23D970945093455214F3B',
@@ -319,9 +283,6 @@ export const networks: Networks = {
       l2Weth: '0x61Dc4b961D2165623A25EB775260785fE78BD37C',
       l2WethGateway: '0x7021B4Edd9f047772242fc948441d6e0b9121175',
     },
-    nitroGenesisBlock: 0,
-    nitroGenesisL1Block: 0,
-    depositTimeout: 900000,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
 }
@@ -598,7 +559,6 @@ export const addDefaultLocalNetwork = (): {
   const defaultLocalL1Network: L1Network = {
     blockTime: 10,
     chainID: 1337,
-    explorerUrl: '',
     isCustom: true,
     name: 'EthLocal',
     partnerChainIDs: [412346],
@@ -615,16 +575,11 @@ export const addDefaultLocalNetwork = (): {
       rollup: '0x65a59D67Da8e710Ef9A01eCa37f83f84AEdeC416',
       sequencerInbox: '0xE7362D0787b51d8C72D504803E5B1d6DcdA89540',
     },
-    explorerUrl: '',
     isArbitrum: true,
     isCustom: true,
     name: 'ArbLocal',
     partnerChainID: 1337,
     partnerChainIDs: [],
-    retryableLifetimeSeconds: 604800,
-    nitroGenesisBlock: 0,
-    nitroGenesisL1Block: 0,
-    depositTimeout: 900000,
     tokenBridge: {
       l1CustomGateway: '0x3DF948c956e14175f43670407d5796b95Bb219D8',
       l1ERC20Gateway: '0x4A2bA922052bA54e29c5417bC979Daaf7D5Fe4f4',
@@ -669,6 +624,22 @@ const createNetworkStateHandler = () => {
       l2Networks = getArbitrumChains()
     },
   }
+}
+
+export function getNitroGenesisBlock(
+  arbitrumChainOrChainId: ArbitrumNetwork | number
+) {
+  const arbitrumChainId =
+    typeof arbitrumChainOrChainId === 'number'
+      ? arbitrumChainOrChainId
+      : arbitrumChainOrChainId.chainID
+
+  // all networks except Arbitrum One started off with Nitro
+  if (arbitrumChainId === 42161) {
+    return ARB1_NITRO_GENESIS_L2_BLOCK
+  }
+
+  return 0
 }
 
 const { resetNetworksToDefault } = createNetworkStateHandler()
