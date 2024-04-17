@@ -442,38 +442,6 @@ export const getEthBridgeInformation = async (
 }
 
 /**
- * Adds any chain to the global index of networks and updates the parent/child relationships.
- */
-const addNetwork = (network: L1Network | ArbitrumNetwork) => {
-  // store the network with the rest of the networks
-  networks[network.chainID] = network
-
-  // if it's a parent chain (L1 or L2), assign it as parent to all the children
-  if (isParentChain(network)) {
-    const children = getChildrenForNetwork(network)
-
-    children.forEach(child => {
-      child.parentChainId = network.chainID
-    })
-  }
-
-  // if it's an arbitrum chain, add it to the parent's list of children
-  if (isArbitrumNetwork(network)) {
-    const parent: L1Network | ArbitrumNetwork | undefined =
-      networks[network.parentChainId]
-
-    if (!parent) {
-      throw new ArbSdkError(
-        `Network ${network.chainID}'s parent network ${network.parentChainId} is not recognized`
-      )
-    }
-  }
-
-  l1Networks = getL1Chains()
-  l2Networks = getArbitrumChains()
-}
-
-/**
  * Registers a pair of custom L1 and L2 chains, or a single custom Arbitrum chain (L2 or L3).
  *
  * @param customL1Network the custom L1 chain (optional)
