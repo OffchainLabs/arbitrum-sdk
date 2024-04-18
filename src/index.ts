@@ -43,9 +43,9 @@ export { ParentToChildMessageGasEstimator } from './lib/message/ParentToChildMes
 export { argSerializerConstructor } from './lib/utils/byte_serialize_params'
 export { CallInput, MultiCaller } from './lib/utils/multicall'
 export {
-  L2Network,
-  getL2Network,
-  addCustomNetwork,
+  ArbitrumNetwork,
+  getArbitrumNetwork,
+  addCustomArbitrumNetwork,
   addDefaultLocalNetwork,
   getChildrenForNetwork,
 } from './lib/dataEntities/networks'

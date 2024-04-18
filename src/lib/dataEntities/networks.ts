@@ -35,7 +35,7 @@ export interface ArbitrumNetwork {
   /**
    * Id of the chain.
    */
-  chainID: number
+  chainId: number
   /**
    * Chain id of the parent chain, i.e. the chain on which this chain settles to.
    */
@@ -75,9 +75,9 @@ export interface ArbitrumNetwork {
  *
  * @deprecated since v4
  */
-export type L2NetworkOld = Prettify<
-  // todo(spsjvc): rename to L2Network after imports are cleaned up
-  Omit<ArbitrumNetwork, 'parentChainId'> & {
+export type L2Network = Prettify<
+  Omit<ArbitrumNetwork, 'chainId' | 'parentChainId'> & {
+    chainID: number
     partnerChainID: number
   }
 >
@@ -108,10 +108,6 @@ export interface EthBridge {
   classicOutboxes?: {
     [addr: string]: number
   }
-}
-
-export interface ArbitrumNetworks {
-  [id: string]: ArbitrumNetwork
 }
 
 export interface Networks {
@@ -152,7 +148,7 @@ const mainnetETHBridge: EthBridge = {
  */
 export const networks: Networks = {
   42161: {
-    chainID: 42161,
+    chainId: 42161,
     name: 'Arbitrum One',
     parentChainId: 1,
     tokenBridge: mainnetTokenBridge,
@@ -161,7 +157,7 @@ export const networks: Networks = {
     isCustom: false,
   },
   42170: {
-    chainID: 42170,
+    chainId: 42170,
     confirmPeriodBlocks: 45818,
     ethBridge: {
       bridge: '0xC1Ebd02f738644983b6C4B2d440b8e77DdE276Bd',
@@ -191,7 +187,7 @@ export const networks: Networks = {
     },
   },
   421614: {
-    chainID: 421614,
+    chainId: 421614,
     confirmPeriodBlocks: 20,
     ethBridge: {
       bridge: '0x38f918D0E9F1b721EDaA41302E399fa1B79333a9',
@@ -221,7 +217,7 @@ export const networks: Networks = {
     },
   },
   23011913: {
-    chainID: 23011913,
+    chainId: 23011913,
     confirmPeriodBlocks: 20,
     ethBridge: {
       bridge: '0x35aa95ac4747D928E2Cd42FE4461F6D9d1826346',
@@ -255,13 +251,13 @@ export const networks: Networks = {
 /**
  * Determines if a chain is a parent of *any* other chain. Could be an L1 or an L2 chain.
  */
-export const isParentChain = (
+export const isParentNetwork = (
   parentChainOrChainId: ArbitrumNetwork | number
 ): boolean => {
   const parentChainId =
     typeof parentChainOrChainId === 'number'
       ? parentChainOrChainId
-      : parentChainOrChainId.chainID
+      : parentChainOrChainId.chainId
 
   // Check if there are any chains that have this chain as its parent chain
   return [...Object.values(l2Networks)].some(
@@ -280,7 +276,7 @@ export const getChildrenForNetwork = (
   const parentChainId =
     typeof parentChainOrChainId === 'number'
       ? parentChainOrChainId
-      : parentChainOrChainId.chainID
+      : parentChainOrChainId.chainId
 
   return Object.values(getArbitrumChains()).filter(
     arbitrumChain => arbitrumChain.parentChainId === parentChainId
@@ -290,47 +286,34 @@ export const getChildrenForNetwork = (
 /**
  * Index of all Arbitrum chains that have been added.
  */
-export let l2Networks: ArbitrumNetworks = getArbitrumChains()
-
-/**
- * Returns the network associated with the given Signer, Provider or chain id.
- * @note Throws if the chain is not recognized.
- */
-export const getNetwork = async (
-  signerOrProviderOrChainID: SignerOrProvider | number
-) => {
-  const chainID = await (async () => {
-    if (typeof signerOrProviderOrChainID === 'number') {
-      return signerOrProviderOrChainID
-    }
-    const provider = SignerProviderUtils.getProviderOrThrow(
-      signerOrProviderOrChainID
-    )
-
-    const { chainId } = await provider.getNetwork()
-    return chainId
-  })()
-
-  let network: ArbitrumNetwork | undefined = undefined
-
-  network = getArbitrumChains()[chainID]
-
-  if (!network) {
-    throw new ArbSdkError(`Unrecognized network ${chainID}.`)
-  }
-
-  return network
-}
+export let l2Networks = getArbitrumChains()
 
 /**
  * Returns the Arbitrum chain associated with the given signer, provider or chain id.
  *
  * @note Throws if the chain is not an Arbitrum chain.
  */
-export const getArbitrumNetwork = (
-  signerOrProviderOrChainID: SignerOrProvider | number
+export const getArbitrumNetwork = async (
+  signerOrProviderOrChainId: SignerOrProvider | number
 ): Promise<ArbitrumNetwork> => {
-  return getNetwork(signerOrProviderOrChainID) as Promise<ArbitrumNetwork>
+  const chainId = await (async () => {
+    if (typeof signerOrProviderOrChainId === 'number') {
+      return signerOrProviderOrChainId
+    }
+    const provider = SignerProviderUtils.getProviderOrThrow(
+      signerOrProviderOrChainId
+    )
+
+    return (await provider.getNetwork()).chainId
+  })()
+
+  const network: ArbitrumNetwork | undefined = getArbitrumChains()[chainId]
+
+  if (!network) {
+    throw new ArbSdkError(`Unrecognized network ${chainId}.`)
+  }
+
+  return network
 }
 
 /**
@@ -365,18 +348,17 @@ export const getEthBridgeInformation = async (
 }
 
 /**
- * Registers a pair of custom L1 and L2 chains, or a single custom Arbitrum chain (L2 or L3).
+ * Registers a custom Arbitrum chain (L2 or L3).
  *
- * @param customL1Network the custom L1 chain (optional)
- * @param customArbitrumNetwork the custom L2 or L3 chain
+ * @param network
  */
-export const addCustomNetwork = (network: ArbitrumNetwork): void => {
-  if (typeof networks[network.chainID] !== 'undefined') {
-    throw new Error(`Network ${network.chainID} already included`)
+export const addCustomArbitrumNetwork = (network: ArbitrumNetwork): void => {
+  if (typeof networks[network.chainId] !== 'undefined') {
+    throw new Error(`Network ${network.chainId} already included`)
   }
 
   // store the network with the rest of the networks
-  networks[network.chainID] = network
+  networks[network.chainId] = network
   l2Networks = getArbitrumChains()
 }
 
@@ -387,7 +369,7 @@ export const addCustomNetwork = (network: ArbitrumNetwork): void => {
  */
 export const addDefaultLocalNetwork = (): ArbitrumNetwork => {
   const defaultLocalL2Network: ArbitrumNetwork = {
-    chainID: 412346,
+    chainId: 412346,
     confirmPeriodBlocks: 20,
     ethBridge: {
       bridge: '0x2b360A9881F21c3d7aa0Ea6cA0De2a3341d4eF3C',
@@ -417,7 +399,7 @@ export const addDefaultLocalNetwork = (): ArbitrumNetwork => {
     },
   }
 
-  addCustomNetwork(defaultLocalL2Network)
+  addCustomArbitrumNetwork(defaultLocalL2Network)
 
   return defaultLocalL2Network
 }
@@ -443,7 +425,7 @@ export function getNitroGenesisBlock(
   const arbitrumChainId =
     typeof arbitrumChainOrChainId === 'number'
       ? arbitrumChainOrChainId
-      : arbitrumChainOrChainId.chainID
+      : arbitrumChainOrChainId.chainId
 
   // all networks except Arbitrum One started off with Nitro
   if (arbitrumChainId === 42161) {
@@ -453,7 +435,7 @@ export function getNitroGenesisBlock(
   return 0
 }
 
-export async function getMulticall(
+export async function getMulticallAddress(
   providerOrChainId: Provider | number
 ): Promise<string> {
   const chains = [...Object.values(l2Networks)]
@@ -462,7 +444,7 @@ export async function getMulticall(
     typeof providerOrChainId === 'number'
       ? providerOrChainId
       : (await providerOrChainId.getNetwork()).chainId
-  const chain = chains.find(c => c.chainID === chainId)
+  const chain = chains.find(c => c.chainId === chainId)
 
   // The provided chain is found in the list
   if (typeof chain !== 'undefined') {
@@ -489,12 +471,13 @@ export async function getMulticall(
  * Maps the old {@link L2Network} (from SDK v3) to {@link ArbitrumNetwork} (from SDK v4).
  */
 export function mapL2NetworkToArbitrumNetwork(
-  l2Network: L2NetworkOld
+  l2Network: L2Network
 ): ArbitrumNetwork {
   return {
     // Spread properties
     ...l2Network,
     // Map properties that were changed
+    chainId: l2Network.chainID,
     parentChainId: l2Network.partnerChainID,
   }
 }
@@ -502,10 +485,3 @@ export function mapL2NetworkToArbitrumNetwork(
 const { resetNetworksToDefault } = createNetworkStateHandler()
 
 export { resetNetworksToDefault }
-export const getChildChain = getArbitrumNetwork
-
-export {
-  ArbitrumNetwork as L2Network,
-  ArbitrumNetworks as L2Networks,
-  getArbitrumNetwork as getL2Network,
-}

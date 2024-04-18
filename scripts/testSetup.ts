@@ -23,11 +23,11 @@ import dotenv from 'dotenv'
 
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
+  L2Network,
   ArbitrumNetwork,
-  getArbitrumNetwork,
-  addCustomNetwork,
   mapL2NetworkToArbitrumNetwork,
-  L2NetworkOld,
+  getArbitrumNetwork,
+  addCustomArbitrumNetwork,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
@@ -104,7 +104,7 @@ export const testSetup = async (): Promise<{
     // check if theres an existing network available
     const { l2Network: childChain } = getLocalNetworksFromFile()
 
-    addCustomNetwork(childChain)
+    addCustomArbitrumNetwork(childChain)
     setChildChain = childChain
   }
 
@@ -142,7 +142,7 @@ export function getLocalNetworksFromFile(): {
     throw new ArbSdkError('localNetwork.json not found, must gen:network first')
   }
   const localNetworksFile = fs.readFileSync(pathToLocalNetworkFile, 'utf8')
-  const localL2: L2NetworkOld = JSON.parse(localNetworksFile).l2Network
+  const localL2: L2Network = JSON.parse(localNetworksFile).l2Network
 
   return {
     l2Network: mapL2NetworkToArbitrumNetwork(localL2),

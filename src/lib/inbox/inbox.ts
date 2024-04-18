@@ -28,7 +28,7 @@ import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factor
 import { IInbox__factory } from '../abi/factories/IInbox__factory'
 import { RequiredPick } from '../utils/types'
 import { MessageDeliveredEvent } from '../abi/Bridge'
-import { L2Network as ChildChain } from '../dataEntities/networks'
+import { ArbitrumNetwork } from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
 import { MultiCaller, CallInput } from '../utils/multicall'
@@ -64,7 +64,7 @@ export class InboxTools {
 
   constructor(
     private readonly parentChainSigner: Signer,
-    private readonly childChain: ChildChain
+    private readonly childChain: ArbitrumNetwork
   ) {
     this.parentChainProvider = SignerProviderUtils.getProviderOrThrow(
       this.parentChainSigner

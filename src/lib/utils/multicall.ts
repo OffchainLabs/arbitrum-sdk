@@ -22,7 +22,7 @@ import { BigNumber, utils } from 'ethers'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { Multicall2 } from '../abi/Multicall2'
 import { Multicall2__factory } from '../abi/factories/Multicall2__factory'
-import { getMulticall } from '../dataEntities/networks'
+import { getMulticallAddress } from '../dataEntities/networks'
 
 /**
  * Input to multicall aggregator
@@ -123,7 +123,7 @@ export class MultiCaller {
    * @returns
    */
   public static async fromProvider(provider: Provider): Promise<MultiCaller> {
-    return new MultiCaller(provider, await getMulticall(provider))
+    return new MultiCaller(provider, await getMulticallAddress(provider))
   }
 
   /**

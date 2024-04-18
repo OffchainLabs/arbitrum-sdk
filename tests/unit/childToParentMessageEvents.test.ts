@@ -43,7 +43,7 @@ describe('ChildToParentMessage events', () => {
     const latestBlock = getNitroGenesisBlock(l2Network) + 1000
     when(l2ProviderMock.getBlockNumber()).thenResolve(latestBlock)
     when(l2ProviderMock.getNetwork()).thenResolve({
-      chainId: l2Network.chainID,
+      chainId: l2Network.chainId,
     } as any)
     when(l2ProviderMock._isProvider).thenReturn(true)
     when(l2ProviderMock.getLogs(anything())).thenResolve([])

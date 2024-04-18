@@ -40,7 +40,7 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { getBlockRangesForL1Block, isArbitrumChain, wait } from '../utils/lib'
-import { getChildChain } from '../dataEntities/networks'
+import { getArbitrumNetwork } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
 import { ArbitrumProvider } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
@@ -222,7 +222,7 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
    * Check if this message has already been executed in the Outbox
    */
   protected async hasExecuted(childProvider: Provider): Promise<boolean> {
-    const childChain = await getChildChain(childProvider)
+    const childChain = await getArbitrumNetwork(childProvider)
     const outbox = Outbox__factory.connect(
       childChain.ethBridge.outbox,
       this.parentProvider
@@ -375,7 +375,7 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
 
   protected async getSendProps(childProvider: Provider) {
     if (!this.sendRootConfirmed) {
-      const childChain = await getChildChain(childProvider)
+      const childChain = await getArbitrumNetwork(childProvider)
 
       const rollup = RollupUserLogic__factory.connect(
         childChain.ethBridge.rollup,
@@ -457,7 +457,7 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
   public async getFirstExecutableBlock(
     childProvider: Provider
   ): Promise<BigNumber | null> {
-    const childChain = await getChildChain(childProvider)
+    const childChain = await getArbitrumNetwork(childProvider)
 
     const rollup = RollupUserLogic__factory.connect(
       childChain.ethBridge.rollup,
@@ -574,7 +574,7 @@ export class ChildToParentChainMessageWriterNitro extends ChildToParentChainMess
       )
     }
     const proof = await this.getOutboxProof(childProvider)
-    const childChain = await getChildChain(childProvider)
+    const childChain = await getArbitrumNetwork(childProvider)
     const outbox = Outbox__factory.connect(
       childChain.ethBridge.outbox,
       this.parentSigner
