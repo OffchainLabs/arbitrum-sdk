@@ -254,7 +254,7 @@ export const isParentChain = (
   )
 }
 
-const getArbitrumChains = () => ({ ...l2Networks })
+const getArbitrumChains = () => networks
 
 /**
  * Returns a list of children chains for the given chain or chain id.
