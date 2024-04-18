@@ -5,7 +5,7 @@ import {
   getArbitrumNetwork,
   l2Networks as arbitrumNetworks,
   getChildrenForNetwork,
-  isParentChain,
+  isParentNetwork,
   getMulticallAddress,
 } from '../../src/lib/dataEntities/networks'
 
@@ -157,25 +157,25 @@ describe('Networks', async () => {
     })
   })
 
-  describe('isParentChain', () => {
+  describe('isParentNetwork', () => {
     it('returns correct value for ethereum mainnet', () => {
-      expect(isParentChain(1)).to.equal(true)
+      expect(isParentNetwork(1)).to.equal(true)
     })
 
     it('returns correct value for arbitrum one', () => {
-      expect(isParentChain(42161)).to.equal(false)
+      expect(isParentNetwork(42161)).to.equal(false)
     })
 
     it('returns correct value for arbitrum nova', () => {
-      expect(isParentChain(42170)).to.equal(false)
+      expect(isParentNetwork(42170)).to.equal(false)
     })
 
     it('returns correct value for sepolia', () => {
-      expect(isParentChain(11155111)).to.equal(true)
+      expect(isParentNetwork(11155111)).to.equal(true)
     })
 
     it('returns correct value for arbitrum sepolia', () => {
-      expect(isParentChain(421614)).to.equal(true)
+      expect(isParentNetwork(421614)).to.equal(true)
     })
   })
 
