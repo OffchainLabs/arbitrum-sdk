@@ -16,42 +16,41 @@
 /* eslint-env node */
 ;('use strict')
 
+import { Provider } from '@ethersproject/abstract-provider'
+
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
-import {
-  ARB1_NITRO_GENESIS_L2_BLOCK,
-  ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
-} from './constants'
+import { ARB1_NITRO_GENESIS_L2_BLOCK } from './constants'
 import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__factory'
-
-export interface Network {
-  chainID: number
-  name: string
-  isCustom: boolean
-  /**
-   * Minimum possible block time for the chain (in seconds).
-   */
-  blockTime: number
-}
-
-/**
- * Represents an L1 chain, e.g. Ethereum Mainnet or Sepolia.
- */
-export interface L1Network extends Network {
-  isArbitrum: false
-}
+import { Prettify } from '../utils/types'
 
 /**
  * Represents an Arbitrum chain, e.g. Arbitrum One, Arbitrum Sepolia, or an L3 chain.
  */
-export interface ArbitrumNetwork extends Network {
-  tokenBridge: TokenBridge
-  ethBridge: EthBridge
+export interface ArbitrumNetwork {
+  /**
+   * Name of the chain.
+   */
+  name: string
+  /**
+   * Id of the chain.
+   */
+  chainId: number
   /**
    * Chain id of the parent chain, i.e. the chain on which this chain settles to.
    */
   parentChainId: number
-  isArbitrum: true
+  /**
+   * The core contracts
+   */
+  ethBridge: EthBridge
+  /**
+   * The token bridge contracts.
+   */
+  tokenBridge: TokenBridge
+  /**
+   * The time allowed for validators to dispute or challenge state assertions. Measured in L1 blocks.
+   */
   confirmPeriodBlocks: number
   /**
    * Represents how long a retryable ticket lasts for before it expires (in seconds). Defaults to 7 days.
@@ -63,7 +62,25 @@ export interface ArbitrumNetwork extends Network {
    * In case of a chain that uses an ERC-20 token from the parent chain as its native/gas token, this is the address of said token on the parent chain
    */
   nativeToken?: string
+  /**
+   * Whether or not the chain was registered by the user.
+   */
+  isCustom: boolean
 }
+
+/**
+ * This type is only here for when you want to achieve backwards compatibility between SDK v3 and v4.
+ *
+ * Please see {@link ArbitrumNetwork} for the latest type.
+ *
+ * @deprecated since v4
+ */
+export type L2Network = Prettify<
+  Omit<ArbitrumNetwork, 'chainId' | 'parentChainId'> & {
+    chainID: number
+    partnerChainID: number
+  }
+>
 
 export interface TokenBridge {
   l1GatewayRouter: string
@@ -93,16 +110,8 @@ export interface EthBridge {
   }
 }
 
-export interface L1Networks {
-  [id: string]: L1Network
-}
-
-export interface ArbitrumNetworks {
-  [id: string]: ArbitrumNetwork
-}
-
 export interface Networks {
-  [id: string]: L1Network | ArbitrumNetwork
+  [id: string]: ArbitrumNetwork
 }
 
 const mainnetTokenBridge: TokenBridge = {
@@ -138,47 +147,17 @@ const mainnetETHBridge: EthBridge = {
  * Storage for all networks, either L1, L2 or L3.
  */
 export const networks: Networks = {
-  1: {
-    chainID: 1,
-    name: 'Mainnet',
-    blockTime: 14,
-    isCustom: false,
-    isArbitrum: false,
-  },
-  1338: {
-    chainID: 1338,
-    name: 'Hardhat_Mainnet_Fork',
-    blockTime: 1,
-    isCustom: false,
-    isArbitrum: false,
-  },
-  11155111: {
-    chainID: 11155111,
-    name: 'Sepolia',
-    blockTime: 12,
-    isCustom: false,
-    isArbitrum: false,
-  },
-  17000: {
-    chainID: 17000,
-    name: 'Holesky',
-    blockTime: 12,
-    isCustom: false,
-    isArbitrum: false,
-  },
   42161: {
-    chainID: 42161,
+    chainId: 42161,
     name: 'Arbitrum One',
     parentChainId: 1,
-    isArbitrum: true,
     tokenBridge: mainnetTokenBridge,
     ethBridge: mainnetETHBridge,
     confirmPeriodBlocks: 45818,
     isCustom: false,
-    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   42170: {
-    chainID: 42170,
+    chainId: 42170,
     confirmPeriodBlocks: 45818,
     ethBridge: {
       bridge: '0xC1Ebd02f738644983b6C4B2d440b8e77DdE276Bd',
@@ -187,7 +166,6 @@ export const networks: Networks = {
       rollup: '0xFb209827c58283535b744575e11953DCC4bEAD88',
       sequencerInbox: '0x211E1c4c7f1bF5351Ac850Ed10FD68CFfCF6c21b',
     },
-    isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Nova',
     parentChainId: 1,
@@ -207,10 +185,9 @@ export const networks: Networks = {
       l2Weth: '0x722E8BdD2ce80A4422E880164f2079488e115365',
       l2WethGateway: '0x7626841cB6113412F9c88D3ADC720C9FAC88D9eD',
     },
-    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   421614: {
-    chainID: 421614,
+    chainId: 421614,
     confirmPeriodBlocks: 20,
     ethBridge: {
       bridge: '0x38f918D0E9F1b721EDaA41302E399fa1B79333a9',
@@ -219,7 +196,6 @@ export const networks: Networks = {
       rollup: '0xd80810638dbDF9081b72C1B33c65375e807281C8',
       sequencerInbox: '0x6c97864CE4bEf387dE0b3310A44230f7E3F1be0D',
     },
-    isArbitrum: true,
     isCustom: false,
     name: 'Arbitrum Rollup Sepolia Testnet',
     parentChainId: 11155111,
@@ -239,10 +215,9 @@ export const networks: Networks = {
       l2Weth: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73',
       l2WethGateway: '0xCFB1f08A4852699a979909e22c30263ca249556D',
     },
-    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   23011913: {
-    chainID: 23011913,
+    chainId: 23011913,
     confirmPeriodBlocks: 20,
     ethBridge: {
       bridge: '0x35aa95ac4747D928E2Cd42FE4461F6D9d1826346',
@@ -251,7 +226,6 @@ export const networks: Networks = {
       rollup: '0x94db9E36d9336cD6F9FfcAd399dDa6Cc05299898',
       sequencerInbox: '0x00A0F15b79d1D3e5991929FaAbCF2AA65623530c',
     },
-    isArbitrum: true,
     isCustom: false,
     name: 'Stylus Testnet',
     parentChainId: 421614,
@@ -271,20 +245,19 @@ export const networks: Networks = {
       l2Weth: '0x61Dc4b961D2165623A25EB775260785fE78BD37C',
       l2WethGateway: '0x7021B4Edd9f047772242fc948441d6e0b9121175',
     },
-    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
 }
 
 /**
  * Determines if a chain is a parent of *any* other chain. Could be an L1 or an L2 chain.
  */
-export const isParentChain = (
-  parentChainOrChainId: L1Network | ArbitrumNetwork | number
+export const isParentNetwork = (
+  parentChainOrChainId: ArbitrumNetwork | number
 ): boolean => {
   const parentChainId =
     typeof parentChainOrChainId === 'number'
       ? parentChainOrChainId
-      : parentChainOrChainId.chainID
+      : parentChainOrChainId.chainId
 
   // Check if there are any chains that have this chain as its parent chain
   return [...Object.values(l2Networks)].some(
@@ -292,77 +265,18 @@ export const isParentChain = (
   )
 }
 
-/**
- * Determines if a chain is an Arbitrum chain. Could be an L2 or an L3 chain.
- */
-const isArbitrumNetwork = (
-  chain: L1Network | ArbitrumNetwork
-): chain is ArbitrumNetwork => {
-  return chain.isArbitrum
-}
-
-/**
- * Determines if a chain is specifically an L1 chain (not L2 or L3).
- */
-export const isL1Network = (
-  chain: L1Network | ArbitrumNetwork
-): chain is L1Network => {
-  return !chain.isArbitrum
-}
-
-/**
- * Builds an object that is a list of chains filtered by the provided predicate function indexed by their chain id
- * @param filterFn - A predicate function to determine if a chain should be included.
- * @return An object with only the filtered chains.
- */
-const getChainsByType = <T extends typeof networks>(
-  filterFn: (chain: L1Network | ArbitrumNetwork) => boolean
-): T => {
-  return Object.entries(networks).reduce<typeof networks>(
-    (accumulator, [chainId, chainData]) => {
-      if (filterFn(chainData)) {
-        accumulator[chainId] = chainData
-      }
-      return accumulator
-    },
-    {}
-  ) as T
-}
-
-const getL1Chains = () => getChainsByType<L1Networks>(isL1Network)
-const getArbitrumChains = () =>
-  getChainsByType<ArbitrumNetworks>(isArbitrumNetwork)
-
-/**
- * Returns the parent chain for the given chain.
- */
-export const getParentForNetwork = (chain: L1Network | ArbitrumNetwork) => {
-  if (!isArbitrumNetwork(chain)) {
-    throw new ArbSdkError(`Chain ${chain.chainID} is not an Arbitrum chain.`)
-  }
-
-  const parentChain: L1Network | ArbitrumNetwork | undefined =
-    networks[chain.parentChainId]
-
-  if (!parentChain || !isParentChain(parentChain)) {
-    throw new ArbSdkError(
-      `Parent chain ${chain.parentChainId} not recognized for chain ${chain.chainID}.`
-    )
-  }
-
-  return parentChain
-}
+const getArbitrumChains = () => networks
 
 /**
  * Returns a list of children chains for the given chain or chain id.
  */
 export const getChildrenForNetwork = (
-  parentChainOrChainId: L1Network | ArbitrumNetwork | number
+  parentChainOrChainId: ArbitrumNetwork | number
 ): ArbitrumNetwork[] => {
   const parentChainId =
     typeof parentChainOrChainId === 'number'
       ? parentChainOrChainId
-      : parentChainOrChainId.chainID
+      : parentChainOrChainId.chainId
 
   return Object.values(getArbitrumChains()).filter(
     arbitrumChain => arbitrumChain.parentChainId === parentChainId
@@ -370,70 +284,36 @@ export const getChildrenForNetwork = (
 }
 
 /**
- * Index of *only* L1 chains that have been added.
- */
-export let l1Networks: L1Networks = getL1Chains()
-
-/**
  * Index of all Arbitrum chains that have been added.
  */
-export let l2Networks: ArbitrumNetworks = getArbitrumChains()
-
-/**
- * Returns the network associated with the given Signer, Provider or chain id.
- * @note Throws if the chain is not recognized.
- */
-export const getNetwork = async (
-  signerOrProviderOrChainID: SignerOrProvider | number,
-  layer: 1 | 2
-) => {
-  const chainID = await (async () => {
-    if (typeof signerOrProviderOrChainID === 'number') {
-      return signerOrProviderOrChainID
-    }
-    const provider = SignerProviderUtils.getProviderOrThrow(
-      signerOrProviderOrChainID
-    )
-
-    const { chainId } = await provider.getNetwork()
-    return chainId
-  })()
-
-  let network: L1Network | ArbitrumNetwork | undefined = undefined
-
-  if (layer === 1) {
-    network = getL1Chains()[chainID]
-  } else {
-    network = getArbitrumChains()[chainID]
-  }
-
-  if (!network) {
-    throw new ArbSdkError(`Unrecognized network ${chainID}.`)
-  }
-
-  return network
-}
-
-/**
- * Returns the L1 chain associated with the given signer, provider or chain id.
- *
- * @note Throws if the chain is not an L1 chain.
- */
-export const getL1Network = (
-  signerOrProviderOrChainID: SignerOrProvider | number
-): Promise<L1Network> => {
-  return getNetwork(signerOrProviderOrChainID, 1) as Promise<L1Network>
-}
+export let l2Networks = getArbitrumChains()
 
 /**
  * Returns the Arbitrum chain associated with the given signer, provider or chain id.
  *
  * @note Throws if the chain is not an Arbitrum chain.
  */
-export const getArbitrumNetwork = (
-  signerOrProviderOrChainID: SignerOrProvider | number
+export const getArbitrumNetwork = async (
+  signerOrProviderOrChainId: SignerOrProvider | number
 ): Promise<ArbitrumNetwork> => {
-  return getNetwork(signerOrProviderOrChainID, 2) as Promise<ArbitrumNetwork>
+  const chainId = await (async () => {
+    if (typeof signerOrProviderOrChainId === 'number') {
+      return signerOrProviderOrChainId
+    }
+    const provider = SignerProviderUtils.getProviderOrThrow(
+      signerOrProviderOrChainId
+    )
+
+    return (await provider.getNetwork()).chainId
+  })()
+
+  const network: ArbitrumNetwork | undefined = getArbitrumChains()[chainId]
+
+  if (!network) {
+    throw new ArbSdkError(`Unrecognized network ${chainId}.`)
+  }
+
+  return network
 }
 
 /**
@@ -468,82 +348,18 @@ export const getEthBridgeInformation = async (
 }
 
 /**
- * Adds any chain to the global index of networks and updates the parent/child relationships.
- */
-const addNetwork = (network: L1Network | ArbitrumNetwork) => {
-  // store the network with the rest of the networks
-  networks[network.chainID] = network
-
-  // if it's a parent chain (L1 or L2), assign it as parent to all the children
-  if (isParentChain(network)) {
-    const children = getChildrenForNetwork(network)
-
-    children.forEach(child => {
-      child.parentChainId = network.chainID
-    })
-  }
-
-  // if it's an arbitrum chain, add it to the parent's list of children
-  if (isArbitrumNetwork(network)) {
-    const parent: L1Network | ArbitrumNetwork | undefined =
-      networks[network.parentChainId]
-
-    if (!parent) {
-      throw new ArbSdkError(
-        `Network ${network.chainID}'s parent network ${network.parentChainId} is not recognized`
-      )
-    }
-  }
-
-  l1Networks = getL1Chains()
-  l2Networks = getArbitrumChains()
-}
-
-/**
- * Registers a pair of custom L1 and L2 chains, or a single custom Arbitrum chain (L2 or L3).
+ * Registers a custom Arbitrum chain (L2 or L3).
  *
- * @param customL1Network the custom L1 chain (optional)
- * @param customArbitrumNetwork the custom L2 or L3 chain
+ * @param network
  */
-export const addCustomNetwork = ({
-  customL1Network,
-  customArbitrumNetwork,
-}: {
-  customL1Network?: L1Network
-  customArbitrumNetwork: ArbitrumNetwork
-}): void => {
-  if (customL1Network) {
-    if (customL1Network.chainID !== customArbitrumNetwork.parentChainId) {
-      throw new ArbSdkError(
-        `Partner chain id for Arbitrum network ${customArbitrumNetwork.chainID} doesn't match the provided L1 network. Expected ${customL1Network.chainID} but got ${customArbitrumNetwork.parentChainId}.`
-      )
-    }
-
-    // check the if the parent chain is in any of the lists
-    if (l1Networks[customL1Network.chainID]) {
-      throw new ArbSdkError(
-        `Network ${customL1Network.chainID} already included`
-      )
-    } else if (!customL1Network.isCustom) {
-      throw new ArbSdkError(
-        `Custom network ${customL1Network.chainID} must have isCustom flag set to true`
-      )
-    }
-
-    addNetwork(customL1Network)
+export const addCustomArbitrumNetwork = (network: ArbitrumNetwork): void => {
+  if (typeof networks[network.chainId] !== 'undefined') {
+    throw new Error(`Network ${network.chainId} already included`)
   }
 
-  if (l2Networks[customArbitrumNetwork.chainID]) {
-    throw new ArbSdkError(
-      `Network ${customArbitrumNetwork.chainID} already included`
-    )
-  } else if (!customArbitrumNetwork.isCustom) {
-    throw new ArbSdkError(
-      `Custom network ${customArbitrumNetwork.chainID} must have isCustom flag set to true`
-    )
-  }
-
-  addNetwork(customArbitrumNetwork)
+  // store the network with the rest of the networks
+  networks[network.chainId] = network
+  l2Networks = getArbitrumChains()
 }
 
 /**
@@ -551,20 +367,9 @@ export const addCustomNetwork = ({
  *
  * @see {@link https://github.com/OffchainLabs/nitro}
  */
-export const addDefaultLocalNetwork = (): {
-  l1Network: L1Network
-  l2Network: ArbitrumNetwork
-} => {
-  const defaultLocalL1Network: L1Network = {
-    blockTime: 10,
-    chainID: 1337,
-    isCustom: true,
-    name: 'EthLocal',
-    isArbitrum: false,
-  }
-
+export const addDefaultLocalNetwork = (): ArbitrumNetwork => {
   const defaultLocalL2Network: ArbitrumNetwork = {
-    chainID: 412346,
+    chainId: 412346,
     confirmPeriodBlocks: 20,
     ethBridge: {
       bridge: '0x2b360A9881F21c3d7aa0Ea6cA0De2a3341d4eF3C',
@@ -573,7 +378,6 @@ export const addDefaultLocalNetwork = (): {
       rollup: '0x65a59D67Da8e710Ef9A01eCa37f83f84AEdeC416',
       sequencerInbox: '0xE7362D0787b51d8C72D504803E5B1d6DcdA89540',
     },
-    isArbitrum: true,
     isCustom: true,
     name: 'ArbLocal',
     parentChainId: 1337,
@@ -593,18 +397,11 @@ export const addDefaultLocalNetwork = (): {
       l2Weth: '0x408Da76E87511429485C32E4Ad647DD14823Fdc4',
       l2WethGateway: '0x4A2bA922052bA54e29c5417bC979Daaf7D5Fe4f4',
     },
-    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   }
 
-  addCustomNetwork({
-    customL1Network: defaultLocalL1Network,
-    customArbitrumNetwork: defaultLocalL2Network,
-  })
+  addCustomArbitrumNetwork(defaultLocalL2Network)
 
-  return {
-    l1Network: defaultLocalL1Network,
-    l2Network: defaultLocalL2Network,
-  }
+  return defaultLocalL2Network
 }
 
 /**
@@ -617,7 +414,6 @@ const createNetworkStateHandler = () => {
     resetNetworksToDefault: () => {
       Object.keys(networks).forEach(key => delete networks[key])
       Object.assign(networks, JSON.parse(JSON.stringify(initialState)))
-      l1Networks = getL1Chains()
       l2Networks = getArbitrumChains()
     },
   }
@@ -629,7 +425,7 @@ export function getNitroGenesisBlock(
   const arbitrumChainId =
     typeof arbitrumChainOrChainId === 'number'
       ? arbitrumChainOrChainId
-      : arbitrumChainOrChainId.chainID
+      : arbitrumChainOrChainId.chainId
 
   // all networks except Arbitrum One started off with Nitro
   if (arbitrumChainId === 42161) {
@@ -639,13 +435,53 @@ export function getNitroGenesisBlock(
   return 0
 }
 
+export async function getMulticallAddress(
+  providerOrChainId: Provider | number
+): Promise<string> {
+  const chains = [...Object.values(l2Networks)]
+
+  const chainId =
+    typeof providerOrChainId === 'number'
+      ? providerOrChainId
+      : (await providerOrChainId.getNetwork()).chainId
+  const chain = chains.find(c => c.chainId === chainId)
+
+  // The provided chain is found in the list
+  if (typeof chain !== 'undefined') {
+    // Return the address of Multicall on the chain
+    return chain.tokenBridge.l2Multicall
+  }
+
+  // The provided chain is not found in the list
+  // Try to find a chain that references this chain as its parent
+  const child = chains.find(c => c.parentChainId === chainId)
+
+  // No chains reference this chain as its parent
+  if (typeof child === 'undefined') {
+    throw new Error(
+      `Failed to retrieve Multicall address for chain: ${chainId}`
+    )
+  }
+
+  // Return the address of Multicall on the parent chain
+  return child.tokenBridge.l1MultiCall
+}
+
+/**
+ * Maps the old {@link L2Network} (from SDK v3) to {@link ArbitrumNetwork} (from SDK v4).
+ */
+export function mapL2NetworkToArbitrumNetwork(
+  l2Network: L2Network
+): ArbitrumNetwork {
+  return {
+    // Spread properties
+    ...l2Network,
+    // Map properties that were changed
+    chainId: l2Network.chainID,
+    parentChainId: l2Network.partnerChainID,
+  }
+}
+
 const { resetNetworksToDefault } = createNetworkStateHandler()
 
 export { resetNetworksToDefault }
-export const getChildChain = getArbitrumNetwork
-
-export {
-  ArbitrumNetwork as L2Network,
-  ArbitrumNetworks as L2Networks,
-  getArbitrumNetwork as getL2Network,
-}

@@ -3,7 +3,7 @@ import { expect } from 'chai'
 import {
   EthBridge,
   getEthBridgeInformation,
-  getChildChain as getL2Network,
+  getArbitrumNetwork,
 } from '../../src/lib/dataEntities/networks'
 import dotenv from 'dotenv'
 dotenv.config()
@@ -14,7 +14,7 @@ dotenv.config()
  */
 describe('Obtain deployed bridge addresses', () => {
   it('obtains deployed ETH Bridge addresses', async () => {
-    const arbOneL2Network = await getL2Network(42161)
+    const arbOneL2Network = await getArbitrumNetwork(42161)
     const ethProvider = new JsonRpcProvider(
       process.env['MAINNET_RPC'] as string
     )
