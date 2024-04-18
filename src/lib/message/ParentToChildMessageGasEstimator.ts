@@ -5,7 +5,7 @@ import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { ArbSdkError } from '../dataEntities/errors'
-import { getChildChain } from '../dataEntities/networks'
+import { getArbitrumNetwork } from '../dataEntities/networks'
 import {
   RetryableData,
   RetryableDataTools,
@@ -125,7 +125,7 @@ export class ParentToChildMessageGasEstimator {
   ): Promise<ParentToChildMessageGasParams['maxSubmissionCost']> {
     const defaultedOptions = this.applySubmissionPriceDefaults(options)
 
-    const network = await getChildChain(this.childProvider)
+    const network = await getArbitrumNetwork(this.childProvider)
     const inbox = Inbox__factory.connect(
       network.ethBridge.inbox,
       parentProvider

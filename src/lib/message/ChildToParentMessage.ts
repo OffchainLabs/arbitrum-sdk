@@ -35,7 +35,10 @@ import {
 import { isDefined } from '../utils/lib'
 import { EventArgs } from '../dataEntities/event'
 import { ChildToParentMessageStatus } from '../dataEntities/message'
-import { getChildChain, getNitroGenesisBlock } from '../dataEntities/networks'
+import {
+  getArbitrumNetwork,
+  getNitroGenesisBlock,
+} from '../dataEntities/networks'
 import { ArbSdkError } from '../dataEntities/errors'
 
 export type ChildToParentTransactionEvent =
@@ -111,7 +114,7 @@ export class ChildToParentMessage {
     hash?: BigNumber,
     indexInBatch?: BigNumber
   ): Promise<(ChildToParentTransactionEvent & { transactionHash: string })[]> {
-    const childChain = await getChildChain(childChainProvider)
+    const childChain = await getArbitrumNetwork(childChainProvider)
     const childChainNitroGenesisBlock = getNitroGenesisBlock(childChain)
 
     const inClassicRange = (blockTag: BlockTag, nitroGenBlock: number) => {
