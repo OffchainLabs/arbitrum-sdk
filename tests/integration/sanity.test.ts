@@ -28,7 +28,7 @@ import { L2ERC20Gateway__factory } from '../../src/lib/abi/factories/L2ERC20Gate
 import { L1ERC20Gateway__factory } from '../../src/lib/abi/factories/L1ERC20Gateway__factory'
 
 import { testSetup } from '../../scripts/testSetup'
-import { randomBytes, hexlify } from 'ethers/lib/utils'
+import { randomBytes, hexlify } from 'ethers-v6'
 import { itOnlyWhenEth } from './custom-fee-token/mochaExtensions'
 
 const expectIgnoreCase = (expected: string, actual: string) => {

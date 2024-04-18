@@ -17,7 +17,8 @@
 'use strict'
 
 import { expect } from 'chai'
-import { providers, utils } from 'ethers'
+import { BigNumber, providers } from 'ethers'
+import { parseEther } from 'ethers-v6'
 import { fundParentSigner, skipIfMainnet } from './testHelpers'
 import { testSetup } from '../../scripts/testSetup'
 import { ParentToChildMessageCreator } from '../../src/lib/message/ParentToChildMessageCreator'
@@ -35,7 +36,7 @@ describe('ParentToChildMessageCreator', () => {
   })
 
   // Testing amount
-  const testAmount = utils.parseEther('0.01')
+  const testAmount = BigNumber.from(parseEther('0.01'))
 
   it('allows the creation of Retryable Tickets sending parameters', async () => {
     const { parentSigner, childSigner } = await testSetup()

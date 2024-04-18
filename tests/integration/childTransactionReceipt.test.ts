@@ -28,7 +28,7 @@ import {
 import { ChildTransactionReceipt } from '../../src'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { BigNumber, Wallet } from 'ethers'
-import { parseEther } from 'ethers/lib/utils'
+import { parseEther } from 'ethers-v6'
 import { testSetup } from '../../scripts/testSetup'
 
 describe('ArbProvider', () => {
@@ -43,8 +43,8 @@ describe('ArbProvider', () => {
     // set up miners
     const miner1 = Wallet.createRandom().connect(parentSigner.provider!)
     const miner2 = Wallet.createRandom().connect(childSigner.provider!)
-    await fundParentSigner(miner1, parseEther('0.1'))
-    await fundChildSigner(miner2, parseEther('0.1'))
+    await fundParentSigner(miner1, BigNumber.from(parseEther('0.1')))
+    await fundChildSigner(miner2, BigNumber.from(parseEther('0.1')))
     const state = { mining: true }
     mineUntilStop(miner1, state)
     mineUntilStop(miner2, state)

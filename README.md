@@ -9,9 +9,9 @@ Below is an overview of the Arbitrum SDK functionality. See the [tutorials](http
 - ##### Deposit Ether Into Arbitrum
 
 ```ts
-import { getL2Network, EthBridger } from '@arbitrum/sdk'
+import { getArbitrumNetwork, EthBridger } from '@arbitrum/sdk'
 
-const l2Network = await getL2Network(
+const l2Network = await getArbitrumNetwork(
   l2ChainID /** <-- chain id of target Arbitrum chain */
 )
 const ethBridger = new EthBridger(l2Network)

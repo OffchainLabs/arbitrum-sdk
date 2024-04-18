@@ -11,7 +11,7 @@ import {
   ParentTransactionReceipt,
 } from './ParentTransaction'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
-import { getChildChain } from '../dataEntities/networks'
+import { getArbitrumNetwork } from '../dataEntities/networks'
 import { ERC20Inbox__factory } from '../abi/factories/ERC20Inbox__factory'
 import { PayableOverrides } from '@ethersproject/contracts'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
@@ -155,7 +155,7 @@ export class ParentToChildMessageCreator {
       options
     )
 
-    const childChain = await getChildChain(childProvider)
+    const childChain = await getArbitrumNetwork(childProvider)
     const nativeTokenIsEth = typeof childChain.nativeToken === 'undefined'
 
     const data = ParentToChildMessageCreator.getTicketCreationRequestCallData(

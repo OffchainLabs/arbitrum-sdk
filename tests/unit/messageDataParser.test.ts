@@ -4,7 +4,7 @@
 import { expect } from 'chai'
 
 import { BigNumber } from 'ethers'
-import { parseEther } from 'ethers/lib/utils'
+import { parseEther } from 'ethers-v6'
 import { SubmitRetryableMessageDataParser } from '../../src/lib/message/messageDataParser'
 
 describe('SubmitRetryableMessageDataParser', () => {

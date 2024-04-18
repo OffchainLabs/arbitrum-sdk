@@ -18,13 +18,12 @@
 
 import { assert, expect } from 'chai'
 import { BigNumber } from '@ethersproject/bignumber'
-import { hexlify } from 'ethers-v6'
+import { hexlify, parseEther, randomBytes } from 'ethers-v6'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import { fundParentSigner, skipIfMainnet } from './testHelpers'
 import { RetryableDataTools } from '../../src'
 import { Wallet } from 'ethers'
 import { testSetup } from '../../scripts/testSetup'
-import { parseEther, randomBytes } from 'ethers/lib/utils'
 import { Inbox__factory } from '../../src/lib/abi/factories/Inbox__factory'
 import { GasOverrides } from '../../src/lib/message/ParentToChildMessageGasEstimator'
 const depositAmount = BigNumber.from(100)
@@ -146,7 +145,7 @@ describe('RevertData', () => {
 
   it('is the same as what we estimate in erc20Bridger', async () => {
     const { erc20Bridger, parentSigner, childSigner } = await testSetup()
-    await fundParentSigner(parentSigner, parseEther('2'))
+    await fundParentSigner(parentSigner, BigNumber.from(parseEther('2')))
 
     const deployErc20 = new TestERC20__factory().connect(parentSigner)
     const testToken = await deployErc20.deploy()

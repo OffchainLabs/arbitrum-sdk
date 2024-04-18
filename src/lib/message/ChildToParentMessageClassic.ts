@@ -40,7 +40,7 @@ import { isDefined, wait } from '../utils/lib'
 import { ArbSdkError } from '../dataEntities/errors'
 import { EventArgs } from '../dataEntities/event'
 import { ChildToParentMessageStatus } from '../dataEntities/message'
-import { getChildChain } from '../dataEntities/networks'
+import { getArbitrumNetwork } from '../dataEntities/networks'
 
 export interface MessageBatchProofInfo {
   /**
@@ -213,7 +213,7 @@ export class ChildToParentMessageReaderClassic extends ChildToParentMessageClass
     batchNumber: number
   ) {
     if (!isDefined(this.outboxAddress)) {
-      const childChain = await getChildChain(childProvider)
+      const childChain = await getArbitrumNetwork(childProvider)
 
       // find the outbox where the activation batch number of the next outbox
       // is greater than the supplied batch
