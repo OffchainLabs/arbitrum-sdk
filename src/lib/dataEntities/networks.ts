@@ -75,9 +75,9 @@ export interface ArbitrumNetwork {
  *
  * @deprecated since v4
  */
-export type L2NetworkOld = Prettify<
-  // todo(spsjvc): rename to L2Network after imports are cleaned up
-  Omit<ArbitrumNetwork, 'parentChainId'> & {
+export type L2Network = Prettify<
+  Omit<ArbitrumNetwork, 'chainId' | 'parentChainId'> & {
+    chainID: number
     partnerChainID: number
   }
 >
@@ -475,12 +475,13 @@ export async function getMulticallAddress(
  * Maps the old {@link L2Network} (from SDK v3) to {@link ArbitrumNetwork} (from SDK v4).
  */
 export function mapL2NetworkToArbitrumNetwork(
-  l2Network: L2NetworkOld
+  l2Network: L2Network
 ): ArbitrumNetwork {
   return {
     // Spread properties
     ...l2Network,
     // Map properties that were changed
+    chainId: l2Network.chainID,
     parentChainId: l2Network.partnerChainID,
   }
 }

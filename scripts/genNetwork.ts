@@ -6,8 +6,8 @@ import * as fs from 'fs'
 import { IERC20Bridge__factory } from '../src/lib/abi/factories/IERC20Bridge__factory'
 import { ethers } from 'ethers'
 import {
+  L2Network,
   ArbitrumNetwork,
-  L2NetworkOld,
   mapL2NetworkToArbitrumNetwork,
 } from '../src/lib/dataEntities/networks'
 
@@ -40,8 +40,8 @@ function getLocalNetworksFromContainer(which: 'l1l2' | 'l2l3'): any {
  * we can remove this patchwork
  */
 async function patchNetworks(
-  l2Network: L2NetworkOld,
-  l3Network: L2NetworkOld | undefined,
+  l2Network: L2Network,
+  l3Network: L2Network | undefined,
   l2Provider: ethers.providers.Provider | undefined
 ): Promise<{
   patchedL2Network: ArbitrumNetwork
