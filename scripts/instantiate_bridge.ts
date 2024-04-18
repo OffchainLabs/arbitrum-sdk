@@ -22,15 +22,9 @@ import { Wallet } from '@ethersproject/wallet'
 import dotenv from 'dotenv'
 import args from './getCLargs'
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
-import {
-  l1Networks,
-  l2Networks,
-  L1Network,
-  L2Network,
-} from '../src/lib/dataEntities/networks'
+import { L2Network, getL2Network } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
-import { isDefined } from '../src/lib/utils/lib'
 
 dotenv.config()
 
@@ -39,11 +33,10 @@ const ethKey = process.env['ETH_KEY'] as string
 
 const defaultNetworkId = 421614
 
-export const instantiateBridge = (
+export const instantiateBridge = async (
   l1PkParam?: string,
   l2PkParam?: string
-): {
-  l1Network: L1Network
+): Promise<{
   l2Network: L2Network
   l1Signer: Signer
   l2Signer: Signer
@@ -51,7 +44,7 @@ export const instantiateBridge = (
   ethBridger: EthBridger
   adminErc20Bridger: AdminErc20Bridger
   inboxTools: InboxTools
-} => {
+}> => {
   if (!l1PkParam && !ethKey) {
     throw new Error('need ARB_KEY var')
   }
@@ -68,21 +61,8 @@ export const instantiateBridge = (
 
     l2NetworkID = defaultNetworkId
   }
-  const isL1 = isDefined(l1Networks[l2NetworkID])
-  const isL2 = isDefined(l2Networks[l2NetworkID])
-  if (!isL1 && !isL2) {
-    throw new Error(`Unrecognized network ID: ${l2NetworkID}`)
-  }
-  if (!isL2) {
-    throw new Error(`Tests must specify an L2 network ID: ${l2NetworkID}`)
-  }
 
-  const l2Network = l2Networks[l2NetworkID]
-  const l1Network = l1Networks[l2Network.parentChainId]
-
-  if (!l1Network) {
-    throw new Error(`Unrecognised parent chain id: ${l2Network.parentChainId}`)
-  }
+  const l2Network = await getL2Network(l2NetworkID)
 
   const l1Rpc = (() => {
     if (l2NetworkID === 42161) return process.env['MAINNET_RPC'] as string
@@ -138,7 +118,6 @@ export const instantiateBridge = (
   const inboxTools = new InboxTools(l1Signer, l2Network)
 
   return {
-    l1Network,
     l2Network,
     l1Signer,
     l2Signer,

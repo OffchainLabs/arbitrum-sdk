@@ -21,11 +21,7 @@ import { constants } from 'ethers'
 import { ParentContractTransaction } from '../message/ParentTransaction'
 import { ChildContractTransaction } from '../message/ChildTransaction'
 
-import {
-  L1Network,
-  ArbitrumNetwork,
-  getParentForNetwork,
-} from '../dataEntities/networks'
+import { ArbitrumNetwork } from '../dataEntities/networks'
 import {
   SignerOrProvider,
   SignerProviderUtils,
@@ -36,11 +32,6 @@ import {
  */
 export abstract class AssetBridger<DepositParams, WithdrawParams> {
   /**
-   * Parent chain for the given Arbitrum chain, can be an L1 or an L2
-   */
-  public readonly parentChain: L1Network | ArbitrumNetwork
-
-  /**
    * In case of a chain that uses ETH as its native/gas token, this is either `undefined` or the zero address
    *
    * In case of a chain that uses an ERC-20 token from the parent chain as its native/gas token, this is the address of said token on the parent chain
@@ -48,7 +39,6 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   public readonly nativeToken?: string
 
   public constructor(public readonly childChain: ArbitrumNetwork) {
-    this.parentChain = getParentForNetwork(childChain)
     this.nativeToken = childChain.nativeToken
   }
 
@@ -57,7 +47,10 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    * @param sop
    */
   protected async checkParentChain(sop: SignerOrProvider): Promise<void> {
-    await SignerProviderUtils.checkNetworkMatches(sop, this.parentChain.chainID)
+    await SignerProviderUtils.checkNetworkMatches(
+      sop,
+      this.childChain.parentChainId
+    )
   }
 
   /**
