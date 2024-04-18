@@ -25,7 +25,6 @@ import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import { L2Network, getL2Network } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
-import { isDefined } from '../src/lib/utils/lib'
 
 dotenv.config()
 

@@ -99,11 +99,8 @@ export const testSetup = async (): Promise<{
     setChildChain = l2Network
   } catch (err) {
     // the networks havent been added yet
-
     // check if theres an existing network available
-    const localNetworkFile = getLocalNetworksFromFile()
-
-    const { l2Network: childChain } = localNetworkFile
+    const { l2Network: childChain } = getLocalNetworksFromFile()
 
     addCustomNetwork(childChain)
     setChildChain = childChain
@@ -143,5 +140,13 @@ export function getLocalNetworksFromFile(): {
     throw new ArbSdkError('localNetwork.json not found, must gen:network first')
   }
   const localNetworksFile = fs.readFileSync(pathToLocalNetworkFile, 'utf8')
-  return JSON.parse(localNetworksFile)
+  const localL2: ArbitrumNetwork = JSON.parse(localNetworksFile).l2Network
+
+  return {
+    l2Network: {
+      ...localL2,
+      // in case network was generated with an onlder version of the SDK
+      parentChainId: (localL2 as any).partnerChainID,
+    },
+  }
 }
