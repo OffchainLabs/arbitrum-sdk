@@ -54,7 +54,7 @@ async function patchNetworks(
     const patchedL3Network = mapL2NetworkToArbitrumNetwork(l3Network)
 
     try {
-      l3Network.nativeToken = await IERC20Bridge__factory.connect(
+      patchedL3Network.nativeToken = await IERC20Bridge__factory.connect(
         l3Network.ethBridge.bridge,
         l2Provider
       ).nativeToken()
