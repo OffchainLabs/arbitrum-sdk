@@ -28,7 +28,7 @@ import {
 import { ChildTransactionReceipt } from '../../src'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { BigNumber, Wallet } from 'ethers'
-import { parseEther } from 'ethers/lib/utils'
+import { parseEther } from 'ethers-v6'
 import { testSetup } from '../../scripts/testSetup'
 
 describe('ArbProvider', () => {

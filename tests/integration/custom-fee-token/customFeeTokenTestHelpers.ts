@@ -1,6 +1,6 @@
 import { StaticJsonRpcProvider } from '@ethersproject/providers'
-import { Signer, Wallet, utils } from 'ethers'
-import { ZeroAddress } from 'ethers-v6'
+import { Signer, Wallet } from 'ethers'
+import { ZeroAddress, parseEther, sha256, toUtf8Bytes } from 'ethers-v6'
 
 import {
   testSetup as _testSetup,
@@ -49,13 +49,13 @@ export async function fundParentCustomFeeToken(
   }
 
   const deployerWallet = new Wallet(
-    utils.sha256(utils.toUtf8Bytes('user_token_bridge_deployer')),
+    sha256(toUtf8Bytes('user_token_bridge_deployer')),
     ethProvider()
   )
 
   const tokenContract = ERC20__factory.connect(nativeToken, deployerWallet)
 
-  const tx = await tokenContract.transfer(address, utils.parseEther('10'))
+  const tx = await tokenContract.transfer(address, parseEther('10'))
   await tx.wait()
 }
 
@@ -96,7 +96,7 @@ export async function fundChildCustomFeeToken(childSigner: Signer) {
 
   const tx = await deployerWallet.sendTransaction({
     to: await childSigner.getAddress(),
-    value: utils.parseEther('1'),
+    value: parseEther('1'),
   })
   await tx.wait()
 }

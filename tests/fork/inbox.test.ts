@@ -29,13 +29,12 @@ import { SequencerInbox__factory } from '../../src/lib/abi/factories/SequencerIn
 import { InboxTools } from '../../src'
 
 import { ethers, network } from 'hardhat'
-import { zeroPadValue } from 'ethers-v6'
+import { ContractTransaction, Signer } from 'ethers'
+import { zeroPadValue, solidityPackedKeccak256 } from 'ethers-v6'
 import {
   ChildChain as L2Network,
   getChildChain as getL2Network,
 } from '../../src/lib/dataEntities/networks'
-import { solidityKeccak256 } from 'ethers/lib/utils'
-import { ContractTransaction, Signer } from 'ethers'
 
 const submitL2Tx = async (
   tx: {
@@ -210,7 +209,7 @@ describe('Inbox tools', () => {
       maxFeePerGas: BigNumber.from(21000000000),
       nonce: 1,
     }
-    const messageDataHash = solidityKeccak256(
+    const messageDataHash = solidityPackedKeccak256(
       ['uint8', 'uint256', 'uint256', 'uint256', 'uint256', 'uint256', 'bytes'],
       [
         0,

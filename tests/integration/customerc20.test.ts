@@ -17,7 +17,7 @@
 'use strict'
 
 import { expect } from 'chai'
-import { Signer, Wallet, utils } from 'ethers'
+import { Signer, Wallet } from 'ethers'
 import { ZeroAddress, parseEther } from 'ethers-v6'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Logger, LogLevel } from '@ethersproject/logger'
@@ -123,7 +123,7 @@ describe('Custom ERC20', () => {
   it('deposits erc20 with extra ETH', async () => {
     await depositToken({
       depositAmount,
-      ethDepositAmount: utils.parseEther('0.0005'),
+      ethDepositAmount: BigNumber.from(parseEther('0.0005')),
       parentTokenAddress: testState.l1CustomToken.address,
       erc20Bridger: testState.adminErc20Bridger,
       parentSigner: testState.parentSigner,
@@ -137,7 +137,7 @@ describe('Custom ERC20', () => {
     const randomAddress = Wallet.createRandom().address
     await depositToken({
       depositAmount,
-      ethDepositAmount: utils.parseEther('0.0005'),
+      ethDepositAmount: BigNumber.from(parseEther('0.0005')),
       parentTokenAddress: testState.l1CustomToken.address,
       erc20Bridger: testState.adminErc20Bridger,
       parentSigner: testState.parentSigner,

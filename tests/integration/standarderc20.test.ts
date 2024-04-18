@@ -17,7 +17,7 @@
 'use strict'
 
 import { expect } from 'chai'
-import { Signer, Wallet, utils, constants } from 'ethers'
+import { Signer, Wallet, constants } from 'ethers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import {
@@ -51,6 +51,7 @@ import {
   isArbitrumNetworkWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
 import { itOnlyWhenCustomGasToken } from './custom-fee-token/mochaExtensions'
+import { parseEther } from 'ethers-v6'
 
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
@@ -302,7 +303,7 @@ describe('standard ERC20', () => {
   it('deposits erc20 with extra ETH', async () => {
     await depositToken({
       depositAmount,
-      ethDepositAmount: utils.parseEther('0.0005'),
+      ethDepositAmount: BigNumber.from(parseEther('0.0005')),
       parentTokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
@@ -316,7 +317,7 @@ describe('standard ERC20', () => {
     const randomAddress = Wallet.createRandom().address
     await depositToken({
       depositAmount,
-      ethDepositAmount: utils.parseEther('0.0005'),
+      ethDepositAmount: BigNumber.from(parseEther('0.0005')),
       parentTokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,

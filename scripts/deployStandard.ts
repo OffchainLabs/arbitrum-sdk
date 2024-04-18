@@ -1,11 +1,11 @@
 import { instantiateBridge } from './instantiate_bridge'
 import dotenv from 'dotenv'
 import args from './getCLargs'
-import { constants, BigNumber, utils } from 'ethers'
+import { constants, BigNumber } from 'ethers'
+import { ZeroAddress, formatEther } from 'ethers-v6'
 import { MultiCaller } from '../src'
 import axios from 'axios'
 import prompt from 'prompts'
-import { ZeroAddress } from 'ethers-v6'
 dotenv.config()
 
 const privKey = process.env.PRIVKEY as string
@@ -156,10 +156,10 @@ const main = async () => {
     const fee = price.mul(gasNeeded)
     if (fee.gt(walletBal)) {
       console.log(
-        `An estimated ${utils.formatEther(
-          fee
-        )} ether is needed for deposit; you only have ${utils.formatEther(
-          walletBal
+        `An estimated ${formatEther(
+          fee.toHexString()
+        )} ether is needed for deposit; you only have ${formatEther(
+          walletBal.toHexString()
         )} ether. Will try depositing anyway:`
       )
     }

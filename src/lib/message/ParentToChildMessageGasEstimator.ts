@@ -1,6 +1,7 @@
 import { Provider } from '@ethersproject/abstract-provider'
 import { BigNumber, BigNumberish } from '@ethersproject/bignumber'
-import { BytesLike, constants, utils } from 'ethers'
+import { BytesLike, constants } from 'ethers'
+import { parseEther, dataLength } from 'ethers-v6'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
@@ -157,7 +158,7 @@ export class ParentToChildMessageGasEstimator {
       callValueRefundAddress,
       data,
     }: ParentToChildMessageNoGasParams,
-    senderDeposit: BigNumber = utils.parseEther('1').add(l2CallValue)
+    senderDeposit: BigNumber = BigNumber.from(parseEther('1')).add(l2CallValue)
   ): Promise<ParentToChildMessageGasParams['gasLimit']> {
     const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
@@ -233,7 +234,7 @@ export class ParentToChildMessageGasEstimator {
     const maxSubmissionFeePromise = this.estimateSubmissionFee(
       parentProvider,
       parentBaseFee,
-      utils.hexDataLength(data),
+      dataLength(data),
       options?.maxSubmissionFee
     )
 

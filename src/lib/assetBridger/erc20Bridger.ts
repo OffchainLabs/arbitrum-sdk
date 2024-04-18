@@ -66,7 +66,7 @@ import {
   ChildToParentTransactionRequest,
   ParentToChildTransactionRequest,
 } from '../dataEntities/transactionRequest'
-import { defaultAbiCoder } from 'ethers/lib/utils'
+import { AbiCoder } from 'ethers-v6'
 import { OmitTyped, RequiredPick } from '../utils/types'
 import { RetryableDataTools } from '../dataEntities/retryableData'
 import { EventArgs } from '../dataEntities/event'
@@ -595,7 +595,7 @@ export class Erc20Bridger extends AssetBridger<
     depositParams: OmitTyped<ParentToChildMessageGasParams, 'deposit'>
   ) {
     if (!this.nativeTokenIsEth) {
-      return defaultAbiCoder.encode(
+      return AbiCoder.defaultAbiCoder().encode(
         ['uint256', 'bytes', 'uint256'],
         [
           // maxSubmissionCost
@@ -610,7 +610,7 @@ export class Erc20Bridger extends AssetBridger<
       )
     }
 
-    return defaultAbiCoder.encode(
+    return AbiCoder.defaultAbiCoder().encode(
       ['uint256', 'bytes'],
       [
         // maxSubmissionCost

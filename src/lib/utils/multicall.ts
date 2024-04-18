@@ -17,7 +17,8 @@
 'use strict'
 
 import { Provider } from '@ethersproject/abstract-provider'
-import { BigNumber, utils } from 'ethers'
+import { BigNumber } from 'ethers'
+import { isHexString, decodeBytes32String, dataLength } from 'ethers-v6'
 
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { Multicall2 } from '../abi/Multicall2'
@@ -284,7 +285,7 @@ export class MultiCaller {
     const erc20Iface = ERC20__factory.createInterface()
 
     const isBytes32 = (data: string) =>
-      utils.isHexString(data) && utils.hexDataLength(data) === 32
+      isHexString(data) && dataLength(data) === 32
 
     const input = []
     for (const t of erc20Addresses) {
@@ -339,7 +340,7 @@ export class MultiCaller {
             // Maker doesn't follow the erc20 spec and returns bytes32 data.
             // https://etherscan.io/token/0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2#readContract
             if (isBytes32(returnData)) {
-              return utils.parseBytes32String(returnData) as string
+              return decodeBytes32String(returnData) as string
             } else
               return erc20Iface.decodeFunctionResult(
                 'name',
@@ -357,7 +358,7 @@ export class MultiCaller {
             // Maker doesn't follow the erc20 spec and returns bytes32 data.
             // https://etherscan.io/token/0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2#readContract
             if (isBytes32(returnData)) {
-              return utils.parseBytes32String(returnData) as string
+              return decodeBytes32String(returnData) as string
             } else
               return erc20Iface.decodeFunctionResult(
                 'symbol',
