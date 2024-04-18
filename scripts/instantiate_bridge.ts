@@ -22,7 +22,10 @@ import { Wallet } from '@ethersproject/wallet'
 import dotenv from 'dotenv'
 import args from './getCLargs'
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
-import { L2Network, getArbitrumNetwork } from '../src/lib/dataEntities/networks'
+import {
+  ArbitrumNetwork,
+  getArbitrumNetwork,
+} from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 
@@ -37,7 +40,7 @@ export const instantiateBridge = async (
   l1PkParam?: string,
   l2PkParam?: string
 ): Promise<{
-  l2Network: L2Network
+  l2Network: ArbitrumNetwork
   l1Signer: Signer
   l2Signer: Signer
   erc20Bridger: Erc20Bridger
