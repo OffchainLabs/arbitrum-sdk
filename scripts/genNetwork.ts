@@ -2,9 +2,14 @@ import * as dotenv from 'dotenv'
 dotenv.config()
 import { execSync } from 'child_process'
 import * as fs from 'fs'
-import { L2Network } from '../src'
+
 import { IERC20Bridge__factory } from '../src/lib/abi/factories/IERC20Bridge__factory'
 import { ethers } from 'ethers'
+import {
+  ArbitrumNetwork,
+  L2NetworkOld,
+  mapL2NetworkToArbitrumNetwork,
+} from '../src/lib/dataEntities/networks'
 
 const isTestingOrbitChains = process.env.ORBIT_TEST === '1'
 
@@ -35,17 +40,18 @@ function getLocalNetworksFromContainer(which: 'l1l2' | 'l2l3'): any {
  * we can remove this patchwork
  */
 async function patchNetworks(
-  l2Network: L2Network,
-  l3Network: L2Network | undefined,
+  l2Network: L2NetworkOld,
+  l3Network: L2NetworkOld | undefined,
   l2Provider: ethers.providers.Provider | undefined
-) {
-  // in case network was generated with an older version of the SDK
-  l2Network.parentChainId = (l2Network as any).partnerChainID
+): Promise<{
+  patchedL2Network: ArbitrumNetwork
+  patchedL3Network?: ArbitrumNetwork
+}> {
+  const patchedL2Network = mapL2NetworkToArbitrumNetwork(l2Network)
 
   // native token for l3
   if (l3Network && l2Provider) {
-    // in case network was generated with an older version of the SDK
-    l3Network.parentChainId = (l3Network as any).partnerChainID
+    const patchedL3Network = mapL2NetworkToArbitrumNetwork(l3Network)
 
     try {
       l3Network.nativeToken = await IERC20Bridge__factory.connect(
@@ -55,7 +61,11 @@ async function patchNetworks(
     } catch (e) {
       // l3 network doesn't have a native token
     }
+
+    return { patchedL2Network, patchedL3Network }
   }
+
+  return { patchedL2Network }
 }
 
 async function main() {
@@ -65,17 +75,24 @@ async function main() {
 
   if (isTestingOrbitChains) {
     const { l2Network: l3Network } = getLocalNetworksFromContainer('l2l3')
-    await patchNetworks(
+    const { patchedL2Network, patchedL3Network } = await patchNetworks(
       output.l2Network,
       l3Network,
       new ethers.providers.JsonRpcProvider(process.env['ARB_URL'])
     )
+
     output = {
-      l1Network: output.l2Network,
-      l2Network: l3Network,
+      l1Network: patchedL2Network,
+      l2Network: patchedL3Network,
     }
   } else {
-    await patchNetworks(output.l2Network, undefined, undefined)
+    const { patchedL2Network } = await patchNetworks(
+      output.l2Network,
+      undefined,
+      undefined
+    )
+
+    output.l2Network = patchedL2Network
   }
 
   fs.writeFileSync('localNetwork.json', JSON.stringify(output, null, 2))
