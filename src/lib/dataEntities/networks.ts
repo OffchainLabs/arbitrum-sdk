@@ -316,7 +316,7 @@ export const getArbitrumNetwork = async (
     return (await provider.getNetwork()).chainId
   })()
 
-  let network: ArbitrumNetwork | undefined = getArbitrumChains()[chainId]
+  const network: ArbitrumNetwork | undefined = getArbitrumChains()[chainId]
 
   if (!network) {
     throw new ArbSdkError(`Unrecognized network ${chainId}.`)
