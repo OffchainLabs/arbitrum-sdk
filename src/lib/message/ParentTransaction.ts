@@ -112,7 +112,7 @@ export class ParentTransactionReceipt implements TransactionReceipt {
     const network = await getArbitrumNetwork(provider)
 
     // all networks except Arbitrum One started off with Nitro
-    if (network.chainID === 42161) {
+    if (network.chainId === 42161) {
       return this.blockNumber < ARB1_NITRO_GENESIS_L1_BLOCK
     }
 
@@ -217,7 +217,7 @@ export class ParentTransactionReceipt implements TransactionReceipt {
     childProvider: Provider
   ): Promise<ParentToChildMessageReaderClassic[]> {
     const network = await getArbitrumNetwork(childProvider)
-    const chainID = network.chainID.toString()
+    const chainID = network.chainId.toString()
     const isClassic = await this.isClassic(childProvider)
 
     // throw on nitro events
@@ -255,7 +255,7 @@ export class ParentTransactionReceipt implements TransactionReceipt {
       childSignerOrProvider
     )
     const network = await getArbitrumNetwork(provider)
-    const chainID = network.chainID.toString()
+    const chainID = network.chainId.toString()
     const isClassic = await this.isClassic(provider)
 
     // throw on classic events

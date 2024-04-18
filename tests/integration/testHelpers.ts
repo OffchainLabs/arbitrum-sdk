@@ -444,7 +444,7 @@ export const skipIfMainnet = (() => {
   return async (testContext: Mocha.Context) => {
     if (!chainId) {
       const { childChain } = await testSetup()
-      chainId = childChain.chainID
+      chainId = childChain.chainId
     }
     if (chainId === 42161 || chainId === 42170) {
       console.error("You're writing to the chain on mainnet lol stop")

@@ -38,7 +38,7 @@ describe('Networks', async () => {
 
       // assert network has correct parent
       const arbitrumNetwork = await getArbitrumNetwork(
-        customArbitrumNetwork.chainID
+        customArbitrumNetwork.chainId
       )
       expect(arbitrumNetwork.parentChainId).to.equal(ethereumMainnetChainId)
     })
@@ -67,7 +67,7 @@ describe('Networks', async () => {
   describe('fetching networks', () => {
     it('successfully fetches an Arbitrum network with `getArbitrumNetwork`', async function () {
       const network = await getArbitrumNetwork(arbitrumOneChainId)
-      expect(network.chainID).to.be.eq(arbitrumOneChainId)
+      expect(network.chainId).to.be.eq(arbitrumOneChainId)
     })
 
     it('fails to fetch a registered L1 network with `getArbitrumNetwork`', async function () {
@@ -96,7 +96,7 @@ describe('Networks', async () => {
       addCustomNetwork(customL3Network)
 
       const l3Network = await getArbitrumNetwork(mockL3ChainId)
-      expect(l3Network.chainID).to.be.eq(mockL3ChainId)
+      expect(l3Network.chainId).to.be.eq(mockL3ChainId)
       // assert network has correct parent
       expect(l3Network.parentChainId).to.equal(arbitrumOneChainId)
     })
@@ -132,27 +132,27 @@ describe('Networks', async () => {
 
   describe('getChildrenForNetwork', () => {
     it('returns correct children for ethereum mainnet', () => {
-      const children = getChildrenForNetwork(1).map(c => c.chainID)
+      const children = getChildrenForNetwork(1).map(c => c.chainId)
       expect(children).to.have.members([42161, 42170])
     })
 
     it('returns correct children for arbitrum one', () => {
-      const children = getChildrenForNetwork(42161).map(c => c.chainID)
+      const children = getChildrenForNetwork(42161).map(c => c.chainId)
       expect(children).to.have.members([])
     })
 
     it('returns correct children for arbitrum nova', () => {
-      const children = getChildrenForNetwork(42170).map(c => c.chainID)
+      const children = getChildrenForNetwork(42170).map(c => c.chainId)
       expect(children).to.have.members([])
     })
 
     it('returns correct children for sepolia', () => {
-      const children = getChildrenForNetwork(11155111).map(c => c.chainID)
+      const children = getChildrenForNetwork(11155111).map(c => c.chainId)
       expect(children).to.have.members([421614])
     })
 
     it('returns correct children for arbitrum sepolia', () => {
-      const children = getChildrenForNetwork(421614).map(c => c.chainID)
+      const children = getChildrenForNetwork(421614).map(c => c.chainId)
       expect(children).to.have.members([23011913])
     })
   })
