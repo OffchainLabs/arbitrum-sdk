@@ -110,10 +110,6 @@ export interface EthBridge {
   }
 }
 
-export interface ArbitrumNetworks {
-  [id: string]: ArbitrumNetwork
-}
-
 export interface Networks {
   [id: string]: ArbitrumNetwork
 }
@@ -290,7 +286,7 @@ export const getChildrenForNetwork = (
 /**
  * Index of all Arbitrum chains that have been added.
  */
-export let l2Networks: ArbitrumNetworks = getArbitrumChains()
+export let l2Networks = getArbitrumChains()
 
 /**
  * Returns the Arbitrum chain associated with the given signer, provider or chain id.
@@ -489,5 +485,3 @@ export function mapL2NetworkToArbitrumNetwork(
 const { resetNetworksToDefault } = createNetworkStateHandler()
 
 export { resetNetworksToDefault }
-
-export { ArbitrumNetworks as L2Networks }
