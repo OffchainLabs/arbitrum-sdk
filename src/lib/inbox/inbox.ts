@@ -29,11 +29,7 @@ import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factor
 import { IInbox__factory } from '../abi/factories/IInbox__factory'
 import { RequiredPick } from '../utils/types'
 import { MessageDeliveredEvent } from '../abi/Bridge'
-import {
-  L2Network as ChildChain,
-  L1Network as ParentChain,
-  getParentForNetwork,
-} from '../dataEntities/networks'
+import { ArbitrumNetwork } from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
 import { MultiCaller, CallInput } from '../utils/multicall'
@@ -66,19 +62,14 @@ export class InboxTools {
    * Parent chain provider
    */
   private readonly parentChainProvider: Provider
-  /**
-   * Parent chain for the given Arbitrum chain, can be an L1 or an L2
-   */
-  private readonly parentChain: ParentChain | ChildChain
 
   constructor(
     private readonly parentChainSigner: Signer,
-    private readonly childChain: ChildChain
+    private readonly childChain: ArbitrumNetwork
   ) {
     this.parentChainProvider = SignerProviderUtils.getProviderOrThrow(
       this.parentChainSigner
     )
-    this.parentChain = getParentForNetwork(childChain)
   }
 
   /**
@@ -99,10 +90,10 @@ export class InboxTools {
 
     // we take a long average block time of 14s
     // and always move at least 10 blocks
-    const diffBlocks = Math.max(
-      Math.ceil(diff / this.parentChain.blockTime),
-      10
-    )
+
+    // todo(spsjvc): do something about this
+    const blockTime = 12
+    const diffBlocks = Math.max(Math.ceil(diff / blockTime), 10)
 
     return await this.findFirstBlockBelow(
       blockNumber - diffBlocks,

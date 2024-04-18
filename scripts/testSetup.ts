@@ -23,11 +23,11 @@ import dotenv from 'dotenv'
 
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
-  L1Network,
+  L2Network,
   ArbitrumNetwork,
-  getL1Network,
+  mapL2NetworkToArbitrumNetwork,
   getArbitrumNetwork,
-  addCustomNetwork,
+  addCustomArbitrumNetwork,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
@@ -72,7 +72,6 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
 }
 
 export const testSetup = async (): Promise<{
-  parentChain: L1Network | ArbitrumNetwork
   childChain: ArbitrumNetwork
   parentSigner: Signer
   childSigner: Signer
@@ -95,53 +94,18 @@ export const testSetup = async (): Promise<{
   const parentSigner = seed.connect(ethProvider)
   const childSigner = seed.connect(arbProvider)
 
-  let setParentChain: L1Network | ArbitrumNetwork,
-    setChildChain: ArbitrumNetwork
+  let setChildChain: ArbitrumNetwork
+
   try {
-    const l1Network = isTestingOrbitChains
-      ? await getArbitrumNetwork(parentDeployer)
-      : await getL1Network(parentDeployer)
     const l2Network = await getArbitrumNetwork(childDeployer)
-    setParentChain = l1Network
     setChildChain = l2Network
   } catch (err) {
     // the networks havent been added yet
-
     // check if theres an existing network available
-    const localNetworkFile = getLocalNetworksFromFile()
+    const { l2Network: childChain } = getLocalNetworksFromFile()
 
-    const { l1Network: parentChain, l2Network: childChain } = localNetworkFile
-
-    if (isTestingOrbitChains) {
-      const _parentChain = parentChain as ArbitrumNetwork
-      const ethLocal: L1Network = {
-        blockTime: 10,
-        chainID: _parentChain.parentChainId,
-        isCustom: true,
-        name: 'EthLocal',
-        isArbitrum: false,
-      }
-
-      addCustomNetwork({
-        customL1Network: ethLocal,
-        customArbitrumNetwork: _parentChain,
-      })
-
-      addCustomNetwork({
-        customArbitrumNetwork: childChain,
-      })
-
-      setParentChain = parentChain
-      setChildChain = childChain
-    } else {
-      addCustomNetwork({
-        customL1Network: parentChain as L1Network,
-        customArbitrumNetwork: childChain,
-      })
-
-      setParentChain = parentChain
-      setChildChain = childChain
-    }
+    addCustomArbitrumNetwork(childChain)
+    setChildChain = childChain
   }
 
   const erc20Bridger = new Erc20Bridger(setChildChain)
@@ -160,7 +124,6 @@ export const testSetup = async (): Promise<{
     childSigner,
     parentProvider: ethProvider,
     childProvider: arbProvider,
-    parentChain: setParentChain,
     childChain: setChildChain,
     erc20Bridger,
     adminErc20Bridger,
@@ -172,7 +135,6 @@ export const testSetup = async (): Promise<{
 }
 
 export function getLocalNetworksFromFile(): {
-  l1Network: L1Network | ArbitrumNetwork
   l2Network: ArbitrumNetwork
 } {
   const pathToLocalNetworkFile = path.join(__dirname, '..', 'localNetwork.json')
@@ -180,5 +142,9 @@ export function getLocalNetworksFromFile(): {
     throw new ArbSdkError('localNetwork.json not found, must gen:network first')
   }
   const localNetworksFile = fs.readFileSync(pathToLocalNetworkFile, 'utf8')
-  return JSON.parse(localNetworksFile)
+  const localL2: L2Network = JSON.parse(localNetworksFile).l2Network
+
+  return {
+    l2Network: mapL2NetworkToArbitrumNetwork(localL2),
+  }
 }
