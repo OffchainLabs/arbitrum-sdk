@@ -26,6 +26,8 @@ import {
   ArbitrumNetwork,
   getArbitrumNetwork,
   addCustomNetwork,
+  mapL2NetworkToArbitrumNetwork,
+  L2NetworkOld,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
@@ -140,13 +142,9 @@ export function getLocalNetworksFromFile(): {
     throw new ArbSdkError('localNetwork.json not found, must gen:network first')
   }
   const localNetworksFile = fs.readFileSync(pathToLocalNetworkFile, 'utf8')
-  const localL2: ArbitrumNetwork = JSON.parse(localNetworksFile).l2Network
+  const localL2: L2NetworkOld = JSON.parse(localNetworksFile).l2Network
 
   return {
-    l2Network: {
-      ...localL2,
-      // in case network was generated with an older version of the SDK
-      parentChainId: (localL2 as any).partnerChainID,
-    },
+    l2Network: mapL2NetworkToArbitrumNetwork(localL2),
   }
 }

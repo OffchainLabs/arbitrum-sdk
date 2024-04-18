@@ -23,6 +23,12 @@ import { ArbSdkError } from '../dataEntities/errors'
 import { ARB1_NITRO_GENESIS_L2_BLOCK } from './constants'
 import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__factory'
 
+// https://twitter.com/mattpocockuk/status/1622730173446557697
+export type Prettify<T> = {
+  [K in keyof T]: T[K]
+  // eslint-disable-next-line @typescript-eslint/ban-types
+} & {}
+
 /**
  * Represents an Arbitrum chain, e.g. Arbitrum One, Arbitrum Sepolia, or an L3 chain.
  */
@@ -66,6 +72,20 @@ export interface ArbitrumNetwork {
    */
   isCustom: boolean
 }
+
+/**
+ * This type is only here for when you want to achieve backwards compatibility between SDK v3 and v4.
+ *
+ * Please see {@link ArbitrumNetwork} for the latest type.
+ *
+ * @deprecated since v4
+ */
+export type L2NetworkOld = Prettify<
+  // todo(spsjvc): rename to L2Network after imports are cleaned up
+  Omit<ArbitrumNetwork, 'parentChainId'> & {
+    partnerChainID: number
+  }
+>
 
 export interface TokenBridge {
   l1GatewayRouter: string
@@ -455,6 +475,20 @@ export async function getMulticallAddress(
 
   // Return the address of Multicall on the parent chain
   return child.tokenBridge.l1MultiCall
+}
+
+/**
+ * Maps the old {@link L2Network} (from SDK v3) to {@link ArbitrumNetwork} (from SDK v4).
+ */
+export function mapL2NetworkToArbitrumNetwork(
+  l2Network: L2NetworkOld
+): ArbitrumNetwork {
+  return {
+    // Spread properties
+    ...l2Network,
+    // Map properties that were changed
+    parentChainId: l2Network.partnerChainID,
+  }
 }
 
 const { resetNetworksToDefault } = createNetworkStateHandler()
