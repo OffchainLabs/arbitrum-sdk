@@ -38,7 +38,7 @@ import {
 import { ArbSdkError } from '../dataEntities/errors'
 import { ethers, Overrides } from 'ethers'
 import { ChildTransactionReceipt, RedeemTransaction } from './ChildTransaction'
-import { getChildChain } from '../../lib/dataEntities/networks'
+import { getArbitrumNetwork } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt, isDefined } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
@@ -319,7 +319,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
    * @returns TransactionReceipt of the first successful redeem if exists, otherwise the current status of the message.
    */
   public async getSuccessfulRedeem(): Promise<ParentToChildMessageWaitResult> {
-    const chainNetwork = await getChildChain(this.chainProvider)
+    const chainNetwork = await getArbitrumNetwork(this.chainProvider)
     const eventFetcher = new EventFetcher(this.chainProvider)
     const creationReceipt = await this.getRetryableCreationReceipt()
 

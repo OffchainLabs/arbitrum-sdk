@@ -494,10 +494,5 @@ export function mapL2NetworkToArbitrumNetwork(
 const { resetNetworksToDefault } = createNetworkStateHandler()
 
 export { resetNetworksToDefault }
-export const getChildChain = getArbitrumNetwork
 
-export {
-  ArbitrumNetwork as L2Network,
-  ArbitrumNetworks as L2Networks,
-  getArbitrumNetwork as getL2Network,
-}
+export { ArbitrumNetwork as L2Network, ArbitrumNetworks as L2Networks }

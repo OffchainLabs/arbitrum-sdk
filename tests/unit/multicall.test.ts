@@ -1,7 +1,7 @@
 'use strict'
 
 import {
-  getChildChain as getL2Network,
+  getArbitrumNetwork,
   getNitroGenesisBlock,
 } from '../../src/lib/dataEntities/networks'
 import { providers } from 'ethers'
@@ -12,7 +12,7 @@ import { MultiCaller } from '../../src'
 
 describe('Multicall', () => {
   const createProviderMock = async (networkChoiceOverride?: number) => {
-    const l2Network = await getL2Network(networkChoiceOverride || 42161)
+    const l2Network = await getArbitrumNetwork(networkChoiceOverride || 42161)
 
     const l2ProviderMock = mock(providers.JsonRpcProvider)
     const latestBlock = getNitroGenesisBlock(l2Network) + 1000

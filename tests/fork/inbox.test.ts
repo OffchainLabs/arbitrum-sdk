@@ -31,8 +31,8 @@ import { InboxTools } from '../../src'
 import { ethers, network } from 'hardhat'
 import { hexZeroPad } from '@ethersproject/bytes'
 import {
-  ChildChain as L2Network,
-  getChildChain as getL2Network,
+  ArbitrumNetwork as L2Network,
+  getArbitrumNetwork,
 } from '../../src/lib/dataEntities/networks'
 import { solidityKeccak256 } from 'ethers/lib/utils'
 import { ContractTransaction, Signer } from 'ethers'
@@ -67,7 +67,7 @@ describe('Inbox tools', () => {
     const signer = signers[0]
     const provider = signer.provider!
 
-    const arbitrumOne = await getL2Network(42161)
+    const arbitrumOne = await getArbitrumNetwork(42161)
 
     const sequencerInbox = SequencerInbox__factory.connect(
       arbitrumOne.ethBridge.sequencerInbox,

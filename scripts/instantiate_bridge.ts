@@ -22,7 +22,7 @@ import { Wallet } from '@ethersproject/wallet'
 import dotenv from 'dotenv'
 import args from './getCLargs'
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
-import { L2Network, getL2Network } from '../src/lib/dataEntities/networks'
+import { L2Network, getArbitrumNetwork } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 
@@ -62,7 +62,7 @@ export const instantiateBridge = async (
     l2NetworkID = defaultNetworkId
   }
 
-  const l2Network = await getL2Network(l2NetworkID)
+  const l2Network = await getArbitrumNetwork(l2NetworkID)
 
   const l1Rpc = (() => {
     if (l2NetworkID === 42161) return process.env['MAINNET_RPC'] as string
