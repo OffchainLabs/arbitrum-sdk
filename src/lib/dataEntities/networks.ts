@@ -438,7 +438,7 @@ export function getNitroGenesisBlock(
   return 0
 }
 
-export async function getMulticall(
+export async function getMulticallAddress(
   providerOrChainId: Provider | number
 ): Promise<string> {
   const chains = [...Object.values(l2Networks)]
