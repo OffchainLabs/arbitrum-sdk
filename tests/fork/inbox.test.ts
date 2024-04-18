@@ -31,7 +31,7 @@ import { InboxTools } from '../../src'
 import { ethers, network } from 'hardhat'
 import { hexZeroPad } from '@ethersproject/bytes'
 import {
-  ArbitrumNetwork as L2Network,
+  ArbitrumNetwork,
   getArbitrumNetwork,
 } from '../../src/lib/dataEntities/networks'
 import { solidityKeccak256 } from 'ethers/lib/utils'
@@ -46,7 +46,7 @@ const submitL2Tx = async (
     maxFeePerGas: BigNumber
     gasLimit: BigNumber
   },
-  l2Network: L2Network,
+  l2Network: ArbitrumNetwork,
   l1Signer: Signer
 ): Promise<ContractTransaction> => {
   const inbox = Inbox__factory.connect(l2Network.ethBridge.inbox, l1Signer)
