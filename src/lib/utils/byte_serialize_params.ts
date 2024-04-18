@@ -48,7 +48,7 @@ Arbitrum SDK includes methods for [serializing parameters](https://developer.off
 
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
-import { isAddress as _isAddress } from '@ethersproject/address'
+import { isAddress as _isAddress } from 'ethers-v6'
 import { concat, hexZeroPad } from '@ethersproject/bytes'
 import { BigNumber } from '@ethersproject/bignumber'
 

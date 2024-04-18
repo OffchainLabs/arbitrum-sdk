@@ -1,4 +1,4 @@
-import { getAddress } from '@ethersproject/address'
+import { getAddress } from 'ethers-v6'
 import { utils } from 'ethers'
 import { ADDRESS_ALIAS_OFFSET } from './constants'
 import { ArbSdkError } from './errors'

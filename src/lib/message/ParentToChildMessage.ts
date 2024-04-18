@@ -22,9 +22,14 @@ import { Signer } from '@ethersproject/abstract-signer'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
 import { concat } from '@ethersproject/bytes'
-import { getAddress } from '@ethersproject/address'
-import { keccak256 } from '@ethersproject/keccak256'
-import { ZeroAddress, toBeArray, encodeRlp, zeroPadValue } from 'ethers-v6'
+import {
+  ZeroAddress,
+  toBeArray,
+  encodeRlp,
+  zeroPadValue,
+  getAddress,
+  keccak256,
+} from 'ethers-v6'
 
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
 import {
