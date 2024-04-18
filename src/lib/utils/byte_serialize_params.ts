@@ -48,8 +48,13 @@ Arbitrum SDK includes methods for [serializing parameters](https://developer.off
 
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
-import { isAddress as _isAddress } from 'ethers-v6'
-import { concat, hexZeroPad } from '@ethersproject/bytes'
+import {
+  isAddress as _isAddress,
+  concat,
+  toBeArray,
+  zeroPadValue,
+} from 'ethers-v6'
+
 import { BigNumber } from '@ethersproject/bignumber'
 
 import { ArbAddressTable__factory } from '../abi/factories/ArbAddressTable__factory'
@@ -112,7 +117,7 @@ const isAddress = (input: PrimativeType) =>
   typeof input === 'string' && _isAddress(input)
 
 const toUint = (val: PrimativeType, bytes: BytesNumber) =>
-  hexZeroPad(BigNumber.from(val).toHexString(), bytes)
+  zeroPadValue(BigNumber.from(val).toHexString(), bytes)
 
 //  outputs string suitable for formatting
 const formatPrimative = (value: PrimativeType) => {
@@ -186,5 +191,5 @@ export const serializeParams = async (
       }
     }
   }
-  return concat(formattedParams)
+  return toBeArray(concat(formattedParams))
 }

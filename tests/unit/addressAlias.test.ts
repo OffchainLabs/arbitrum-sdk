@@ -21,8 +21,7 @@ import { expect } from 'chai'
 import { Address } from '../../src/lib/dataEntities/address'
 import { BigNumber } from 'ethers'
 import { ADDRESS_ALIAS_OFFSET } from '../../src/lib/dataEntities/constants'
-import { hexZeroPad } from '@ethersproject/bytes'
-import { getAddress } from 'ethers-v6'
+import { getAddress, zeroPadValue } from 'ethers-v6'
 const offset = BigNumber.from(ADDRESS_ALIAS_OFFSET)
 const maxAddr = BigNumber.from('0xffffffffffffffffffffffffffffffffffffffff')
 
@@ -49,7 +48,7 @@ describe('Address', () => {
 
   it('does alias correctly below offset', async () => {
     // 0xeeeeffffffffffffffffffffffffffffffffeee4
-    const belowOffset = hexZeroPad(
+    const belowOffset = zeroPadValue(
       maxAddr.sub(offset).sub(10).toHexString(),
       20
     )
@@ -63,7 +62,7 @@ describe('Address', () => {
 
   it('does alias correctly on', async () => {
     // 0xeeeeffffffffffffffffffffffffffffffffeeee
-    const onOffset = hexZeroPad(maxAddr.sub(offset).add(0).toHexString(), 20)
+    const onOffset = zeroPadValue(maxAddr.sub(offset).add(0).toHexString(), 20)
 
     testApplyUndo(
       getAddress(onOffset),
@@ -74,7 +73,7 @@ describe('Address', () => {
 
   it('does alias correctly above offset', async () => {
     // 0xeeeeffffffffffffffffffffffffffffffffeef8
-    const aboveOffset = hexZeroPad(
+    const aboveOffset = zeroPadValue(
       maxAddr.sub(offset).add(10).toHexString(),
       20
     )

@@ -21,7 +21,6 @@ import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
-import { concat } from '@ethersproject/bytes'
 import {
   ZeroAddress,
   toBeArray,
@@ -29,6 +28,7 @@ import {
   zeroPadValue,
   getAddress,
   keccak256,
+  concat,
 } from 'ethers-v6'
 
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
