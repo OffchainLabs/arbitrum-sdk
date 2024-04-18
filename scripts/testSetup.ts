@@ -145,7 +145,7 @@ export function getLocalNetworksFromFile(): {
   return {
     l2Network: {
       ...localL2,
-      // in case network was generated with an onlder version of the SDK
+      // in case network was generated with an older version of the SDK
       parentChainId: (localL2 as any).partnerChainID,
     },
   }

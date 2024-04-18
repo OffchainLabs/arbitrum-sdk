@@ -39,12 +39,12 @@ async function patchNetworks(
   l3Network: L2Network | undefined,
   l2Provider: ethers.providers.Provider | undefined
 ) {
-  // in case network was generated with an onlder version of the SDK
+  // in case network was generated with an older version of the SDK
   l2Network.parentChainId = (l2Network as any).partnerChainID
 
   // native token for l3
   if (l3Network && l2Provider) {
-    // in case network was generated with an onlder version of the SDK
+    // in case network was generated with an older version of the SDK
     l3Network.parentChainId = (l3Network as any).partnerChainID
 
     try {
