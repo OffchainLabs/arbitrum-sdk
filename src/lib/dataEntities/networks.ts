@@ -362,7 +362,7 @@ export const getEthBridgeInformation = async (
  * @param customL1Network the custom L1 chain (optional)
  * @param customArbitrumNetwork the custom L2 or L3 chain
  */
-export const addCustomNetwork = (network: ArbitrumNetwork): void => {
+export const addCustomArbitrumNetwork = (network: ArbitrumNetwork): void => {
   if (typeof networks[network.chainId] !== 'undefined') {
     throw new Error(`Network ${network.chainId} already included`)
   }
@@ -409,7 +409,7 @@ export const addDefaultLocalNetwork = (): ArbitrumNetwork => {
     },
   }
 
-  addCustomNetwork(defaultLocalL2Network)
+  addCustomArbitrumNetwork(defaultLocalL2Network)
 
   return defaultLocalL2Network
 }

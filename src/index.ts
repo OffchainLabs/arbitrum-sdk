@@ -45,7 +45,7 @@ export { CallInput, MultiCaller } from './lib/utils/multicall'
 export {
   ArbitrumNetwork,
   getArbitrumNetwork,
-  addCustomNetwork,
+  addCustomArbitrumNetwork,
   addDefaultLocalNetwork,
   getChildrenForNetwork,
 } from './lib/dataEntities/networks'

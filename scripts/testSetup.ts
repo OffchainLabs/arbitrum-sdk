@@ -25,7 +25,7 @@ import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
   ArbitrumNetwork,
   getArbitrumNetwork,
-  addCustomNetwork,
+  addCustomArbitrumNetwork,
   mapL2NetworkToArbitrumNetwork,
   L2NetworkOld,
 } from '../src/lib/dataEntities/networks'
@@ -104,7 +104,7 @@ export const testSetup = async (): Promise<{
     // check if theres an existing network available
     const { l2Network: childChain } = getLocalNetworksFromFile()
 
-    addCustomNetwork(childChain)
+    addCustomArbitrumNetwork(childChain)
     setChildChain = childChain
   }
 
