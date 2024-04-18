@@ -495,4 +495,4 @@ const { resetNetworksToDefault } = createNetworkStateHandler()
 
 export { resetNetworksToDefault }
 
-export { ArbitrumNetwork as L2Network, ArbitrumNetworks as L2Networks }
+export { ArbitrumNetworks as L2Networks }
