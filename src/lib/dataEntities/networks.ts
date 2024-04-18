@@ -22,12 +22,7 @@ import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
 import { ARB1_NITRO_GENESIS_L2_BLOCK } from './constants'
 import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__factory'
-
-// https://twitter.com/mattpocockuk/status/1622730173446557697
-export type Prettify<T> = {
-  [K in keyof T]: T[K]
-  // eslint-disable-next-line @typescript-eslint/ban-types
-} & {}
+import { Prettify } from '../utils/types'
 
 /**
  * Represents an Arbitrum chain, e.g. Arbitrum One, Arbitrum Sepolia, or an L3 chain.
