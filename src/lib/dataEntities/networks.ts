@@ -278,44 +278,31 @@ export const getChildrenForNetwork = (
 export let l2Networks: ArbitrumNetworks = getArbitrumChains()
 
 /**
- * Returns the network associated with the given Signer, Provider or chain id.
- * @note Throws if the chain is not recognized.
- */
-export const getNetwork = async (
-  signerOrProviderOrChainID: SignerOrProvider | number
-) => {
-  const chainID = await (async () => {
-    if (typeof signerOrProviderOrChainID === 'number') {
-      return signerOrProviderOrChainID
-    }
-    const provider = SignerProviderUtils.getProviderOrThrow(
-      signerOrProviderOrChainID
-    )
-
-    const { chainId } = await provider.getNetwork()
-    return chainId
-  })()
-
-  let network: ArbitrumNetwork | undefined = undefined
-
-  network = getArbitrumChains()[chainID]
-
-  if (!network) {
-    throw new ArbSdkError(`Unrecognized network ${chainID}.`)
-  }
-
-  return network
-}
-
-/**
  * Returns the Arbitrum chain associated with the given signer, provider or chain id.
  *
  * @note Throws if the chain is not an Arbitrum chain.
  */
-export const getArbitrumNetwork = (
-  signerOrProviderOrChainID: SignerOrProvider | number
+export const getArbitrumNetwork = async (
+  signerOrProviderOrChainId: SignerOrProvider | number
 ): Promise<ArbitrumNetwork> => {
-  return getNetwork(signerOrProviderOrChainID) as Promise<ArbitrumNetwork>
+  const chainId = await (async () => {
+    if (typeof signerOrProviderOrChainId === 'number') {
+      return signerOrProviderOrChainId
+    }
+    const provider = SignerProviderUtils.getProviderOrThrow(
+      signerOrProviderOrChainId
+    )
+
+    return (await provider.getNetwork()).chainId
+  })()
+
+  let network: ArbitrumNetwork | undefined = getArbitrumChains()[chainId]
+
+  if (!network) {
+    throw new ArbSdkError(`Unrecognized network ${chainId}.`)
+  }
+
+  return network
 }
 
 /**
