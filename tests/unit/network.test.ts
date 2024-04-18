@@ -26,7 +26,7 @@ describe('Networks', async () => {
 
       const customArbitrumNetwork = {
         ...arbitrumOne,
-        chainID: mockL2ChainId,
+        chainId: mockL2ChainId,
         parentChainId: ethereumMainnetChainId,
         isArbitrum: true,
         isCustom: true,
@@ -48,7 +48,7 @@ describe('Networks', async () => {
 
       const customArbitrumNetwork = {
         ...arbitrumOne,
-        chainID: mockL3ChainId,
+        chainId: mockL3ChainId,
         parentChainId: arbitrumOneChainId,
         isArbitrum: true,
         isCustom: true,
@@ -87,7 +87,7 @@ describe('Networks', async () => {
 
       const customL3Network = {
         ...arbitrumOne,
-        chainID: mockL3ChainId,
+        chainId: mockL3ChainId,
         parentChainId: arbitrumOneChainId,
         isArbitrum: true,
         isCustom: true,

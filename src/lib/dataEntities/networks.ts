@@ -352,10 +352,9 @@ export const getEthBridgeInformation = async (
 }
 
 /**
- * Registers a pair of custom L1 and L2 chains, or a single custom Arbitrum chain (L2 or L3).
+ * Registers a custom Arbitrum chain (L2 or L3).
  *
- * @param customL1Network the custom L1 chain (optional)
- * @param customArbitrumNetwork the custom L2 or L3 chain
+ * @param network
  */
 export const addCustomArbitrumNetwork = (network: ArbitrumNetwork): void => {
   if (typeof networks[network.chainId] !== 'undefined') {
