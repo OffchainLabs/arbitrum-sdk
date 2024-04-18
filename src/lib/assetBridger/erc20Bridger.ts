@@ -599,13 +599,16 @@ export class Erc20Bridger extends AssetBridger<
         ['uint256', 'bytes', 'uint256'],
         [
           // maxSubmissionCost
-          depositParams.maxSubmissionCost, // will be zero
+          BigInt(depositParams.maxSubmissionCost.toHexString()), // will be zero
           // callHookData
           '0x',
           // nativeTokenTotalFee
-          depositParams.gasLimit
-            .mul(depositParams.maxFeePerGas)
-            .add(depositParams.maxSubmissionCost), // will be zero
+          BigInt(
+            depositParams.gasLimit
+              .mul(depositParams.maxFeePerGas)
+              .add(depositParams.maxSubmissionCost)
+              .toHexString()
+          ), // will be zero
         ]
       )
     }
@@ -614,7 +617,7 @@ export class Erc20Bridger extends AssetBridger<
       ['uint256', 'bytes'],
       [
         // maxSubmissionCost
-        depositParams.maxSubmissionCost,
+        BigInt(depositParams.maxSubmissionCost.toHexString()),
         // callHookData
         '0x',
       ]
