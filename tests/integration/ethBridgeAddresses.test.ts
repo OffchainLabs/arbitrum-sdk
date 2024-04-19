@@ -1,9 +1,8 @@
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { expect } from 'chai'
 import {
-  EthBridge,
-  getEthBridgeInformation,
   getArbitrumNetwork,
+  getArbitrumNetworkInformationFromRollup,
 } from '../../src/lib/dataEntities/networks'
 import dotenv from 'dotenv'
 dotenv.config()
@@ -20,11 +19,20 @@ describe('Obtain deployed bridge addresses', () => {
     )
 
     // Obtain on-chain information
-    const ethBridge: EthBridge = await getEthBridgeInformation(
-      arbOneL2Network.ethBridge.rollup,
-      ethProvider
-    )
+    const { parentChainId, confirmPeriodBlocks, ethBridge } =
+      await getArbitrumNetworkInformationFromRollup(
+        arbOneL2Network.ethBridge.rollup,
+        ethProvider
+      )
 
+    expect(
+      arbOneL2Network.parentChainId,
+      'Bridge contract is not correct'
+    ).to.eq(parentChainId)
+    expect(
+      arbOneL2Network.confirmPeriodBlocks,
+      'Bridge contract is not correct'
+    ).to.eq(confirmPeriodBlocks)
     // Obtained addresses should equal the addresses
     // available in Arbitrum One's l2Network configuration
     expect(
