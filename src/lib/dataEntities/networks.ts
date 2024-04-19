@@ -316,18 +316,23 @@ export const getArbitrumNetwork = async (
   return network
 }
 
+export type ArbitrumNetworkInformationFromRollup = Pick<
+  ArbitrumNetwork,
+  'parentChainId' | 'confirmPeriodBlocks' | 'ethBridge'
+>
+
 /**
- * Returns the addresses of all contracts that make up the ETH bridge, the parent chain
- * @param rollupContractAddress Address of the Rollup contract
- * @param l1SignerOrProvider A parent chain signer or provider
- * @returns EthBridge object with all information about the ETH bridge
+ * Returns all the information about an Arbitrum network that can be fetched from its Rollup contract.
+ *
+ * @param rollupAddress Address of the Rollup contract on the parent chain
+ * @param parentProvider Provider for the parent chain
+ *
+ * @returns An {@link ArbitrumNetworkInformationFromRollup} object
  */
 export async function getArbitrumNetworkInformationFromRollup(
   rollupAddress: string,
   parentProvider: Provider
-): Promise<
-  Pick<ArbitrumNetwork, 'parentChainId' | 'confirmPeriodBlocks' | 'ethBridge'>
-> {
+): Promise<ArbitrumNetworkInformationFromRollup> {
   const rollup = RollupAdminLogic__factory.connect(
     rollupAddress,
     parentProvider
