@@ -47,9 +47,9 @@ export {
   getArbitrumNetwork,
   ArbitrumNetworkInformationFromRollup,
   getArbitrumNetworkInformationFromRollup,
-  addCustomArbitrumNetwork,
-  addDefaultLocalNetwork,
   getChildrenForNetwork,
+  registerCustomArbitrumNetwork,
+  addDefaultLocalNetwork,
 } from './lib/dataEntities/networks'
 export { InboxTools } from './lib/inbox/inbox'
 export { EventFetcher } from './lib/utils/eventFetcher'

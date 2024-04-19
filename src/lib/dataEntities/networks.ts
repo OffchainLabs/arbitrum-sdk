@@ -361,18 +361,39 @@ export async function getArbitrumNetworkInformationFromRollup(
 }
 
 /**
- * Registers a custom Arbitrum chain (L2 or L3).
+ * Registers a custom Arbitrum network.
  *
- * @param network
+ * @param network {@link ArbitrumNetwork} to be registered
+ * @param options Additional options
+ * @param options.throwIfAlreadyRegistered Whether or not the function should throw if the network is already registered, defaults to `false`
  */
-export const addCustomArbitrumNetwork = (network: ArbitrumNetwork): void => {
+export function registerCustomArbitrumNetwork(
+  network: ArbitrumNetwork,
+  options?: { throwIfAlreadyRegistered?: boolean }
+): ArbitrumNetwork {
+  const throwIfAlreadyRegistered = options?.throwIfAlreadyRegistered ?? false
+
+  if (!network.isCustom) {
+    throw new ArbSdkError(
+      `Custom network ${network.chainId} must have isCustom flag set to true`
+    )
+  }
+
   if (typeof networks[network.chainId] !== 'undefined') {
-    throw new Error(`Network ${network.chainId} already included`)
+    const message = `Network ${network.chainId} already included`
+
+    if (throwIfAlreadyRegistered) {
+      throw new ArbSdkError(message)
+    }
+
+    console.warn(message)
   }
 
   // store the network with the rest of the networks
   networks[network.chainId] = network
   l2Networks = getArbitrumChains()
+
+  return network
 }
 
 /**
@@ -412,9 +433,7 @@ export const addDefaultLocalNetwork = (): ArbitrumNetwork => {
     },
   }
 
-  addCustomArbitrumNetwork(defaultLocalL2Network)
-
-  return defaultLocalL2Network
+  return registerCustomArbitrumNetwork(defaultLocalL2Network)
 }
 
 /**
