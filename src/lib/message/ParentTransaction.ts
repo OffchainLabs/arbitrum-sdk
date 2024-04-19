@@ -284,8 +284,8 @@ export class ParentTransactionReceipt implements TransactionReceipt {
           childSignerOrProvider,
           BigNumber.from(chainId).toNumber(),
           mn.bridgeMessageEvent.sender,
-          mn.inboxMessageEvent.messageNum,
-          mn.bridgeMessageEvent.baseFeeL1,
+          BigInt(mn.inboxMessageEvent.messageNum.toHexString()),
+          BigInt(mn.bridgeMessageEvent.baseFeeL1.toHexString()),
           inboxMessageData
         )
       })
