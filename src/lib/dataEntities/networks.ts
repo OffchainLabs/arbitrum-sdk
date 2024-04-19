@@ -316,34 +316,47 @@ export const getArbitrumNetwork = async (
   return network
 }
 
+export type ArbitrumNetworkInformationFromRollup = Pick<
+  ArbitrumNetwork,
+  'parentChainId' | 'confirmPeriodBlocks' | 'ethBridge'
+>
+
 /**
- * Returns the addresses of all contracts that make up the ETH bridge
- * @param rollupContractAddress Address of the Rollup contract
- * @param l1SignerOrProvider A parent chain signer or provider
- * @returns EthBridge object with all information about the ETH bridge
+ * Returns all the information about an Arbitrum network that can be fetched from its Rollup contract.
+ *
+ * @param rollupAddress Address of the Rollup contract on the parent chain
+ * @param parentProvider Provider for the parent chain
+ *
+ * @returns An {@link ArbitrumNetworkInformationFromRollup} object
  */
-export const getEthBridgeInformation = async (
-  rollupContractAddress: string,
-  l1SignerOrProvider: SignerOrProvider
-): Promise<EthBridge> => {
+export async function getArbitrumNetworkInformationFromRollup(
+  rollupAddress: string,
+  parentProvider: Provider
+): Promise<ArbitrumNetworkInformationFromRollup> {
   const rollup = RollupAdminLogic__factory.connect(
-    rollupContractAddress,
-    l1SignerOrProvider
+    rollupAddress,
+    parentProvider
   )
 
-  const [bridge, inbox, sequencerInbox, outbox] = await Promise.all([
-    rollup.bridge(),
-    rollup.inbox(),
-    rollup.sequencerInbox(),
-    rollup.outbox(),
-  ])
+  const [bridge, inbox, sequencerInbox, outbox, confirmPeriodBlocks] =
+    await Promise.all([
+      rollup.bridge(),
+      rollup.inbox(),
+      rollup.sequencerInbox(),
+      rollup.outbox(),
+      rollup.confirmPeriodBlocks(),
+    ])
 
   return {
-    bridge,
-    inbox,
-    sequencerInbox,
-    outbox,
-    rollup: rollupContractAddress,
+    parentChainId: (await parentProvider.getNetwork()).chainId,
+    confirmPeriodBlocks: confirmPeriodBlocks.toNumber(),
+    ethBridge: {
+      bridge,
+      inbox,
+      sequencerInbox,
+      outbox,
+      rollup: rollupAddress,
+    },
   }
 }
 
