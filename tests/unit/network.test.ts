@@ -1,7 +1,7 @@
 import { expect } from 'chai'
 import {
   resetNetworksToDefault,
-  addCustomArbitrumNetwork,
+  registerCustomArbitrumNetwork,
   getArbitrumNetwork,
   l2Networks as arbitrumNetworks,
   getChildrenForNetwork,
@@ -32,7 +32,7 @@ describe('Networks', async () => {
         isCustom: true,
       } as const
 
-      addCustomArbitrumNetwork(customArbitrumNetwork)
+      registerCustomArbitrumNetwork(customArbitrumNetwork)
 
       expect(await getArbitrumNetwork(mockL2ChainId)).to.be.ok
 
@@ -54,7 +54,7 @@ describe('Networks', async () => {
         isCustom: true,
       } as const
 
-      addCustomArbitrumNetwork(customArbitrumNetwork)
+      registerCustomArbitrumNetwork(customArbitrumNetwork)
 
       expect(await getArbitrumNetwork(mockL3ChainId)).to.be.ok
 
@@ -93,7 +93,7 @@ describe('Networks', async () => {
         isCustom: true,
       } as const
 
-      addCustomArbitrumNetwork(customL3Network)
+      registerCustomArbitrumNetwork(customL3Network)
 
       const l3Network = await getArbitrumNetwork(mockL3ChainId)
       expect(l3Network.chainId).to.be.eq(mockL3ChainId)

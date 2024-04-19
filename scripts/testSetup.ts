@@ -27,7 +27,7 @@ import {
   ArbitrumNetwork,
   mapL2NetworkToArbitrumNetwork,
   getArbitrumNetwork,
-  addCustomArbitrumNetwork,
+  registerCustomArbitrumNetwork,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
@@ -103,9 +103,7 @@ export const testSetup = async (): Promise<{
     // the networks havent been added yet
     // check if theres an existing network available
     const { l2Network: childChain } = getLocalNetworksFromFile()
-
-    addCustomArbitrumNetwork(childChain)
-    setChildChain = childChain
+    setChildChain = registerCustomArbitrumNetwork(childChain)
   }
 
   const erc20Bridger = new Erc20Bridger(setChildChain)
