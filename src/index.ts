@@ -32,12 +32,13 @@ export {
   ParentTransactionReceipt,
 } from './lib/message/ParentTransaction'
 export {
-  ParentToChildMessageStatus,
   EthDepositStatus,
   ParentToChildMessage,
   ParentToChildMessageReader,
   ParentToChildMessageReaderClassic,
   ParentToChildMessageWriter,
+  ParentToChildMessageStatus,
+  ParentToChildMessageWaitForStatusResult,
 } from './lib/message/ParentToChildMessage'
 export { ParentToChildMessageGasEstimator } from './lib/message/ParentToChildMessageGasEstimator'
 export { argSerializerConstructor } from './lib/utils/byte_serialize_params'

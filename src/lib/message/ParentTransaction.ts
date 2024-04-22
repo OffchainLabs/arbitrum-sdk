@@ -27,7 +27,7 @@ import {
   ParentToChildMessageReaderClassic,
   ParentToChildMessageWriter,
   ParentToChildMessageStatus,
-  ParentToChildMessageWaitResult,
+  ParentToChildMessageWaitForStatusResult,
   EthDepositMessage,
   EthDepositMessageWaitResult,
 } from './ParentToChildMessage'
@@ -412,7 +412,7 @@ export class ParentContractCallTransactionReceipt extends ParentTransactionRecei
     {
       complete: boolean
       message: ParentToChildMessageReaderOrWriter<T>
-    } & ParentToChildMessageWaitResult
+    } & ParentToChildMessageWaitForStatusResult
   > {
     const message = (
       await this.getParentToChildMessages(childSignerOrProvider)
