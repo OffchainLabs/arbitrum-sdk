@@ -72,7 +72,7 @@ export enum ParentToChildMessageStatus {
   EXPIRED = 5,
 }
 
-export enum EthDepositStatus {
+export enum EthDepositMessageStatus {
   /**
    * ETH is not deposited on Chain yet
    */
@@ -249,8 +249,8 @@ export type ParentToChildMessageWaitForStatusResult =
       >
     }
 
-export type EthDepositMessageWaitResult = {
-  chainTxReceipt: TransactionReceipt | null
+export type EthDepositMessageWaitForStatusResult = {
+  txReceipt: TransactionReceipt | null
 }
 
 export class ParentToChildMessageReader extends ParentToChildMessage {
@@ -866,12 +866,12 @@ export class EthDepositMessage {
     )
   }
 
-  public async status(): Promise<EthDepositStatus> {
+  public async status(): Promise<EthDepositMessageStatus> {
     const receipt = await this.chainProvider.getTransactionReceipt(
       this.chainDepositTxHash
     )
-    if (receipt === null) return EthDepositStatus.PENDING
-    else return EthDepositStatus.DEPOSITED
+    if (receipt === null) return EthDepositMessageStatus.PENDING
+    else return EthDepositMessageStatus.DEPOSITED
   }
 
   public async wait(confirmations?: number, timeout?: number) {

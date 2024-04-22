@@ -136,8 +136,8 @@ describe('Ether', async () => {
     prettyLog('chainTxHash: ' + waitResult.message.chainDepositTxHash)
     prettyLog('chain transaction found!')
     expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
-    expect(waitResult.chainTxReceipt).to.exist
-    expect(waitResult.chainTxReceipt).to.not.be.null
+    expect(waitResult.txReceipt).to.exist
+    expect(waitResult.txReceipt).to.not.be.null
 
     const testWalletL2EthBalance = await childSigner.getBalance()
     expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(

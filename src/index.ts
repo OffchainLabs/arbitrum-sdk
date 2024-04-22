@@ -32,7 +32,9 @@ export {
   ParentTransactionReceipt,
 } from './lib/message/ParentTransaction'
 export {
-  EthDepositStatus,
+  EthDepositMessage,
+  EthDepositMessageStatus,
+  EthDepositMessageWaitForStatusResult,
   ParentToChildMessage,
   ParentToChildMessageReader,
   ParentToChildMessageReaderClassic,
