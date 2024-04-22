@@ -17,7 +17,8 @@
 'use strict'
 
 import { expect } from 'chai'
-import { Signer, Wallet, constants, utils, ethers } from 'ethers'
+import { Signer, Wallet, utils } from 'ethers'
+import { ZeroAddress, parseEther } from 'ethers-v6'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Logger, LogLevel } from '@ethersproject/logger'
 Logger.setLogLevel(LogLevel.ERROR)
@@ -163,7 +164,7 @@ const registerCustomToken = async (
     childChain.tokenBridge.l1GatewayRouter
   )
   await l1CustomToken.deployed()
-  const amount = ethers.utils.parseEther('1')
+  const amount = parseEther('1')
 
   if (isArbitrumNetworkWithCustomFeeToken()) {
     const approvalTx = await ERC20__factory.connect(
@@ -199,28 +200,28 @@ const registerCustomToken = async (
   expect(
     startL1GatewayAddress,
     'Start l1GatewayAddress not equal empty address'
-  ).to.eq(constants.AddressZero)
+  ).to.eq(ZeroAddress)
   const startL2GatewayAddress = await l2GatewayRouter.l1TokenToGateway(
     l2CustomToken.address
   )
   expect(
     startL2GatewayAddress,
     'Start l2GatewayAddress not equal empty address'
-  ).to.eq(constants.AddressZero)
+  ).to.eq(ZeroAddress)
   const startL1Erc20Address = await l1CustomGateway.l1ToL2Token(
     l1CustomToken.address
   )
   expect(
     startL1Erc20Address,
     'Start l1Erc20Address not equal empty address'
-  ).to.eq(constants.AddressZero)
+  ).to.eq(ZeroAddress)
   const startL2Erc20Address = await l2CustomGateway.l1ToL2Token(
     l1CustomToken.address
   )
   expect(
     startL2Erc20Address,
     'Start l2Erc20Address not equal empty address'
-  ).to.eq(constants.AddressZero)
+  ).to.eq(ZeroAddress)
 
   // send the messages
   const regTx = await adminErc20Bridger.registerCustomToken(

@@ -18,6 +18,7 @@
 ;('use strict')
 
 import { BigNumber, ethers, Signer } from 'ethers'
+import { Transaction } from 'ethers-v6'
 import { InboxTools } from '../../src/lib/inbox/inbox'
 import {
   getArbitrumNetwork,
@@ -75,7 +76,7 @@ describe('Send signedTx to child chain using inbox', async () => {
     )
     const parentStatus = parentTransactionReceipt?.status
     expect(parentStatus).to.equal(1, 'parent txn failed')
-    const childTx = ethers.utils.parseTransaction(signedMsg)
+    const childTx = Transaction.from(signedMsg)
     const childTxhash = childTx.hash!
     const childTxReceipt = await childDeployer.provider!.waitForTransaction(
       childTxhash
@@ -101,7 +102,7 @@ describe('Send signedTx to child chain using inbox', async () => {
       await sendSignedTx(testState, info)
     const parentStatus = parentTransactionReceipt?.status
     expect(parentStatus).to.equal(1)
-    const childTxhash = ethers.utils.parseTransaction(signedMsg).hash!
+    const childTxhash = Transaction.from(signedMsg).hash!
     const childTxReceipt = await childDeployer.provider!.waitForTransaction(
       childTxhash
     )
@@ -131,11 +132,8 @@ describe('Send signedTx to child chain using inbox', async () => {
     const enoughFeeTx = await sendSignedTx(testState, info)
     const enoughFeeParentStatus = enoughFeeTx.parentTransactionReceipt?.status
     expect(enoughFeeParentStatus).to.equal(1)
-    const childLowFeeTxhash = ethers.utils.parseTransaction(lowFeeTx.signedMsg)
-      .hash!
-    const childEnoughFeeTxhash = ethers.utils.parseTransaction(
-      enoughFeeTx.signedMsg
-    ).hash!
+    const childLowFeeTxhash = Transaction.from(lowFeeTx.signedMsg).hash!
+    const childEnoughFeeTxhash = Transaction.from(enoughFeeTx.signedMsg).hash!
 
     const childTEnoughFeeReceipt =
       await childDeployer.provider!.waitForTransaction(childEnoughFeeTxhash)

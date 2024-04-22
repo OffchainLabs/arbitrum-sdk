@@ -1,5 +1,6 @@
 import { StaticJsonRpcProvider } from '@ethersproject/providers'
-import { Signer, Wallet, ethers, utils } from 'ethers'
+import { Signer, Wallet, utils } from 'ethers'
+import { ZeroAddress } from 'ethers-v6'
 
 import {
   testSetup as _testSetup,
@@ -16,7 +17,7 @@ const localNetworks = () => getLocalNetworksFromFile()
 
 export function isArbitrumNetworkWithCustomFeeToken(): boolean {
   const nt = localNetworks().l2Network.nativeToken
-  return typeof nt !== 'undefined' && nt !== ethers.constants.AddressZero
+  return typeof nt !== 'undefined' && nt !== ZeroAddress
 }
 
 export async function testSetup() {

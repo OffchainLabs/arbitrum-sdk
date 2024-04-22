@@ -5,6 +5,7 @@ import { constants, BigNumber, utils } from 'ethers'
 import { MultiCaller } from '../src'
 import axios from 'axios'
 import prompt from 'prompts'
+import { ZeroAddress } from 'ethers-v6'
 dotenv.config()
 
 const privKey = process.env.PRIVKEY as string
@@ -106,7 +107,7 @@ const main = async () => {
     l1TokenAddress,
     l1Provider
   )
-  if (l2TokenAddress === constants.AddressZero) {
+  if (l2TokenAddress === ZeroAddress) {
     throw new Error(`${l1TokenAddress} can't be bridged`)
   }
 

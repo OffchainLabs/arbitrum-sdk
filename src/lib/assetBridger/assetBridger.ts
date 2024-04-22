@@ -16,8 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { constants } from 'ethers'
-
+import { ZeroAddress } from 'ethers-v6'
 import { ParentContractTransaction } from '../message/ParentTransaction'
 import { ChildContractTransaction } from '../message/ChildTransaction'
 
@@ -66,7 +65,7 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    * @returns {boolean}
    */
   protected get nativeTokenIsEth() {
-    return !this.nativeToken || this.nativeToken === constants.AddressZero
+    return !this.nativeToken || this.nativeToken === ZeroAddress
   }
 
   /**

@@ -18,7 +18,8 @@
 
 import { Signer } from '@ethersproject/abstract-signer'
 import { Block, Provider } from '@ethersproject/abstract-provider'
-import { BigNumber, ContractTransaction, ethers, Overrides } from 'ethers'
+import { BigNumber, ContractTransaction, Overrides } from 'ethers'
+import { ZeroAddress, hexlify, solidityPacked, toBeArray } from 'ethers-v6'
 import { TransactionRequest } from '@ethersproject/providers'
 
 import { Bridge } from '../abi/Bridge'
@@ -107,7 +108,7 @@ export class InboxTools {
     if (
       childChainTransactionRequest.to === '0x' ||
       !isDefined(childChainTransactionRequest.to) ||
-      childChainTransactionRequest.to === ethers.constants.AddressZero
+      childChainTransactionRequest.to === ZeroAddress
     ) {
       return true
     }
@@ -132,7 +133,7 @@ export class InboxTools {
       childChainTransactionRequest
     )
     const gasComponents = await nodeInterface.callStatic.gasEstimateComponents(
-      childChainTransactionRequest.to || ethers.constants.AddressZero,
+      childChainTransactionRequest.to || ZeroAddress,
       contractCreation,
       childChainTransactionRequest.data,
       {
@@ -358,9 +359,9 @@ export class InboxTools {
       this.parentChainSigner
     )
 
-    const sendData = ethers.utils.solidityPack(
+    const sendData = solidityPacked(
       ['uint8', 'bytes'],
-      [ethers.utils.hexlify(InboxMessageKind.L2MessageType_signedTx), signedTx]
+      [hexlify(toBeArray(InboxMessageKind.L2MessageType_signedTx)), signedTx]
     )
 
     return await delayedInbox.functions.sendL2Message(sendData)
@@ -410,7 +411,7 @@ export class InboxTools {
     // however, it is needed when we call to estimateArbitrumGas, so
     // we add a zero address here.
     if (!isDefined(tx.to)) {
-      tx.to = ethers.constants.AddressZero
+      tx.to = ZeroAddress
     }
 
     //estimate gas on child chain
