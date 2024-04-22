@@ -1,4 +1,4 @@
-import { AbiCoder, getAddress } from 'ethers-v6'
+import { AbiCoder, getAddress, toBeHex } from 'ethers-v6'
 
 export class SubmitRetryableMessageDataParser {
   /**
@@ -25,7 +25,7 @@ export class SubmitRetryableMessageDataParser {
     )
 
     const addressFromBigInt = (value: bigint) => {
-      const hexString = value.toString(16)
+      const hexString = toBeHex(value, 20)
       const addr = getAddress(hexString)
       return addr
     }
