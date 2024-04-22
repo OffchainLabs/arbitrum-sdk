@@ -115,7 +115,7 @@ export abstract class ParentToChildMessage {
   /**
    * The submit retryable transactions use the typed transaction envelope 2718.
    * The id of these transactions is the hash of the RLP encoded transaction.
-   * @param chainChainId
+   * @param childChainId
    * @param fromAddress the aliased address that called the ParentChain inbox as emitted in the bridge event.
    * @param messageNumber
    * @param parentChainBaseFee
@@ -131,26 +131,27 @@ export abstract class ParentToChildMessage {
    * @returns
    */
   public static calculateSubmitRetryableId(
-    chainChainId: number,
+    childChainId: number,
     fromAddress: string,
-    messageNumber: BigNumber,
-    parentChainBaseFee: BigNumber,
+    messageNumber: bigint,
+    parentChainBaseFee: bigint,
     destAddress: string,
-    chainCallValue: BigNumber,
-    parentChainValue: BigNumber,
-    maxSubmissionFee: BigNumber,
+    chainCallValue: bigint,
+    parentChainValue: bigint,
+    maxSubmissionFee: bigint,
     excessFeeRefundAddress: string,
     callValueRefundAddress: string,
-    gasLimit: BigNumber,
-    maxFeePerGas: BigNumber,
+    gasLimit: bigint,
+    maxFeePerGas: bigint,
     data: string
   ): string {
-    const formatNumber = (value: BigNumber): Uint8Array => {
-      return toBeArray(value.toHexString())
+    const formatNumber = (value: bigint): Uint8Array => {
+      const uintArr = toBeArray(value)
+      return uintArr
     }
 
-    const chainId = BigNumber.from(chainChainId)
-    const msgNum = BigNumber.from(messageNumber)
+    const chainId = BigInt(childChainId)
+    const msgNum = BigInt(messageNumber)
 
     const fields: any[] = [
       formatNumber(chainId),
@@ -181,16 +182,16 @@ export abstract class ParentToChildMessage {
     chainSignerOrProvider: T,
     chainId: number,
     sender: string,
-    messageNumber: BigNumber,
-    parentChainBaseFee: BigNumber,
+    messageNumber: bigint,
+    parentChainBaseFee: bigint,
     messageData: RetryableMessageParams
   ): ParentToChildMessageReaderOrWriter<T>
   public static fromEventComponents<T extends SignerOrProvider>(
     chainSignerOrProvider: T,
     chainId: number,
     sender: string,
-    messageNumber: BigNumber,
-    parentChainBaseFee: BigNumber,
+    messageNumber: bigint,
+    parentChainBaseFee: bigint,
     messageData: RetryableMessageParams
   ): ParentToChildMessageReader | ParentToChildMessageWriter {
     return SignerProviderUtils.isSigner(chainSignerOrProvider)
@@ -215,8 +216,8 @@ export abstract class ParentToChildMessage {
   protected constructor(
     public readonly chainId: number,
     public readonly sender: string,
-    public readonly messageNumber: BigNumber,
-    public readonly parentChainBaseFee: BigNumber,
+    public readonly messageNumber: bigint,
+    public readonly parentChainBaseFee: bigint,
     public readonly messageData: RetryableMessageParams
   ) {
     this.retryableCreationId = ParentToChildMessage.calculateSubmitRetryableId(
@@ -263,8 +264,8 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
     public readonly chainProvider: Provider,
     chainId: number,
     sender: string,
-    messageNumber: BigNumber,
-    parentChainBaseFee: BigNumber,
+    messageNumber: bigint,
+    parentChainBaseFee: bigint,
     messageData: RetryableMessageParams
   ) {
     super(chainId, sender, messageNumber, parentChainBaseFee, messageData)
@@ -658,8 +659,8 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
     public readonly chainSigner: Signer,
     chainId: number,
     sender: string,
-    messageNumber: BigNumber,
-    parentChainBaseFee: BigNumber,
+    messageNumber: bigint,
+    parentChainBaseFee: bigint,
     messageData: RetryableMessageParams
   ) {
     super(
@@ -766,7 +767,7 @@ export class EthDepositMessage {
   private chainDepositTxReceipt: TransactionReceipt | undefined | null
 
   public static calculateDepositTxId(
-    chainChainId: number,
+    childChainId: number,
     messageNumber: BigNumber,
     fromAddress: string,
     toAddress: string,
@@ -776,7 +777,7 @@ export class EthDepositMessage {
       return toBeArray(numberVal.toHexString())
     }
 
-    const chainId = BigNumber.from(chainChainId)
+    const chainId = BigNumber.from(childChainId)
     const msgNum = BigNumber.from(messageNumber)
 
     // https://github.com/OffchainLabs/go-ethereum/blob/07e017aa73e32be92aadb52fa327c552e1b7b118/core/types/arb_types.go#L302-L308
@@ -845,21 +846,21 @@ export class EthDepositMessage {
   /**
    *
    * @param chainProvider
-   * @param chainChainId
+   * @param childChainId
    * @param messageNumber
    * @param to Recipient address of the ETH on Chain
    * @param value
    */
   constructor(
     private readonly chainProvider: Provider,
-    public readonly chainChainId: number,
+    public readonly childChainId: number,
     public readonly messageNumber: BigNumber,
     public readonly from: string,
     public readonly to: string,
     public readonly value: BigNumber
   ) {
     this.chainDepositTxHash = EthDepositMessage.calculateDepositTxId(
-      chainChainId,
+      childChainId,
       messageNumber,
       from,
       to,

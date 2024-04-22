@@ -1,5 +1,3 @@
-import { BigNumber } from '@ethersproject/bignumber'
-
 /**
  * The components of a submit retryable message. Can be parsed from the
  * events emitted from the Inbox.
@@ -12,15 +10,15 @@ export interface RetryableMessageParams {
   /**
    * Call value in L2 message
    */
-  l2CallValue: BigNumber
+  l2CallValue: bigint
   /**
    * Value sent at L1
    */
-  l1Value: BigNumber
+  l1Value: bigint
   /**
    * Max gas deducted from L2 balance to cover base submission fee
    */
-  maxSubmissionFee: BigNumber
+  maxSubmissionFee: bigint
   /**
    * L2 address address to credit (gaslimit x gasprice - execution cost)
    */
@@ -32,11 +30,11 @@ export interface RetryableMessageParams {
   /**
    * Max gas deducted from user's L2 balance to cover L2 execution
    */
-  gasLimit: BigNumber
+  gasLimit: bigint
   /**
    * Gas price for L2 execution
    */
-  maxFeePerGas: BigNumber
+  maxFeePerGas: bigint
   /**
    * Calldata for of the L2 message
    */

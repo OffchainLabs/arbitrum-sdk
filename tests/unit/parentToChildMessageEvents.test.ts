@@ -1,5 +1,5 @@
 import { ParentTransactionReceipt } from './../../src/lib/message/ParentTransaction'
-import { BigNumber, constants, providers } from 'ethers'
+import { constants, providers } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { expect } from 'chai'
 
@@ -183,12 +183,10 @@ describe('ParentToChildMessage events', () => {
     expect(msg.sender, 'incorrect sender').to.be.eq(
       '0xeA3123E9d9911199a6711321d1277285e6d4F3EC'
     )
+    expect(msg.messageNumber === BigInt('0x504c'), 'incorrect message number')
+      .to.be.true
     expect(
-      msg.messageNumber.eq(BigNumber.from('0x504c')),
-      'incorrect message number'
-    ).to.be.true
-    expect(
-      msg.parentChainBaseFee.eq(BigNumber.from('0x05e0fc4c58')),
+      msg.parentChainBaseFee === BigInt('0x05e0fc4c58'),
       'incorrect parent chain base fee'
     ).to.be.true
     expect(
@@ -196,15 +194,15 @@ describe('ParentToChildMessage events', () => {
       'incorrect dest address on messageData'
     ).to.be.eq('0x6c411aD3E74De3E7Bd422b94A27770f5B86C623B')
     expect(
-      msg.messageData.l2CallValue.eq(BigNumber.from('0x0853a0d2313c0000')),
+      msg.messageData.l2CallValue === BigInt('0x0853a0d2313c0000'),
       'incorrect child chain call value on messageData'
     ).to.be.true
     expect(
-      msg.messageData.l1Value.eq(BigNumber.from('0x0854e8ab1802ca80')),
+      msg.messageData.l1Value === BigInt('0x0854e8ab1802ca80'),
       'incorrect parent chain value on messageData'
     ).to.be.true
     expect(
-      msg.messageData.maxSubmissionFee.eq(BigNumber.from('0x01270f6740d880')),
+      msg.messageData.maxSubmissionFee === BigInt('0x01270f6740d880'),
       'incorrect max submission fee on messageData'
     ).to.be.true
     expect(
@@ -216,11 +214,11 @@ describe('ParentToChildMessage events', () => {
       'incorrect call value refund address'
     ).to.be.eq('0xa2e06c19EE14255889f0Ec0cA37f6D0778D06754')
     expect(
-      msg.messageData.gasLimit.eq(BigNumber.from('0x01d566')),
+      msg.messageData.gasLimit === BigInt('0x01d566'),
       'incorrect gas limit on messageData'
     ).to.be.true
     expect(
-      msg.messageData.maxFeePerGas.eq(BigNumber.from('0x11e1a300')),
+      msg.messageData.maxFeePerGas === BigInt('0x11e1a300'),
       'incorrect max fee per gas on messageData'
     ).to.be.true
     expect(msg.messageData.data, 'incorrect data on messageData').to.be.eq(
@@ -319,7 +317,7 @@ describe('ParentToChildMessage events', () => {
     expect(isClassic, 'incorrect tx type returned by isClassic call').to.be.true
     expect(status, 'invalid message status').to.be.eq(5)
     expect(
-      msg.messageNumber.eq(BigNumber.from('0x064371')),
+      BigInt(msg.messageNumber.toHexString()) === BigInt('0x064371'),
       'incorrect message number'
     ).to.be.true
     expect(msg.retryableCreationId, 'incorrect retryable creation id').to.be.eq(
