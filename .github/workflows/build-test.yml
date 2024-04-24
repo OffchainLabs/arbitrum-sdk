@@ -124,62 +124,6 @@ jobs:
         run: CI=true yarn test:unit
 
   test-integration:
-    name: Test (Integration) on Node.js v${{ matrix.node-version }}${{ matrix.orbit-test == '1' && ' with L3' || '' }}${{ matrix.custom-fee == '1' && ' with custom gas token (18 decimals)' || '' }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false # runs all tests to completion even if one fails
-      matrix:
-        node-version: [16, 18, 20]
-        orbit-test: ['0', '1']
-        custom-fee: ['0']
-        include:
-          - orbit-test: '1'
-            custom-fee: '1'
-            node-version: 16
-          - orbit-test: '1'
-            custom-fee: '1'
-            node-version: 18
-          - orbit-test: '1'
-            custom-fee: '1'
-            node-version: 20
-
-    needs: install
-    env:
-      ORBIT_TEST: ${{ matrix.orbit-test }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Restore node_modules
-        uses: OffchainLabs/actions/node-modules/restore@main
-
-      - name: Set up the local node
-        uses: OffchainLabs/actions/run-nitro-test-node@1f885750616dc453d404e40f2dbbf891b850de57
-        with:
-          nitro-testnode-ref: non18-decimal-token
-          l3-node: ${{ matrix.orbit-test == '1' }}
-          args: ${{ matrix.non-18-decimals == '1' && '--l3-fee-token decimals 16' || matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
-
-      - name: Copy .env
-        run: cp ./.env-sample ./.env
-
-      - name: Build
-        run: |
-          yarn gen:abi
-          yarn build
-
-      - name: Generate network file
-        run: yarn gen:network
-
-      - name: Run integration tests
-        run: CI=true yarn test:integration
-
-test-integration:
     name: Test (Integration) on Node.js v${{ matrix.node-version }}${{ matrix.orbit-test == '1' && ' with L3' || '' }}${{ matrix.custom-fee == '1' && ' with custom gas token (non-18 decimals)' || '' }}
     runs-on: ubuntu-latest
     strategy:
@@ -223,7 +167,7 @@ test-integration:
         uses: OffchainLabs/actions/run-nitro-test-node@1f885750616dc453d404e40f2dbbf891b850de57
         with:
           nitro-testnode-ref: non18-decimal-token
-          l3-node: ${{ matrix.orbit-test == '1' }}
+          l3-node: ${{ matrix.non-18-decimals == '1' || matrix.orbit-test == '1' }}
           args: ${{ matrix.non-18-decimals == '1' && '--l3-fee-token decimals 16' || matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
 
       - name: Copy .env
