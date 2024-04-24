@@ -28,6 +28,8 @@ import { parseEther, randomBytes } from 'ethers/lib/utils'
 import { Inbox__factory } from '../../src/lib/abi/factories/Inbox__factory'
 import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
 const depositAmount = BigNumber.from(100)
+import { ERC20Inbox__factory } from '../../src/lib/abi/factories/ERC20Inbox__factory'
+import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 
 describe('RevertData', () => {
   beforeEach('skipIfMainnet', async function () {
@@ -59,7 +61,6 @@ describe('RevertData', () => {
     const { l1Signer, l2Network } = await testSetup()
     await fundL1(l1Signer)
 
-    const inbox = Inbox__factory.connect(l2Network.ethBridge.inbox, l1Signer)
     const {
       to,
       l2CallValue,
@@ -73,17 +74,40 @@ describe('RevertData', () => {
     } = createRevertParams()
 
     try {
-      await inbox[func].createRetryableTicket(
-        to,
-        l2CallValue,
-        maxSubmissionCost,
-        excessFeeRefundAddress,
-        callValueRefundAddress,
-        gasLimit,
-        maxFeePerGas,
-        data,
-        { value }
-      )
+      if (isL2NetworkWithCustomFeeToken()) {
+        const inbox = ERC20Inbox__factory.connect(
+          l2Network.ethBridge.inbox,
+          l1Signer
+        )
+        await inbox[func].createRetryableTicket(
+          to,
+          l2CallValue,
+          maxSubmissionCost,
+          excessFeeRefundAddress,
+          callValueRefundAddress,
+          gasLimit,
+          maxFeePerGas,
+          value,
+          data
+        )
+      } else {
+        const inbox = Inbox__factory.connect(
+          l2Network.ethBridge.inbox,
+          l1Signer
+        )
+        await inbox[func].createRetryableTicket(
+          to,
+          l2CallValue,
+          maxSubmissionCost,
+          excessFeeRefundAddress,
+          callValueRefundAddress,
+          gasLimit,
+          maxFeePerGas,
+          data,
+          { value }
+        )
+      }
+
       assert.fail(`Expected ${func} to fail`)
     } catch (err) {
       const typedErr = err as Error
@@ -138,6 +162,16 @@ describe('RevertData', () => {
       })
     ).wait()
 
+    if (isL2NetworkWithCustomFeeToken()) {
+      // approve the custom fee token
+      await (
+        await erc20Bridger.approveGasToken({
+          erc20L1Address: l1TokenAddress,
+          l1Signer: l1Signer,
+        })
+      ).wait()
+    }
+
     const retryableOverrides: GasOverrides = {
       maxFeePerGas: {
         base: RetryableDataTools.ErrorTriggeringParams.maxFeePerGas,
@@ -182,7 +216,9 @@ describe('RevertData', () => {
       )
       expect(parsed.data, 'data').to.eq(depositParams.retryableData.data)
       expect(parsed.deposit.toString(), 'deposit').to.eq(
-        depositParams.txRequest.value.toString()
+        isL2NetworkWithCustomFeeToken()
+          ? depositParams.retryableData.deposit.toString()
+          : depositParams.txRequest.value.toString()
       )
       expect(parsed.excessFeeRefundAddress, 'excessFeeRefundAddress').to.eq(
         depositParams.retryableData.excessFeeRefundAddress

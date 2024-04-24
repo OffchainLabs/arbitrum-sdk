@@ -17,11 +17,12 @@
 'use strict'
 
 import { Signer } from '@ethersproject/abstract-signer'
-import { Provider } from '@ethersproject/abstract-provider'
+import { Provider, TransactionRequest } from '@ethersproject/abstract-provider'
 import { PayableOverrides, Overrides } from '@ethersproject/contracts'
-import { BigNumber } from 'ethers'
+import { BigNumber, constants } from 'ethers'
 
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
+import { ERC20Inbox__factory } from '../abi/factories/ERC20Inbox__factory'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 import { AssetBridger } from './assetBridger'
@@ -46,6 +47,38 @@ import { OmitTyped } from '../utils/types'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getL2Network } from '../dataEntities/networks'
+import { ERC20__factory } from '../abi/factories/ERC20__factory'
+import { isArbitrumChain } from '../utils/lib'
+
+export type ApproveGasTokenParams = {
+  /**
+   * Amount to approve. Defaults to max int.
+   */
+  amount?: BigNumber
+  /**
+   * Transaction overrides
+   */
+  overrides?: PayableOverrides
+}
+
+export type ApproveGasTokenTxRequest = {
+  /**
+   * Transaction request
+   */
+  txRequest: Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>
+  /**
+   * Transaction overrides
+   */
+  overrides?: Overrides
+}
+
+export type ApproveGasTokenParamsOrTxRequest =
+  | ApproveGasTokenParams
+  | ApproveGasTokenTxRequest
+
+type WithL1Signer<T extends ApproveGasTokenParamsOrTxRequest> = T & {
+  l1Signer: Signer
+}
 
 export interface EthWithdrawParams {
   /**
@@ -142,29 +175,104 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Get a transaction request for an eth deposit
+   * Asserts that the provided argument is of type `ApproveGasTokenParams` and not `ApproveGasTokenTxRequest`.
+   * @param params
+   */
+  private isApproveGasTokenParams(
+    params: ApproveGasTokenParamsOrTxRequest
+  ): params is WithL1Signer<ApproveGasTokenParams> {
+    return typeof (params as ApproveGasTokenTxRequest).txRequest === 'undefined'
+  }
+
+  /**
+   * Creates a transaction request for approving the custom gas token to be spent by the inbox on the parent chain
+   * @param params
+   */
+  public getApproveGasTokenRequest(
+    params?: ApproveGasTokenParams
+  ): Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>> {
+    if (this.nativeTokenIsEth) {
+      throw new Error('chain uses ETH as its native/gas token')
+    }
+
+    const data = ERC20__factory.createInterface().encodeFunctionData(
+      'approve',
+      [
+        // spender
+        this.l2Network.ethBridge.inbox,
+        // value
+        params?.amount ?? constants.MaxUint256,
+      ]
+    )
+
+    return {
+      to: this.nativeToken!,
+      data,
+      value: BigNumber.from(0),
+    }
+  }
+
+  /**
+   * Approves the custom gas token to be spent by the Inbox on the parent chain.
+   * @param params
+   */
+  public async approveGasToken(
+    params: WithL1Signer<ApproveGasTokenParamsOrTxRequest>
+  ) {
+    if (this.nativeTokenIsEth) {
+      throw new Error('chain uses ETH as its native/gas token')
+    }
+
+    const approveGasTokenRequest = this.isApproveGasTokenParams(params)
+      ? this.getApproveGasTokenRequest(params)
+      : params.txRequest
+
+    return params.l1Signer.sendTransaction({
+      ...approveGasTokenRequest,
+      ...params.overrides,
+    })
+  }
+
+  /**
+   * Gets transaction calldata for a tx request for depositing ETH or custom gas token
    * @param params
    * @returns
    */
-  public async getDepositRequest(
-    params: EthDepositRequestParams
-  ): Promise<OmitTyped<L1ToL2TransactionRequest, 'retryableData'>> {
-    const inboxInterface = Inbox__factory.createInterface()
+  private getDepositRequestData(params: EthDepositRequestParams) {
+    if (!this.nativeTokenIsEth) {
+      return (
+        ERC20Inbox__factory.createInterface() as unknown as {
+          encodeFunctionData(
+            functionFragment: 'depositERC20(uint256)',
+            values: [BigNumber]
+          ): string
+        }
+      ).encodeFunctionData('depositERC20(uint256)', [params.amount])
+    }
 
-    const functionData = (
-      inboxInterface as unknown as {
+    return (
+      Inbox__factory.createInterface() as unknown as {
         encodeFunctionData(
           functionFragment: 'depositEth()',
           values?: undefined
         ): string
       }
     ).encodeFunctionData('depositEth()')
+  }
 
+  /**
+   * Gets tx request for depositing ETH or custom gas token
+   * @param params
+   * @returns
+   */
+  public async getDepositRequest(
+    params: EthDepositRequestParams
+  ): Promise<OmitTyped<L1ToL2TransactionRequest, 'retryableData'>> {
     return {
       txRequest: {
         to: this.l2Network.ethBridge.inbox,
-        value: params.amount,
-        data: functionData,
+        value: this.nativeTokenIsEth ? params.amount : 0,
+        data: this.getDepositRequestData(params),
         from: params.from,
       },
       isValid: async () => true,
@@ -272,11 +380,17 @@ export class EthBridger extends AssetBridger<
         value: params.amount,
         from: params.from,
       },
-      // we make this async and expect a provider since we
-      // in the future we want to do proper estimation here
-      /* eslint-disable @typescript-eslint/no-unused-vars */
+      // todo: do proper estimation
       estimateL1GasLimit: async (l1Provider: Provider) => {
-        //  measured 126998 - add some padding
+        if (await isArbitrumChain(l1Provider)) {
+          // values for L3 are dependent on the L1 base fee, so hardcoding can never be accurate
+          // however, this is only an estimate used for display, so should be good enough
+          //
+          // measured with withdrawals from Xai and Rari then added some padding
+          return BigNumber.from(4_000_000)
+        }
+
+        // measured 126998 - add some padding
         return BigNumber.from(130000)
       },
     }

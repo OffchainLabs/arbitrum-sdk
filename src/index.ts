@@ -54,6 +54,7 @@ export {
 } from './lib/dataEntities/networks'
 export { InboxTools } from './lib/inbox/inbox'
 export { EventFetcher } from './lib/utils/eventFetcher'
+export { ArbitrumProvider } from './lib/utils/arbProvider'
 export * as constants from './lib/dataEntities/constants'
 export { L2ToL1MessageStatus } from './lib/dataEntities/message'
 export {

@@ -1,6 +1,6 @@
 # Arbitrum SDK
 
-Typescript library for client-side interactions with Arbitrum. Arbitrum SDK provides common helper functionaliy as well access to the underlying smart contract interfaces.
+TypeScript library for client-side interactions with Arbitrum. Arbitrum SDK provides common helper functionality as well as access to the underlying smart contract interfaces.
 
 Below is an overview of the Arbitrum SDK functionality. See the [tutorials](https://github.com/OffchainLabs/arbitrum-tutorials) for further examples of how to use these classes.
 
@@ -71,7 +71,7 @@ const dataIsOnL1 = await l2TxnReceipt.isDataAvailable(l2Provider, l1Provider)
 
 ### Bridging assets
 
-Arbitrum SDK can be used to bridge assets to/from the rollup chain.The following asset bridgers are currently available:
+Arbitrum SDK can be used to bridge assets to/from the rollup chain. The following asset bridgers are currently available:
 
 - EthBridger
 - Erc20Bridger
@@ -81,7 +81,7 @@ All asset bridgers have the following methods:
 - **deposit** - moves assets from the L1 to the L2
 - **depositEstimateGas** - estimates the gas required to do the deposit
 - **withdraw** - moves assets from the L2 to the L1
-- **withdrawEstimateGas** - estimate the gas required to do the withdrawal
+- **withdrawEstimateGas** - estimates the gas required to do the withdrawal
   Which accept different parameters depending on the asset bridger type
 
 ### Cross chain messages
@@ -90,11 +90,11 @@ When assets are moved by the L1 and L2 cross chain messages are sent. The lifecy
 
 ### Networks
 
-Arbitrum SDK comes pre-configured for Mainnet and Goerli, and their Arbitrum counterparts. However, the networks functionality can be used to register networks for custom Arbitrum instances. Most of the classes in Arbitrum SDK depend on network objects so this must be configured before using other Arbitrum SDK functionality.
+Arbitrum SDK comes pre-configured for Mainnet and Sepolia, and their Arbitrum counterparts. However, the networks functionality can be used to register networks for custom Arbitrum instances. Most of the classes in Arbitrum SDK depend on network objects so this must be configured before using other Arbitrum SDK functionality.
 
 ### Inbox tools
 
-As part of normal operation the Arbitrum sequencer will messages into the rollup chain. However, if the sequencer is unavailable and not posting batches, the inbox tools can be used to force the inclusion of transactions into the rollup chain.
+As part of normal operation the Arbitrum sequencer will send messages into the rollup chain. However, if the sequencer is unavailable and not posting batches, the inbox tools can be used to force the inclusion of transactions into the rollup chain.
 
 ### Utils
 
@@ -104,28 +104,28 @@ As part of normal operation the Arbitrum sequencer will messages into the rollup
 
 ### Run Integration tests
 
-1. First, make sure you have a Nitro node running. Check out the nitro repo, and run the following command `./test-node.bash --init --no-blockscout`
+1. First, make sure you have a Nitro test node running. Follow the instructions [here](https://docs.arbitrum.io/node-running/how-tos/local-dev-node).
 
-2. After the node has started up (that could take upto 20-30 mins), run `yarn gen:network`.
+2. After the node has started up (that could take up to 20-30 mins), run `yarn gen:network`.
 
 3. Once done, finally run `yarn test:integration` to run the integration tests.
 
-Defaults to `Arbitrum Goerli`, for custom network use `--network` flag.
+Defaults to `Arbitrum Sepolia`, for custom network use `--network` flag.
 
-`Arbitrum Goerli` expects env var `ARB_KEY` to be prefunded with at least 0.02 ETH, and env var `INFURA_KEY` to be set.
+`Arbitrum Sepolia` expects env var `ARB_KEY` to be prefunded with at least 0.02 ETH, and env var `INFURA_KEY` to be set.
 (see `integration_test/config.ts`)
 
 ### Bridge A Standard Token
 
-Bridging new a token to L2 (i.e., deploying a new token contract) through the standard gateway is done by simply depositing a token that hasn't yet been bridged. This repo includes a script to trigger this initial deposit/deployment:
+Bridging a new token to L2 (i.e., deploying a new token contract) through the standard gateway is done by simply depositing a token that hasn't yet been bridged. This repo includes a script to trigger this initial deposit/deployment:
 
-1. clone `arbitrum-sdk`
+1. Clone `arbitrum-sdk`
 
 2. `yarn install` (from root)
 
-3. Set `PRIVKEY` environmental variable (you can use .env) to the key of the account from which you'll be deploying (account should have some balance of the token you're bridging).
+3. Set `PRIVKEY` environment variable (you can use .env) to the key of the account from which you'll be deploying (account should have some balance of the token you're bridging).
 
-4. Set MAINNET_RPC environmental variable to L1 RPC endpoint (i.e., https://mainnet.infura.io/v3/my-infura-key)
+4. Set MAINNET_RPC environment variable to L1 RPC endpoint (i.e., https://mainnet.infura.io/v3/my-infura-key)
 
 5. `yarn bridgeStandardToken`
 
@@ -134,4 +134,4 @@ Required CL params:
 `l1TokenAddress`:string — address of L1 token to be bridged
 
 Ex:
-`yarn bridgeStandardToken --networkID 421611 --l1TokenAddress 0xdf032bc4b9dc2782bb09352007d4c57b75160b15 --amount 3`
+`yarn bridgeStandardToken --networkID 421614 --l1TokenAddress 0xdf032bc4b9dc2782bb09352007d4c57b75160b15 --amount 3`
