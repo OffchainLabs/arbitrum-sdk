@@ -163,7 +163,7 @@ jobs:
         with:
           nitro-testnode-ref: non18-decimal-token
           l3-node: ${{ matrix.orbit-test == '1' }}
-          args: ${{ matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
+          args: ${{ matrix.non-18-decimals == '1' && '--l3-fee-token decimals 16' || matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
@@ -224,7 +224,7 @@ test-integration:
         with:
           nitro-testnode-ref: non18-decimal-token
           l3-node: ${{ matrix.orbit-test == '1' }}
-          args: ${{ matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
+          args: ${{ matrix.non-18-decimals == '1' && '--l3-fee-token decimals 16' || matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
