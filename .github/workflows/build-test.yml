@@ -164,7 +164,7 @@ jobs:
         uses: OffchainLabs/actions/node-modules/restore@main
 
       - name: Set up the local node
-        uses: OffchainLabs/actions/run-nitro-test-node@1f885750616dc453d404e40f2dbbf891b850de57
+        uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
           nitro-testnode-ref: non18-decimal-token
           l3-node: ${{ matrix.non-18-decimals == '1' || matrix.orbit-test == '1' }}
