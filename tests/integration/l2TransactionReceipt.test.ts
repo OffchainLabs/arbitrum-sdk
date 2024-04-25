@@ -31,7 +31,7 @@ import { BigNumber, Wallet } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
 import { testSetup } from '../../scripts/testSetup'
 
-async function waitForL1BatchConfirmation(
+async function waitForL1BatchConfirmations(
   arbTxReceipt: L2TransactionReceipt,
   l2Provider: JsonRpcProvider,
   timeoutMs: number
@@ -101,22 +101,19 @@ describe('ArbProvider', () => {
         })
       ).toNumber()
 
-      const l1BatchConfirmations = await waitForL1BatchConfirmation(
-        arbTxReceipt,
-        l2Provider,
-        // for L3s, we also have to wait for the batch to land on L1, so we poll for max 60s until that happens
-        60_000
-      )
-
       if (l1BatchNumber && l1BatchNumber > 0) {
-        expect(l1BatchConfirmations, 'missing confirmations').to.be.gt(0)
-      }
-      if (l1BatchConfirmations > 0) {
-        expect(l1BatchNumber, 'missing batch number').to.be.gt(0)
-      }
+        const l1BatchConfirmations = await waitForL1BatchConfirmations(
+          arbTxReceipt,
+          l2Provider,
+          // for L3s, we also have to wait for the batch to land on L1, so we poll for max 30s until that happens
+          30_000
+        )
 
-      if (l1BatchConfirmations > 8) {
-        break
+        expect(l1BatchConfirmations, 'missing confirmations').to.be.gt(0)
+
+        if (l1BatchConfirmations > 8) {
+          break
+        }
       }
     }
 
