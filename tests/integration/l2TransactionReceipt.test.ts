@@ -104,8 +104,8 @@ describe('ArbProvider', () => {
       const l1BatchConfirmations = await waitForL1BatchConfirmation(
         arbTxReceipt,
         l2Provider,
-        // for L3s, we also have to wait for the batch to land on L1, so we poll for max 30s until that happens
-        30_000
+        // for L3s, we also have to wait for the batch to land on L1, so we poll for max 60s until that happens
+        60_000
       )
 
       if (l1BatchNumber && l1BatchNumber > 0) {
