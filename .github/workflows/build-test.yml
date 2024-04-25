@@ -161,8 +161,8 @@ jobs:
       - name: Set up the local node
         uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
-          nitro-testnode-ref: master
-          nitro-contracts-branch: develop
+          nitro-testnode-ref: release
+          nitro-contracts-branch: validator-wallet-fix
           l3-node: ${{ matrix.orbit-test == '1' }}
           args: ${{ matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
 
