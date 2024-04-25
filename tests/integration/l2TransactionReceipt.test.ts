@@ -31,17 +31,17 @@ import { BigNumber, Wallet } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
 import { testSetup } from '../../scripts/testSetup'
 
-async function pollForL1BatchConfirmations(
+async function waitForL1BatchConfirmation(
   arbTxReceipt: L2TransactionReceipt,
   l2Provider: JsonRpcProvider,
-  timeoutMs = 30_000
+  timeoutMs: number
 ) {
   let polls = 0
   let l1BatchConfirmations = 0
 
   const MAX_POLLS = 10
 
-  while (l1BatchConfirmations === 0 && polls < MAX_POLLS) {
+  while (polls < MAX_POLLS) {
     l1BatchConfirmations = (
       await arbTxReceipt.getBatchConfirmations(l2Provider)
     ).toNumber()
@@ -101,9 +101,11 @@ describe('ArbProvider', () => {
         })
       ).toNumber()
 
-      const l1BatchConfirmations = await pollForL1BatchConfirmations(
+      const l1BatchConfirmations = await waitForL1BatchConfirmation(
         arbTxReceipt,
-        l2Provider
+        l2Provider,
+        // for L3s, we also have to wait for the batch to land on L1, so we poll for max 30s until that happens
+        30_000
       )
 
       if (l1BatchNumber && l1BatchNumber > 0) {
