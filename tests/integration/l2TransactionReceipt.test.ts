@@ -105,8 +105,8 @@ describe('ArbProvider', () => {
         const l1BatchConfirmations = await waitForL1BatchConfirmations(
           arbTxReceipt,
           l2Provider,
-          // for L3s, we also have to wait for the batch to land on L1, so we poll for max 30s until that happens
-          30_000
+          // for L3s, we also have to wait for the batch to land on L1, so we poll for max 60s until that happens
+          60_000
         )
 
         expect(l1BatchConfirmations, 'missing confirmations').to.be.gt(0)
