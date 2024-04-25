@@ -138,8 +138,8 @@ export declare namespace IRollupCore {
   };
 }
 
-export interface RollupUserLogicInterface extends utils.Interface {
-  contractName: "RollupUserLogic";
+export interface BoldRollupUserLogicInterface extends utils.Interface {
+  contractName: "BoldRollupUserLogic";
   functions: {
     "VALIDATOR_AFK_BLOCKS()": FunctionFragment;
     "_stakerMap(address)": FunctionFragment;
@@ -713,13 +713,13 @@ export type UserWithdrawableFundsUpdatedEvent = TypedEvent<
 export type UserWithdrawableFundsUpdatedEventFilter =
   TypedEventFilter<UserWithdrawableFundsUpdatedEvent>;
 
-export interface RollupUserLogic extends BaseContract {
-  contractName: "RollupUserLogic";
+export interface BoldRollupUserLogic extends BaseContract {
+  contractName: "BoldRollupUserLogic";
   connect(signerOrProvider: Signer | Provider | string): this;
   attach(addressOrName: string): this;
   deployed(): Promise<this>;
 
-  interface: RollupUserLogicInterface;
+  interface: BoldRollupUserLogicInterface;
 
   queryFilter<TEvent extends TypedEvent>(
     event: TypedEventFilter<TEvent>,

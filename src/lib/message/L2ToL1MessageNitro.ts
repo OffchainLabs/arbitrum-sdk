@@ -27,7 +27,7 @@ import { BlockTag } from '@ethersproject/abstract-provider'
 
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { RollupUserLogic__factory } from '../abi/factories/RollupUserLogic__factory'
-import { RollupUserLogic__factory as BoldRollupUserLogic__factory } from '../boldAbi/factories/RollupUserLogic__factory'
+import { BoldRollupUserLogic__factory } from '../abi/factories/BoldRollupUserLogic__factory'
 import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
@@ -45,15 +45,16 @@ import { L2Network, getL2Network } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
 import {
   AssertionCreatedEvent,
-  AssertionCreatedEventObject,
-  RollupUserLogic as BoldRollupUserLogic,
-} from '../boldAbi/RollupUserLogic'
+  BoldRollupUserLogic,
+} from '../abi/BoldRollupUserLogic'
 import { ArbitrumProvider } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { EventArgs } from '../dataEntities/event'
 import { L2ToL1MessageStatus } from '../dataEntities/message'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
+
+// 
 
 /**
  * Conditional type for Signer or Provider. If T is of type Provider
@@ -246,9 +247,9 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
   private parseAssertionCreatedEvent(e: FetchedEvent<AssertionCreatedEvent>) {
     return {
       afterState: {
-        blockHash: (e.event as AssertionCreatedEventObject).assertion.afterState
+        blockHash: (e as FetchedEvent<AssertionCreatedEvent>).event.assertion.afterState
           .globalState.bytes32Vals[0],
-        sendRoot: (e.event as AssertionCreatedEventObject).assertion.afterState
+        sendRoot: (e as FetchedEvent<AssertionCreatedEvent>).event.assertion.afterState
           .globalState.bytes32Vals[1],
       },
     }
@@ -258,7 +259,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     log: FetchedEvent<NodeCreatedEvent> | FetchedEvent<AssertionCreatedEvent>
   ): log is FetchedEvent<AssertionCreatedEvent> {
     return (
-      (log.event as AssertionCreatedEventObject).challengeManager != undefined
+      (log as FetchedEvent<AssertionCreatedEvent>).event.challengeManager != undefined
     )
   }
 
@@ -444,7 +445,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
           )
           latestCreatedAssertionId = (
             assertionCreatedEvents[assertionCreatedEvents.length - 1]
-              .event as AssertionCreatedEventObject
+              .event
           ).assertionHash
         } else {
           latestCreatedAssertionId = await rollup.callStatic.latestNodeCreated()
@@ -662,7 +663,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     }
 
     if (l2Network.isBold) {
-      const assertionHash = (foundLog.event as AssertionCreatedEventObject)
+      const assertionHash = (foundLog as FetchedEvent<AssertionCreatedEvent>).event
         .assertionHash
       const assertion = await (rollup as BoldRollupUserLogic).getAssertion(
         assertionHash
