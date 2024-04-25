@@ -32,7 +32,7 @@ import { parseEther } from 'ethers/lib/utils'
 import { testSetup } from '../../scripts/testSetup'
 
 async function waitForL1BatchConfirmations(
-  arbTxReceipt: L2TransactionReceipt,
+  arbTxReceipt: ChildTransactionReceipt,
   l2Provider: JsonRpcProvider,
   timeoutMs: number
 ) {
