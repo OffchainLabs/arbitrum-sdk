@@ -31,6 +31,34 @@ import { BigNumber, Wallet } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
 import { testSetup } from '../../scripts/testSetup'
 
+async function pollForL1BatchConfirmations(
+  arbTxReceipt: L2TransactionReceipt,
+  l2Provider: JsonRpcProvider,
+  timeoutMs = 30_000
+) {
+  let polls = 0
+  let l1BatchConfirmations = 0
+
+  const MAX_POLLS = 10
+
+  while (l1BatchConfirmations === 0 && polls < MAX_POLLS) {
+    l1BatchConfirmations = (
+      await arbTxReceipt.getBatchConfirmations(l2Provider)
+    ).toNumber()
+
+    // exit out of the while loop after fetching a non-zero number of batch confirmations
+    if (l1BatchConfirmations !== 0) {
+      break
+    }
+
+    // otherwise, increment the number of polls and wait
+    polls += 1
+    await wait(timeoutMs / MAX_POLLS)
+  }
+
+  return l1BatchConfirmations
+}
+
 describe('ArbProvider', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
@@ -72,9 +100,11 @@ describe('ArbProvider', () => {
           return BigNumber.from(0)
         })
       ).toNumber()
-      const l1BatchConfirmations = (
-        await arbTxReceipt.getBatchConfirmations(l2Provider)
-      ).toNumber()
+
+      const l1BatchConfirmations = await pollForL1BatchConfirmations(
+        arbTxReceipt,
+        l2Provider
+      )
 
       if (l1BatchNumber && l1BatchNumber > 0) {
         expect(l1BatchConfirmations, 'missing confirmations').to.be.gt(0)
