@@ -72,7 +72,7 @@ export enum ParentToChildMessageStatus {
   EXPIRED = 5,
 }
 
-export enum EthDepositStatus {
+export enum EthDepositMessageStatus {
   /**
    * ETH is not deposited on Chain yet
    */
@@ -237,10 +237,10 @@ export abstract class ParentToChildMessage {
  * If the status is redeemed an chainTxReceipt is populated.
  * For all other statuses chainTxReceipt is not populated
  */
-export type ParentToChildMessageWaitResult =
+export type ParentToChildMessageWaitForStatusResult =
   | {
       status: ParentToChildMessageStatus.REDEEMED
-      chainTxReceipt: TransactionReceipt
+      txReceipt: TransactionReceipt
     }
   | {
       status: Exclude<
@@ -249,8 +249,8 @@ export type ParentToChildMessageWaitResult =
       >
     }
 
-export type EthDepositMessageWaitResult = {
-  chainTxReceipt: TransactionReceipt | null
+export type EthDepositMessageWaitForStatusResult = {
+  txReceipt: TransactionReceipt | null
 }
 
 export class ParentToChildMessageReader extends ParentToChildMessage {
@@ -318,7 +318,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
    * Receipt for the successful chain transaction created by this message.
    * @returns TransactionReceipt of the first successful redeem if exists, otherwise the current status of the message.
    */
-  public async getSuccessfulRedeem(): Promise<ParentToChildMessageWaitResult> {
+  public async getSuccessfulRedeem(): Promise<ParentToChildMessageWaitForStatusResult> {
     const chainNetwork = await getArbitrumNetwork(this.chainProvider)
     const eventFetcher = new EventFetcher(this.chainProvider)
     const creationReceipt = await this.getRetryableCreationReceipt()
@@ -337,7 +337,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
     const autoRedeem = await this.getAutoRedeemAttempt()
     if (autoRedeem && autoRedeem.status === 1) {
       return {
-        chainTxReceipt: autoRedeem,
+        txReceipt: autoRedeem,
         status: ParentToChildMessageStatus.REDEEMED,
       }
     }
@@ -395,7 +395,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
         )
       if (successfulRedeem.length == 1)
         return {
-          chainTxReceipt: successfulRedeem[0],
+          txReceipt: successfulRedeem[0],
           status: ParentToChildMessageStatus.REDEEMED,
         }
 
@@ -492,7 +492,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
   public async waitForStatus(
     confirmations?: number,
     timeout?: number
-  ): Promise<ParentToChildMessageWaitResult> {
+  ): Promise<ParentToChildMessageWaitForStatusResult> {
     const chosenTimeout = isDefined(timeout) ? timeout : DEFAULT_DEPOSIT_TIMEOUT
 
     // try to wait for the retryable ticket to be created
@@ -866,12 +866,12 @@ export class EthDepositMessage {
     )
   }
 
-  public async status(): Promise<EthDepositStatus> {
+  public async status(): Promise<EthDepositMessageStatus> {
     const receipt = await this.chainProvider.getTransactionReceipt(
       this.chainDepositTxHash
     )
-    if (receipt === null) return EthDepositStatus.PENDING
-    else return EthDepositStatus.DEPOSITED
+    if (receipt === null) return EthDepositMessageStatus.PENDING
+    else return EthDepositMessageStatus.DEPOSITED
   }
 
   public async wait(confirmations?: number, timeout?: number) {

@@ -27,9 +27,9 @@ import {
   ParentToChildMessageReaderClassic,
   ParentToChildMessageWriter,
   ParentToChildMessageStatus,
-  ParentToChildMessageWaitResult,
+  ParentToChildMessageWaitForStatusResult,
   EthDepositMessage,
-  EthDepositMessageWaitResult,
+  EthDepositMessageWaitForStatusResult,
 } from './ParentToChildMessage'
 
 import { L1ERC20Gateway__factory } from '../abi/factories/L1ERC20Gateway__factory'
@@ -374,7 +374,7 @@ export class ParentEthDepositTransactionReceipt extends ParentTransactionReceipt
     {
       complete: boolean
       message: EthDepositMessage
-    } & EthDepositMessageWaitResult
+    } & EthDepositMessageWaitForStatusResult
   > {
     const message = (await this.getEthDeposits(childProvider))[0]
     if (!message)
@@ -383,7 +383,7 @@ export class ParentEthDepositTransactionReceipt extends ParentTransactionReceipt
 
     return {
       complete: isDefined(res),
-      chainTxReceipt: res,
+      txReceipt: res,
       message,
     }
   }
@@ -412,7 +412,7 @@ export class ParentContractCallTransactionReceipt extends ParentTransactionRecei
     {
       complete: boolean
       message: ParentToChildMessageReaderOrWriter<T>
-    } & ParentToChildMessageWaitResult
+    } & ParentToChildMessageWaitForStatusResult
   > {
     const message = (
       await this.getParentToChildMessages(childSignerOrProvider)
