@@ -167,7 +167,6 @@ jobs:
         uses: OffchainLabs/actions/run-nitro-test-node@remove-defaults
         with:
           nitro-testnode-ref: default-versions
-          nitro-contracts-branch: validator-wallet-fix
           l3-node: ${{ matrix.non-18-decimals == '1' || matrix.orbit-test == '1' }}
           args: ${{ matrix.non-18-decimals == '1' && '--l3-fee-token decimals 16' || matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
 
