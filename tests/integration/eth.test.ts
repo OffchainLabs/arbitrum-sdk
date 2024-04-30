@@ -217,6 +217,7 @@ describe('Ether', async () => {
     const { ethBridger, l1Signer, l2Signer } = await testSetup()
 
     await fundL1(l1Signer)
+    await fundL2(l2Signer)
     const destWallet = Wallet.createRandom()
 
     const ethToDeposit = parseEther('0.0002')
@@ -244,9 +245,10 @@ describe('Ether', async () => {
       'unexpected status, expected auto-redeem to fail'
     )
 
-    const testWalletL2EthBalance = await l2Signer.provider!.getBalance(
+    let testWalletL2EthBalance = await l2Signer.provider!.getBalance(
       destWallet.address
     )
+
     expect(
       testWalletL2EthBalance.eq(constants.Zero),
       'balance before auto-redeem'
@@ -258,6 +260,10 @@ describe('Ether', async () => {
     const l1ToL2MessageWriter = (await l1Receipt.getL1ToL2Messages(l2Signer))[0]
 
     await (await l1ToL2MessageWriter.redeem()).wait()
+
+    testWalletL2EthBalance = await l2Signer.provider!.getBalance(
+      destWallet.address
+    )
 
     expect(
       testWalletL2EthBalance.toString(),
