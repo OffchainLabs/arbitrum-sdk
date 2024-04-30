@@ -216,7 +216,7 @@ describe('Ether', async () => {
     )
   })
 
-  it('deposit ether to a specific L2 address and check balance before auto-redeem', async () => {
+  it('deposit ether to a specific L2 address with manual redeem', async () => {
     const { ethBridger, l1Signer, l2Signer } = await testSetup()
 
     await fundL1(l1Signer)
@@ -238,9 +238,9 @@ describe('Ether', async () => {
     const rec = await res.wait()
     const l1ToL2Messages = await rec.getL1ToL2Messages(l2Signer.provider!)
     expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
-    let l1ToL2Message = l1ToL2Messages[0]
+    const l1ToL2MessageReader = l1ToL2Messages[0]
 
-    const retryableTicketResult = await l1ToL2Message.waitForStatus()
+    const retryableTicketResult = await l1ToL2MessageReader.waitForStatus()
 
     expect(retryableTicketResult.status).to.eq(
       L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
@@ -251,18 +251,16 @@ describe('Ether', async () => {
       destWallet.address
     )
     expect(
-      testWalletL2EthBalance.lt(ethToDeposit),
+      testWalletL2EthBalance.eq(constants.Zero),
       'balance before auto-redeem'
     ).to.be.true
 
     const l1TxHash = await l1Signer.provider!.getTransactionReceipt(res.hash)
     const l1Receipt = new L1TransactionReceipt(l1TxHash)
-    l1ToL2Message = l1Receipt.getL1ToL2Messages(l2Signer)[0]
 
-    if (l1ToL2Message instanceof L1ToL2MessageWriter) {
-      const res = await l1ToL2Message.redeem()
-      await res.wait()
-    }
+    const l1ToL2MessageWriter = (await l1Receipt.getL1ToL2Messages(l2Signer))[0]
+
+    await (await l1ToL2MessageWriter.redeem()).wait()
 
     expect(
       testWalletL2EthBalance.toString(),
