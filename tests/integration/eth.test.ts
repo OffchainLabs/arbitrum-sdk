@@ -217,7 +217,6 @@ describe('Ether', async () => {
     const { ethBridger, l1Signer, l2Signer } = await testSetup()
 
     await fundL1(l1Signer)
-    await fundL2(l2Signer)
     const destWallet = Wallet.createRandom()
 
     const ethToDeposit = parseEther('0.0002')
@@ -253,6 +252,8 @@ describe('Ether', async () => {
       testWalletL2EthBalance.eq(constants.Zero),
       'balance before auto-redeem'
     ).to.be.true
+
+    await fundL2(l2Signer)
 
     const l1TxHash = await l1Signer.provider!.getTransactionReceipt(res.hash)
     const l1Receipt = new L1TransactionReceipt(l1TxHash)
