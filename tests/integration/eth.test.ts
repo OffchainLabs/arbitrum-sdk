@@ -236,11 +236,12 @@ describe('Ether', async () => {
     expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
     const l1ToL2Message = l1ToL2Messages[0]
 
-    const status = await l1ToL2Message.status()
+    const retryableTicketResult = await l1ToL2Message.waitForStatus()
 
-    if (status !== L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
-      throw `Unexpected status: ${status}.`
-    }
+    expect(retryableTicketResult.status).to.eq(
+      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      'unexpected status, expected auto-redeem to fail'
+    )
 
     const testWalletL2EthBalance = await l2Signer.provider!.getBalance(
       destWallet.address
