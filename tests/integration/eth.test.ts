@@ -33,11 +33,15 @@ import {
 import { L2ToL1Message } from '../../src/lib/message/L2ToL1Message'
 import { L2ToL1MessageStatus } from '../../src/lib/dataEntities/message'
 import { L2TransactionReceipt } from '../../src/lib/message/L2Transaction'
-import { L1ToL2MessageStatus } from '../../src/lib/message/L1ToL2Message'
+import {
+  L1ToL2MessageStatus,
+  L1ToL2MessageWriter,
+} from '../../src/lib/message/L1ToL2Message'
 import { testSetup } from '../../scripts/testSetup'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { itOnlyWhenEth } from './custom-fee-token/mochaExtensions'
+import { L1TransactionReceipt } from '../../src'
 
 dotenv.config()
 
@@ -234,7 +238,7 @@ describe('Ether', async () => {
     const rec = await res.wait()
     const l1ToL2Messages = await rec.getL1ToL2Messages(l2Signer.provider!)
     expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
-    const l1ToL2Message = l1ToL2Messages[0]
+    let l1ToL2Message = l1ToL2Messages[0]
 
     const retryableTicketResult = await l1ToL2Message.waitForStatus()
 
@@ -250,6 +254,20 @@ describe('Ether', async () => {
       testWalletL2EthBalance.lt(ethToDeposit),
       'balance before auto-redeem'
     ).to.be.true
+
+    const l1TxHash = await l1Signer.provider!.getTransactionReceipt(res.hash)
+    const l1Receipt = new L1TransactionReceipt(l1TxHash)
+    l1ToL2Message = l1Receipt.getL1ToL2Messages(l2Signer)[0]
+
+    if (l1ToL2Message instanceof L1ToL2MessageWriter) {
+      const res = await l1ToL2Message.redeem()
+      await res.wait()
+    }
+
+    expect(
+      testWalletL2EthBalance.toString(),
+      'balance after manual redeem'
+    ).to.eq(ethToDeposit.toString())
   })
 
   it('withdraw Ether transaction succeeds', async () => {
