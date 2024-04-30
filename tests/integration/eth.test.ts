@@ -182,6 +182,34 @@ describe('Ether', async () => {
       'message inputs value error'
     ).to.eq(ethToDeposit.toString())
 
+    let status = await l1ToL2Message.status()
+
+    while (status !== L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
+      if (status === L1ToL2MessageStatus.REDEEMED) {
+        throw 'Test scenario: redeemed too fast.'
+      }
+
+      if (
+        status === L1ToL2MessageStatus.CREATION_FAILED ||
+        status === L1ToL2MessageStatus.EXPIRED
+      ) {
+        throw 'Test scenario: tx error.'
+      }
+
+      if (status === L1ToL2MessageStatus.NOT_YET_CREATED) {
+        status = await l1ToL2Message.status()
+      }
+    }
+
+    let testWalletL2EthBalance = await l2Signer.provider!.getBalance(
+      destWallet.address
+    )
+
+    expect(
+      testWalletL2EthBalance.lt(ethToDeposit),
+      'balance before auto-redeem'
+    ).to.be.true
+
     const retryableTicketResult = await l1ToL2Message.waitForStatus()
     expect(retryableTicketResult.status).to.eq(
       L1ToL2MessageStatus.REDEEMED,
@@ -203,7 +231,7 @@ describe('Ether', async () => {
     expect(ticketRedeemEvents[0].retryTxHash).to.exist
     expect(ticketRedeemEvents[0].retryTxHash).to.not.be.null
 
-    const testWalletL2EthBalance = await l2Signer.provider!.getBalance(
+    testWalletL2EthBalance = await l2Signer.provider!.getBalance(
       destWallet.address
     )
     expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(
