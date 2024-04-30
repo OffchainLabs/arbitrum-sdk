@@ -21,6 +21,7 @@ import dotenv from 'dotenv'
 
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
+import { constants } from 'ethers'
 
 import {
   fundL1,
@@ -182,34 +183,6 @@ describe('Ether', async () => {
       'message inputs value error'
     ).to.eq(ethToDeposit.toString())
 
-    let status = await l1ToL2Message.status()
-
-    while (status !== L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
-      if (status === L1ToL2MessageStatus.REDEEMED) {
-        throw 'Test scenario: redeemed too fast.'
-      }
-
-      if (
-        status === L1ToL2MessageStatus.CREATION_FAILED ||
-        status === L1ToL2MessageStatus.EXPIRED
-      ) {
-        throw 'Test scenario: tx error.'
-      }
-
-      if (status === L1ToL2MessageStatus.NOT_YET_CREATED) {
-        status = await l1ToL2Message.status()
-      }
-    }
-
-    let testWalletL2EthBalance = await l2Signer.provider!.getBalance(
-      destWallet.address
-    )
-
-    expect(
-      testWalletL2EthBalance.lt(ethToDeposit),
-      'balance before auto-redeem'
-    ).to.be.true
-
     const retryableTicketResult = await l1ToL2Message.waitForStatus()
     expect(retryableTicketResult.status).to.eq(
       L1ToL2MessageStatus.REDEEMED,
@@ -231,12 +204,51 @@ describe('Ether', async () => {
     expect(ticketRedeemEvents[0].retryTxHash).to.exist
     expect(ticketRedeemEvents[0].retryTxHash).to.not.be.null
 
-    testWalletL2EthBalance = await l2Signer.provider!.getBalance(
+    const testWalletL2EthBalance = await l2Signer.provider!.getBalance(
       destWallet.address
     )
     expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(
       ethToDeposit.toString()
     )
+  })
+
+  it('deposit ether to a specific L2 address and check balance before auto-redeem', async () => {
+    const { ethBridger, l1Signer, l2Signer } = await testSetup()
+
+    await fundL1(l1Signer)
+    const destWallet = Wallet.createRandom()
+
+    const ethToDeposit = parseEther('0.0002')
+    const res = await ethBridger.depositTo({
+      amount: ethToDeposit,
+      l1Signer: l1Signer,
+      destinationAddress: destWallet.address,
+      l2Provider: l2Signer.provider!,
+      retryableGasOverrides: {
+        gasLimit: {
+          // causes auto-redeem to fail which allows us to check balances before it happens
+          base: constants.Zero,
+        },
+      },
+    })
+    const rec = await res.wait()
+    const l1ToL2Messages = await rec.getL1ToL2Messages(l2Signer.provider!)
+    expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
+    const l1ToL2Message = l1ToL2Messages[0]
+
+    const status = await l1ToL2Message.status()
+
+    if (status !== L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
+      throw `Unexpected status: ${status}.`
+    }
+
+    const testWalletL2EthBalance = await l2Signer.provider!.getBalance(
+      destWallet.address
+    )
+    expect(
+      testWalletL2EthBalance.lt(ethToDeposit),
+      'balance before auto-redeem'
+    ).to.be.true
   })
 
   it('withdraw Ether transaction succeeds', async () => {
