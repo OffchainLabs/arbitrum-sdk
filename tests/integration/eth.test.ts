@@ -33,10 +33,7 @@ import {
 import { L2ToL1Message } from '../../src/lib/message/L2ToL1Message'
 import { L2ToL1MessageStatus } from '../../src/lib/dataEntities/message'
 import { L2TransactionReceipt } from '../../src/lib/message/L2Transaction'
-import {
-  L1ToL2MessageStatus,
-  L1ToL2MessageWriter,
-} from '../../src/lib/message/L1ToL2Message'
+import { L1ToL2MessageStatus } from '../../src/lib/message/L1ToL2Message'
 import { testSetup } from '../../scripts/testSetup'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
