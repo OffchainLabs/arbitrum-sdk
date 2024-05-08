@@ -299,7 +299,7 @@ export const networks: Networks = {
     explorerUrl: 'https://stylus-testnet-explorer.arbitrum.io',
     isArbitrum: true,
     isCustom: false,
-    name: 'Stylus Testnet',
+    name: 'Stylus Testnet v1',
     partnerChainID: 421614,
     partnerChainIDs: [],
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
