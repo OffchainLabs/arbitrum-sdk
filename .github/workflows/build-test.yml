@@ -164,7 +164,7 @@ jobs:
         uses: OffchainLabs/actions/node-modules/restore@main
 
       - name: Set up the local node
-        uses: OffchainLabs/actions/run-nitro-test-node@non18-decimal-token
+        uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
           nitro-testnode-ref: non18-decimal-token
           nitro-contracts-branch: e2e-decimals
