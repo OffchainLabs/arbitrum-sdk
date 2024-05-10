@@ -164,9 +164,11 @@ jobs:
         uses: OffchainLabs/actions/node-modules/restore@main
 
       - name: Set up the local node
-        uses: OffchainLabs/actions/run-nitro-test-node@remove-defaults
+        uses: OffchainLabs/actions/run-nitro-test-node@non18-decimal-token
         with:
-          nitro-testnode-ref: default-versions
+          nitro-testnode-ref: non18-decimal-token
+          nitro-contracts-branch: e2e-decimals
+          token-bridge-branch: non-18-decimals
           l3-node: ${{ matrix.non-18-decimals == '1' || matrix.orbit-test == '1' }}
           args: ${{ matrix.non-18-decimals == '1' && '--l3-fee-token decimals 16' || matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
 
