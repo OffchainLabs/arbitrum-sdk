@@ -47,7 +47,7 @@ export interface ArbitrumNetwork {
   /**
    * The token bridge contracts.
    */
-  tokenBridge: TokenBridge
+  tokenBridge?: TokenBridge
   /**
    * The time allowed for validators to dispute or challenge state assertions. Measured in L1 blocks.
    */
@@ -480,6 +480,7 @@ export async function getMulticallAddress(
 
   // The provided chain is found in the list
   if (typeof chain !== 'undefined') {
+    assertHasTokenBridge(chain)
     // Return the address of Multicall on the chain
     return chain.tokenBridge.l2Multicall
   }
@@ -495,6 +496,7 @@ export async function getMulticallAddress(
     )
   }
 
+  assertHasTokenBridge(childChain)
   // Return the address of Multicall on the parent chain
   return childChain.tokenBridge.l1MultiCall
 }
@@ -511,6 +513,18 @@ export function mapL2NetworkToArbitrumNetwork(
     // Map properties that were changed
     chainId: l2Network.chainID,
     parentChainId: l2Network.partnerChainID,
+  }
+}
+
+export function assertHasTokenBridge<T extends ArbitrumNetwork>(
+  obj: T
+): asserts obj is T & { tokenBridge: TokenBridge } {
+  if (
+    typeof obj === 'undefined' ||
+    !('tokenBridge' in obj) ||
+    typeof obj.tokenBridge === 'undefined'
+  ) {
+    throw new ArbSdkError('Token bridge addresses required for network')
   }
 }
 
