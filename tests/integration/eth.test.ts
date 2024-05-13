@@ -21,6 +21,7 @@ import dotenv from 'dotenv'
 
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
+import { constants } from 'ethers'
 
 import {
   fundL1,
@@ -37,6 +38,7 @@ import { testSetup } from '../../scripts/testSetup'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { itOnlyWhenEth } from './custom-fee-token/mochaExtensions'
+import { L1TransactionReceipt } from '../../src'
 
 dotenv.config()
 
@@ -209,6 +211,65 @@ describe('Ether', async () => {
     expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(
       ethToDeposit.toString()
     )
+  })
+
+  it('deposit ether to a specific L2 address with manual redeem', async () => {
+    const { ethBridger, l1Signer, l2Signer } = await testSetup()
+
+    await fundL1(l1Signer)
+    const destWallet = Wallet.createRandom()
+
+    const ethToDeposit = parseEther('0.0002')
+    const res = await ethBridger.depositTo({
+      amount: ethToDeposit,
+      l1Signer: l1Signer,
+      destinationAddress: destWallet.address,
+      l2Provider: l2Signer.provider!,
+      retryableGasOverrides: {
+        gasLimit: {
+          // causes auto-redeem to fail which allows us to check balances before it happens
+          base: constants.Zero,
+        },
+      },
+    })
+    const rec = await res.wait()
+    const l1ToL2Messages = await rec.getL1ToL2Messages(l2Signer.provider!)
+    expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
+    const l1ToL2MessageReader = l1ToL2Messages[0]
+
+    const retryableTicketResult = await l1ToL2MessageReader.waitForStatus()
+
+    expect(retryableTicketResult.status).to.eq(
+      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      'unexpected status, expected auto-redeem to fail'
+    )
+
+    let testWalletL2EthBalance = await l2Signer.provider!.getBalance(
+      destWallet.address
+    )
+
+    expect(
+      testWalletL2EthBalance.eq(constants.Zero),
+      'balance before auto-redeem'
+    ).to.be.true
+
+    await fundL2(l2Signer)
+
+    const l1TxHash = await l1Signer.provider!.getTransactionReceipt(res.hash)
+    const l1Receipt = new L1TransactionReceipt(l1TxHash)
+
+    const l1ToL2MessageWriter = (await l1Receipt.getL1ToL2Messages(l2Signer))[0]
+
+    await (await l1ToL2MessageWriter.redeem()).wait()
+
+    testWalletL2EthBalance = await l2Signer.provider!.getBalance(
+      destWallet.address
+    )
+
+    expect(
+      testWalletL2EthBalance.toString(),
+      'balance after manual redeem'
+    ).to.eq(ethToDeposit.toString())
   })
 
   it('withdraw Ether transaction succeeds', async () => {
