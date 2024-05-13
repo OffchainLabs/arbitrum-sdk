@@ -486,17 +486,17 @@ export async function getMulticallAddress(
 
   // The provided chain is not found in the list
   // Try to find a chain that references this chain as its parent
-  const child = chains.find(c => c.parentChainId === chainId)
+  const childChain = chains.find(c => c.parentChainId === chainId)
 
   // No chains reference this chain as its parent
-  if (typeof child === 'undefined') {
+  if (typeof childChain === 'undefined') {
     throw new Error(
       `Failed to retrieve Multicall address for chain: ${chainId}`
     )
   }
 
   // Return the address of Multicall on the parent chain
-  return child.tokenBridge.l1MultiCall
+  return childChain.tokenBridge.l1MultiCall
 }
 
 /**

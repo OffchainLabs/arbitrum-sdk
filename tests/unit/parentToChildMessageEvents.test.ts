@@ -188,7 +188,7 @@ describe('ParentToChildMessage events', () => {
       'incorrect message number'
     ).to.be.true
     expect(
-      msg.parentChainBaseFee.eq(BigNumber.from('0x05e0fc4c58')),
+      msg.parentBaseFee.eq(BigNumber.from('0x05e0fc4c58')),
       'incorrect parent chain base fee'
     ).to.be.true
     expect(

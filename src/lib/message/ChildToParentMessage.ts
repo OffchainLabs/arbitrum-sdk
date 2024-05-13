@@ -55,7 +55,7 @@ export type ChildToParentMessageReaderOrWriter<T extends SignerOrProvider> =
   T extends Provider ? ChildToParentMessageReader : ChildToParentMessageWriter
 
 /**
- * Base functionality for Chain->ParentChain messages
+ * Base functionality for Child-to-Parent messages
  */
 export class ChildToParentMessage {
   protected isClassic(
@@ -69,37 +69,37 @@ export class ChildToParentMessage {
   /**
    * Instantiates a new `ChildToParentMessageWriter` or `ChildToParentMessageReader` object.
    *
-   * @param {SignerOrProvider} ParentChainSignerOrProvider Signer or provider to be used for executing or reading the Chain-to-ParentChain message.
-   * @param {ChildToParentTransactionEvent} event The event containing the data of the Chain-to-ParentChain message.
-   * @param {Provider} [ParentChainProvider] Optional. Used to override the Provider which is attached to `ParentChainSignerOrProvider` in case you need more control. This will be a required parameter in a future major version update.
+   * @param {SignerOrProvider} ParentSignerOrProvider Signer or provider to be used for executing or reading the Chain-to-Parent message.
+   * @param {ChildToParentTransactionEvent} event The event containing the data of the Chain-to-Parent message.
+   * @param {Provider} [ParentProvider] Optional. Used to override the Provider which is attached to `ParentSignerOrProvider` in case you need more control. This will be a required parameter in a future major version update.
    */
   public static fromEvent<T extends SignerOrProvider>(
-    parentChainSignerOrProvider: T,
+    parentSignerOrProvider: T,
     event: ChildToParentTransactionEvent,
-    parentChainProvider?: Provider
+    parentProvider?: Provider
   ): ChildToParentMessageReaderOrWriter<T>
   static fromEvent<T extends SignerOrProvider>(
-    parentChainSignerOrProvider: T,
+    parentSignerOrProvider: T,
     event: ChildToParentTransactionEvent,
-    parentChainProvider?: Provider
+    parentProvider?: Provider
   ): ChildToParentMessageReader | ChildToParentMessageWriter {
-    return SignerProviderUtils.isSigner(parentChainSignerOrProvider)
+    return SignerProviderUtils.isSigner(parentSignerOrProvider)
       ? new ChildToParentMessageWriter(
-          parentChainSignerOrProvider,
+          parentSignerOrProvider,
           event,
-          parentChainProvider
+          parentProvider
         )
-      : new ChildToParentMessageReader(parentChainSignerOrProvider, event)
+      : new ChildToParentMessageReader(parentSignerOrProvider, event)
   }
 
   /**
    * Get event logs for ChildToParent transactions.
-   * @param childChainProvider
+   * @param childProvider
    * @param filter Block range filter
    * @param position The batchnumber indexed field was removed in nitro and a position indexed field was added.
    * For pre-nitro events the value passed in here will be used to find events with the same batchnumber.
    * For post nitro events it will be used to find events with the same position.
-   * @param destination The ParentChain destination of the ChildToParent message
+   * @param destination The parent destination of the ChildToParent message
    * @param hash The uniqueId indexed field was removed in nitro and a hash indexed field was added.
    * For pre-nitro events the value passed in here will be used to find events with the same uniqueId.
    * For post nitro events it will be used to find events with the same hash.
@@ -107,15 +107,15 @@ export class ChildToParentMessage {
    * @returns Any classic and nitro events that match the provided filters.
    */
   public static async getChildToParentEvents(
-    childChainProvider: Provider,
+    childProvider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     position?: BigNumber,
     destination?: string,
     hash?: BigNumber,
     indexInBatch?: BigNumber
   ): Promise<(ChildToParentTransactionEvent & { transactionHash: string })[]> {
-    const childChain = await getArbitrumNetwork(childChainProvider)
-    const childChainNitroGenesisBlock = getNitroGenesisBlock(childChain)
+    const childChain = await getArbitrumNetwork(childProvider)
+    const childNitroGenesisBlock = getNitroGenesisBlock(childChain)
 
     const inClassicRange = (blockTag: BlockTag, nitroGenBlock: number) => {
       if (typeof blockTag === 'string') {
@@ -158,14 +158,14 @@ export class ChildToParentMessage {
 
     // only fetch nitro events after the genesis block
     const classicFilter = {
-      fromBlock: inClassicRange(filter.fromBlock, childChainNitroGenesisBlock),
-      toBlock: inClassicRange(filter.toBlock, childChainNitroGenesisBlock),
+      fromBlock: inClassicRange(filter.fromBlock, childNitroGenesisBlock),
+      toBlock: inClassicRange(filter.toBlock, childNitroGenesisBlock),
     }
     const logQueries = []
     if (classicFilter.fromBlock !== classicFilter.toBlock) {
       logQueries.push(
         classic.ChildToParentMessageClassic.getChildToParentEvents(
-          childChainProvider,
+          childProvider,
           classicFilter,
           position,
           destination,
@@ -176,13 +176,13 @@ export class ChildToParentMessage {
     }
 
     const nitroFilter = {
-      fromBlock: inNitroRange(filter.fromBlock, childChainNitroGenesisBlock),
-      toBlock: inNitroRange(filter.toBlock, childChainNitroGenesisBlock),
+      fromBlock: inNitroRange(filter.fromBlock, childNitroGenesisBlock),
+      toBlock: inNitroRange(filter.toBlock, childNitroGenesisBlock),
     }
     if (nitroFilter.fromBlock !== nitroFilter.toBlock) {
       logQueries.push(
-        nitro.ChildToParentChainMessageNitro.getChildToParentChainEvents(
-          childChainProvider,
+        nitro.ChildToParentMessageNitro.getChildToParentEvents(
+          childProvider,
           nitroFilter,
           position,
           destination,
@@ -196,37 +196,37 @@ export class ChildToParentMessage {
 }
 
 /**
- * Provides read-only access for Chain-to-ParentChain-messages
+ * Provides read-only access for Child-to-Parent messages
  */
 export class ChildToParentMessageReader extends ChildToParentMessage {
   private readonly classicReader?: classic.ChildToParentMessageReaderClassic
-  private readonly nitroReader?: nitro.ChildToParentChainMessageReaderNitro
+  private readonly nitroReader?: nitro.ChildToParentMessageReaderNitro
 
   constructor(
-    protected readonly parentChainProvider: Provider,
+    protected readonly parentProvider: Provider,
     event: ChildToParentTransactionEvent
   ) {
     super()
     if (this.isClassic(event)) {
       this.classicReader = new classic.ChildToParentMessageReaderClassic(
-        parentChainProvider,
+        parentProvider,
         event.batchNumber,
         event.indexInBatch
       )
     } else {
-      this.nitroReader = new nitro.ChildToParentChainMessageReaderNitro(
-        parentChainProvider,
+      this.nitroReader = new nitro.ChildToParentMessageReaderNitro(
+        parentProvider,
         event
       )
     }
   }
 
   public async getOutboxProof(
-    childChainProvider: Provider
+    childProvider: Provider
   ): Promise<classic.MessageBatchProofInfo | null | string[]> {
     if (this.nitroReader) {
-      return await this.nitroReader.getOutboxProof(childChainProvider)
-    } else return await this.classicReader!.tryGetProof(childChainProvider)
+      return await this.nitroReader.getOutboxProof(childProvider)
+    } else return await this.classicReader!.tryGetProof(childProvider)
   }
 
   /**
@@ -235,12 +235,11 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
    * @returns
    */
   public async status(
-    childChainProvider: Provider
+    childProvider: Provider
   ): Promise<ChildToParentMessageStatus> {
     // can we create a ChildToParentMessage here, we need to - the constructor is what we need
-    if (this.nitroReader)
-      return await this.nitroReader.status(childChainProvider)
-    else return await this.classicReader!.status(childChainProvider)
+    if (this.nitroReader) return await this.nitroReader.status(childProvider)
+    else return await this.classicReader!.status(childProvider)
   }
 
   /**
@@ -251,87 +250,84 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
    * @returns outbox entry status (either executed or confirmed but not pending)
    */
   public async waitUntilReadyToExecute(
-    childChainProvider: Provider,
+    childProvider: Provider,
     retryDelay = 500
   ): Promise<
     ChildToParentMessageStatus.EXECUTED | ChildToParentMessageStatus.CONFIRMED
   > {
     if (this.nitroReader)
-      return this.nitroReader.waitUntilReadyToExecute(
-        childChainProvider,
-        retryDelay
-      )
+      return this.nitroReader.waitUntilReadyToExecute(childProvider, retryDelay)
     else
       return this.classicReader!.waitUntilOutboxEntryCreated(
-        childChainProvider,
+        childProvider,
         retryDelay
       )
   }
 
   /**
-   * Estimates the ParentChain block number in which this Chain to ParentChain tx will be available for execution.
+   * Estimates the Parent block number in which this Child-to-Parent tx will be available for execution.
    * If the message can or already has been executed, this returns null
-   * @param childChainProvider
-   * @returns expected ParentChain block number where the Chain to ParentChain message will be executable. Returns null if the message can or already has been executed
+   * @param childProvider
+   * @returns expected Parent block number where the Child-to-Parent message will be executable. Returns null if the message can or already has been executed
    */
   public async getFirstExecutableBlock(
-    childChainProvider: Provider
+    childProvider: Provider
   ): Promise<BigNumber | null> {
     if (this.nitroReader)
-      return this.nitroReader.getFirstExecutableBlock(childChainProvider)
-    else return this.classicReader!.getFirstExecutableBlock(childChainProvider)
+      return this.nitroReader.getFirstExecutableBlock(childProvider)
+    else return this.classicReader!.getFirstExecutableBlock(childProvider)
   }
 }
 
 /**
- * Provides read and write access for Chain-to-ParentChain-messages
+ * Provides read and write access for Chain-to-Parent messages
  */
 export class ChildToParentMessageWriter extends ChildToParentMessageReader {
   private readonly classicWriter?: classic.ChildToParentMessageWriterClassic
-  private readonly nitroWriter?: nitro.ChildToParentChainMessageWriterNitro
+  private readonly nitroWriter?: nitro.ChildToParentMessageWriterNitro
 
   /**
    * Instantiates a new `ChildToParentMessageWriter` object.
    *
-   * @param {Signer} ParentChainSigner The signer to be used for executing the Chain-to-ParentChain message.
-   * @param {ChildToParentTransactionEvent} event The event containing the data of the Chain-to-ParentChain message.
-   * @param {Provider} [ParentChainProvider] Optional. Used to override the Provider which is attached to `ParentChainSigner` in case you need more control. This will be a required parameter in a future major version update.
+   * @param {Signer} ParentSigner The signer to be used for executing the Chain-to-Parent message.
+   * @param {ChildToParentTransactionEvent} event The event containing the data of the Chain-to-Parent message.
+   * @param {Provider} [ParentProvider] Optional. Used to override the Provider which is attached to `ParentSigner` in case you need more control. This will be a required parameter in a future major version update.
    */
   constructor(
-    parentChainSigner: Signer,
+    parentSigner: Signer,
     event: ChildToParentTransactionEvent,
-    parentChainProvider?: Provider
+    parentProvider?: Provider
   ) {
-    super(parentChainProvider ?? parentChainSigner.provider!, event)
+    super(parentProvider ?? parentSigner.provider!, event)
 
     if (this.isClassic(event)) {
       this.classicWriter = new classic.ChildToParentMessageWriterClassic(
-        parentChainSigner,
+        parentSigner,
         event.batchNumber,
         event.indexInBatch,
-        parentChainProvider
+        parentProvider
       )
     } else {
-      this.nitroWriter = new nitro.ChildToParentChainMessageWriterNitro(
-        parentChainSigner,
+      this.nitroWriter = new nitro.ChildToParentMessageWriterNitro(
+        parentSigner,
         event,
-        parentChainProvider
+        parentProvider
       )
     }
   }
 
   /**
-   * Executes the ChildToParentMessage on ParentChain.
+   * Executes the ChildToParentMessage on Parent chain.
    * Will throw an error if the outbox entry has not been created, which happens when the
    * corresponding assertion is confirmed.
    * @returns
    */
   public async execute(
-    childChainProvider: Provider,
+    childProvider: Provider,
     overrides?: Overrides
   ): Promise<ContractTransaction> {
     if (this.nitroWriter)
-      return this.nitroWriter.execute(childChainProvider, overrides)
-    else return await this.classicWriter!.execute(childChainProvider, overrides)
+      return this.nitroWriter.execute(childProvider, overrides)
+    else return await this.classicWriter!.execute(childProvider, overrides)
   }
 }

@@ -51,7 +51,7 @@ export enum ParentToChildMessageStatus {
   NOT_YET_CREATED = 1,
   /**
    * An attempt was made to create the retryable ticket, but it failed.
-   * This could be due to not enough submission cost being paid by the ParentChain transaction
+   * This could be due to not enough submission cost being paid by the Parent transaction
    */
   CREATION_FAILED = 2,
   /**
@@ -100,7 +100,7 @@ export type ParentToChildMessageReaderOrWriter<T extends SignerOrProvider> =
 
 export abstract class ParentToChildMessage {
   /**
-   * When messages are sent from ParentChain to Chain a retryable ticket is created on Chain.
+   * When messages are sent from Parent to Child a retryable ticket is created on the child chain.
    * The retryableCreationId can be used to retrieve information about the success or failure of the
    * creation of the retryable ticket.
    */
@@ -109,29 +109,29 @@ export abstract class ParentToChildMessage {
   /**
    * The submit retryable transactions use the typed transaction envelope 2718.
    * The id of these transactions is the hash of the RLP encoded transaction.
-   * @param chainChainId
-   * @param fromAddress the aliased address that called the ParentChain inbox as emitted in the bridge event.
+   * @param childChainId
+   * @param fromAddress the aliased address that called the Parent inbox as emitted in the bridge event.
    * @param messageNumber
-   * @param parentChainBaseFee
+   * @param parentBaseFee
    * @param destAddress
    * @param chainCallValue
-   * @param parentChainValue
+   * @param parentValue
    * @param maxSubmissionFee
-   * @param excessFeeRefundAddress refund address specified in the retryable creation. Note the ParentChain inbox aliases this address if it is a ParentChain smart contract. The user is expected to provide this value already aliased when needed.
-   * @param callValueRefundAddress refund address specified in the retryable creation. Note the ParentChain inbox aliases this address if it is a ParentChain smart contract. The user is expected to provide this value already aliased when needed.
+   * @param excessFeeRefundAddress refund address specified in the retryable creation. Note the Parent inbox aliases this address if it is a Parent smart contract. The user is expected to provide this value already aliased when needed.
+   * @param callValueRefundAddress refund address specified in the retryable creation. Note the Parent inbox aliases this address if it is a Parent smart contract. The user is expected to provide this value already aliased when needed.
    * @param gasLimit
    * @param maxFeePerGas
    * @param data
    * @returns
    */
   public static calculateSubmitRetryableId(
-    chainChainId: number,
+    childChainId: number,
     fromAddress: string,
     messageNumber: BigNumber,
-    parentChainBaseFee: BigNumber,
+    parentBaseFee: BigNumber,
     destAddress: string,
     chainCallValue: BigNumber,
-    parentChainValue: BigNumber,
+    parentValue: BigNumber,
     maxSubmissionFee: BigNumber,
     excessFeeRefundAddress: string,
     callValueRefundAddress: string,
@@ -143,16 +143,16 @@ export abstract class ParentToChildMessage {
       return ethers.utils.stripZeros(value.toHexString())
     }
 
-    const chainId = BigNumber.from(chainChainId)
+    const chainId = BigNumber.from(childChainId)
     const msgNum = BigNumber.from(messageNumber)
 
     const fields: any[] = [
       formatNumber(chainId),
       zeroPad(formatNumber(msgNum), 32),
       fromAddress,
-      formatNumber(parentChainBaseFee),
+      formatNumber(parentBaseFee),
 
-      formatNumber(parentChainValue),
+      formatNumber(parentValue),
       formatNumber(maxFeePerGas),
       formatNumber(gasLimit),
       // when destAddress is 0x0, arbos treat that as nil
@@ -178,7 +178,7 @@ export abstract class ParentToChildMessage {
     chainId: number,
     sender: string,
     messageNumber: BigNumber,
-    parentChainBaseFee: BigNumber,
+    parentBaseFee: BigNumber,
     messageData: RetryableMessageParams
   ): ParentToChildMessageReaderOrWriter<T>
   public static fromEventComponents<T extends SignerOrProvider>(
@@ -186,7 +186,7 @@ export abstract class ParentToChildMessage {
     chainId: number,
     sender: string,
     messageNumber: BigNumber,
-    parentChainBaseFee: BigNumber,
+    parentBaseFee: BigNumber,
     messageData: RetryableMessageParams
   ): ParentToChildMessageReader | ParentToChildMessageWriter {
     return SignerProviderUtils.isSigner(chainSignerOrProvider)
@@ -195,7 +195,7 @@ export abstract class ParentToChildMessage {
           chainId,
           sender,
           messageNumber,
-          parentChainBaseFee,
+          parentBaseFee,
           messageData
         )
       : new ParentToChildMessageReader(
@@ -203,7 +203,7 @@ export abstract class ParentToChildMessage {
           chainId,
           sender,
           messageNumber,
-          parentChainBaseFee,
+          parentBaseFee,
           messageData
         )
   }
@@ -212,14 +212,14 @@ export abstract class ParentToChildMessage {
     public readonly chainId: number,
     public readonly sender: string,
     public readonly messageNumber: BigNumber,
-    public readonly parentChainBaseFee: BigNumber,
+    public readonly parentBaseFee: BigNumber,
     public readonly messageData: RetryableMessageParams
   ) {
     this.retryableCreationId = ParentToChildMessage.calculateSubmitRetryableId(
       chainId,
       sender,
       messageNumber,
-      parentChainBaseFee,
+      parentBaseFee,
       messageData.destAddress,
       messageData.l2CallValue,
       messageData.l1Value,
@@ -260,10 +260,10 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
     chainId: number,
     sender: string,
     messageNumber: BigNumber,
-    parentChainBaseFee: BigNumber,
+    parentBaseFee: BigNumber,
     messageData: RetryableMessageParams
   ) {
-    super(chainId, sender, messageNumber, parentChainBaseFee, messageData)
+    super(chainId, sender, messageNumber, parentBaseFee, messageData)
   }
 
   /**
@@ -655,7 +655,7 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
     chainId: number,
     sender: string,
     messageNumber: BigNumber,
-    parentChainBaseFee: BigNumber,
+    parentBaseFee: BigNumber,
     messageData: RetryableMessageParams
   ) {
     super(
@@ -663,7 +663,7 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
       chainId,
       sender,
       messageNumber,
-      parentChainBaseFee,
+      parentBaseFee,
       messageData
     )
     if (!chainSigner.provider)
@@ -755,14 +755,14 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
 }
 
 /**
- * A message for Eth deposits from ParentChain to Chain
+ * A message for Eth deposits from Parent to Child
  */
 export class EthDepositMessage {
   public readonly chainDepositTxHash: string
   private chainDepositTxReceipt: TransactionReceipt | undefined | null
 
   public static calculateDepositTxId(
-    chainChainId: number,
+    childChainId: number,
     messageNumber: BigNumber,
     fromAddress: string,
     toAddress: string,
@@ -772,7 +772,7 @@ export class EthDepositMessage {
       return ethers.utils.stripZeros(numberVal.toHexString())
     }
 
-    const chainId = BigNumber.from(chainChainId)
+    const chainId = BigNumber.from(childChainId)
     const msgNum = BigNumber.from(messageNumber)
 
     // https://github.com/OffchainLabs/go-ethereum/blob/07e017aa73e32be92aadb52fa327c552e1b7b118/core/types/arb_types.go#L302-L308
@@ -844,21 +844,21 @@ export class EthDepositMessage {
   /**
    *
    * @param chainProvider
-   * @param chainChainId
+   * @param childChainId
    * @param messageNumber
    * @param to Recipient address of the ETH on Chain
    * @param value
    */
   constructor(
     private readonly chainProvider: Provider,
-    public readonly chainChainId: number,
+    public readonly childChainId: number,
     public readonly messageNumber: BigNumber,
     public readonly from: string,
     public readonly to: string,
     public readonly value: BigNumber
   ) {
     this.chainDepositTxHash = EthDepositMessage.calculateDepositTxId(
-      chainChainId,
+      childChainId,
       messageNumber,
       from,
       to,
