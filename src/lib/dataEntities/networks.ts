@@ -248,6 +248,10 @@ export const networks: Networks = {
       l2Weth: '0x722E8BdD2ce80A4422E880164f2079488e115365',
       l2WethGateway: '0x7626841cB6113412F9c88D3ADC720C9FAC88D9eD',
     },
+    teleporterAddresses: {
+      l1Teleporter: '0xCBd9c6e310D6AaDeF9F025f716284162F0158992',
+      l2ForwarderFactory: '0x791d2AbC6c3A459E13B9AdF54Fb5e97B7Af38f87',
+    },
     nitroGenesisBlock: 0,
     nitroGenesisL1Block: 0,
     /**
