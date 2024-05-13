@@ -198,6 +198,10 @@ export const networks: Networks = {
     isArbitrum: true,
     tokenBridge: mainnetTokenBridge,
     ethBridge: mainnetETHBridge,
+    teleporterAddresses: {
+      l1Teleporter: '0xCBd9c6e310D6AaDeF9F025f716284162F0158992',
+      l2ForwarderFactory: '0x791d2AbC6c3A459E13B9AdF54Fb5e97B7Af38f87',
+    },
     confirmPeriodBlocks: 45818,
     isCustom: false,
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,

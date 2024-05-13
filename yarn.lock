@@ -15,17 +15,7 @@
     "@jridgewell/gen-mapping" "^0.3.0"
     "@jridgewell/trace-mapping" "^0.3.9"
 
-"@arbitrum/nitro-contracts@1.1.1", "@arbitrum/nitro-contracts@^1.1.1":
-  version "1.1.1"
-  resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.1.1.tgz#2d8a2f9ab757bb7654562aebe435bff833c4b98d"
-  integrity sha512-4Tyk3XVHz+bm8UujUC78LYSw3xAxyYvBCxfEX4z3qE4/ww7Qck/rmce5gbHMzQjArEAzAP2YSfYIFuIFuRXtfg==
-  dependencies:
-    "@offchainlabs/upgrade-executor" "1.1.0-beta.0"
-    "@openzeppelin/contracts" "4.5.0"
-    "@openzeppelin/contracts-upgradeable" "4.5.2"
-    patch-package "^6.4.7"
-
-"@arbitrum/nitro-contracts@^1.0.0-beta.8":
+"@arbitrum/nitro-contracts@1.1.0", "@arbitrum/nitro-contracts@^1.0.0-beta.8":
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.1.0.tgz#37ca26e026306ca9cc9fbeb183841fd8666ac7bb"
   integrity sha512-/tLlU++IFdaD9Bn+RYzQ6+6k+0iDPuqi/cNf9kv5N1I9NAApNx1qfsIHoHMEQAvLuY+gj+raH7TAESBbzTAuuw==
@@ -37,10 +27,10 @@
   optionalDependencies:
     sol2uml "2.2.0"
 
-"@arbitrum/nitro-contracts@^1.1.0":
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.2.1.tgz#2ebff205886e7dd1017a3e1df68fb1a8ab36185b"
-  integrity sha512-1k8t5ozeyCUpZ4RFlPXF876JE57z3w/YW1qUow1l9TF2+VDnbqGAiK3axhVZFhYUZxo+PajqsdpWr3FK+yW6uA==
+"@arbitrum/nitro-contracts@1.1.1", "@arbitrum/nitro-contracts@^1.1.1":
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.1.1.tgz#2d8a2f9ab757bb7654562aebe435bff833c4b98d"
+  integrity sha512-4Tyk3XVHz+bm8UujUC78LYSw3xAxyYvBCxfEX4z3qE4/ww7Qck/rmce5gbHMzQjArEAzAP2YSfYIFuIFuRXtfg==
   dependencies:
     "@offchainlabs/upgrade-executor" "1.1.0-beta.0"
     "@openzeppelin/contracts" "4.5.0"
@@ -1332,12 +1322,12 @@
   resolved "https://registry.yarnpkg.com/@nomiclabs/hardhat-ethers/-/hardhat-ethers-2.0.5.tgz#131b0da1b71680d5a01569f916ae878229d326d3"
   integrity sha512-A2gZAGB6kUvLx+kzM92HKuUF33F1FSe90L0TmkXkT2Hh0OKRpvWZURUSU2nghD2yC4DzfEZ3DftfeHGvZ2JTUw==
 
-"@offchainlabs/l1-l3-teleport-contracts@^0.1.0-alpha.1":
-  version "0.1.0-alpha.1"
-  resolved "https://registry.yarnpkg.com/@offchainlabs/l1-l3-teleport-contracts/-/l1-l3-teleport-contracts-0.1.0-alpha.1.tgz#02aa1fd7aadbe1f91afa57f8639c76430bd02f34"
-  integrity sha512-ihsHbNGUqQEz7Ei0ek+n6yeQHd1oKgxylPrzhJ+oPGFLVJPpAJ+ODmaUEoqqHYz9jTz6CAcAktMNgJaX5x7TuA==
+"@offchainlabs/l1-l3-teleport-contracts@1.0.1":
+  version "1.0.1"
+  resolved "https://registry.yarnpkg.com/@offchainlabs/l1-l3-teleport-contracts/-/l1-l3-teleport-contracts-1.0.1.tgz#cdb4599f5714e123e52e5547d91c955fbfeff2c8"
+  integrity sha512-e0Pq0fBDYzFGWfxC6pSxmcpaeo9kxz7SIekdMqOjx/YJHYwgdLaDgs0+BZUtyi2XZ8FytzvWZ5XMkdyrUNiZqQ==
   dependencies:
-    "@arbitrum/nitro-contracts" "^1.1.0"
+    "@arbitrum/nitro-contracts" "1.1.0"
     "@arbitrum/token-bridge-contracts" "1.2.0"
     "@openzeppelin/contracts" "4.9.4"
 
