@@ -136,7 +136,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
 
   const { expectedL2Gateway } = getGateways(
     params.gatewayType,
-    params.erc20Bridger.child
+    params.erc20Bridger.childChain
   )
   expect(gatewayAddress, 'Gateway is not custom gateway').to.eq(
     expectedL2Gateway
@@ -342,7 +342,7 @@ export const depositToken = async ({
 
   const { expectedL1Gateway, expectedL2Gateway } = getGateways(
     expectedGatewayType,
-    erc20Bridger.child
+    erc20Bridger.childChain
   )
 
   const parentGateway = await erc20Bridger.getL1GatewayAddress(
@@ -437,8 +437,8 @@ export const skipIfMainnet = (() => {
   let chainId: number
   return async (testContext: Mocha.Context) => {
     if (!chainId) {
-      const { child } = await testSetup()
-      chainId = child.chainId
+      const { childChain } = await testSetup()
+      chainId = childChain.chainId
     }
     if (chainId === 42161 || chainId === 42170) {
       console.error("You're writing to the chain on mainnet lol stop")
