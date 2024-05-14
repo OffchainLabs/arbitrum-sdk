@@ -16,8 +16,8 @@
 /* eslint-env node */
 'use strict'
 
-export { EthBridger } from './lib/assetBridger/ethBridger'
-export { Erc20Bridger } from './lib/assetBridger/erc20Bridger'
+export { EthBridger } from './lib/bridgers/EthBridger'
+export { Erc20Bridger } from './lib/bridgers/Erc20Bridger'
 export {
   ChildTransactionReceipt,
   ChildContractTransaction,
@@ -54,7 +54,7 @@ export {
   registerCustomArbitrumNetwork,
   addDefaultLocalNetwork,
 } from './lib/dataEntities/networks'
-export { InboxTools } from './lib/inbox/inbox'
+export { InboxTools } from './lib/inbox/InboxTools'
 export { EventFetcher } from './lib/utils/eventFetcher'
 export { ArbitrumProvider } from './lib/utils/arbProvider'
 export * as constants from './lib/dataEntities/constants'

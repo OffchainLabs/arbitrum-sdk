@@ -25,7 +25,7 @@ import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { ERC20Inbox__factory } from '../abi/factories/ERC20Inbox__factory'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
-import { AssetBridger } from './assetBridger'
+import { AssetBridger } from './AssetBridger'
 import {
   ParentEthDepositTransaction,
   ParentContractCallTransaction,
