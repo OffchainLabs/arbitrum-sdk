@@ -326,7 +326,10 @@ class BaseL1L3Bridger {
     }
   }
 
-  protected async _getTxReceiptFromTxRef(txRef: TxReference, provider: Provider): Promise<L1ContractCallTransactionReceipt> {
+  protected async _getTxReceiptFromTxRef(
+    txRef: TxReference,
+    provider: Provider
+  ): Promise<L1ContractCallTransactionReceipt> {
     if ('txReceipt' in txRef) {
       return txRef.txReceipt
     }
@@ -570,15 +573,13 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l1OrL2Provider: Provider
   ): Promise<string> {
     const chainId = (await l1OrL2Provider.getNetwork()).chainId
-    
+
     let predictor
     if (chainId === this.l1Network.chainID) {
       predictor = this.teleporterAddresses.l1Teleporter
-    }
-    else if (chainId === this.l2Network.chainID) {
+    } else if (chainId === this.l2Network.chainID) {
       predictor = this.teleporterAddresses.l2ForwarderFactory
-    }
-    else {
+    } else {
       throw new ArbSdkError(`Unknown chain id: ${chainId}`)
     }
 
@@ -799,7 +800,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
 
-    const l1TxReceipt = await this._getTxReceiptFromTxRef(params, params.l1Provider)
+    const l1TxReceipt = await this._getTxReceiptFromTxRef(
+      params,
+      params.l1Provider
+    )
     const l1l2Messages = await l1TxReceipt.getL1ToL2Messages(params.l2Provider)
 
     let partialResult: OmitTyped<
@@ -843,13 +847,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   /**
    * Given a deposit status, get the L2Forwarder address and its balance of the L2 token
    */
-  public async getL2ForwarderAndBalanceFromStatus(
-    params: {
-      status: Erc20DepositStatus,
-      l2Provider: Provider,
-    }
-  ): Promise<{ l2ForwarderAddress: string; balance: BigNumber }> {
-
+  public async getL2ForwarderAndBalanceFromStatus(params: {
+    status: Erc20DepositStatus
+    l2Provider: Provider
+  }): Promise<{ l2ForwarderAddress: string; balance: BigNumber }> {
     const decodedCallForwarder = this._decodeCallForwarderCalldata(
       params.status.l2ForwarderFactory.messageData.data
     )
@@ -865,10 +866,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       decodedCallForwarder.l2Token,
       params.l2Provider
     ).balanceOf(l2ForwarderAddress)
-    
+
     return {
       l2ForwarderAddress,
-      balance
+      balance,
     }
   }
 
@@ -1317,7 +1318,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   /**
    * Given raw calldata for a callForwarder call, decode the parameters
    */
-  protected _decodeCallForwarderCalldata(data: string): IL2Forwarder.L2ForwarderParamsStruct {
+  protected _decodeCallForwarderCalldata(
+    data: string
+  ): IL2Forwarder.L2ForwarderParamsStruct {
     const iface = IL2ForwarderFactory__factory.createInterface()
     const decoded = iface.parseTransaction({ data })
     if (decoded.functionFragment.name !== 'callForwarder') {
@@ -1439,7 +1442,10 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
     await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
 
-    const l1TxReceipt = await this._getTxReceiptFromTxRef(params, params.l1Provider)
+    const l1TxReceipt = await this._getTxReceiptFromTxRef(
+      params,
+      params.l1Provider
+    )
 
     const l1l2Message = (
       await l1TxReceipt.getL1ToL2Messages(params.l2Provider)
