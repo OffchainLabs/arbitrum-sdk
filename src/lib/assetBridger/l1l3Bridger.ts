@@ -51,6 +51,7 @@ import { OmitTyped } from '../utils/types'
 import { getAddress } from 'ethers/lib/utils'
 import { IL2Forwarder } from '../abi/IL2Forwarder'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
+import { IL2ForwarderPredictor__factory } from '../abi/factories/IL2ForwarderPredictor__factory'
 
 type PickedTransactionRequest = Required<
   Pick<TransactionRequest, 'to' | 'data' | 'value'>
@@ -174,17 +175,18 @@ export type Erc20DepositRequestParams = {
   retryableOverrides?: Erc20DepositRequestRetryableOverrides
 }
 
-export type GetDepositMessagesParams = {
-  l1Provider: Provider
-  l2Provider: Provider
-  l3Provider: Provider
-} & (
+export type TxReference =
   | { txHash: string }
   | { tx: L1ContractCallTransaction }
   | { txReceipt: L1ContractCallTransactionReceipt }
-)
 
-export type Erc20DepositMessages = {
+export type GetDepositStatusParams = {
+  l1Provider: Provider
+  l2Provider: Provider
+  l3Provider: Provider
+} & TxReference
+
+export type Erc20DepositStatus = {
   /**
    * L1 to L2 token bridge message
    */
@@ -312,6 +314,26 @@ class BaseL1L3Bridger {
 
   protected _percentIncrease(num: BigNumber, increase: BigNumber): BigNumber {
     return num.add(num.mul(increase).div(100))
+  }
+
+  protected _getTxHashFromTxRef(txRef: TxReference): string {
+    if ('txHash' in txRef) {
+      return txRef.txHash
+    } else if ('tx' in txRef) {
+      return txRef.tx.hash
+    } else {
+      return txRef.txReceipt.transactionHash
+    }
+  }
+
+  protected async _getTxReceiptFromTxRef(txRef: TxReference, provider: Provider): Promise<L1ContractCallTransactionReceipt> {
+    if ('txReceipt' in txRef) {
+      return txRef.txReceipt
+    }
+
+    return new L1ContractCallTransactionReceipt(
+      await provider.getTransactionReceipt(this._getTxHashFromTxRef(txRef))
+    )
   }
 }
 
@@ -545,13 +567,24 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     owner: string,
     routerOrInbox: string,
     to: string,
-    l1Provider: Provider
+    l1OrL2Provider: Provider
   ): Promise<string> {
-    await this._checkL1Network(l1Provider)
+    const chainId = (await l1OrL2Provider.getNetwork()).chainId
+    
+    let predictor
+    if (chainId === this.l1Network.chainID) {
+      predictor = this.teleporterAddresses.l1Teleporter
+    }
+    else if (chainId === this.l2Network.chainID) {
+      predictor = this.teleporterAddresses.l2ForwarderFactory
+    }
+    else {
+      throw new ArbSdkError(`Unknown chain id: ${chainId}`)
+    }
 
-    return IL2ForwarderFactory__factory.connect(
-      this.teleporterAddresses.l1Teleporter,
-      l1Provider
+    return IL2ForwarderPredictor__factory.connect(
+      predictor,
+      l1OrL2Provider
     ).l2ForwarderAddress(owner, routerOrInbox, to)
   }
 
@@ -755,34 +788,22 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   }
 
   /**
-   * Fetch the cross chain messages
+   * Fetch the cross chain messages and their status
    *
    * Can provide either the txHash, the tx, or the txReceipt
    */
-  public async getDepositMessages(
-    params: GetDepositMessagesParams
-  ): Promise<Erc20DepositMessages> {
+  public async getDepositStatus(
+    params: GetDepositStatusParams
+  ): Promise<Erc20DepositStatus> {
     await this._checkL1Network(params.l1Provider)
     await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
 
-    let l1TxReceipt: L1ContractCallTransactionReceipt
-    if ('txHash' in params) {
-      l1TxReceipt = new L1ContractCallTransactionReceipt(
-        await params.l1Provider.getTransactionReceipt(params.txHash)
-      )
-    } else if ('tx' in params) {
-      l1TxReceipt = new L1ContractCallTransactionReceipt(
-        await params.l1Provider.getTransactionReceipt(params.tx.hash)
-      )
-    } else {
-      l1TxReceipt = params.txReceipt
-    }
-
+    const l1TxReceipt = await this._getTxReceiptFromTxRef(params, params.l1Provider)
     const l1l2Messages = await l1TxReceipt.getL1ToL2Messages(params.l2Provider)
 
     let partialResult: OmitTyped<
-      Erc20DepositMessages,
+      Erc20DepositStatus,
       'completed' | 'l2l3TokenBridge'
     >
 
@@ -816,6 +837,38 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       ...partialResult,
       l2l3TokenBridge: l2l3Message,
       completed: (await l2l3Message?.status()) === L1ToL2MessageStatus.REDEEMED,
+    }
+  }
+
+  /**
+   * Given a deposit status, get the L2Forwarder address and its balance of the L2 token
+   */
+  public async getL2ForwarderAndBalanceFromStatus(
+    params: {
+      status: Erc20DepositStatus,
+      l2Provider: Provider,
+    }
+  ): Promise<{ l2ForwarderAddress: string; balance: BigNumber }> {
+
+    const decodedCallForwarder = this._decodeCallForwarderCalldata(
+      params.status.l2ForwarderFactory.messageData.data
+    )
+
+    const l2ForwarderAddress = await this.l2ForwarderAddress(
+      decodedCallForwarder.owner,
+      decodedCallForwarder.routerOrInbox,
+      decodedCallForwarder.to,
+      params.l2Provider
+    )
+
+    const balance = await IERC20__factory.connect(
+      decodedCallForwarder.l2Token,
+      params.l2Provider
+    ).balanceOf(l2ForwarderAddress)
+    
+    return {
+      l2ForwarderAddress,
+      balance
     }
   }
 
@@ -1260,6 +1313,18 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     }
     return decoded.args[0]
   }
+
+  /**
+   * Given raw calldata for a callForwarder call, decode the parameters
+   */
+  protected _decodeCallForwarderCalldata(data: string): IL2Forwarder.L2ForwarderParamsStruct {
+    const iface = IL2ForwarderFactory__factory.createInterface()
+    const decoded = iface.parseTransaction({ data })
+    if (decoded.functionFragment.name !== 'callForwarder') {
+      throw new ArbSdkError(`not callForwarder data`)
+    }
+    return decoded.args[0]
+  }
 }
 
 /**
@@ -1367,25 +1432,14 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
    * @return Information regarding each step of the deposit
    * and `EthDepositStatus.completed` which indicates whether the deposit has fully completed.
    */
-  public async getDepositMessages(
-    params: GetDepositMessagesParams
+  public async getDepositStatus(
+    params: GetDepositStatusParams
   ): Promise<EthDepositStatus> {
     await this._checkL1Network(params.l1Provider)
     await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
 
-    let l1TxReceipt: L1ContractCallTransactionReceipt
-    if ('txHash' in params) {
-      l1TxReceipt = new L1ContractCallTransactionReceipt(
-        await params.l1Provider.getTransactionReceipt(params.txHash)
-      )
-    } else if ('tx' in params) {
-      l1TxReceipt = new L1ContractCallTransactionReceipt(
-        await params.l1Provider.getTransactionReceipt(params.tx.hash)
-      )
-    } else {
-      l1TxReceipt = params.txReceipt
-    }
+    const l1TxReceipt = await this._getTxReceiptFromTxRef(params, params.l1Provider)
 
     const l1l2Message = (
       await l1TxReceipt.getL1ToL2Messages(params.l2Provider)

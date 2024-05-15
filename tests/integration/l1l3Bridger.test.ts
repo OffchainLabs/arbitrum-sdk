@@ -268,13 +268,13 @@ describe('L1 to L3 Bridging', () => {
           })
         }
       )
-      // getDepositMessages
+      // getDepositStatus
       await checkNetworkGuards(
         true,
         true,
         true,
         async (l1Signer, l2Signer, l3Signer) => {
-          return new EthL1L3Bridger(l3Network).getDepositMessages({
+          return new EthL1L3Bridger(l3Network).getDepositStatus({
             txReceipt: '' as any,
             l1Provider: l1Signer.provider!,
             l2Provider: l2Signer.provider!,
@@ -320,7 +320,7 @@ describe('L1 to L3 Bridging', () => {
 
       // poll status
       await poll(async () => {
-        const status = await l1l3Bridger.getDepositMessages({
+        const status = await l1l3Bridger.getDepositStatus({
           txReceipt: depositReceipt,
           l1Provider: l1Signer.provider!,
           l2Provider: l2Signer.provider!,
@@ -645,21 +645,6 @@ describe('L1 to L3 Bridging', () => {
         }
       )
 
-      // l2ForwarderAddress
-      await checkNetworkGuards(
-        true,
-        false,
-        false,
-        async (l1Signer, _l2Signer, _l3Signer) => {
-          return new Erc20L1L3Bridger(l3Network).l2ForwarderAddress(
-            l1Token.address,
-            l1Token.address,
-            l1Token.address,
-            l1Signer.provider!
-          )
-        }
-      )
-
       // approveToken
       await checkNetworkGuards(
         true,
@@ -745,13 +730,13 @@ describe('L1 to L3 Bridging', () => {
         }
       )
 
-      // getDepositMessages
+      // getDepositStatus
       await checkNetworkGuards(
         true,
         true,
         true,
         async (l1Signer, l2Signer, l3Signer) => {
-          return new Erc20L1L3Bridger(l3Network).getDepositMessages({
+          return new Erc20L1L3Bridger(l3Network).getDepositStatus({
             txHash: '0x0',
             l1Provider: l1Signer.provider!,
             l2Provider: l2Signer.provider!,
@@ -789,7 +774,7 @@ describe('L1 to L3 Bridging', () => {
 
       // poll status
       await poll(async () => {
-        const status = await l1l3Bridger.getDepositMessages({
+        const status = await l1l3Bridger.getDepositStatus({
           txHash: depositReceipt.transactionHash,
           l1Provider: l1Signer.provider!,
           l2Provider: l2Signer.provider!,
@@ -803,7 +788,7 @@ describe('L1 to L3 Bridging', () => {
       }, 1000)
 
       // we have to manually redeem the l3 retryable
-      const status = await l1l3Bridger.getDepositMessages({
+      const status = await l1l3Bridger.getDepositStatus({
         txHash: depositReceipt.transactionHash,
         l1Provider: l1Signer.provider!,
         l2Provider: l2Signer.provider!,
@@ -873,7 +858,7 @@ describe('L1 to L3 Bridging', () => {
 
       // poll status
       await poll(async () => {
-        const status = await l1l3Bridger.getDepositMessages({
+        const status = await l1l3Bridger.getDepositStatus({
           txHash: depositReceipt.transactionHash,
           l1Provider: l1Signer.provider!,
           l2Provider: l2Signer.provider!,
@@ -927,7 +912,7 @@ describe('L1 to L3 Bridging', () => {
 
       // poll status
       await poll(async () => {
-        const status = await l1l3Bridger.getDepositMessages({
+        const status = await l1l3Bridger.getDepositStatus({
           txHash: depositReceipt.transactionHash,
           l1Provider: l1Signer.provider!,
           l2Provider: l2Signer.provider!,
