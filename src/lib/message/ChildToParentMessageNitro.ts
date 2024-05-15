@@ -301,6 +301,7 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
           this.parentProvider
         )
 
+        // @ts-ignore
         const l2BlockRangeFromNode = await nodeInterface.l2BlockRangeForL1(
           createdAtBlock
         )

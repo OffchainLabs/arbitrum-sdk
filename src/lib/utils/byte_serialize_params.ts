@@ -92,7 +92,8 @@ export const getAddressIndex = (() => {
 })()
 
 /**
-  // to use:
+  to use:
+  
   ```js
   const mySerializeParamsFunction = argSerializerConstructor("rpcurl")
   mySerializeParamsFunction(["4","5", "6"])

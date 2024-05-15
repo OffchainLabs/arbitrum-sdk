@@ -668,7 +668,8 @@ export class Erc20Bridger extends AssetBridger<
 
       const functionData =
         defaultedParams.excessFeeRefundAddress !== defaultedParams.from
-          ? iGatewayRouter.encodeFunctionData('outboundTransferCustomRefund', [
+          ? // @ts-ignore
+            iGatewayRouter.encodeFunctionData('outboundTransferCustomRefund', [
               erc20ParentAddress,
               defaultedParams.excessFeeRefundAddress,
               destinationAddress,
