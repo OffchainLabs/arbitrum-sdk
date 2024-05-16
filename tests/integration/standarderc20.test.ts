@@ -54,7 +54,7 @@ import { itOnlyWhenCustomGasToken } from './custom-fee-token/mochaExtensions'
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
-const DECIMALS = process.env.DECIMALS
+const DECIMALS = process.env.DECIMALS || 18
 
 describe('standard ERC20', () => {
   beforeEach('skipIfMainnet', async function () {

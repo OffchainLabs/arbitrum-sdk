@@ -50,7 +50,7 @@ import {
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
-const DECIMALS = process.env.DECIMALS
+const DECIMALS = process.env.DECIMALS || 18
 
 describe('Custom ERC20', () => {
   beforeEach('skipIfMainnet', async function () {
