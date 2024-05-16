@@ -206,7 +206,7 @@ export type Erc20DepositStatus = {
   /**
    * Whether the teleportation has completed.
    *
-   * True if l1l2TokenBridge status is REDEEMED and l2ForwarderTokenBalance is 0
+   * True if l1l2TokenBridge status is REDEEMED and the L2Forwarder token balance is 0
    */
   completed: boolean
 }
