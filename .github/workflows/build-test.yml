@@ -151,6 +151,7 @@ jobs:
     env:
       ORBIT_TEST: ${{ matrix.orbit-test }}
       NON_18_DECIMALS_TEST: ${{ matrix.non-18-decimals }}
+      DECIMALS: 6
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -170,7 +171,7 @@ jobs:
           nitro-contracts-branch: e2e-decimals
           token-bridge-branch: non-18-decimals
           l3-node: ${{ matrix.non-18-decimals == '1' || matrix.orbit-test == '1' }}
-          args: ${{ matrix.non-18-decimals == '1' && '--l3-fee-token --l3-fee-token-decimals 16' || matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
+          args: ${{ matrix.non-18-decimals == '1' && '--l3-fee-token --l3-fee-token-decimals 6' || matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
 
       - name: Copy .env
         run: cp ./.env-sample ./.env

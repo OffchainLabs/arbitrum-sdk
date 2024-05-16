@@ -20,7 +20,7 @@ import { expect } from 'chai'
 import dotenv from 'dotenv'
 
 import { Wallet } from '@ethersproject/wallet'
-import { parseEther } from '@ethersproject/units'
+import { parseUnits } from '@ethersproject/units'
 import { constants } from 'ethers'
 
 import {
@@ -42,6 +42,8 @@ import { L1TransactionReceipt } from '../../src'
 
 dotenv.config()
 
+const DECIMALS = process.env.DECIMALS
+
 describe('Ether', async () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
@@ -52,7 +54,7 @@ describe('Ether', async () => {
 
     await fundL2(l2Signer)
     const randomAddress = Wallet.createRandom().address
-    const amountToSend = parseEther('0.000005')
+    const amountToSend = parseUnits('0.000005', DECIMALS)
 
     const balanceBefore = await l2Signer.provider!.getBalance(
       await l2Signer.getAddress()
@@ -107,7 +109,7 @@ describe('Ether', async () => {
     const initialInboxBalance = await l1Signer.provider!.getBalance(
       inboxAddress
     )
-    const ethToDeposit = parseEther('0.0002')
+    const ethToDeposit = parseUnits('0.0002')
     const res = await ethBridger.deposit({
       amount: ethToDeposit,
       l1Signer: l1Signer,
@@ -155,7 +157,7 @@ describe('Ether', async () => {
     const initialInboxBalance = await l1Signer.provider!.getBalance(
       inboxAddress
     )
-    const ethToDeposit = parseEther('0.0002')
+    const ethToDeposit = parseUnits('0.0002', DECIMALS)
     const res = await ethBridger.depositTo({
       amount: ethToDeposit,
       l1Signer: l1Signer,
@@ -219,7 +221,7 @@ describe('Ether', async () => {
     await fundL1(l1Signer)
     const destWallet = Wallet.createRandom()
 
-    const ethToDeposit = parseEther('0.0002')
+    const ethToDeposit = parseUnits('0.0002', DECIMALS)
     const res = await ethBridger.depositTo({
       amount: ethToDeposit,
       l1Signer: l1Signer,
@@ -277,7 +279,7 @@ describe('Ether', async () => {
     await fundL2(l2Signer)
     await fundL1(l1Signer)
 
-    const ethToWithdraw = parseEther('0.00000002')
+    const ethToWithdraw = parseUnits('0.00000002', DECIMALS)
     const randomAddress = Wallet.createRandom().address
 
     const request = await ethBridger.getWithdrawalRequest({
@@ -340,8 +342,8 @@ describe('Ether', async () => {
     // run a miner whilst withdrawing
     const miner1 = Wallet.createRandom().connect(l1Signer.provider!)
     const miner2 = Wallet.createRandom().connect(l2Signer.provider!)
-    await fundL1(miner1, parseEther('1'))
-    await fundL2(miner2, parseEther('1'))
+    await fundL1(miner1, parseUnits('1', DECIMALS))
+    await fundL2(miner2, parseUnits('1', DECIMALS))
     const state = { mining: true }
     await Promise.race([
       mineUntilStop(miner1, state),
