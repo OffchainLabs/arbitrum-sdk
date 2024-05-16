@@ -33,7 +33,7 @@ import { describeOnlyWhenCustomGasToken } from './mochaExtensions'
 
 dotenv.config()
 
-const DECIMALS = process.env.DECIMALS || 18
+const DECIMALS = Number(process.env.DECIMALS) || 18
 
 describeOnlyWhenCustomGasToken(
   'EthBridger (with custom fee token)',
