@@ -167,8 +167,11 @@ export const testSetup = async (): Promise<{
   const inboxTools = new InboxTools(l1Signer, setL2Network)
 
   if (isL2NetworkWithCustomFeeToken()) {
+    console.log('fundL1')
     await fundL1(l1Signer)
+    console.log('fundL1CustomFeeToken')
     await fundL1CustomFeeToken(l1Signer)
+    console.log('approveL1CustomFeeToken')
     await approveL1CustomFeeToken(l1Signer)
   }
 

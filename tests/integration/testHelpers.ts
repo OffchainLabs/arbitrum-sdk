@@ -405,6 +405,7 @@ const fund = async (
   amount?: BigNumber,
   fundingKey?: string
 ) => {
+  console.log('preFundAmount: ', preFundAmount.toString())
   const wallet = getSigner(signer.provider! as JsonRpcProvider, fundingKey)
   await (
     await wallet.sendTransaction({
