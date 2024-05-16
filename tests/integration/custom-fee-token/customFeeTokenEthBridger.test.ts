@@ -20,7 +20,7 @@ import { expect } from 'chai'
 import { ethers, constants, Wallet } from 'ethers'
 import dotenv from 'dotenv'
 
-import { parseEther } from '@ethersproject/units'
+import { parseEther, parseUnits } from '@ethersproject/units'
 
 import {
   fundL1 as fundL1Ether,
@@ -32,6 +32,8 @@ import { L2ToL1Message, L2ToL1MessageStatus } from '../../../src'
 import { describeOnlyWhenCustomGasToken } from './mochaExtensions'
 
 dotenv.config()
+
+const DECIMALS = process.env.DECIMALS
 
 describeOnlyWhenCustomGasToken(
   'EthBridger (with custom fee token)',
@@ -49,7 +51,7 @@ describeOnlyWhenCustomGasToken(
 
     it('approves the custom fee token to be spent by the Inbox on the parent chain (arbitrary amount, using params)', async function () {
       const { ethBridger, nativeTokenContract, l1Signer } = await testSetup()
-      const amount = ethers.utils.parseEther('1')
+      const amount = ethers.utils.parseUnits('1', DECIMALS)
 
       await fundL1Ether(l1Signer)
       await fundL1CustomFeeToken(l1Signer)
@@ -162,7 +164,7 @@ describeOnlyWhenCustomGasToken(
         nativeTokenContract,
       } = await testSetup()
       const bridge = ethBridger.l2Network.ethBridge.bridge
-      const amount = parseEther('0.2')
+      const amount = parseUnits('0.2', DECIMALS)
 
       await fundL1Ether(l1Signer)
       await fundL2CustomFeeToken(l2Signer)

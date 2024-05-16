@@ -54,6 +54,8 @@ import { itOnlyWhenCustomGasToken } from './custom-fee-token/mochaExtensions'
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
+const DECIMALS = process.env.DECIMALS
+
 describe('standard ERC20', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
@@ -299,7 +301,7 @@ describe('standard ERC20', () => {
   it('deposits erc20 with extra ETH', async () => {
     await depositToken({
       depositAmount,
-      ethDepositAmount: utils.parseEther('0.0005'),
+      ethDepositAmount: utils.parseUnits('0.0005', DECIMALS),
       l1TokenAddress: testState.l1Token.address,
       erc20Bridger: testState.erc20Bridger,
       l1Signer: testState.l1Signer,
@@ -313,7 +315,7 @@ describe('standard ERC20', () => {
     const randomAddress = Wallet.createRandom().address
     await depositToken({
       depositAmount,
-      ethDepositAmount: utils.parseEther('0.0005'),
+      ethDepositAmount: utils.parseUnits('0.0005', DECIMALS),
       l1TokenAddress: testState.l1Token.address,
       erc20Bridger: testState.erc20Bridger,
       l1Signer: testState.l1Signer,
