@@ -14,6 +14,8 @@ const ethProvider = () => new StaticJsonRpcProvider(config.ethUrl)
 const arbProvider = () => new StaticJsonRpcProvider(config.arbUrl)
 const localNetworks = () => getLocalNetworksFromFile()
 
+const DECIMALS = process.env.DECIMALS ?? 18
+
 export function isL2NetworkWithCustomFeeToken(): boolean {
   const nt = localNetworks().l2Network.nativeToken
   return typeof nt !== 'undefined' && nt !== ethers.constants.AddressZero
@@ -49,7 +51,10 @@ export async function fundL1CustomFeeToken(l1SignerOrAddress: Signer | string) {
 
   const tokenContract = ERC20__factory.connect(nativeToken, deployerWallet)
 
-  const tx = await tokenContract.transfer(address, utils.parseEther('10'))
+  const tx = await tokenContract.transfer(
+    address,
+    utils.parseUnits('10', DECIMALS)
+  )
   await tx.wait()
 }
 
@@ -87,7 +92,7 @@ export async function fundL2CustomFeeToken(l2Signer: Signer) {
 
   const tx = await deployerWallet.sendTransaction({
     to: await l2Signer.getAddress(),
-    value: utils.parseEther('1'),
+    value: utils.parseUnits('1', DECIMALS),
   })
   await tx.wait()
 }
