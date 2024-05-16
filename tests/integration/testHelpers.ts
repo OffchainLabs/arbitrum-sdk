@@ -38,7 +38,7 @@ import { ERC20 } from '../../src/lib/abi/ERC20'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 
-const DECIMALS = process.env.DECIMALS ?? 18
+const DECIMALS = Number(process.env.DECIMALS) || 18
 
 export const preFundAmount = parseUnits('0.1', DECIMALS)
 

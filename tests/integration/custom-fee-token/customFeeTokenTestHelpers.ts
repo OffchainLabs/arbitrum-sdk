@@ -14,7 +14,7 @@ const ethProvider = () => new StaticJsonRpcProvider(config.ethUrl)
 const arbProvider = () => new StaticJsonRpcProvider(config.arbUrl)
 const localNetworks = () => getLocalNetworksFromFile()
 
-const DECIMALS = process.env.DECIMALS ?? 18
+const DECIMALS = Number(process.env.DECIMALS) || 18
 
 export function isL2NetworkWithCustomFeeToken(): boolean {
   const nt = localNetworks().l2Network.nativeToken
