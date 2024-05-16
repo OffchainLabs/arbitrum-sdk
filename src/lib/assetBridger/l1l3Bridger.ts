@@ -204,7 +204,9 @@ export type Erc20DepositStatus = {
    */
   l2l3TokenBridge: L1ToL2MessageReader | undefined
   /**
-   * Whether the teleportation has completed
+   * Whether the teleportation has completed.
+   *
+   * True if l1l2TokenBridge status is REDEEMED and l2ForwarderTokenBalance is 0
    */
   completed: boolean
 }
@@ -825,6 +827,22 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       }
     }
 
+    const decodedFactoryCall = this._decodeCallForwarderCalldata(
+      partialResult.l2ForwarderFactory.messageData.data
+    )
+
+    const balance = await IERC20__factory.connect(
+      decodedFactoryCall.l2Token,
+      params.l2Provider
+    ).balanceOf(
+      await this.l2ForwarderAddress(
+        decodedFactoryCall.owner,
+        decodedFactoryCall.routerOrInbox,
+        decodedFactoryCall.to,
+        params.l2Provider
+      )
+    )
+
     const factoryRedeem =
       await partialResult.l2ForwarderFactory.getSuccessfulRedeem()
 
@@ -837,39 +855,14 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
           )[0]
         : undefined
 
+    const completed =
+      (await partialResult.l1l2TokenBridge.status()) ===
+        L1ToL2MessageStatus.REDEEMED && balance.eq(0)
+
     return {
       ...partialResult,
       l2l3TokenBridge: l2l3Message,
-      completed: (await l2l3Message?.status()) === L1ToL2MessageStatus.REDEEMED,
-    }
-  }
-
-  /**
-   * Given a deposit status, get the L2Forwarder address and its balance of the L2 token
-   */
-  public async getL2ForwarderAndBalanceFromStatus(params: {
-    status: Erc20DepositStatus
-    l2Provider: Provider
-  }): Promise<{ l2ForwarderAddress: string; balance: BigNumber }> {
-    const decodedCallForwarder = this._decodeCallForwarderCalldata(
-      params.status.l2ForwarderFactory.messageData.data
-    )
-
-    const l2ForwarderAddress = await this.l2ForwarderAddress(
-      decodedCallForwarder.owner,
-      decodedCallForwarder.routerOrInbox,
-      decodedCallForwarder.to,
-      params.l2Provider
-    )
-
-    const balance = await IERC20__factory.connect(
-      decodedCallForwarder.l2Token,
-      params.l2Provider
-    ).balanceOf(l2ForwarderAddress)
-
-    return {
-      l2ForwarderAddress,
-      balance,
+      completed,
     }
   }
 
