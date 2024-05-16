@@ -21,7 +21,7 @@ import chalk from 'chalk'
 
 import { BigNumber } from '@ethersproject/bignumber'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { parseEther } from '@ethersproject/units'
+import { parseUnits } from '@ethersproject/units'
 
 import { config, getSigner, testSetup } from '../../scripts/testSetup'
 
@@ -38,7 +38,9 @@ import { ERC20 } from '../../src/lib/abi/ERC20'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 
-export const preFundAmount = parseEther('0.1')
+const DECIMALS = process.env.DECIMALS ?? 18
+
+export const preFundAmount = parseUnits('0.1', DECIMALS)
 
 export const prettyLog = (text: string): void => {
   console.log(chalk.blue(`    *** ${text}`))
@@ -159,8 +161,8 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   // whilst waiting for status we miner on both l1 and l2
   const miner1 = Wallet.createRandom().connect(params.l1Signer.provider!)
   const miner2 = Wallet.createRandom().connect(params.l2Signer.provider!)
-  await fundL1(miner1, parseEther('1'))
-  await fundL2(miner2, parseEther('1'))
+  await fundL1(miner1, parseUnits('1', DECIMALS))
+  await fundL2(miner2, parseUnits('1', DECIMALS))
   const state = { mining: true }
   await Promise.race([
     mineUntilStop(miner1, state),
