@@ -31,7 +31,7 @@ const depositAmount = BigNumber.from(100)
 import { ERC20Inbox__factory } from '../../src/lib/abi/factories/ERC20Inbox__factory'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 
-const DECIMALS = process.env.DECIMALS || 18
+const DECIMALS = Number(process.env.DECIMALS) || 18
 
 describe('RevertData', () => {
   beforeEach('skipIfMainnet', async function () {

@@ -33,7 +33,7 @@ import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { describeOnlyWhenEth } from './custom-fee-token/mochaExtensions'
 
-const DECIMALS = process.env.DECIMALS || 18
+const DECIMALS = Number(process.env.DECIMALS) || 18
 
 describeOnlyWhenEth('WETH', async () => {
   beforeEach('skipIfMainnet', async function () {
