@@ -234,6 +234,12 @@ export class EthBridger extends AssetBridger<
 
     console.log('approveGasToken-1')
 
+    console.log(
+      'approveGasTokenRequest: ',
+      JSON.stringify(approveGasTokenRequest)
+    )
+    console.log('params: ', JSON.stringify(params))
+
     return params.l1Signer.sendTransaction({
       ...approveGasTokenRequest,
       ...params.overrides,
