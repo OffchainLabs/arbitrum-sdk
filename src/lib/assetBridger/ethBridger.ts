@@ -195,6 +195,8 @@ export class EthBridger extends AssetBridger<
       throw new Error('chain uses ETH as its native/gas token')
     }
 
+    console.log('getApproveGasTokenRequest start')
+
     const data = ERC20__factory.createInterface().encodeFunctionData(
       'approve',
       [
@@ -204,6 +206,8 @@ export class EthBridger extends AssetBridger<
         params?.amount ?? constants.MaxUint256,
       ]
     )
+
+    console.log('getApproveGasTokenRequest end')
 
     return {
       to: this.nativeToken!,
@@ -223,9 +227,12 @@ export class EthBridger extends AssetBridger<
       throw new Error('chain uses ETH as its native/gas token')
     }
 
+    console.log('approveGasToken-0')
     const approveGasTokenRequest = this.isApproveGasTokenParams(params)
       ? this.getApproveGasTokenRequest(params)
       : params.txRequest
+
+    console.log('approveGasToken-1')
 
     return params.l1Signer.sendTransaction({
       ...approveGasTokenRequest,

@@ -1,5 +1,5 @@
 import { StaticJsonRpcProvider } from '@ethersproject/providers'
-import { Signer, Wallet, ethers, utils } from 'ethers'
+import { BigNumber, Signer, Wallet, ethers, utils } from 'ethers'
 
 import {
   testSetup as _testSetup,
@@ -8,6 +8,7 @@ import {
 } from '../../../scripts/testSetup'
 import { Erc20Bridger, EthBridger } from '../../../src'
 import { ERC20__factory } from '../../../src/lib/abi/factories/ERC20__factory'
+import { parseUnits } from 'ethers/lib/utils'
 
 // `config` isn't initialized yet, so we have to wrap these in functions
 const ethProvider = () => new StaticJsonRpcProvider(config.ethUrl)
@@ -63,7 +64,10 @@ export async function approveL1CustomFeeToken(l1Signer: Signer) {
   const ethBridger = await EthBridger.fromProvider(arbProvider())
 
   console.log('2')
-  const tx = await ethBridger.approveGasToken({ l1Signer })
+  const tx = await ethBridger.approveGasToken({
+    l1Signer,
+    amount: parseUnits('1_000_000'),
+  })
   console.log('3')
   await tx.wait()
   console.log('4')
