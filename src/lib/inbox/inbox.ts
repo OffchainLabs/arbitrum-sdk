@@ -183,10 +183,9 @@ export class InboxTools {
       await multicall.multiCall(multicallInput, true)
 
     const firstEligibleBlockNumber =
-      currentBlockNumber.toNumber() - maxTimeVariation.delayBlocks.toNumber()
+      currentBlockNumber.toNumber() - maxTimeVariation[0].toNumber()
     const firstEligibleTimestamp =
-      currentBlockTimestamp.toNumber() -
-      maxTimeVariation.delaySeconds.toNumber()
+      currentBlockTimestamp.toNumber() - maxTimeVariation[0].toNumber()
 
     const firstEligibleBlock = await this.findFirstBlockBelow(
       firstEligibleBlockNumber,
