@@ -37,6 +37,8 @@ describe('L1ToL2MessageGasEstimator', () => {
     async () => {
       const { l1Provider, l2Provider } = await testSetup()
 
+      console.log('L1ToL2MessageGasEstimator start')
+
       const submissionFee = await new L1ToL2MessageGasEstimator(
         l2Provider
       ).estimateSubmissionFee(
@@ -44,6 +46,8 @@ describe('L1ToL2MessageGasEstimator', () => {
         await l1Provider.getGasPrice(),
         123456
       )
+
+      console.log('L1ToL2MessageGasEstimator end')
 
       expect(submissionFee.toString()).to.not.eq(BigNumber.from(0).toString())
     }

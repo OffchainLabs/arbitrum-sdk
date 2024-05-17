@@ -64,7 +64,9 @@ export async function approveL1CustomFeeToken(l1Signer: Signer) {
 
   console.log('2')
   const tx = await ethBridger.approveGasToken({ l1Signer })
+  console.log('3')
   await tx.wait()
+  console.log('4')
 }
 
 export async function getL1CustomFeeTokenAllowance(

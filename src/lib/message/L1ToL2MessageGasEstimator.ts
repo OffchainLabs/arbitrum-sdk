@@ -130,8 +130,14 @@ export class L1ToL2MessageGasEstimator {
   ): Promise<L1ToL2MessageGasParams['maxSubmissionCost']> {
     const defaultedOptions = this.applySubmissionPriceDefaults(options)
 
+    console.log({ defaultedOptions })
+
     const network = await getL2Network(this.l2Provider)
     const inbox = Inbox__factory.connect(network.ethBridge.inbox, l1Provider)
+
+    console.log('percentIncrease start')
+    console.log('l1BaseFee: ', l1BaseFee.toString())
+    console.log('callDataSize: ', callDataSize.toString())
 
     return this.percentIncrease(
       defaultedOptions.base ||

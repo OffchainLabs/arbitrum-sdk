@@ -173,6 +173,7 @@ export const testSetup = async (): Promise<{
     await fundL1CustomFeeToken(l1Signer)
     console.log('approveL1CustomFeeToken')
     await approveL1CustomFeeToken(l1Signer)
+    console.log('methods-end')
   }
 
   return {
