@@ -166,7 +166,7 @@ const registerCustomToken = async (
   console.log('3')
   await l1CustomToken.deployed()
   console.log('4')
-  const amount = ethers.utils.parseUnits('1', DECIMALS)
+  const amount = ethers.utils.parseEther('1')
 
   if (isL2NetworkWithCustomFeeToken()) {
     const approvalTx = await ERC20__factory.connect(
