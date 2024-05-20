@@ -4,10 +4,8 @@
 import { expect } from 'chai'
 
 import { BigNumber } from 'ethers'
-import { parseUnits } from 'ethers/lib/utils'
+import { parseEther } from 'ethers/lib/utils'
 import { SubmitRetryableMessageDataParser } from '../../src/lib/message/messageDataParser'
-
-const DECIMALS = Number(process.env.DECIMALS)
 
 describe('SubmitRetryableMessageDataParser', () => {
   it('does parse l1 to l2 message', async () => {
@@ -66,8 +64,7 @@ describe('SubmitRetryableMessageDataParser', () => {
       '0xf71946496600e1e1d47b8A77EB2f109Fd82dc86a'
     )
     expect(res.gasLimit.eq(BigNumber.from(0)), 'incorrect gas limit').to.be.true
-    expect(res.l1Value.eq(parseUnits('30.01', DECIMALS)), 'incorrect l1 value')
-      .to.be.true
+    expect(res.l1Value.eq(parseEther('30.01')), 'incorrect l1 value').to.be.true
     expect(res.l2CallValue.eq(BigNumber.from(0)), 'incorrect l2 call value').to
       .be.true
     expect(res.maxFeePerGas.eq(BigNumber.from(0)), 'incorrect max fee per gas')
