@@ -161,8 +161,8 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   // whilst waiting for status we miner on both l1 and l2
   const miner1 = Wallet.createRandom().connect(params.l1Signer.provider!)
   const miner2 = Wallet.createRandom().connect(params.l2Signer.provider!)
-  await fundL1(miner1, parseUnits('1', DECIMALS))
-  await fundL2(miner2, parseUnits('1', DECIMALS))
+  await fundL1(miner1, parseEther('1'))
+  await fundL2(miner2, parseEther('1'))
   const state = { mining: true }
   await Promise.race([
     mineUntilStop(miner1, state),
