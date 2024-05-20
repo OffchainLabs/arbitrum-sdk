@@ -21,7 +21,7 @@ import chalk from 'chalk'
 
 import { BigNumber } from '@ethersproject/bignumber'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { parseUnits } from '@ethersproject/units'
+import { parseEther, parseUnits } from '@ethersproject/units'
 
 import { config, getSigner, testSetup } from '../../scripts/testSetup'
 
@@ -40,7 +40,7 @@ import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 
 const DECIMALS = Number(process.env.DECIMALS) || 18
 
-export const preFundAmount = parseUnits('1000', DECIMALS)
+export const preFundAmount = parseEther('0.1')
 
 export const prettyLog = (text: string): void => {
   console.log(chalk.blue(`    *** ${text}`))
