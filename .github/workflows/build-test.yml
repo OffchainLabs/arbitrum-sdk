@@ -151,7 +151,7 @@ jobs:
     env:
       ORBIT_TEST: ${{ matrix.orbit-test }}
       NON_18_DECIMALS_TEST: ${{ matrix.non-18-decimals }}
-      DECIMALS: ${{ matrix.non-18-decimals == '1' && '6' }}
+      DECIMALS: ${{ matrix.non-18-decimals == '1' && '6' || '18' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
