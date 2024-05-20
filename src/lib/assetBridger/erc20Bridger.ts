@@ -905,6 +905,13 @@ export class AdminErc20Bridger extends Erc20Bridger {
       )
     }
 
+    const l1Provider = l1Signer.provider!
+
+    const nativeTokenDecimals = await getNativeTokenDecimals({
+      l1Provider,
+      l2Network: this.l2Network,
+    })
+
     type GasParams = {
       maxSubmissionCost: BigNumber
       gasLimit: BigNumber
@@ -923,12 +930,18 @@ export class AdminErc20Bridger extends Erc20Bridger {
       )
         ? RetryableDataTools.ErrorTriggeringParams.maxFeePerGas.mul(2)
         : maxFeePerGas
-      const setTokenDeposit = setTokenGas.gasLimit
-        .mul(doubleFeePerGas)
-        .add(setTokenGas.maxSubmissionCost)
-      const setGatewayDeposit = setGatewayGas.gasLimit
-        .mul(doubleFeePerGas)
-        .add(setGatewayGas.maxSubmissionCost)
+      const setTokenDeposit = scaleToNativeDecimals({
+        amount: setTokenGas.gasLimit
+          .mul(doubleFeePerGas)
+          .add(setTokenGas.maxSubmissionCost),
+        decimals: nativeTokenDecimals,
+      })
+      const setGatewayDeposit = scaleToNativeDecimals({
+        amount: setGatewayGas.gasLimit
+          .mul(doubleFeePerGas)
+          .add(setGatewayGas.maxSubmissionCost),
+        decimals: nativeTokenDecimals,
+      })
 
       const data = l1Token.interface.encodeFunctionData('registerTokenOnL2', [
         l2TokenAddress,
@@ -950,7 +963,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
       }
     }
 
-    const l1Provider = l1Signer.provider!
     const gEstimator = new L1ToL2MessageGasEstimator(l2Provider)
     const setTokenEstimates2 = await gEstimator.populateFunctionParams(
       (params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>) =>
