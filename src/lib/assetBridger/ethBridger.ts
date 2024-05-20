@@ -240,6 +240,10 @@ export class EthBridger extends AssetBridger<
     )
     console.log('params: ', JSON.stringify(params))
 
+    const bal = await params.l1Signer.getBalance()
+
+    console.log('BALANCE: ', bal.toString())
+
     return params.l1Signer.sendTransaction({
       ...approveGasTokenRequest,
       ...params.overrides,
