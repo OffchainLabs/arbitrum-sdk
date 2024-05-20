@@ -51,7 +51,6 @@ export async function fundL1CustomFeeToken(l1SignerOrAddress: Signer | string) {
 
   const tokenContract = ERC20__factory.connect(nativeToken, deployerWallet)
 
-  console.log('1')
   const tx = await tokenContract.transfer(
     address,
     utils.parseUnits('10', DECIMALS)
@@ -62,11 +61,8 @@ export async function fundL1CustomFeeToken(l1SignerOrAddress: Signer | string) {
 export async function approveL1CustomFeeToken(l1Signer: Signer) {
   const ethBridger = await EthBridger.fromProvider(arbProvider())
 
-  console.log('2')
   const tx = await ethBridger.approveGasToken({ l1Signer })
-  console.log('3')
   await tx.wait()
-  console.log('4')
 }
 
 export async function getL1CustomFeeTokenAllowance(
