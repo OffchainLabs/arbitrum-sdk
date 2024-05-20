@@ -21,7 +21,7 @@ import chalk from 'chalk'
 
 import { BigNumber } from '@ethersproject/bignumber'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { parseEther, parseUnits } from '@ethersproject/units'
+import { parseEther } from '@ethersproject/units'
 
 import { config, getSigner, testSetup } from '../../scripts/testSetup'
 
@@ -37,8 +37,6 @@ import { ArbSdkError } from '../../src/lib/dataEntities/errors'
 import { ERC20 } from '../../src/lib/abi/ERC20'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
-
-const DECIMALS = Number(process.env.DECIMALS) || 18
 
 export const preFundAmount = parseEther('0.1')
 
@@ -405,7 +403,6 @@ const fund = async (
   amount?: BigNumber,
   fundingKey?: string
 ) => {
-  console.log('preFundAmount: ', preFundAmount.toString())
   const wallet = getSigner(signer.provider! as JsonRpcProvider, fundingKey)
   await (
     await wallet.sendTransaction({

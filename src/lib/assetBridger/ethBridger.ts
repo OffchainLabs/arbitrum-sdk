@@ -224,7 +224,7 @@ export class EthBridger extends AssetBridger<
     }
 
     const approveGasTokenRequest = this.isApproveGasTokenParams(params)
-      ? this.getApproveGasTokenRequest({ ...params })
+      ? this.getApproveGasTokenRequest(params)
       : params.txRequest
 
     return params.l1Signer.sendTransaction({

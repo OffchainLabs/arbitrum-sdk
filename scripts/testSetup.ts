@@ -54,7 +54,6 @@ const isTestingNon18Decimals = process.env.NON_18_DECIMALS_TEST === '1'
 
 export const config = (function () {
   if (isTestingOrbitChains) {
-    // TODO
     if (isTestingNon18Decimals) {
       return {
         arbUrl: 'http://localhost:3347',

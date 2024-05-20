@@ -17,7 +17,7 @@
 'use strict'
 
 import { expect } from 'chai'
-import { parseEther, parseUnits } from '@ethersproject/units'
+import { parseEther } from '@ethersproject/units'
 import { AeWETH__factory } from '../../src/lib/abi/factories/AeWETH__factory'
 import {
   fundL1,
@@ -33,8 +33,6 @@ import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { describeOnlyWhenEth } from './custom-fee-token/mochaExtensions'
 
-const DECIMALS = Number(process.env.DECIMALS) || 18
-
 describeOnlyWhenEth('WETH', async () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
@@ -48,7 +46,7 @@ describeOnlyWhenEth('WETH', async () => {
     const wethToWrap = parseEther('0.00001')
     const wethToDeposit = parseEther('0.0000001')
 
-    await fundL1(l1Signer, parseUnits('1', DECIMALS))
+    await fundL1(l1Signer, parseEther('1'))
 
     const l2WETH = AeWETH__factory.connect(
       l2Network.tokenBridge.l2Weth,

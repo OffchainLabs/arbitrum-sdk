@@ -20,7 +20,7 @@
     "@openzeppelin/contracts-upgradeable" "4.5.2"
     patch-package "^6.4.7"
 
-"@arbitrum/nitro-contracts@^1.2.1":
+"@arbitrum/nitro-contracts@^1.1.1":
   version "1.2.1"
   resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.2.1.tgz#2ebff205886e7dd1017a3e1df68fb1a8ab36185b"
   integrity sha512-1k8t5ozeyCUpZ4RFlPXF876JE57z3w/YW1qUow1l9TF2+VDnbqGAiK3axhVZFhYUZxo+PajqsdpWr3FK+yW6uA==
