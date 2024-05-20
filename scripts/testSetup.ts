@@ -79,6 +79,8 @@ export const config = (function () {
   }
 })()
 
+console.log('config: ', JSON.stringify(config))
+
 export const getSigner = (provider: JsonRpcProvider, key?: string) => {
   if (!key && !provider)
     throw new ArbSdkError('Provide at least one of key or provider.')
