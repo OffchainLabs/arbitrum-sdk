@@ -232,7 +232,7 @@ export class EthBridger extends AssetBridger<
 
     console.log('approveGasToken-0')
     const approveGasTokenRequest = this.isApproveGasTokenParams(params)
-      ? this.getApproveGasTokenRequest({ ...params, amount: bal })
+      ? this.getApproveGasTokenRequest({ ...params })
       : params.txRequest
 
     console.log('approveGasToken-1')
