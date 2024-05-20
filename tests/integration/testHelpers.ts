@@ -40,7 +40,7 @@ import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 
 const DECIMALS = Number(process.env.DECIMALS) || 18
 
-export const preFundAmount = parseUnits('0.1', DECIMALS)
+export const preFundAmount = parseUnits('1000', DECIMALS)
 
 export const prettyLog = (text: string): void => {
   console.log(chalk.blue(`    *** ${text}`))
