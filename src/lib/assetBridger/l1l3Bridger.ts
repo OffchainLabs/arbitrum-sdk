@@ -52,6 +52,8 @@ import { getAddress } from 'ethers/lib/utils'
 import { IL2Forwarder } from '../abi/IL2Forwarder'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { IL2ForwarderPredictor__factory } from '../abi/factories/IL2ForwarderPredictor__factory'
+import { IInbox__factory } from '../abi/factories/IInbox__factory'
+import { RetryableMessageParams } from '../dataEntities/message'
 
 type PickedTransactionRequest = Required<
   Pick<TransactionRequest, 'to' | 'data' | 'value'>
@@ -326,6 +328,19 @@ class BaseL1L3Bridger {
     } else {
       return txRef.txReceipt.transactionHash
     }
+  }
+
+  protected async _getTxFromTxRef(
+    txRef: TxReference,
+    provider: Provider
+  ): Promise<L1ContractCallTransaction> {
+    if ('tx' in txRef) {
+      return txRef.tx
+    }
+
+    return L1TransactionReceipt.monkeyPatchContractCallWait(
+      await provider.getTransaction(this._getTxHashFromTxRef(txRef))
+    )
   }
 
   protected async _getTxReceiptFromTxRef(
@@ -791,6 +806,45 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   }
 
   /**
+   * Given a teleportation tx, get the L1Teleporter parameters, L2Forwarder parameters, and L2Forwarder address
+   */
+  public async getDepositParameters(
+    params: {
+      l1Provider: Provider
+      l2Provider: Provider
+    } & TxReference
+  ) {
+    await this._checkL1Network(params.l1Provider)
+    await this._checkL2Network(params.l2Provider)
+
+    const tx = await this._getTxFromTxRef(params, params.l1Provider)
+    const txReceipt = await tx.wait()
+    const l1l2Messages = await this._getL1ToL2Messages(
+      txReceipt,
+      params.l2Provider
+    )
+
+    const l2ForwarderParams = this._decodeCallForwarderCalldata(
+      l1l2Messages.l2ForwarderFactory.messageData.data
+    )
+
+    const l2ForwarderAddress = this.l2ForwarderAddress(
+      l2ForwarderParams.owner,
+      l2ForwarderParams.routerOrInbox,
+      l2ForwarderParams.to,
+      params.l2Provider
+    )
+
+    const teleportParams = this._decodeTeleportCalldata(tx.data)
+
+    return {
+      teleportParams,
+      l2ForwarderParams,
+      l2ForwarderAddress,
+    }
+  }
+
+  /**
    * Fetch the cross chain messages and their status
    *
    * Can provide either the txHash, the tx, or the txReceipt
@@ -806,26 +860,11 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       params,
       params.l1Provider
     )
-    const l1l2Messages = await l1TxReceipt.getL1ToL2Messages(params.l2Provider)
 
-    let partialResult: OmitTyped<
-      Erc20DepositStatus,
-      'completed' | 'l2l3TokenBridge'
-    >
-
-    if (l1l2Messages.length === 2) {
-      partialResult = {
-        l1l2TokenBridge: l1l2Messages[0],
-        l2ForwarderFactory: l1l2Messages[1],
-        l1l2FeeTokenBridge: undefined,
-      }
-    } else {
-      partialResult = {
-        l1l2FeeTokenBridge: l1l2Messages[0],
-        l1l2TokenBridge: l1l2Messages[1],
-        l2ForwarderFactory: l1l2Messages[2],
-      }
-    }
+    const partialResult = await this._getL1ToL2Messages(
+      l1TxReceipt,
+      params.l2Provider
+    )
 
     const decodedFactoryCall = this._decodeCallForwarderCalldata(
       partialResult.l2ForwarderFactory.messageData.data
@@ -1321,6 +1360,35 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     }
     return decoded.args[0]
   }
+
+  protected async _getL1ToL2Messages(
+    l1TxReceipt: L1ContractCallTransactionReceipt,
+    l2Provider: Provider
+  ) {
+    const l1l2Messages = await l1TxReceipt.getL1ToL2Messages(l2Provider)
+
+    let partialResult: {
+      l1l2TokenBridge: L1ToL2MessageReader
+      l1l2FeeTokenBridge: L1ToL2MessageReader | undefined
+      l2ForwarderFactory: L1ToL2MessageReader
+    }
+
+    if (l1l2Messages.length === 2) {
+      partialResult = {
+        l1l2TokenBridge: l1l2Messages[0],
+        l2ForwarderFactory: l1l2Messages[1],
+        l1l2FeeTokenBridge: undefined,
+      }
+    } else {
+      partialResult = {
+        l1l2FeeTokenBridge: l1l2Messages[0],
+        l1l2TokenBridge: l1l2Messages[1],
+        l2ForwarderFactory: l1l2Messages[2],
+      }
+    }
+
+    return partialResult
+  }
 }
 
 /**
@@ -1423,6 +1491,33 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
   }
 
   /**
+   * Given an L1 transaction, get the retryable parameters for both l2 and l3 tickets
+   */
+  public async getDepositParameters(
+    params: {
+      l1Provider: Provider
+    } & TxReference
+  ) {
+    await this._checkL1Network(params.l1Provider)
+
+    const tx = await this._getTxFromTxRef(params, params.l1Provider)
+
+    const l1l2TicketData: RetryableMessageParams = {
+      ...this._decodeCreateRetryableTicket(tx.data),
+      l1Value: tx.value,
+    }
+    const l2l3TicketData: RetryableMessageParams = {
+      ...this._decodeCreateRetryableTicket(l1l2TicketData.data),
+      l1Value: l1l2TicketData.l2CallValue,
+    }
+
+    return {
+      l1l2TicketData,
+      l2l3TicketData,
+    }
+  }
+
+  /**
    * Get the status of a deposit given an L1 tx receipt. Does not check if the tx is actually a deposit tx.
    *
    * @return Information regarding each step of the deposit
@@ -1467,6 +1562,29 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
       l2Retryable: l1l2Message,
       l3Retryable: l2l3Message,
       completed: (await l2l3Message.status()) === L1ToL2MessageStatus.REDEEMED,
+    }
+  }
+
+  protected _decodeCreateRetryableTicket(
+    data: string
+  ): OmitTyped<RetryableMessageParams, 'l1Value'> {
+    const iface = IInbox__factory.createInterface()
+    const decoded = iface.parseTransaction({ data })
+    if (decoded.functionFragment.name !== 'createRetryableTicket') {
+      throw new ArbSdkError(`not createRetryableTicket data`)
+    }
+
+    const args = decoded.args
+
+    return {
+      destAddress: args[0],
+      l2CallValue: args[1],
+      maxSubmissionFee: args[2],
+      excessFeeRefundAddress: args[3],
+      callValueRefundAddress: args[4],
+      gasLimit: args[5],
+      maxFeePerGas: args[6],
+      data: args[7],
     }
   }
 }
