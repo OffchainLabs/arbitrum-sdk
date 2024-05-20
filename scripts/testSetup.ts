@@ -56,7 +56,7 @@ export const config = (function () {
   if (isTestingOrbitChains) {
     if (isTestingNon18Decimals) {
       return {
-        arbUrl: 'http://localhost:3347',
+        arbUrl: 'http://127.0.0.1:3347',
         ethUrl: process.env['ARB_URL'] as string,
         arbKey: process.env['ORBIT_KEY'] as string,
         ethKey: process.env['ARB_KEY'] as string,
