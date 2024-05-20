@@ -37,6 +37,7 @@ import {
   depositToken,
   GatewayType,
   withdrawToken,
+  skipIfNon18Decimals,
 } from './testHelpers'
 import { L1ToL2MessageStatus, L2Network } from '../../src'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
@@ -55,6 +56,7 @@ const DECIMALS = Number(process.env.DECIMALS) || 18
 describe('Custom ERC20', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
+    await skipIfNon18Decimals(this)
   })
 
   // test globals
@@ -153,19 +155,15 @@ const registerCustomToken = async (
   l2Signer: Signer,
   adminErc20Bridger: AdminErc20Bridger
 ) => {
-  console.log('1')
   // create a custom token on L1 and L2
   const l1CustomTokenFactory = isL2NetworkWithCustomFeeToken()
     ? new TestOrbitCustomTokenL1__factory(l1Signer)
     : new TestCustomTokenL1__factory(l1Signer)
-  console.log('2')
   const l1CustomToken = await l1CustomTokenFactory.deploy(
     l2Network.tokenBridge.l1CustomGateway,
     l2Network.tokenBridge.l1GatewayRouter
   )
-  console.log('3')
   await l1CustomToken.deployed()
-  console.log('4')
   const amount = ethers.utils.parseEther('1')
 
   if (isL2NetworkWithCustomFeeToken()) {
@@ -176,15 +174,12 @@ const registerCustomToken = async (
     await approvalTx.wait()
   }
 
-  console.log('5')
-
   const l2CustomTokenFac = new TestArbCustomToken__factory(l2Signer)
   const l2CustomToken = await l2CustomTokenFac.deploy(
     l2Network.tokenBridge.l2CustomGateway,
     l1CustomToken.address
   )
   await l2CustomToken.deployed()
-  console.log('6')
 
   // check starting conditions - should initially use the default gateway
   const l1GatewayRouter = new L1GatewayRouter__factory(l1Signer).attach(
@@ -202,7 +197,6 @@ const registerCustomToken = async (
   const startL1GatewayAddress = await l1GatewayRouter.l1TokenToGateway(
     l1CustomToken.address
   )
-  console.log('7')
   expect(
     startL1GatewayAddress,
     'Start l1GatewayAddress not equal empty address'
@@ -229,7 +223,6 @@ const registerCustomToken = async (
     'Start l2Erc20Address not equal empty address'
   ).to.eq(constants.AddressZero)
 
-  console.log('8')
   // send the messages
   const regTx = await adminErc20Bridger.registerCustomToken(
     l1CustomToken.address,
@@ -238,8 +231,6 @@ const registerCustomToken = async (
     l2Signer.provider!
   )
   const regRec = await regTx.wait()
-
-  console.log('9')
 
   // wait on messages
   const l1ToL2Messages = await regRec.getL1ToL2Messages(l2Signer.provider!)
@@ -255,8 +246,6 @@ const registerCustomToken = async (
     L1ToL2MessageStatus.REDEEMED
   )
 
-  console.log('10')
-
   // check end conditions
   const endL1GatewayAddress = await l1GatewayRouter.l1TokenToGateway(
     l1CustomToken.address
@@ -269,7 +258,6 @@ const registerCustomToken = async (
   const endL2GatewayAddress = await l2GatewayRouter.l1TokenToGateway(
     l1CustomToken.address
   )
-  console.log('11')
   expect(
     endL2GatewayAddress,
     'End l2GatewayAddress not equal to l2 custom gateway'
@@ -283,7 +271,6 @@ const registerCustomToken = async (
     'End l1Erc20Address not equal l1CustomToken address'
   ).to.eq(l2CustomToken.address)
 
-  console.log('12')
   const endL2Erc20Address = await l2CustomGateway.l1ToL2Token(
     l1CustomToken.address
   )

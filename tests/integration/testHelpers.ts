@@ -446,3 +446,14 @@ export const skipIfMainnet = (() => {
     }
   }
 })()
+
+export const skipIfNon18Decimals = (() => {
+  const decimals = process.env.DECIMALS
+
+  return async (testContext: Mocha.Context) => {
+    if (decimals && Number(decimals) !== 18) {
+      console.warn('Skip for non 18 decimals')
+      testContext.skip()
+    }
+  }
+})()
