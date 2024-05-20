@@ -227,9 +227,12 @@ export class EthBridger extends AssetBridger<
       throw new Error('chain uses ETH as its native/gas token')
     }
 
+    const bal = await params.l1Signer.getBalance()
+    console.log('BALANCE: ', bal.toString())
+
     console.log('approveGasToken-0')
     const approveGasTokenRequest = this.isApproveGasTokenParams(params)
-      ? this.getApproveGasTokenRequest(params)
+      ? this.getApproveGasTokenRequest({ ...params, amount: bal })
       : params.txRequest
 
     console.log('approveGasToken-1')
@@ -239,10 +242,6 @@ export class EthBridger extends AssetBridger<
       JSON.stringify(approveGasTokenRequest)
     )
     console.log('params: ', JSON.stringify(params))
-
-    const bal = await params.l1Signer.getBalance()
-
-    console.log('BALANCE: ', bal.toString())
 
     return params.l1Signer.sendTransaction({
       ...approveGasTokenRequest,
