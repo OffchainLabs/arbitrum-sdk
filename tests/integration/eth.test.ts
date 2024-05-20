@@ -109,7 +109,7 @@ describe('Ether', async () => {
     const initialInboxBalance = await l1Signer.provider!.getBalance(
       inboxAddress
     )
-    const ethToDeposit = parseUnits('0.0002')
+    const ethToDeposit = parseUnits('0.0002', DECIMALS)
     const res = await ethBridger.deposit({
       amount: ethToDeposit,
       l1Signer: l1Signer,
