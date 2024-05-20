@@ -7,7 +7,7 @@ import { BigNumber } from 'ethers'
 import { parseUnits } from 'ethers/lib/utils'
 import { SubmitRetryableMessageDataParser } from '../../src/lib/message/messageDataParser'
 
-const DECIMALS = Number(process.env.DECIMALS) || 18
+const DECIMALS = Number(process.env.DECIMALS)
 
 describe('SubmitRetryableMessageDataParser', () => {
   it('does parse l1 to l2 message', async () => {

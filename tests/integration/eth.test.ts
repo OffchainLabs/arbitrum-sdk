@@ -43,7 +43,7 @@ import { L1TransactionReceipt } from '../../src'
 
 dotenv.config()
 
-const DECIMALS = Number(process.env.DECIMALS) || 18
+const DECIMALS = Number(process.env.DECIMALS)
 
 describe('Ether', async () => {
   beforeEach('skipIfMainnet', async function () {
