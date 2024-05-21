@@ -36,9 +36,9 @@ const sendSignedTx = async (testState: any, info?: any) => {
     ...info,
     value: BigNumber.from(0),
   }
-  const signedTx = await inbox.signChildChainTx(message, childDeployer)
+  const signedTx = await inbox.signChildTx(message, childDeployer)
 
-  const parentTx = await inbox.sendChildChainSignedTx(signedTx)
+  const parentTx = await inbox.sendChildSignedTx(signedTx)
   return {
     signedMsg: signedTx,
     parentTransactionReceipt: await parentTx?.wait(),
