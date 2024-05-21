@@ -49,8 +49,8 @@ import { ArbitrumNetwork, getArbitrumNetwork } from '../dataEntities/networks'
 import { ArbSdkError, MissingProviderArbSdkError } from '../dataEntities/errors'
 import { DISABLED_GATEWAY } from '../dataEntities/constants'
 import { EventFetcher } from '../utils/eventFetcher'
-import { EthDepositParams, EthWithdrawParams } from './EthBridger'
-import { AssetBridger } from './AssetBridger'
+import { EthDepositParams, EthWithdrawParams } from './ethBridger'
+import { AssetBridger } from './assetBridger'
 import {
   ParentContractCallTransaction,
   ParentContractTransaction,
@@ -668,8 +668,8 @@ export class Erc20Bridger extends AssetBridger<
 
       const functionData =
         defaultedParams.excessFeeRefundAddress !== defaultedParams.from
-        // @ts-ignore
-          ? iGatewayRouter.encodeFunctionData('outboundTransferCustomRefund', [
+          ? // @ts-ignore
+            iGatewayRouter.encodeFunctionData('outboundTransferCustomRefund', [
               erc20ParentAddress,
               defaultedParams.excessFeeRefundAddress,
               destinationAddress,
