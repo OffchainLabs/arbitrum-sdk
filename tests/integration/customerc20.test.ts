@@ -51,8 +51,6 @@ import {
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
-const DECIMALS = Number(process.env.DECIMALS)
-
 describe('Custom ERC20', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
@@ -123,7 +121,7 @@ describe('Custom ERC20', () => {
   it('deposits erc20 with extra ETH', async () => {
     await depositToken({
       depositAmount,
-      ethDepositAmount: utils.parseUnits('0.0005', DECIMALS),
+      ethDepositAmount: utils.parseEther('0.0005'),
       l1TokenAddress: testState.l1CustomToken.address,
       erc20Bridger: testState.adminErc20Bridger,
       l1Signer: testState.l1Signer,
@@ -137,7 +135,7 @@ describe('Custom ERC20', () => {
     const randomAddress = Wallet.createRandom().address
     await depositToken({
       depositAmount,
-      ethDepositAmount: utils.parseUnits('0.0005', DECIMALS),
+      ethDepositAmount: utils.parseEther('0.0005'),
       l1TokenAddress: testState.l1CustomToken.address,
       erc20Bridger: testState.adminErc20Bridger,
       l1Signer: testState.l1Signer,
