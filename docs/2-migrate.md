@@ -28,6 +28,25 @@ The terms L1 and L2 have been replaced with Parent and Child to better reflect t
 | `getL2Network`               | `getArbitrumNetwork`                |
 | `addCustomNetwork`           | `registerCustomArbitrumNetwork`     |
 
+#### Asset Bridger Class Methods
+
+The `AssetBridger` class methods have been renamed to reflect the new Parent/Child terminology.
+
+| v3 Name          | v4 Name            |
+| ---------------- | ------------------ |
+| `checkL1Network` | `checkParentChain` |
+| `checkL2Network` | `checkChildChain`  |
+
+#### Erc20Bridger Class Methods
+
+The `Erc20Bridger` class methods have been renamed to reflect the new Parent/Child terminology.
+
+<!-- TODO: these aren't final -->
+
+| v3 Name | v4 Name |
+| ------- | ------- |
+| ``      | ``      |
+
 ### Removing L1 network
 
 The Arbitrum SDK no longer requires the L1 network to be specified. The Arbitrum SDK now only requires the Child network to be specified.
