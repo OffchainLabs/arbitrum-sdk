@@ -49,8 +49,8 @@ import { ArbitrumNetwork, getArbitrumNetwork } from '../dataEntities/networks'
 import { ArbSdkError, MissingProviderArbSdkError } from '../dataEntities/errors'
 import { DISABLED_GATEWAY } from '../dataEntities/constants'
 import { EventFetcher } from '../utils/eventFetcher'
-import { EthDepositParams, EthWithdrawParams } from './ethBridger'
-import { AssetBridger } from './assetBridger'
+import { EthDepositParams, EthWithdrawParams } from './EthBridger'
+import { AssetBridger } from './AssetBridger'
 import {
   ParentContractCallTransaction,
   ParentContractTransaction,

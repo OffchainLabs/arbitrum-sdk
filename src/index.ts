@@ -16,8 +16,8 @@
 /* eslint-env node */
 'use strict'
 
-export { EthBridger } from './lib/assetBridger/ethBridger'
-export { Erc20Bridger } from './lib/assetBridger/erc20Bridger'
+export { EthBridger } from './lib/assetBridger/EthBridger'
+export { Erc20Bridger } from './lib/assetBridger/Erc20Bridger'
 export {
   ChildTransactionReceipt,
   ChildContractTransaction,
