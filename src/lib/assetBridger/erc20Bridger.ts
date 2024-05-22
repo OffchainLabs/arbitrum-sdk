@@ -200,12 +200,12 @@ export class Erc20Bridger extends AssetBridger<
   }
 
   /**
-   * Get the address of the l1 gateway for this token
+   * Get the address of the parent gateway for this token
    * @param erc20ParentAddress
    * @param parentProvider
    * @returns
    */
-  public async getL1GatewayAddress(
+  public async getParentGatewayAddress(
     erc20ParentAddress: string,
     parentProvider: Provider
   ): Promise<string> {
@@ -218,12 +218,12 @@ export class Erc20Bridger extends AssetBridger<
   }
 
   /**
-   * Get the address of the l2 gateway for this token
+   * Get the address of the child gateway for this token
    * @param erc20ParentAddress
    * @param childProvider
    * @returns
    */
-  public async getL2GatewayAddress(
+  public async getChildGatewayAddress(
     erc20ParentAddress: string,
     childProvider: Provider
   ): Promise<string> {
@@ -289,7 +289,7 @@ export class Erc20Bridger extends AssetBridger<
     params: ProviderTokenApproveParams
   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
     // you approve tokens to the gateway that the router will use
-    const gatewayAddress = await this.getL1GatewayAddress(
+    const gatewayAddress = await this.getParentGatewayAddress(
       params.erc20ParentAddress,
       SignerProviderUtils.getProviderOrThrow(params.parentProvider)
     )
@@ -346,7 +346,7 @@ export class Erc20Bridger extends AssetBridger<
    * @param filter
    * @returns
    */
-  public async getL2WithdrawalEvents(
+  public async getChildWithdrawalEvents(
     childProvider: Provider,
     gatewayAddress: string,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
@@ -362,7 +362,7 @@ export class Erc20Bridger extends AssetBridger<
         L2ArbitrumGateway__factory,
         contract =>
           contract.filters.WithdrawalInitiated(
-            null, // l1Token
+            null, // parentToken
             fromAddress || null, // _from
             toAddress || null // _to
           ),
@@ -434,22 +434,22 @@ export class Erc20Bridger extends AssetBridger<
 
   /**
    * Get the child chain token contract at the provided address
-   * Note: This function just returns a typed ethers object for the provided address, it doesnt
+   * Note: This function just returns a typed ethers object for the provided address, it doesn't
    * check the underlying form of the contract bytecode to see if it's an erc20, and doesn't ensure the validity
    * of any of the underlying functions on that contract.
    * @param childProvider
-   * @param l2TokenAddr
+   * @param childTokenAddr
    * @returns
    */
   public getChildTokenContract(
     childProvider: Provider,
-    l2TokenAddr: string
+    childTokenAddr: string
   ): L2GatewayToken {
-    return L2GatewayToken__factory.connect(l2TokenAddr, childProvider)
+    return L2GatewayToken__factory.connect(childTokenAddr, childProvider)
   }
 
   /**
-   * Get the L1 token contract at the provided address
+   * Get the parent token contract at the provided address
    * Note: This function just returns a typed ethers object for the provided address, it doesnt
    * check the underlying form of the contract bytecode to see if it's an erc20, and doesn't ensure the validity
    * of any of the underlying functions on that contract.
@@ -476,12 +476,12 @@ export class Erc20Bridger extends AssetBridger<
   ): Promise<string> {
     await this.checkParentChain(parentProvider)
 
-    const l1GatewayRouter = L1GatewayRouter__factory.connect(
+    const parentGatewayRouter = L1GatewayRouter__factory.connect(
       this.childChain.tokenBridge.l1GatewayRouter,
       parentProvider
     )
 
-    return await l1GatewayRouter.functions
+    return await parentGatewayRouter.functions
       .calculateL2TokenAddress(erc20ParentAddress)
       .then(([res]) => res)
   }
@@ -499,7 +499,7 @@ export class Erc20Bridger extends AssetBridger<
   ): Promise<string> {
     await this.checkChildChain(childProvider)
 
-    // child chain WETH contract doesn't have the l1Address method on it
+    // child chain WETH contract doesn't have the parentAddress method on it
     if (
       erc20ChildChainAddress.toLowerCase() ===
       this.childChain.tokenBridge.l2Weth.toLowerCase()
@@ -511,22 +511,26 @@ export class Erc20Bridger extends AssetBridger<
       erc20ChildChainAddress,
       childProvider
     )
-    const l1Address = await arbERC20.functions.l1Address().then(([res]) => res)
+    const parentAddress = await arbERC20.functions
+      .l1Address()
+      .then(([res]) => res)
 
     // check that this l1 address is indeed registered to this child token
-    const l2GatewayRouter = L2GatewayRouter__factory.connect(
+    const childGatewayRouter = L2GatewayRouter__factory.connect(
       this.childChain.tokenBridge.l2GatewayRouter,
       childProvider
     )
 
-    const l2Address = await l2GatewayRouter.calculateL2TokenAddress(l1Address)
-    if (l2Address.toLowerCase() !== erc20ChildChainAddress.toLowerCase()) {
+    const childAddress = await childGatewayRouter.calculateL2TokenAddress(
+      parentAddress
+    )
+    if (childAddress.toLowerCase() !== erc20ChildChainAddress.toLowerCase()) {
       throw new ArbSdkError(
-        `Unexpected l1 address. L1 address from token is not registered to the provided l2 address. ${l1Address} ${l2Address} ${erc20ChildChainAddress}`
+        `Unexpected parent address. Parent address from token is not registered to the provided child address. ${parentAddress} ${childAddress} ${erc20ChildChainAddress}`
       )
     }
 
-    return l1Address
+    return parentAddress
   }
 
   /**
@@ -541,13 +545,13 @@ export class Erc20Bridger extends AssetBridger<
   ): Promise<boolean> {
     await this.checkParentChain(parentProvider)
 
-    const l1GatewayRouter = L1GatewayRouter__factory.connect(
+    const parentGatewayRouter = L1GatewayRouter__factory.connect(
       this.childChain.tokenBridge.l1GatewayRouter,
       parentProvider
     )
 
     return (
-      (await l1GatewayRouter.l1TokenToGateway(parentTokenAddress)) ===
+      (await parentGatewayRouter.l1TokenToGateway(parentTokenAddress)) ===
       DISABLED_GATEWAY
     )
   }
@@ -577,9 +581,9 @@ export class Erc20Bridger extends AssetBridger<
       return constants.Zero
     }
 
-    // we dont include the l2 call value for token deposits because
+    // we dont include the child call value for token deposits because
     // they either have 0 call value, or their call value is withdrawn from
-    // a contract by the gateway (weth). So in both of these cases the l2 call value
+    // a contract by the gateway (weth). So in both of these cases the child call value
     // is not actually deposited in the value field
     return depositParams.gasLimit
       .mul(depositParams.maxFeePerGas)
@@ -641,13 +645,13 @@ export class Erc20Bridger extends AssetBridger<
       retryableGasOverrides,
     } = defaultedParams
 
-    const l1GatewayAddress = await this.getL1GatewayAddress(
+    const parentGatewayAddress = await this.getParentGatewayAddress(
       erc20ParentAddress,
       parentProvider
     )
     let tokenGasOverrides: GasOverrides | undefined = retryableGasOverrides
     // we also add a hardcoded minimum gas limit for custom gateway deposits
-    if (l1GatewayAddress === this.childChain.tokenBridge.l1CustomGateway) {
+    if (parentGatewayAddress === this.childChain.tokenBridge.l1CustomGateway) {
       if (!tokenGasOverrides) tokenGasOverrides = {}
       if (!tokenGasOverrides.gasLimit) tokenGasOverrides.gasLimit = {}
       if (!tokenGasOverrides.gasLimit.min) {
@@ -741,7 +745,7 @@ export class Erc20Bridger extends AssetBridger<
     // We do a safety check here
     if ((params.overrides as PayableOverrides | undefined)?.value) {
       throw new ArbSdkError(
-        'L1 call value should be set through l1CallValue param'
+        'Parent call value should be set through `l1CallValue` param'
       )
     }
 
@@ -810,15 +814,15 @@ export class Erc20Bridger extends AssetBridger<
           return BigNumber.from(8_000_000)
         }
 
-        const l1GatewayAddress = await this.getL1GatewayAddress(
+        const parentGatewayAddress = await this.getParentGatewayAddress(
           params.erc20ParentAddress,
           parentProvider
         )
 
-        // The WETH gateway is the only deposit that requires callvalue in the L2 user-tx (i.e., the recently un-wrapped ETH)
+        // The WETH gateway is the only deposit that requires callvalue in the Child user-tx (i.e., the recently un-wrapped ETH)
         // Here we check if this is a WETH deposit, and include the callvalue for the gas estimate query if so
         const isWeth = await this.isWethGateway(
-          l1GatewayAddress,
+          parentGatewayAddress,
           parentProvider
         )
 
@@ -877,7 +881,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
    * See https://developer.offchainlabs.com/docs/bridging_assets#the-arbitrum-generic-custom-gateway for more details
    * @param parentTokenAddress Address of the already deployed parent token. Must inherit from https://developer.offchainlabs.com/docs/sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/ethereum/icustomtoken.
    * @param childTokenAddress Address of the already deployed child token. Must inherit from https://developer.offchainlabs.com/docs/sol_contract_docs/md_docs/arb-bridge-peripherals/tokenbridge/arbitrum/iarbtoken.
-   * @param parentSigner The signer with the rights to call registerTokenOnL2 on the parent token
+   * @param parentSigner The signer with the rights to call `registerTokenOnL2` on the parent token
    * @param childProvider Arbitrum rpc provider
    * @returns
    */
@@ -908,10 +912,10 @@ export class AdminErc20Bridger extends Erc20Bridger {
     await parentToken.deployed()
     await childToken.deployed()
 
-    const l1AddressFromChildChain = await childToken.l1Address()
-    if (l1AddressFromChildChain !== parentTokenAddress) {
+    const parentAddressFromChildChain = await childToken.l1Address()
+    if (parentAddressFromChildChain !== parentTokenAddress) {
       throw new ArbSdkError(
-        `L2 token does not have l1 address set. Set address: ${l1AddressFromChildChain}, expected address: ${parentTokenAddress}.`
+        `Child token does not have parent address set. Set address: ${parentAddressFromChildChain}, expected address: ${parentTokenAddress}.`
       )
     }
 
@@ -1007,24 +1011,25 @@ export class AdminErc20Bridger extends Erc20Bridger {
   }
 
   /**
-   * Get all the gateway set events on the L1 gateway router
+   * Get all the gateway set events on the Parent gateway router
    * @param parentProvider
-   * @param customNetworkL1GatewayRouter
+   * @param customNetworkParentGatewayRouter
    * @returns
    */
-  public async getL1GatewaySetEvents(
+  public async getParentGatewaySetEvents(
     parentProvider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag }
   ): Promise<EventArgs<GatewaySetEvent>[]> {
     await this.checkParentChain(parentProvider)
 
-    const l1GatewayRouterAddress = this.childChain.tokenBridge.l1GatewayRouter
+    const parentGatewayRouterAddress =
+      this.childChain.tokenBridge.l1GatewayRouter
     const eventFetcher = new EventFetcher(parentProvider)
     return (
       await eventFetcher.getEvents(
         L1GatewayRouter__factory,
         t => t.filters.GatewaySet(),
-        { ...filter, address: l1GatewayRouterAddress }
+        { ...filter, address: parentGatewayRouterAddress }
       )
     ).map(a => a.event)
   }
@@ -1032,10 +1037,10 @@ export class AdminErc20Bridger extends Erc20Bridger {
   /**
    * Get all the gateway set events on the L2 gateway router
    * @param parentProvider
-   * @param customNetworkL1GatewayRouter
+   * @param customNetworkParentGatewayRouter
    * @returns
    */
-  public async getL2GatewaySetEvents(
+  public async getChildGatewaySetEvents(
     childProvider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     customNetworkL2GatewayRouter?: string
@@ -1047,7 +1052,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     }
     await this.checkChildChain(childProvider)
 
-    const l2GatewayRouterAddress =
+    const childGatewayRouterAddress =
       customNetworkL2GatewayRouter ||
       this.childChain.tokenBridge.l2GatewayRouter
 
@@ -1056,7 +1061,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
       await eventFetcher.getEvents(
         L1GatewayRouter__factory,
         t => t.filters.GatewaySet(),
-        { ...filter, address: l2GatewayRouterAddress }
+        { ...filter, address: childGatewayRouterAddress }
       )
     ).map(a => a.event)
   }
@@ -1082,7 +1087,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
 
     const from = await parentSigner.getAddress()
 
-    const l1GatewayRouter = L1GatewayRouter__factory.connect(
+    const parentGatewayRouter = L1GatewayRouter__factory.connect(
       this.childChain.tokenBridge.l1GatewayRouter,
       parentSigner
     )
@@ -1091,7 +1096,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
       params: OmitTyped<ParentToChildMessageGasParams, 'deposit'>
     ) => {
       return {
-        data: l1GatewayRouter.interface.encodeFunctionData('setGateways', [
+        data: parentGatewayRouter.interface.encodeFunctionData('setGateways', [
           tokenGateways.map(tG => tG.tokenAddr),
           tokenGateways.map(tG => tG.gatewayAddr),
           params.gasLimit,
@@ -1102,7 +1107,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
         value: params.gasLimit
           .mul(params.maxFeePerGas)
           .add(params.maxSubmissionCost),
-        to: l1GatewayRouter.address,
+        to: parentGatewayRouter.address,
       }
     }
     const gEstimator = new ParentToChildMessageGasEstimator(childProvider)
