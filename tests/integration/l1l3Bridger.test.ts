@@ -13,7 +13,10 @@ import { TestERC20 } from '../../src/lib/abi/TestERC20'
 import { L1Teleporter__factory } from '../../src/lib/abi/factories/L1Teleporter__factory'
 import { fundL1, fundL2, skipIfMainnet } from './testHelpers'
 import { BigNumber, Signer, Wallet, ethers, providers, utils } from 'ethers'
-import { EthL1L3Bridger } from '../../src/lib/assetBridger/l1l3Bridger'
+import {
+  Erc20DepositRequestParams,
+  EthL1L3Bridger,
+} from '../../src/lib/assetBridger/l1l3Bridger'
 import { assert, expect } from 'chai'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
@@ -229,14 +232,8 @@ describe('L1 to L3 Bridging', () => {
     }
   })
 
-  describeOnlyWhenEth('EthL1L3Bridger', () => {
-    let l1l3Bridger: EthL1L3Bridger
-
-    before(() => {
-      l1l3Bridger = new EthL1L3Bridger(l3Network)
-    })
-
-    it('functions should be guarded by check*Network', async () => {
+  describe('EthL1L3Bridger', () => {
+    itOnlyWhenEth('functions should be guarded by check*Network', async () => {
       // getDepositRequest
       await checkNetworkGuards(
         true,
@@ -284,26 +281,16 @@ describe('L1 to L3 Bridging', () => {
       )
     })
 
-    it('should fail construction if l3 uses a custom fee token', async () => {
-      l3Network.nativeToken = ethers.utils.hexlify(ethers.utils.randomBytes(20))
-
+    itOnlyWhenCustomGasToken('should fail construction if l3 uses a custom fee token', async () => {
       expect(() => new EthL1L3Bridger(l3Network)).to.throw(
         `L3 network ${l3Network.name} uses a custom fee token`
       )
-
-      l3Network.nativeToken = undefined
-
-      // should still work if nativeToken is zero address or undefined
-      l3Network.nativeToken = ethers.constants.AddressZero
-      new EthL1L3Bridger(l3Network)
-
-      l3Network.nativeToken = undefined
-      new EthL1L3Bridger(l3Network)
     })
 
     // send some eth to L3 with custom l3 recipient and l2 refund address
     // makes sure that appropriate amounts land at the right places
-    it('happy path', async () => {
+    itOnlyWhenEth('happy path', async () => {
+      const l1l3Bridger = new EthL1L3Bridger(l3Network)
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
       const l2RefundAddress = ethers.utils.hexlify(ethers.utils.randomBytes(20))
 
@@ -751,7 +738,7 @@ describe('L1 to L3 Bridging', () => {
 
       const depositParams = {
         erc20L1Address: l1Token.address,
-        to: l3Recipient,
+        destinationAddress: l3Recipient,
         amount,
         l1Signer,
         l2Provider: l2Signer.provider!,
@@ -822,9 +809,9 @@ describe('L1 to L3 Bridging', () => {
     it('happy path non fee token or standard', async () => {
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
 
-      const depositParams = {
+      const depositParams: Erc20DepositRequestParams & { l1Signer: Signer } = {
         erc20L1Address: l1Token.address,
-        to: l3Recipient,
+        destinationAddress: l3Recipient,
         amount,
         l1Signer,
         l2Provider: l2Signer.provider!,
@@ -890,7 +877,7 @@ describe('L1 to L3 Bridging', () => {
       ))!
       const depositParams = {
         erc20L1Address: l1FeeToken,
-        to: l3Recipient,
+        destinationAddress: l3Recipient,
         amount: ethers.utils.parseEther('0.1'),
         l1Signer,
         l2Provider: l2Signer.provider!,

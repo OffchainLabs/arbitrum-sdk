@@ -206,9 +206,21 @@ export type Erc20DepositStatus = {
    */
   l2l3TokenBridgeRetryable: L1ToL2MessageReader | undefined
   /**
-   * Whether the teleportation has completed.
+   * Indicates that the L2ForwarderFactory call was front ran by another teleportation.
    *
-   * True if l1l2TokenBridge status is REDEEMED and the L2Forwarder token balance is 0
+   * This is true if:
+   * - l1l2TokenBridgeRetryable status is REDEEMED; AND
+   * - l2ForwarderFactoryRetryable status is FUNDS_DEPOSITED_ON_L2; AND
+   * - L2Forwarder token balance is 0
+   * 
+   * The first teleportation with l2ForwarderFactoryRetryable redemption *after* this teleportation's l1l2TokenBridgeRetryable redemption
+   * is the one that completes this teleportation.
+   * 
+   * If that subsequent teleportation is complete, this one is considered complete as well.
+   */
+  l2ForwarderFactoryRetryableFrontRan: boolean
+  /**
+   * Whether the teleportation has completed.
    */
   completed: boolean
 }
@@ -866,22 +878,6 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       params.l2Provider
     )
 
-    const decodedFactoryCall = this._decodeCallForwarderCalldata(
-      partialResult.l2ForwarderFactoryRetryable.messageData.data
-    )
-
-    const balance = await IERC20__factory.connect(
-      decodedFactoryCall.l2Token,
-      params.l2Provider
-    ).balanceOf(
-      await this.l2ForwarderAddress(
-        decodedFactoryCall.owner,
-        decodedFactoryCall.routerOrInbox,
-        decodedFactoryCall.to,
-        params.l2Provider
-      )
-    )
-
     const factoryRedeem =
       await partialResult.l2ForwarderFactoryRetryable.getSuccessfulRedeem()
 
@@ -894,14 +890,44 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
           )[0]
         : undefined
 
-    const completed =
-      (await partialResult.l1l2TokenBridgeRetryable.status()) ===
-        L1ToL2MessageStatus.REDEEMED && balance.eq(0)
+    // check if we got a race condition where another teleportation front ran the l2 forwarder factory call
+    // if the balance is 0, l1l2TokenBridgeRetryable is redeemed, and l2ForwarderFactoryRetryable failed,
+    // then another teleportation front ran the l2 forwarder factory call
+    // set a flag to indicate this
+    let l2ForwarderFactoryRetryableFrontRan = false
+    const l1l2TokenBridgeRetryableStatus =
+      await partialResult.l1l2TokenBridgeRetryable.status()
+    if (
+      l1l2TokenBridgeRetryableStatus === L1ToL2MessageStatus.REDEEMED &&
+      factoryRedeem.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+    ) {
+      // decoding the factory call is the most reliable way to get the owner and other parameters
+      const decodedFactoryCall = this._decodeCallForwarderCalldata(
+        partialResult.l2ForwarderFactoryRetryable.messageData.data
+      )
+
+      // get the token balance of the l2 forwarder
+      // we only do this check if the token bridge retryable has been redeemed, otherwise the token might not exist
+      const balance = await IERC20__factory.connect(
+        decodedFactoryCall.l2Token,
+        params.l2Provider
+      ).balanceOf(
+        await this.l2ForwarderAddress(
+          decodedFactoryCall.owner,
+          decodedFactoryCall.routerOrInbox,
+          decodedFactoryCall.to,
+          params.l2Provider
+        )
+      )
+
+      l2ForwarderFactoryRetryableFrontRan = balance.isZero()
+    }
 
     return {
       ...partialResult,
       l2l3TokenBridgeRetryable: l2l3Message,
-      completed,
+      l2ForwarderFactoryRetryableFrontRan,
+      completed: (await l2l3Message?.status()) === L1ToL2MessageStatus.REDEEMED,
     }
   }
 
