@@ -192,19 +192,19 @@ export type Erc20DepositStatus = {
   /**
    * L1 to L2 token bridge message
    */
-  l1l2TokenBridge: L1ToL2MessageReader
+  l1l2TokenBridgeRetryable: L1ToL2MessageReader
   /**
    * L1 to L2 fee token bridge message
    */
-  l1l2FeeTokenBridge: L1ToL2MessageReader | undefined
+  l1l2FeeTokenBridgeRetryable: L1ToL2MessageReader | undefined
   /**
    * L2ForwarderFactory message
    */
-  l2ForwarderFactory: L1ToL2MessageReader
+  l2ForwarderFactoryRetryable: L1ToL2MessageReader
   /**
    * L2 to L3 token bridge message
    */
-  l2l3TokenBridge: L1ToL2MessageReader | undefined
+  l2l3TokenBridgeRetryable: L1ToL2MessageReader | undefined
   /**
    * Whether the teleportation has completed.
    *
@@ -825,7 +825,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     )
 
     const l2ForwarderParams = this._decodeCallForwarderCalldata(
-      l1l2Messages.l2ForwarderFactory.messageData.data
+      l1l2Messages.l2ForwarderFactoryRetryable.messageData.data
     )
 
     const l2ForwarderAddress = this.l2ForwarderAddress(
@@ -867,7 +867,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     )
 
     const decodedFactoryCall = this._decodeCallForwarderCalldata(
-      partialResult.l2ForwarderFactory.messageData.data
+      partialResult.l2ForwarderFactoryRetryable.messageData.data
     )
 
     const balance = await IERC20__factory.connect(
@@ -883,7 +883,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     )
 
     const factoryRedeem =
-      await partialResult.l2ForwarderFactory.getSuccessfulRedeem()
+      await partialResult.l2ForwarderFactoryRetryable.getSuccessfulRedeem()
 
     const l2l3Message =
       factoryRedeem.status === L1ToL2MessageStatus.REDEEMED
@@ -895,12 +895,12 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         : undefined
 
     const completed =
-      (await partialResult.l1l2TokenBridge.status()) ===
+      (await partialResult.l1l2TokenBridgeRetryable.status()) ===
         L1ToL2MessageStatus.REDEEMED && balance.eq(0)
 
     return {
       ...partialResult,
-      l2l3TokenBridge: l2l3Message,
+      l2l3TokenBridgeRetryable: l2l3Message,
       completed,
     }
   }
@@ -1368,22 +1368,22 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     const l1l2Messages = await l1TxReceipt.getL1ToL2Messages(l2Provider)
 
     let partialResult: {
-      l1l2TokenBridge: L1ToL2MessageReader
-      l1l2FeeTokenBridge: L1ToL2MessageReader | undefined
-      l2ForwarderFactory: L1ToL2MessageReader
+      l1l2TokenBridgeRetryable: L1ToL2MessageReader
+      l1l2FeeTokenBridgeRetryable: L1ToL2MessageReader | undefined
+      l2ForwarderFactoryRetryable: L1ToL2MessageReader
     }
 
     if (l1l2Messages.length === 2) {
       partialResult = {
-        l1l2TokenBridge: l1l2Messages[0],
-        l2ForwarderFactory: l1l2Messages[1],
-        l1l2FeeTokenBridge: undefined,
+        l1l2TokenBridgeRetryable: l1l2Messages[0],
+        l2ForwarderFactoryRetryable: l1l2Messages[1],
+        l1l2FeeTokenBridgeRetryable: undefined,
       }
     } else {
       partialResult = {
-        l1l2FeeTokenBridge: l1l2Messages[0],
-        l1l2TokenBridge: l1l2Messages[1],
-        l2ForwarderFactory: l1l2Messages[2],
+        l1l2FeeTokenBridgeRetryable: l1l2Messages[0],
+        l1l2TokenBridgeRetryable: l1l2Messages[1],
+        l2ForwarderFactoryRetryable: l1l2Messages[2],
       }
     }
 

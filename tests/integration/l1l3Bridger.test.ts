@@ -244,7 +244,7 @@ describe('L1 to L3 Bridging', () => {
         true,
         async (l1Signer, l2Signer, l3Signer) => {
           return new EthL1L3Bridger(l3Network).getDepositRequest({
-            to: await l1Signer.getAddress(),
+            destinationAddress: await l1Signer.getAddress(),
             amount: ethers.utils.parseEther('0.1'),
             l1Signer,
             l2Provider: l2Signer.provider!,
@@ -309,7 +309,7 @@ describe('L1 to L3 Bridging', () => {
 
       const depositTx = await l1l3Bridger.deposit({
         amount: ethers.utils.parseEther('0.1'),
-        to: l3Recipient,
+        destinationAddress: l3Recipient,
         l2RefundAddress: l2RefundAddress,
         l1Signer,
         l2Provider: l2Signer.provider!,
@@ -703,7 +703,7 @@ describe('L1 to L3 Bridging', () => {
         async (l1Signer, l2Signer, l3Signer) => {
           return new Erc20L1L3Bridger(l3Network).getDepositRequest({
             erc20L1Address: l1Token.address,
-            to: await l1Signer.getAddress(),
+            destinationAddress: await l1Signer.getAddress(),
             amount: amount,
             from: await l1Signer.getAddress(),
             l1Signer,
@@ -782,7 +782,7 @@ describe('L1 to L3 Bridging', () => {
         })
 
         return (
-          (await status.l2l3TokenBridge?.status()) ===
+          (await status.l2l3TokenBridgeRetryable?.status()) ===
           L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
         )
       }, 1000)
@@ -795,7 +795,7 @@ describe('L1 to L3 Bridging', () => {
         l3Provider,
       })
 
-      const ticket = status.l2l3TokenBridge!
+      const ticket = status.l2l3TokenBridgeRetryable!
       const messageWriter = new L1ToL2MessageWriter(
         l3Signer,
         l3Network.chainID,
