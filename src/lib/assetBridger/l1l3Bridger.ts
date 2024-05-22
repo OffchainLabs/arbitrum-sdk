@@ -166,7 +166,7 @@ export type Erc20DepositRequestParams = {
    *
    * Defaults to false
    */
-  skipFeeToken?: boolean
+  skipGasToken?: boolean
   /**
    * Optional recipient on L3, defaults to signer's address
    */
@@ -465,7 +465,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       !l1FeeTokenAddress ||
       l1FeeTokenAddress === ethers.constants.AddressZero
     ) {
-      throw new ArbSdkError('L1 gas token not found')
+      throw new ArbSdkError('L1 gas token not found. Use skipGasToken when depositing')
     }
 
     // make sure both the L1 and L2 tokens have 18 decimals
@@ -475,7 +475,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         l1Provider
       ).decimals()) !== 18
     ) {
-      throw new ArbSdkError('L1 gas token has incorrect decimals')
+      throw new ArbSdkError('L1 gas token has incorrect decimals. Use skipGasToken when depositing')
     }
     if (
       (await ERC20__factory.connect(
@@ -483,7 +483,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         l2Provider
       ).decimals()) !== 18
     ) {
-      throw new ArbSdkError('L2 gas token has incorrect decimals')
+      throw new ArbSdkError('L2 gas token has incorrect decimals. Use skipGasToken when depositing')
     }
 
     return (this._l1FeeTokenAddress = l1FeeTokenAddress)
@@ -739,7 +739,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       l1FeeToken = ethers.constants.AddressZero
     }
     // if the l3 uses custom fee but the user opts to skip payment, set to magic address
-    else if (params.skipFeeToken) {
+    else if (params.skipGasToken) {
       l1FeeToken = this.skipL1FeeTokenMagic
     }
     // if the l3 uses custom fee and the user opts to not skip, try to get the token
