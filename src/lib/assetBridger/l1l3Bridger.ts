@@ -268,7 +268,7 @@ class BaseL1L3Bridger {
   public readonly l3Network: L2Network
 
   public readonly defaultGasPricePercentIncrease: BigNumber =
-    BigNumber.from(200)
+    BigNumber.from(500)
   public readonly defaultGasLimitPercentIncrease: BigNumber =
     BigNumber.from(100)
 
