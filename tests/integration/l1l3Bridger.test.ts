@@ -365,7 +365,7 @@ describe('L1 to L3 Bridging', () => {
         // make sure l1 token maps to l2 token
         expect(
           await new Erc20Bridger(l2Network).getL2ERC20Address(
-            (await l1l3Bridger.l1FeeTokenAddress(
+            (await l1l3Bridger.getGasTokenOnL1(
               l1Signer.provider!,
               l2Signer.provider!
             ))!,
@@ -376,23 +376,24 @@ describe('L1 to L3 Bridging', () => {
     )
 
     itOnlyWhenCustomGasToken(
-      'should return zero address for l1 fee token address when it is unavailable',
+      'should throw getting l1 gas token address when it is unavailable',
       async () => {
         const networkCopy = JSON.parse(JSON.stringify(l3Network)) as L2Network
         networkCopy.nativeToken = ethers.utils.hexlify(
           ethers.utils.randomBytes(20)
         )
-        expect(
-          await new Erc20L1L3Bridger(networkCopy).l1FeeTokenAddress(
+        await expectPromiseToReject(
+          new Erc20L1L3Bridger(networkCopy).getGasTokenOnL1(
             l1Signer.provider!,
             l2Signer.provider!
-          )
-        ).to.eq(ethers.constants.AddressZero)
+          ),
+          'L1 gas token not found'
+        )
       }
     )
 
     itOnlyWhenCustomGasToken(
-      'should return zero address when the fee token does not use 18 decimals on L1 or L2',
+      'should throw when the fee token does not use 18 decimals on L1 or L2',
       async () => {
         const hackedL1Provider = new ethers.providers.JsonRpcProvider(
           process.env['ETH_URL']
@@ -407,7 +408,7 @@ describe('L1 to L3 Bridging', () => {
           new ethers.utils.AbiCoder().encode(['uint8'], [decimals])
 
         // test require custom fee token has 18 decimals on l1 and l2
-        const l1FeeToken = (await l1l3Bridger.l1FeeTokenAddress(
+        const l1FeeToken = (await l1l3Bridger.getGasTokenOnL1(
           l1Signer.provider!,
           l2Signer.provider!
         ))!
@@ -419,12 +420,12 @@ describe('L1 to L3 Bridging', () => {
           decimalSelector,
           encodeDecimals(10)
         )
-        expect(
-          await new Erc20L1L3Bridger(l3Network).l1FeeTokenAddress(
+        await expectPromiseToReject(
+          new Erc20L1L3Bridger(l3Network).getGasTokenOnL1(
             hackedL1Provider,
             hackedL2Provider
-          )
-        ).to.eq(ethers.constants.AddressZero)
+          ), 'L2 gas token has incorrect decimals'
+        )
 
         // incorrect L1 fee token decimals
         unhackProvider(hackedL2Provider)
@@ -434,19 +435,19 @@ describe('L1 to L3 Bridging', () => {
           decimalSelector,
           encodeDecimals(17)
         )
-        expect(
-          await new Erc20L1L3Bridger(l3Network).l1FeeTokenAddress(
+        await expectPromiseToReject(
+          new Erc20L1L3Bridger(l3Network).getGasTokenOnL1(
             hackedL1Provider,
             hackedL2Provider
-          )
-        ).to.eq(ethers.constants.AddressZero)
+          ) , 'L1 gas token has incorrect decimals'
+        )
       }
     )
     itOnlyWhenEth('should not have l1 and l2 fee token addresses', async () => {
       // make sure l2 is undefined and l1 is also undefined
       expect(l1l3Bridger.l2FeeTokenAddress).to.be.undefined
       expect(
-        await l1l3Bridger.l1FeeTokenAddress(
+        await l1l3Bridger.getGasTokenOnL1(
           l1Signer.provider!,
           l2Signer.provider!
         )
@@ -547,7 +548,7 @@ describe('L1 to L3 Bridging', () => {
           true,
           false,
           async (l1Signer, l2Signer, _l3Signer) => {
-            return new Erc20L1L3Bridger(l3Network).l1FeeTokenAddress(
+            return new Erc20L1L3Bridger(l3Network).getGasTokenOnL1(
               l1Signer.provider!,
               l2Signer.provider!
             )
@@ -874,7 +875,7 @@ describe('L1 to L3 Bridging', () => {
 
     itOnlyWhenCustomGasToken('happy path OnlyCustomFee', async () => {
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
-      const l1FeeToken = (await l1l3Bridger.l1FeeTokenAddress(
+      const l1FeeToken = (await l1l3Bridger.getGasTokenOnL1(
         l1Signer.provider!,
         l2Signer.provider!
       ))!

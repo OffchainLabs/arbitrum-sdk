@@ -433,12 +433,12 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    * If the L3 network uses a custom fee token, return the address of that token on L1.
    * If the fee token is not available on L1 or the L3 network uses ETH for fees, return the zero address.
    */
-  public async l1FeeTokenAddress(
+  public async getGasTokenOnL1(
     l1Provider: Provider,
     l2Provider: Provider
   ): Promise<string> {
     // if the L3 network uses ETH for fees, early return zero
-    if (!this.l2FeeTokenAddress) return ethers.constants.AddressZero
+    if (!this.l2FeeTokenAddress) throw new ArbSdkError('L3 uses ETH for gas')
 
     // if we've already fetched the L1 fee token address, early return it
     if (this._l1FeeTokenAddress) return this._l1FeeTokenAddress
@@ -454,7 +454,6 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         l2Provider
       )
     } catch (e: any) {
-      // todo: this feels like a hack
       // if the error is a CALL_EXCEPTION, we can't find the token on L1
       // if the error is something else, rethrow
       if (e.code !== 'CALL_EXCEPTION') {
@@ -466,7 +465,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       !l1FeeTokenAddress ||
       l1FeeTokenAddress === ethers.constants.AddressZero
     ) {
-      return (this._l1FeeTokenAddress = ethers.constants.AddressZero)
+      throw new ArbSdkError('L1 gas token not found')
     }
 
     // make sure both the L1 and L2 tokens have 18 decimals
@@ -476,7 +475,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         l1Provider
       ).decimals()) !== 18
     ) {
-      return (this._l1FeeTokenAddress = ethers.constants.AddressZero)
+      throw new ArbSdkError('L1 gas token has incorrect decimals')
     }
     if (
       (await ERC20__factory.connect(
@@ -484,7 +483,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         l2Provider
       ).decimals()) !== 18
     ) {
-      return (this._l1FeeTokenAddress = ethers.constants.AddressZero)
+      throw new ArbSdkError('L2 gas token has incorrect decimals')
     }
 
     return (this._l1FeeTokenAddress = l1FeeTokenAddress)
@@ -744,12 +743,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       l1FeeToken = this.skipL1FeeTokenMagic
     }
     // if the l3 uses custom fee and the user opts to not skip, try to get the token
-    // if the token is unavailable set to magic address
+    // will throw if the token doesn't exist on L1 or is unsupported
     else {
-      l1FeeToken = await this.l1FeeTokenAddress(l1Provider, params.l2Provider)
-      if (l1FeeToken === ethers.constants.AddressZero) {
-        l1FeeToken = this.skipL1FeeTokenMagic
-      }
+      l1FeeToken = await this.getGasTokenOnL1(l1Provider, params.l2Provider)
     }
 
     const partialTeleportParams: OmitTyped<
@@ -1353,7 +1349,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l1Provider: Provider,
     l2Provider: Provider
   ) {
-    const ft = await this.l1FeeTokenAddress(l1Provider, l2Provider)
+    const ft = await this.getGasTokenOnL1(l1Provider, l2Provider)
     if (!ft)
       throw new Error(`L3 network ${this.l3Network.name} uses ETH for fees`)
     return ft
