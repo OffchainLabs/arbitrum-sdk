@@ -430,8 +430,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   }
 
   /**
-   * If the L3 network uses a custom fee token, return the address of that token on L1.
-   * If the fee token is not available on L1 or the L3 network uses ETH for fees, return the zero address.
+   * If the L3 network uses a custom gas token, return the address of that token on L1.
+   * If the fee token is not available on L1, does not use 18 decimals on L1 and L2, or the L3 network uses ETH for fees, throw.
    */
   public async getGasTokenOnL1(
     l1Provider: Provider,
