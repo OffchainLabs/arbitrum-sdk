@@ -1,6 +1,12 @@
 # Introduction
 
-The Arbitrum SDK is a TypeScript library that is used to interact with Arbitrum networks. It provides functionality for bridging tokens and passing messages between networks by implementing a TypeScript interface for the underlying smart contracts.
+The Arbitrum SDK is a powerful TypeScript library that streamlines interactions with Arbitrum networks. It offers robust tools for bridging tokens and passing messages between networks through an intuitive interface to the underlying smart contracts.
+
+**Key Features**
+
+- Token Bridging: Effortlessly bridge tokens between Ethereum and Arbitrum.
+- Message Passing: Seamlessly pass messages across networks.
+- Contracts Interface: Leverage a strongly-typed interface for interacting with smart contracts.
 
 Below is an overview of the Arbitrum SDK functionality. See the [tutorials](https://github.com/OffchainLabs/arbitrum-tutorials) for more examples.
 

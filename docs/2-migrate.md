@@ -41,12 +41,18 @@ The `AssetBridger` class methods have been renamed to reflect the new Parent/Chi
 
 The `Erc20Bridger` class methods have been renamed to reflect the new Parent/Child terminology.
 
-<!-- TODO: these aren't final -->
-
-| v3 Name | v4 Name |
-| ------- | ------- |
-| ``      | ``      |
+| v3 Name                 | v4 Name                     |
+| ----------------------- | --------------------------- |
+| `getL1GatewayAddress`   | `getParentGatewayAddress`   |
+| `getL2GatewayAddress`   | `getChildGatewayAddress`    |
+| `getL2WithdrawalEvents` | `getChildWithdrawalEvents`  |
+| `getL1ERC20Address`     | `getParentERC20Address`     |
+| `getL2ERC20Address`     | `getChildERC20Address`      |
+| `l1TokenIsDisabled`     | `parentTokenIsDisabled`     |
+| `l1Provider`            | `parentProvider`            |
+| `getL1GatewaySetEvents` | `getParentGatewaySetEvents` |
+| `getL2GatewaySetEvents` | `getChildGatewaySetEvents`  |
 
 ### Removing L1 network
 
-The Arbitrum SDK no longer requires the L1 network to be specified. The Arbitrum SDK now only requires the Child network to be specified.
+The Arbitrum SDK no longer requires the L1 network to be specified. The Arbitrum SDK now only requires the Child network to be registered.
