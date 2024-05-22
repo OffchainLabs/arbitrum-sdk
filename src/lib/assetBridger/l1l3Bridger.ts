@@ -212,10 +212,10 @@ export type Erc20DepositStatus = {
    * - l1l2TokenBridgeRetryable status is REDEEMED; AND
    * - l2ForwarderFactoryRetryable status is FUNDS_DEPOSITED_ON_L2; AND
    * - L2Forwarder token balance is 0
-   * 
+   *
    * The first teleportation with l2ForwarderFactoryRetryable redemption *after* this teleportation's l1l2TokenBridgeRetryable redemption
    * is the one that completes this teleportation.
-   * 
+   *
    * If that subsequent teleportation is complete, this one is considered complete as well.
    */
   l2ForwarderFactoryRetryableFrontRan: boolean

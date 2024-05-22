@@ -281,11 +281,14 @@ describe('L1 to L3 Bridging', () => {
       )
     })
 
-    itOnlyWhenCustomGasToken('should fail construction if l3 uses a custom fee token', async () => {
-      expect(() => new EthL1L3Bridger(l3Network)).to.throw(
-        `L3 network ${l3Network.name} uses a custom fee token`
-      )
-    })
+    itOnlyWhenCustomGasToken(
+      'should fail construction if l3 uses a custom fee token',
+      async () => {
+        expect(() => new EthL1L3Bridger(l3Network)).to.throw(
+          `L3 network ${l3Network.name} uses a custom fee token`
+        )
+      }
+    )
 
     // send some eth to L3 with custom l3 recipient and l2 refund address
     // makes sure that appropriate amounts land at the right places
