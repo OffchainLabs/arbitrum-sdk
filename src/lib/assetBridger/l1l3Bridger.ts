@@ -170,7 +170,7 @@ export type Erc20DepositRequestParams = {
   /**
    * Optional recipient on L3, defaults to signer's address
    */
-  to?: string
+  destinationAddress?: string
   /**
    * Optional overrides for retryable gas parameters
    */
@@ -229,7 +229,7 @@ export type EthDepositRequestParams = {
   /**
    * Optional recipient on L3, defaults to signer's address
    */
-  to?: string
+  destinationAddress?: string
   /**
    * Optional fee refund address on L2, defaults to signer's address
    */
@@ -586,7 +586,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   public async l2ForwarderAddress(
     owner: string,
     routerOrInbox: string,
-    to: string,
+    destinationAddress: string,
     l1OrL2Provider: Provider
   ): Promise<string> {
     const chainId = (await l1OrL2Provider.getNetwork()).chainId
@@ -603,7 +603,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     return IL2ForwarderPredictor__factory.connect(
       predictor,
       l1OrL2Provider
-    ).l2ForwarderAddress(owner, routerOrInbox, to)
+    ).l2ForwarderAddress(owner, routerOrInbox, destinationAddress)
   }
 
   /**
@@ -752,7 +752,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         getAddress(params.erc20L1Address) === getAddress(l1FeeToken)
           ? this.l3Network.ethBridge.inbox
           : this.l3Network.tokenBridge.l1GatewayRouter,
-      to: params.to || from,
+      to: params.destinationAddress || from,
       amount: params.amount,
     }
 
@@ -1430,7 +1430,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
     const from =
       'from' in params ? params.from : await params.l1Signer.getAddress()
 
-    const l3DestinationAddress = params.to || from
+    const l3DestinationAddress = params.destinationAddress || from
     const l2RefundAddress = params.l2RefundAddress || from
 
     const l3TicketRequest = await L1ToL2MessageCreator.getTicketCreationRequest(
