@@ -67,7 +67,7 @@ export enum TeleportationType {
   /**
    * Teleporting the fee token to a custom fee L3
    */
-  OnlyFeeToken,
+  OnlyGasToken,
   /**
    * Teleporting a non-fee token to a custom fee L3
    */
@@ -922,7 +922,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       getAddress(partialTeleportParams.l1Token) ===
       getAddress(partialTeleportParams.l3FeeTokenL1Addr)
     ) {
-      return TeleportationType.OnlyFeeToken
+      return TeleportationType.OnlyGasToken
     } else {
       return TeleportationType.NonFeeTokenToCustomFee
     }
@@ -1082,7 +1082,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         gasLimit: BigNumber.from(0),
         maxSubmissionFee: BigNumber.from(0),
       }
-    } else if (teleportationType === TeleportationType.OnlyFeeToken) {
+    } else if (teleportationType === TeleportationType.OnlyGasToken) {
       // we are bridging the fee token to l3, this will not go through the l2l3 token bridge, instead it's just a regular retryable
       const estimate = await new L1ToL2MessageGasEstimator(
         params.l3Provider
