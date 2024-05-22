@@ -387,7 +387,7 @@ describe('L1 to L3 Bridging', () => {
             l1Signer.provider!,
             l2Signer.provider!
           ),
-          'L1 gas token not found'
+          'L1 gas token not found. Use skipGasToken when depositing'
         )
       }
     )
@@ -424,7 +424,7 @@ describe('L1 to L3 Bridging', () => {
           new Erc20L1L3Bridger(l3Network).getGasTokenOnL1(
             hackedL1Provider,
             hackedL2Provider
-          ), 'L2 gas token has incorrect decimals'
+          ), 'L2 gas token has incorrect decimals. Use skipGasToken when depositing'
         )
 
         // incorrect L1 fee token decimals
@@ -439,19 +439,21 @@ describe('L1 to L3 Bridging', () => {
           new Erc20L1L3Bridger(l3Network).getGasTokenOnL1(
             hackedL1Provider,
             hackedL2Provider
-          ) , 'L1 gas token has incorrect decimals'
+          ) , 'L1 gas token has incorrect decimals. Use skipGasToken when depositing'
         )
       }
     )
+
     itOnlyWhenEth('should not have l1 and l2 fee token addresses', async () => {
       // make sure l2 is undefined and l1 is also undefined
       expect(l1l3Bridger.l2FeeTokenAddress).to.be.undefined
-      expect(
-        await l1l3Bridger.getGasTokenOnL1(
+      await expectPromiseToReject(
+        l1l3Bridger.getGasTokenOnL1(
           l1Signer.provider!,
           l2Signer.provider!
-        )
-      ).to.eq(ethers.constants.AddressZero)
+        ),
+        'L3 uses ETH for gas'
+      )
     })
 
     it('getL2ERC20Address', async () => {
