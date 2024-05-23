@@ -88,7 +88,7 @@ export const mineUntilStop = async (
 export const withdrawToken = async (params: WithdrawalParams) => {
   const withdrawalParams = await params.erc20Bridger.getWithdrawalRequest({
     amount: params.amount,
-    erc20l1Address: params.l1Token.address,
+    erc20L1Address: params.l1Token.address,
     destinationAddress: await params.l2Signer.getAddress(),
     from: await params.l2Signer.getAddress(),
   })
@@ -99,7 +99,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   const withdrawRes = await params.erc20Bridger.withdraw({
     destinationAddress: await params.l2Signer.getAddress(),
     amount: params.amount,
-    erc20l1Address: params.l1Token.address,
+    erc20L1Address: params.l1Token.address,
     l2Signer: params.l2Signer,
   })
   const withdrawRec = await withdrawRes.wait()
@@ -372,7 +372,7 @@ export const depositToken = async ({
   )
   expect(l1Erc20Addr).to.equal(
     l1TokenAddress,
-    'getERC20L1Address/getERC20L2Address failed with proper token address'
+    'getL1ERC20Address/getL2ERC20Address failed with proper token address'
   )
 
   const tokenBalL2After = await l2Token.balanceOf(

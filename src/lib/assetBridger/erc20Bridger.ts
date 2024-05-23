@@ -127,7 +127,7 @@ export interface Erc20WithdrawParams extends EthWithdrawParams {
   /**
    * L1 address of the token ERC20 contract
    */
-  erc20l1Address: string
+  erc20L1Address: string
 }
 
 export type L1ToL2TxReqAndSignerProvider = L1ToL2TransactionRequest & {
@@ -772,7 +772,7 @@ export class Erc20Bridger extends AssetBridger<
           ): string
         }
       ).encodeFunctionData('outboundTransfer(address,address,uint256,bytes)', [
-        params.erc20l1Address,
+        params.erc20L1Address,
         to,
         params.amount,
         '0x',
@@ -796,7 +796,7 @@ export class Erc20Bridger extends AssetBridger<
         }
 
         const l1GatewayAddress = await this.getL1GatewayAddress(
-          params.erc20l1Address,
+          params.erc20L1Address,
           l1Provider
         )
 
