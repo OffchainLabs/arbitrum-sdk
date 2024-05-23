@@ -465,7 +465,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       !l1FeeTokenAddress ||
       l1FeeTokenAddress === ethers.constants.AddressZero
     ) {
-      throw new ArbSdkError('L1 gas token not found. Use skipGasToken when depositing')
+      throw new ArbSdkError(
+        'L1 gas token not found. Use skipGasToken when depositing'
+      )
     }
 
     // make sure both the L1 and L2 tokens have 18 decimals
@@ -475,7 +477,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         l1Provider
       ).decimals()) !== 18
     ) {
-      throw new ArbSdkError('L1 gas token has incorrect decimals. Use skipGasToken when depositing')
+      throw new ArbSdkError(
+        'L1 gas token has incorrect decimals. Use skipGasToken when depositing'
+      )
     }
     if (
       (await ERC20__factory.connect(
@@ -483,7 +487,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         l2Provider
       ).decimals()) !== 18
     ) {
-      throw new ArbSdkError('L2 gas token has incorrect decimals. Use skipGasToken when depositing')
+      throw new ArbSdkError(
+        'L2 gas token has incorrect decimals. Use skipGasToken when depositing'
+      )
     }
 
     return (this._l1FeeTokenAddress = l1FeeTokenAddress)
