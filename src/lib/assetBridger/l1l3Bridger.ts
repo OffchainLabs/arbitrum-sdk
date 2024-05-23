@@ -492,6 +492,18 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       )
     }
 
+    if (await this.l1TokenIsDisabled(l1FeeTokenAddress, l1Provider)) {
+      throw new ArbSdkError(
+        'L1 gas token is disabled on the L1 to L2 token bridge. Use skipGasToken when depositing'
+      )
+    }
+
+    if (await this.l2TokenIsDisabled(this.l2FeeTokenAddress, l2Provider)) {
+      throw new ArbSdkError(
+        'L2 gas token is disabled on the L2 to L3 token bridge. Use skipGasToken when depositing'
+      )
+    }
+
     return (this._l1FeeTokenAddress = l1FeeTokenAddress)
   }
 
@@ -675,7 +687,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     amount?: BigNumber
   }): Promise<PickedTransactionRequest> {
     return this.getApproveTokenRequest({
-      erc20L1Address: await this._l1FeeTokenAddressOrThrow(
+      erc20L1Address: await this.getGasTokenOnL1(
         params.l1Provider,
         params.l2Provider
       ),
@@ -1346,19 +1358,6 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         [struct]
       )
     return ethers.utils.hexDataLength(dummyCalldata) - 4
-  }
-
-  /**
-   * Get the L1 address of the L3's fee token, or if there isn't one throw.
-   */
-  protected async _l1FeeTokenAddressOrThrow(
-    l1Provider: Provider,
-    l2Provider: Provider
-  ) {
-    const ft = await this.getGasTokenOnL1(l1Provider, l2Provider)
-    if (!ft)
-      throw new Error(`L3 network ${this.l3Network.name} uses ETH for fees`)
-    return ft
   }
 
   /**

@@ -741,18 +741,17 @@ describe('L1 to L3 Bridging', () => {
     itOnlyWhenCustomGasToken('happy path skip fee token', async () => {
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
 
-      const depositParams = {
+      const depositParams: Erc20DepositRequestParams = {
         erc20L1Address: l1Token.address,
         destinationAddress: l3Recipient,
         amount,
-        l1Signer,
         l2Provider: l2Signer.provider!,
         l3Provider,
-        skipFeeToken: true,
+        skipGasToken: true,
       }
 
       const depositTxRequest = await l1l3Bridger.getDepositRequest(
-        depositParams
+        {...depositParams, l1Signer}
       )
 
       assert(depositTxRequest.feeTokenAmount.eq(0))
@@ -814,17 +813,16 @@ describe('L1 to L3 Bridging', () => {
     it('happy path non fee token or standard', async () => {
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
 
-      const depositParams: Erc20DepositRequestParams & { l1Signer: Signer } = {
+      const depositParams: Erc20DepositRequestParams = {
         erc20L1Address: l1Token.address,
         destinationAddress: l3Recipient,
         amount,
-        l1Signer,
         l2Provider: l2Signer.provider!,
         l3Provider,
       }
 
       const depositTxRequest = await l1l3Bridger.getDepositRequest(
-        depositParams
+        {...depositParams, l1Signer}
       )
 
       if (isL2NetworkWithCustomFeeToken()) {
@@ -880,20 +878,20 @@ describe('L1 to L3 Bridging', () => {
         l1Signer.provider!,
         l2Signer.provider!
       ))!
-      const depositParams = {
+
+      const depositParams: Erc20DepositRequestParams = {
         erc20L1Address: l1FeeToken,
         destinationAddress: l3Recipient,
         amount: ethers.utils.parseEther('0.1'),
-        l1Signer,
         l2Provider: l2Signer.provider!,
         l3Provider,
       }
 
       const depositTxRequest = await l1l3Bridger.getDepositRequest(
-        depositParams
+        {...depositParams, l1Signer}
       )
 
-      await (await l1l3Bridger.approveToken(depositParams)).wait()
+      await (await l1l3Bridger.approveToken({...depositParams, l1Signer})).wait()
 
       const depositTx = await l1l3Bridger.deposit({
         l1Signer,
