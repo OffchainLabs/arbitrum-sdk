@@ -130,8 +130,8 @@ export abstract class ParentToChildMessage {
     messageNumber: BigNumber,
     parentBaseFee: BigNumber,
     destAddress: string,
-    chainCallValue: BigNumber,
-    parentValue: BigNumber,
+    childCallValue: BigNumber,
+    parentCallValue: BigNumber,
     maxSubmissionFee: BigNumber,
     excessFeeRefundAddress: string,
     callValueRefundAddress: string,
@@ -758,8 +758,8 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
  * A message for Eth deposits from Parent to Child
  */
 export class EthDepositMessage {
-  public readonly chainDepositTxHash: string
-  private chainDepositTxReceipt: TransactionReceipt | undefined | null
+  public readonly childChainDepositTxHash: string
+  private childChainDepositTxReceipt: TransactionReceipt | undefined | null
 
   public static calculateDepositTxId(
     childChainId: number,
@@ -850,7 +850,7 @@ export class EthDepositMessage {
    * @param value
    */
   constructor(
-    private readonly chainProvider: Provider,
+    private readonly childChainProvider: Provider,
     public readonly childChainId: number,
     public readonly messageNumber: BigNumber,
     public readonly from: string,
