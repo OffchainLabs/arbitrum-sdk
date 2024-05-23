@@ -750,9 +750,10 @@ describe('L1 to L3 Bridging', () => {
         skipGasToken: true,
       }
 
-      const depositTxRequest = await l1l3Bridger.getDepositRequest(
-        {...depositParams, l1Signer}
-      )
+      const depositTxRequest = await l1l3Bridger.getDepositRequest({
+        ...depositParams,
+        l1Signer,
+      })
 
       assert(depositTxRequest.feeTokenAmount.eq(0))
 
@@ -821,9 +822,10 @@ describe('L1 to L3 Bridging', () => {
         l3Provider,
       }
 
-      const depositTxRequest = await l1l3Bridger.getDepositRequest(
-        {...depositParams, l1Signer}
-      )
+      const depositTxRequest = await l1l3Bridger.getDepositRequest({
+        ...depositParams,
+        l1Signer,
+      })
 
       if (isL2NetworkWithCustomFeeToken()) {
         assert(depositTxRequest.feeTokenAmount.gt('0'))
@@ -887,11 +889,14 @@ describe('L1 to L3 Bridging', () => {
         l3Provider,
       }
 
-      const depositTxRequest = await l1l3Bridger.getDepositRequest(
-        {...depositParams, l1Signer}
-      )
+      const depositTxRequest = await l1l3Bridger.getDepositRequest({
+        ...depositParams,
+        l1Signer,
+      })
 
-      await (await l1l3Bridger.approveToken({...depositParams, l1Signer})).wait()
+      await (
+        await l1l3Bridger.approveToken({ ...depositParams, l1Signer })
+      ).wait()
 
       const depositTx = await l1l3Bridger.deposit({
         l1Signer,
