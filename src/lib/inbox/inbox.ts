@@ -123,7 +123,6 @@ export class InboxTools {
     }
 
     const block = await this.parentChainProvider.getBlock(blockNumber)
-    // X.timestamp < T - DT
     const diff = block.timestamp - blockTimestamp
     if (diff < 0) return block
 
