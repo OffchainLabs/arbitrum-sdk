@@ -19,7 +19,7 @@
 import { Signer } from '@ethersproject/abstract-signer'
 import { Block, Provider } from '@ethersproject/abstract-provider'
 import { BigNumber, ContractTransaction, ethers, Overrides } from 'ethers'
-import { TransactionRequest } from '@ethersproject/providers'
+import { TransactionRequest, JsonRpcProvider } from '@ethersproject/providers'
 
 import { Bridge } from '../abi/Bridge'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
@@ -40,7 +40,12 @@ import { ArbSdkError } from '../dataEntities/errors'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { InboxMessageKind } from '../dataEntities/message'
-import { isDefined } from '../utils/lib'
+import {
+  getBlockRangesForL1Block,
+  isArbitrumChain,
+  isDefined,
+} from '../utils/lib'
+import { ArbitrumProvider } from '../utils/arbProvider'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
@@ -90,6 +95,38 @@ export class InboxTools {
     blockNumber: number,
     blockTimestamp: number
   ): Promise<Block> {
+    const isParentChainArbitrum = await isArbitrumChain(this.l1Provider)
+
+    const nodeInterface = NodeInterface__factory.connect(
+      NODE_INTERFACE_ADDRESS,
+      this.l1Provider
+    )
+
+    if (isParentChainArbitrum) {
+      try {
+        blockNumber = (
+          await nodeInterface.l2BlockRangeForL1(blockNumber - 1)
+        ).firstBlock.toNumber()
+      } catch (e) {
+        // l2BlockRangeForL1 reverts if no L2 block exist with the given L1 block number,
+        // since l1 block is updated in batch sometimes block can be skipped even when there are activities
+        // alternatively we use binary search to get the nearest block
+        const _blockNum = (
+          await getBlockRangesForL1Block({
+            provider: this.l1Provider as JsonRpcProvider,
+            forL1Block: blockNumber - 1,
+            allowGreater: true,
+          })
+        )[0]
+
+        if (!_blockNum) {
+          throw e
+        }
+
+        blockNumber = _blockNum
+      }
+    }
+
     const block = await this.l1Provider.getBlock(blockNumber)
     const diff = block.timestamp - blockTimestamp
     if (diff < 0) return block
@@ -154,10 +191,24 @@ export class InboxTools {
    * @returns
    */
   private async getForceIncludableBlockRange(blockNumberRangeSize: number) {
+    let currentL1BlockNumber
+
     const sequencerInbox = SequencerInbox__factory.connect(
       this.l2Network.ethBridge.sequencerInbox,
       this.l1Provider
     )
+
+    const isParentChainArbitrum = await isArbitrumChain(this.l1Provider)
+
+    if (isParentChainArbitrum) {
+      const arbProvider = new ArbitrumProvider(
+        this.l1Provider as JsonRpcProvider
+      )
+      const currentArbBlock = await arbProvider.getBlock(
+        await arbProvider.getBlockNumber()
+      )
+      currentL1BlockNumber = currentArbBlock.l1BlockNumber
+    }
 
     const multicall = await MultiCaller.fromProvider(this.l1Provider)
     const multicallInput: [
@@ -183,7 +234,8 @@ export class InboxTools {
       await multicall.multiCall(multicallInput, true)
 
     const firstEligibleBlockNumber =
-      currentBlockNumber.toNumber() - maxTimeVariation.delayBlocks.toNumber()
+      (currentL1BlockNumber ?? currentBlockNumber.toNumber()) -
+      maxTimeVariation.delayBlocks.toNumber()
     const firstEligibleTimestamp =
       currentBlockTimestamp.toNumber() -
       maxTimeVariation.delaySeconds.toNumber()
