@@ -1,6 +1,6 @@
 {
-  "name": "godzillaba-arbitrum-sdk",
-  "version": "3.4.1-teleporter.5",
+  "name": "@arbitrum/sdk",
+  "version": "3.4.1-teleporter.1",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
