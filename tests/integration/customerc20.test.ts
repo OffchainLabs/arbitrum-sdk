@@ -39,7 +39,10 @@ import {
   withdrawToken,
 } from './testHelpers'
 import { ParentToChildMessageStatus } from '../../src'
-import { ArbitrumNetwork } from '../../src/lib/dataEntities/networks'
+import {
+  ArbitrumNetwork,
+  assertHasTokenBridge,
+} from '../../src/lib/dataEntities/networks'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
@@ -154,6 +157,8 @@ const registerCustomToken = async (
   childSigner: Signer,
   adminErc20Bridger: AdminErc20Bridger
 ) => {
+  assertHasTokenBridge(childChain)
+
   // create a custom token on L1 and L2
   const l1CustomTokenFactory = isArbitrumNetworkWithCustomFeeToken()
     ? new TestOrbitCustomTokenL1__factory(parentSigner)

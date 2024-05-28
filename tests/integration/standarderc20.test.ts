@@ -61,11 +61,7 @@ describe('standard ERC20', () => {
   })
 
   // test globals
-  let testState: {
-    parentSigner: Signer
-    childSigner: Signer
-    erc20Bridger: Erc20Bridger
-    childChain: ArbitrumNetwork
+  let testState: Awaited<ReturnType<typeof testSetup>> & {
     parentToken: TestERC20
   }
 
