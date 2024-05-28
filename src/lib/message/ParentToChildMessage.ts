@@ -114,8 +114,8 @@ export abstract class ParentToChildMessage {
    * @param messageNumber
    * @param parentBaseFee
    * @param destAddress
-   * @param chainCallValue
-   * @param parentValue
+   * @param childCallValue
+   * @param parentCallValue
    * @param maxSubmissionFee
    * @param excessFeeRefundAddress refund address specified in the retryable creation. Note the Parent inbox aliases this address if it is a Parent smart contract. The user is expected to provide this value already aliased when needed.
    * @param callValueRefundAddress refund address specified in the retryable creation. Note the Parent inbox aliases this address if it is a Parent smart contract. The user is expected to provide this value already aliased when needed.
@@ -130,8 +130,8 @@ export abstract class ParentToChildMessage {
     messageNumber: BigNumber,
     parentBaseFee: BigNumber,
     destAddress: string,
-    chainCallValue: BigNumber,
-    parentValue: BigNumber,
+    childCallValue: BigNumber,
+    parentCallValue: BigNumber,
     maxSubmissionFee: BigNumber,
     excessFeeRefundAddress: string,
     callValueRefundAddress: string,
@@ -152,12 +152,12 @@ export abstract class ParentToChildMessage {
       fromAddress,
       formatNumber(parentBaseFee),
 
-      formatNumber(parentValue),
+      formatNumber(parentCallValue),
       formatNumber(maxFeePerGas),
       formatNumber(gasLimit),
       // when destAddress is 0x0, arbos treat that as nil
       destAddress === ethers.constants.AddressZero ? '0x' : destAddress,
-      formatNumber(chainCallValue),
+      formatNumber(childCallValue),
       callValueRefundAddress,
       formatNumber(maxSubmissionFee),
       excessFeeRefundAddress,
@@ -256,7 +256,7 @@ export type EthDepositMessageWaitForStatusResult = {
 export class ParentToChildMessageReader extends ParentToChildMessage {
   private retryableCreationReceipt: TransactionReceipt | undefined | null
   public constructor(
-    public readonly chainProvider: Provider,
+    public readonly childProvider: Provider,
     chainId: number,
     sender: string,
     messageNumber: BigNumber,
@@ -278,7 +278,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
   ): Promise<TransactionReceipt | null> {
     if (!this.retryableCreationReceipt) {
       this.retryableCreationReceipt = await getTransactionReceipt(
-        this.chainProvider,
+        this.childProvider,
         this.retryableCreationId,
         confirmations,
         timeout
@@ -301,7 +301,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
       const redeemEvents = chainReceipt.getRedeemScheduledEvents()
 
       if (redeemEvents.length === 1) {
-        return await this.chainProvider.getTransactionReceipt(
+        return await this.childProvider.getTransactionReceipt(
           redeemEvents[0].retryTxHash
         )
       } else if (redeemEvents.length > 1) {
@@ -319,8 +319,8 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
    * @returns TransactionReceipt of the first successful redeem if exists, otherwise the current status of the message.
    */
   public async getSuccessfulRedeem(): Promise<ParentToChildMessageWaitForStatusResult> {
-    const chainNetwork = await getArbitrumNetwork(this.chainProvider)
-    const eventFetcher = new EventFetcher(this.chainProvider)
+    const chainNetwork = await getArbitrumNetwork(this.childProvider)
+    const eventFetcher = new EventFetcher(this.childProvider)
     const creationReceipt = await this.getRetryableCreationReceipt()
 
     if (!isDefined(creationReceipt)) {
@@ -357,14 +357,14 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
     // to do this we need to filter through the whole lifetime of the ticket looking
     // for relevant redeem scheduled events
     let increment = 1000
-    let fromBlock = await this.chainProvider.getBlock(
+    let fromBlock = await this.childProvider.getBlock(
       creationReceipt.blockNumber
     )
     let timeout =
       fromBlock.timestamp +
       (chainNetwork.retryableLifetimeSeconds ?? SEVEN_DAYS_IN_SECONDS)
     const queriedRange: { from: number; to: number }[] = []
-    const maxBlock = await this.chainProvider.getBlockNumber()
+    const maxBlock = await this.childProvider.getBlockNumber()
     while (fromBlock.number < maxBlock) {
       const toBlockNumber = Math.min(fromBlock.number + increment, maxBlock)
 
@@ -384,7 +384,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
       const successfulRedeem = (
         await Promise.all(
           redeemEvents.map(e =>
-            this.chainProvider.getTransactionReceipt(e.event.retryTxHash)
+            this.childProvider.getTransactionReceipt(e.event.retryTxHash)
           )
         )
       ).filter(r => isDefined(r) && r.status === 1)
@@ -399,7 +399,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
           status: ParentToChildMessageStatus.REDEEMED,
         }
 
-      const toBlock = await this.chainProvider.getBlock(toBlockNumber)
+      const toBlock = await this.childProvider.getBlock(toBlockNumber)
       if (toBlock.timestamp > timeout) {
         // Check for LifetimeExtended event
         while (queriedRange.length > 0) {
@@ -453,7 +453,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
 
   private async retryableExists(): Promise<boolean> {
     const currentTimestamp = BigNumber.from(
-      (await this.chainProvider.getBlock('latest')).timestamp
+      (await this.childProvider.getBlock('latest')).timestamp
     )
     try {
       const timeoutTimestamp = await this.getTimeout()
@@ -518,10 +518,10 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
    * The minimium lifetime of a retryable tx
    * @returns
    */
-  public static async getLifetime(chainProvider: Provider): Promise<BigNumber> {
+  public static async getLifetime(childProvider: Provider): Promise<BigNumber> {
     const arbRetryableTx = ArbRetryableTx__factory.connect(
       ARB_RETRYABLE_TX_ADDRESS,
-      chainProvider
+      childProvider
     )
     return await arbRetryableTx.getLifetime()
   }
@@ -533,7 +533,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
   public async getTimeout(): Promise<BigNumber> {
     const arbRetryableTx = ArbRetryableTx__factory.connect(
       ARB_RETRYABLE_TX_ADDRESS,
-      this.chainProvider
+      this.childProvider
     )
     return await arbRetryableTx.getTimeout(this.retryableCreationId)
   }
@@ -546,7 +546,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
   public getBeneficiary(): Promise<string> {
     const arbRetryableTx = ArbRetryableTx__factory.connect(
       ARB_RETRYABLE_TX_ADDRESS,
-      this.chainProvider
+      this.childProvider
     )
     return arbRetryableTx.getBeneficiary(this.retryableCreationId)
   }
@@ -557,17 +557,17 @@ export class ParentToChildMessageReaderClassic {
   public readonly messageNumber: BigNumber
   public readonly retryableCreationId: string
   public readonly autoRedeemId: string
-  public readonly chainTxHash: string
-  public readonly chainProvider: Provider
+  public readonly childTxHash: string
+  public readonly childProvider: Provider
 
   constructor(
-    chainProvider: Provider,
+    childProvider: Provider,
     chainId: number,
     messageNumber: BigNumber
   ) {
     const bitFlip = (num: BigNumber) => num.or(BigNumber.from(1).shl(255))
     this.messageNumber = messageNumber
-    this.chainProvider = chainProvider
+    this.childProvider = childProvider
 
     this.retryableCreationId = keccak256(
       concat([
@@ -583,7 +583,7 @@ export class ParentToChildMessageReaderClassic {
       ])
     )
 
-    this.chainTxHash = keccak256(
+    this.childTxHash = keccak256(
       concat([
         zeroPad(this.retryableCreationId, 32),
         zeroPad(BigNumber.from(0).toHexString(), 32),
@@ -613,7 +613,7 @@ export class ParentToChildMessageReaderClassic {
   ): Promise<TransactionReceipt | null> {
     if (!this.retryableCreationReceipt) {
       this.retryableCreationReceipt = await getTransactionReceipt(
-        this.chainProvider,
+        this.childProvider,
         this.retryableCreationId,
         confirmations,
         timeout
@@ -637,7 +637,7 @@ export class ParentToChildMessageReaderClassic {
     const chainDerivedHash = this.calculateChainDerivedHash(
       this.retryableCreationId
     )
-    const chainTxReceipt = await this.chainProvider.getTransactionReceipt(
+    const chainTxReceipt = await this.childProvider.getTransactionReceipt(
       chainDerivedHash
     )
 
@@ -688,7 +688,7 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
 
       return ChildTransactionReceipt.toRedeemTransaction(
         ChildTransactionReceipt.monkeyPatchWait(redeemTx),
-        this.chainProvider
+        this.childProvider
       )
     } else {
       throw new ArbSdkError(
@@ -758,8 +758,8 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
  * A message for Eth deposits from Parent to Child
  */
 export class EthDepositMessage {
-  public readonly chainDepositTxHash: string
-  private chainDepositTxReceipt: TransactionReceipt | undefined | null
+  public readonly childDepositTxHash: string
+  private childDepositTxReceipt: TransactionReceipt | undefined | null
 
   public static calculateDepositTxId(
     childChainId: number,
@@ -814,25 +814,25 @@ export class EthDepositMessage {
 
   /**
    * Create an EthDepositMessage from data emitted in event when calling ethDeposit on Inbox.sol
-   * @param chainProvider
+   * @param childProvider
    * @param messageNumber The message number in the Inbox.InboxMessageDelivered event
    * @param senderAddr The sender address from Bridge.MessageDelivered event
    * @param inboxMessageEventData The data field from the Inbox.InboxMessageDelivered event
    * @returns
    */
   public static async fromEventComponents(
-    chainProvider: Provider,
+    childProvider: Provider,
     messageNumber: BigNumber,
     senderAddr: string,
     inboxMessageEventData: string
   ) {
-    const chainId = (await chainProvider.getNetwork()).chainId
+    const chainId = (await childProvider.getNetwork()).chainId
     const { to, value } = EthDepositMessage.parseEthDepositData(
       inboxMessageEventData
     )
 
     return new EthDepositMessage(
-      chainProvider,
+      childProvider,
       chainId,
       messageNumber,
       senderAddr,
@@ -843,21 +843,21 @@ export class EthDepositMessage {
 
   /**
    *
-   * @param chainProvider
+   * @param childProvider
    * @param childChainId
    * @param messageNumber
    * @param to Recipient address of the ETH on Chain
    * @param value
    */
   constructor(
-    private readonly chainProvider: Provider,
+    private readonly childProvider: Provider,
     public readonly childChainId: number,
     public readonly messageNumber: BigNumber,
     public readonly from: string,
     public readonly to: string,
     public readonly value: BigNumber
   ) {
-    this.chainDepositTxHash = EthDepositMessage.calculateDepositTxId(
+    this.childDepositTxHash = EthDepositMessage.calculateDepositTxId(
       childChainId,
       messageNumber,
       from,
@@ -867,8 +867,8 @@ export class EthDepositMessage {
   }
 
   public async status(): Promise<EthDepositMessageStatus> {
-    const receipt = await this.chainProvider.getTransactionReceipt(
-      this.chainDepositTxHash
+    const receipt = await this.childProvider.getTransactionReceipt(
+      this.childDepositTxHash
     )
     if (receipt === null) return EthDepositMessageStatus.PENDING
     else return EthDepositMessageStatus.DEPOSITED
@@ -877,15 +877,15 @@ export class EthDepositMessage {
   public async wait(confirmations?: number, timeout?: number) {
     const chosenTimeout = isDefined(timeout) ? timeout : DEFAULT_DEPOSIT_TIMEOUT
 
-    if (!this.chainDepositTxReceipt) {
-      this.chainDepositTxReceipt = await getTransactionReceipt(
-        this.chainProvider,
-        this.chainDepositTxHash,
+    if (!this.childDepositTxReceipt) {
+      this.childDepositTxReceipt = await getTransactionReceipt(
+        this.childProvider,
+        this.childDepositTxHash,
         confirmations,
         chosenTimeout
       )
     }
 
-    return this.chainDepositTxReceipt || null
+    return this.childDepositTxReceipt || null
   }
 }
