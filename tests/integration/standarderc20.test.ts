@@ -17,7 +17,7 @@
 'use strict'
 
 import { expect } from 'chai'
-import { Signer, Wallet, utils, constants } from 'ethers'
+import { Wallet, utils, constants } from 'ethers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import {
@@ -29,12 +29,10 @@ import {
   fundChildSigner,
 } from './testHelpers'
 import {
-  Erc20Bridger,
   ParentToChildMessageStatus,
   ParentToChildMessageWriter,
   ChildTransactionReceipt,
 } from '../../src'
-import { ArbitrumNetwork } from '../../src/lib/dataEntities/networks'
 import { TestERC20 } from '../../src/lib/abi/TestERC20'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
