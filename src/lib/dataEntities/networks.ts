@@ -516,13 +516,20 @@ export function mapL2NetworkToArbitrumNetwork(
   }
 }
 
+/**
+ * Asserts that the given object has a token bridge. This is useful because not all Arbitrum network
+ * operations require a token bridge.
+ *
+ * @param network {@link ArbitrumNetwork} object
+ * @throws ArbSdkError if the object does not have a token bridge
+ */
 export function assertHasTokenBridge<T extends ArbitrumNetwork>(
-  obj: T
-): asserts obj is T & { tokenBridge: TokenBridge } {
+  network: T
+): asserts network is T & { tokenBridge: TokenBridge } {
   if (
-    typeof obj === 'undefined' ||
-    !('tokenBridge' in obj) ||
-    typeof obj.tokenBridge === 'undefined'
+    typeof network === 'undefined' ||
+    !('tokenBridge' in network) ||
+    typeof network.tokenBridge === 'undefined'
   ) {
     throw new ArbSdkError('Token bridge addresses required for network')
   }
