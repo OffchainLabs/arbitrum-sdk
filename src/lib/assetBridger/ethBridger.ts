@@ -50,6 +50,12 @@ import {
   Providerish,
   transformUniversalProviderToEthersV5Provider,
 } from '../utils/universal/providerTransforms'
+import {
+  isWalletClient,
+  createViemSigner,
+  ViemSigner,
+} from '../utils/universal/signerTransforms'
+import { WalletClient } from 'viem'
 
 export interface EthWithdrawParams {
   /**
@@ -74,7 +80,7 @@ export type EthDepositParams = {
   /**
    * The L1 provider or signer
    */
-  l1Signer: Signer
+  l1Signer: Signer | ViemSigner | any
   /**
    * The amount of ETH or tokens to be deposited
    */
@@ -127,6 +133,32 @@ type EthDepositToRequestParams = OmitTyped<
    * Address that is depositing the ETH
    */
   from: string
+}
+
+function useViemSigner(
+  target: any,
+  propertyKey: string,
+  descriptor: PropertyDescriptor
+) {
+  const originalMethod = descriptor.value
+
+  descriptor.value = function (...args: any[]) {
+    args = args.map(arg => {
+      if (arg && typeof arg === 'object') {
+        Object.keys(arg).forEach(key => {
+          if (isWalletClient(arg[key])) {
+            arg[key] = createViemSigner(arg[key])
+          }
+        })
+      }
+      return arg
+    })
+
+    // Call the original method with the transformed arguments
+    return originalMethod.apply(this, args)
+  }
+
+  return descriptor
 }
 
 /**
@@ -186,6 +218,7 @@ export class EthBridger extends AssetBridger<
    * @param params
    * @returns
    */
+  @useViemSigner
   public async deposit(
     params: EthDepositParams | L1ToL2TxReqAndSigner
   ): Promise<L1EthDepositTransaction> {

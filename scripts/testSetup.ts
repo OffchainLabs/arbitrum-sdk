@@ -38,7 +38,7 @@ import { deployErc20AndInit } from './deployBridge'
 import * as path from 'path'
 import * as fs from 'fs'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
-import { createWalletClient, http } from 'viem'
+import { WalletClient, createWalletClient, http } from 'viem'
 import { mainnet } from 'viem/chains'
 import { privateKeyToAccount } from 'viem/accounts'
 import { createViemSigner } from '../src/lib/utils/universal/signerTransforms'
@@ -237,6 +237,7 @@ export const testSetup = async (): Promise<{
   inboxTools: InboxTools
   l1Deployer: Signer
   l2Deployer: Signer
+  ethWalletClient: WalletClient
 }> => {
   const ethProvider = new JsonRpcProvider(config.ethUrl)
   const arbProvider = new JsonRpcProvider(config.arbUrl)
@@ -316,6 +317,7 @@ export const testSetup = async (): Promise<{
     pk,
     l1Signer,
     ethersL1Signer,
+    ethWalletClient,
     l2Signer,
     l1Network: setL1Network,
     l2Network: setL2Network,
