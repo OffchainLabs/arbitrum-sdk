@@ -10,6 +10,7 @@ import {
 import { L2ForwarderContractsDeployer__factory } from '../../src/lib/abi/factories/L2ForwarderContractsDeployer__factory'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import { TestERC20 } from '../../src/lib/abi/TestERC20'
+import { AeWETH__factory } from '../../src/lib/abi/factories/AeWETH__factory'
 import { L1Teleporter__factory } from '../../src/lib/abi/factories/L1Teleporter__factory'
 import { fundL1, fundL2, skipIfMainnet } from './testHelpers'
 import { BigNumber, Signer, Wallet, ethers, providers, utils } from 'ethers'
@@ -811,17 +812,9 @@ describe('L1 to L3 Bridging', () => {
       assert(l3Balance.eq(amount))
     })
 
-    it('happy path non fee token or standard', async () => {
-      const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
-
-      const depositParams: Erc20DepositRequestParams = {
-        erc20L1Address: l1Token.address,
-        destinationAddress: l3Recipient,
-        amount,
-        l2Provider: l2Signer.provider!,
-        l3Provider,
-      }
-
+    async function testHappyPathNonFeeOrStandard(
+      depositParams: Erc20DepositRequestParams
+    ) {
       const depositTxRequest = await l1l3Bridger.getDepositRequest({
         ...depositParams,
         l1Signer,
@@ -861,17 +854,69 @@ describe('L1 to L3 Bridging', () => {
 
       // make sure the tokens have landed in the right place
       const l3TokenAddr = await l1l3Bridger.getL3ERC20Address(
-        l1Token.address,
+        depositParams.erc20L1Address,
         l1Signer.provider!,
         l2Signer.provider!
       )
       const l3Token = l1l3Bridger.getL3TokenContract(l3TokenAddr, l3Provider)
 
-      const l3Balance = await l3Token.balanceOf(l3Recipient)
+      const l3Balance = await l3Token.balanceOf(
+        depositParams.destinationAddress || (await l1Signer.getAddress())
+      )
 
-      assert((await l3Provider.getBalance(l3Recipient)).gt('0'))
+      assert(
+        (
+          await l3Provider.getBalance(
+            depositParams.destinationAddress || (await l1Signer.getAddress())
+          )
+        ).gt('0')
+      )
 
       assert(l3Balance.eq(amount))
+    }
+
+    it('happy path non fee token or standard', async () => {
+      const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
+
+      const depositParams: Erc20DepositRequestParams = {
+        erc20L1Address: l1Token.address,
+        destinationAddress: l3Recipient,
+        amount,
+        l2Provider: l2Signer.provider!,
+        l3Provider,
+      }
+
+      await testHappyPathNonFeeOrStandard(depositParams)
+    })
+
+    it('happy path weth', async () => {
+      const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
+      const weth = AeWETH__factory.connect(
+        l2Network.tokenBridge.l1Weth,
+        l1Signer
+      )
+
+      // wrap some eth
+      await (
+        await weth.deposit({
+          value: amount,
+        })
+      ).wait()
+
+      // approve weth
+      await (
+        await weth.approve(l1l3Bridger.teleporterAddresses.l1Teleporter, amount)
+      ).wait()
+
+      const depositParams: Erc20DepositRequestParams = {
+        erc20L1Address: l2Network.tokenBridge.l1Weth,
+        destinationAddress: l3Recipient,
+        amount,
+        l2Provider: l2Signer.provider!,
+        l3Provider,
+      }
+
+      await testHappyPathNonFeeOrStandard(depositParams)
     })
 
     itOnlyWhenCustomGasToken('happy path OnlyCustomFee', async () => {

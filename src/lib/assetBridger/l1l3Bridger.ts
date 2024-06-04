@@ -980,6 +980,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     from: string
     to: string
     amount: BigNumber
+    isWeth: boolean
   }): Promise<RetryableGasValues> {
     const parentGateway = L1GatewayRouter__factory.connect(
       params.parentGatewayAddress,
@@ -1001,7 +1002,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         to: await parentGateway.counterpartGateway(),
         data: outboundCalldata,
         from: parentGateway.address,
-        l2CallValue: BigNumber.from(0),
+        l2CallValue: params.isWeth ? params.amount : BigNumber.from(0),
         excessFeeRefundAddress: params.to,
         callValueRefundAddress: new Address(params.from).applyAlias().value,
       },
@@ -1026,18 +1027,22 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l1Provider: Provider
     l2Provider: Provider
   }): Promise<RetryableGasValues> {
+    const parentGatewayAddress = await this.getL1L2GatewayAddress(
+      params.l1Token,
+      params.l1Provider
+    )
     return this._getTokenBridgeGasEstimates({
       parentProvider: params.l1Provider,
       childProvider: params.l2Provider,
       parentGasPrice: params.l1GasPrice,
       parentErc20Address: params.l1Token,
-      parentGatewayAddress: await this.getL1L2GatewayAddress(
-        params.l1Token,
-        params.l1Provider
-      ),
+      parentGatewayAddress,
       from: this.teleporterAddresses.l1Teleporter,
       to: params.l2ForwarderAddress,
       amount: BigNumber.from(params.amount),
+      isWeth:
+        getAddress(parentGatewayAddress) ===
+        getAddress(this.l2Network.tokenBridge.l1WethGateway),
     })
   }
 
@@ -1058,18 +1063,22 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         maxSubmissionFee: BigNumber.from(0),
       }
     }
+    const parentGatewayAddress = await this.getL1L2GatewayAddress(
+      params.l3FeeTokenL1Addr,
+      params.l1Provider
+    )
     return this._getTokenBridgeGasEstimates({
       parentProvider: params.l1Provider,
       childProvider: params.l2Provider,
       parentGasPrice: params.l1GasPrice,
       parentErc20Address: params.l3FeeTokenL1Addr,
-      parentGatewayAddress: await this.getL1L2GatewayAddress(
-        params.l3FeeTokenL1Addr,
-        params.l1Provider
-      ),
+      parentGatewayAddress,
       from: this.teleporterAddresses.l1Teleporter,
       to: params.l2ForwarderAddress,
       amount: params.feeTokenAmount,
+      isWeth:
+        getAddress(parentGatewayAddress) ===
+        getAddress(this.l2Network.tokenBridge.l1WethGateway),
     })
   }
 
@@ -1145,6 +1154,12 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       }
     } else {
       // we are bridging a non fee token to l3, this will go through the token bridge
+      const parentGatewayAddress = await this.getL2L3GatewayAddress(
+        params.partialTeleportParams.l1Token,
+        params.l1Provider,
+        params.l2Provider
+      )
+
       return this._getTokenBridgeGasEstimates({
         parentProvider: params.l2Provider,
         childProvider: params.l3Provider,
@@ -1153,14 +1168,13 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
           params.partialTeleportParams.l1Token,
           params.l1Provider
         ),
-        parentGatewayAddress: await this.getL2L3GatewayAddress(
-          params.partialTeleportParams.l1Token,
-          params.l1Provider,
-          params.l2Provider
-        ),
+        parentGatewayAddress,
         from: params.l2ForwarderAddress,
         to: params.partialTeleportParams.to,
         amount: BigNumber.from(params.partialTeleportParams.amount),
+        isWeth:
+          getAddress(parentGatewayAddress) ===
+          getAddress(this.l3Network.tokenBridge.l1WethGateway),
       })
     }
   }
