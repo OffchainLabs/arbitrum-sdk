@@ -23,7 +23,6 @@ import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeToken
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { Deferrable } from 'ethers/lib/utils'
 import {
-  describeOnlyWhenEth,
   itOnlyWhenCustomGasToken,
   itOnlyWhenEth,
 } from './custom-fee-token/mochaExtensions'
