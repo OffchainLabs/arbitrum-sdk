@@ -39,7 +39,7 @@ import * as path from 'path'
 import * as fs from 'fs'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import { WalletClient, createWalletClient, http } from 'viem'
-import { mainnet } from 'viem/chains'
+import { mainnet, arbitrum } from 'viem/chains'
 import { privateKeyToAccount } from 'viem/accounts'
 import { createViemSigner } from '../src/lib/utils/universal/signerTransforms'
 
@@ -237,7 +237,8 @@ export const testSetup = async (): Promise<{
   inboxTools: InboxTools
   l1Deployer: Signer
   l2Deployer: Signer
-  ethWalletClient: WalletClient
+  l1WalletClient: WalletClient
+  l2WalletClient: WalletClient
 }> => {
   const ethProvider = new JsonRpcProvider(config.ethUrl)
   const arbProvider = new JsonRpcProvider(config.arbUrl)
@@ -247,11 +248,12 @@ export const testSetup = async (): Promise<{
 
   const seed = Wallet.createRandom()
   const ethersL1Signer = seed.connect(ethProvider)
-  const l2Signer = seed.connect(arbProvider)
+  const ethersL2Signer = seed.connect(arbProvider)
 
-  const pk = ethersL1Signer._signingKey().privateKey as `0x${string}`
-  const ethWalletClient = createWalletClient({
-    account: privateKeyToAccount(pk),
+  const l1pk = ethersL1Signer._signingKey().privateKey as `0x${string}`
+  const l2pk = ethersL2Signer._signingKey().privateKey as `0x${string}`
+  const l1WalletClient = createWalletClient({
+    account: privateKeyToAccount(l1pk),
     transport: http(config.ethUrl),
     chain: {
       ...mainnet,
@@ -267,8 +269,28 @@ export const testSetup = async (): Promise<{
     },
   })
   const l1Signer = config.shouldUseViemSigner
-    ? createViemSigner(ethWalletClient)
+    ? createViemSigner(l1WalletClient)
     : ethersL1Signer
+
+  const l2WalletClient = createWalletClient({
+    account: privateKeyToAccount(l2pk),
+    transport: http(config.arbUrl),
+    chain: {
+      ...arbitrum,
+      id: 412346,
+      rpcUrls: {
+        default: {
+          http: [config.arbUrl],
+        },
+        public: {
+          http: [config.arbUrl],
+        },
+      },
+    },
+  })
+  const l2Signer = config.shouldUseViemSigner
+    ? createViemSigner(l2WalletClient)
+    : ethersL2Signer
 
   let setL1Network: L1Network, setL2Network: L2Network
   try {
@@ -314,10 +336,11 @@ export const testSetup = async (): Promise<{
 
   return {
     seed,
-    pk,
+    pk: l1pk,
     l1Signer,
     ethersL1Signer,
-    ethWalletClient,
+    l1WalletClient: l1WalletClient,
+    l2WalletClient: l2WalletClient,
     l2Signer,
     l1Network: setL1Network,
     l2Network: setL2Network,

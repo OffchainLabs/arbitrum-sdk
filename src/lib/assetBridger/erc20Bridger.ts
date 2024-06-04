@@ -71,6 +71,7 @@ import { OmitTyped, RequiredPick } from '../utils/types'
 import { RetryableDataTools } from '../dataEntities/retryableData'
 import { EventArgs } from '../dataEntities/event'
 import { L1ToL2MessageGasParams } from '../message/L1ToL2MessageCreator'
+import { applyUseViemSignerToAllMethods } from '../utils/universal/providerTransforms'
 
 export interface TokenApproveParams {
   /**
@@ -168,6 +169,7 @@ type DefaultedDepositRequest = RequiredPick<
 /**
  * Bridger for moving ERC20 tokens back and forth between L1 to L2
  */
+@applyUseViemSignerToAllMethods
 export class Erc20Bridger extends AssetBridger<
   Erc20DepositParams | L1ToL2TxReqAndSignerProvider,
   OmitTyped<Erc20WithdrawParams, 'from'> | L2ToL1TransactionRequest

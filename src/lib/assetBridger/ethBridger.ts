@@ -48,14 +48,10 @@ import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getL2Network } from '../dataEntities/networks'
 import {
   Providerish,
+  applyUseViemSignerToAllMethods,
   transformUniversalProviderToEthersV5Provider,
 } from '../utils/universal/providerTransforms'
-import {
-  isWalletClient,
-  createViemSigner,
-  ViemSigner,
-} from '../utils/universal/signerTransforms'
-import { WalletClient } from 'viem'
+import { ViemSigner } from '../utils/universal/signerTransforms'
 
 export interface EthWithdrawParams {
   /**
@@ -135,35 +131,10 @@ type EthDepositToRequestParams = OmitTyped<
   from: string
 }
 
-function useViemSigner(
-  target: any,
-  propertyKey: string,
-  descriptor: PropertyDescriptor
-) {
-  const originalMethod = descriptor.value
-
-  descriptor.value = function (...args: any[]) {
-    args = args.map(arg => {
-      if (arg && typeof arg === 'object') {
-        Object.keys(arg).forEach(key => {
-          if (isWalletClient(arg[key])) {
-            arg[key] = createViemSigner(arg[key])
-          }
-        })
-      }
-      return arg
-    })
-
-    // Call the original method with the transformed arguments
-    return originalMethod.apply(this, args)
-  }
-
-  return descriptor
-}
-
 /**
  * Bridger for moving ETH back and forth between L1 to L2
  */
+@applyUseViemSignerToAllMethods
 export class EthBridger extends AssetBridger<
   EthDepositParams | EthDepositToParams | L1ToL2TxReqAndSigner,
   EthWithdrawParams | L2ToL1TxReqAndSigner
@@ -218,7 +189,6 @@ export class EthBridger extends AssetBridger<
    * @param params
    * @returns
    */
-  @useViemSigner
   public async deposit(
     params: EthDepositParams | L1ToL2TxReqAndSigner
   ): Promise<L1EthDepositTransaction> {
