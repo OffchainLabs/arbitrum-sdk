@@ -48,8 +48,10 @@ import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getL2Network } from '../dataEntities/networks'
 import {
   Providerish,
+  applyUseViemSignerToAllMethods,
   transformUniversalProviderToEthersV5Provider,
 } from '../utils/universal/providerTransforms'
+import { ViemSigner } from '../utils/universal/signerTransforms'
 
 export interface EthWithdrawParams {
   /**
@@ -74,7 +76,7 @@ export type EthDepositParams = {
   /**
    * The L1 provider or signer
    */
-  l1Signer: Signer
+  l1Signer: Signer | ViemSigner | any
   /**
    * The amount of ETH or tokens to be deposited
    */
@@ -132,6 +134,7 @@ type EthDepositToRequestParams = OmitTyped<
 /**
  * Bridger for moving ETH back and forth between L1 to L2
  */
+@applyUseViemSignerToAllMethods
 export class EthBridger extends AssetBridger<
   EthDepositParams | EthDepositToParams | L1ToL2TxReqAndSigner,
   EthWithdrawParams | L2ToL1TxReqAndSigner

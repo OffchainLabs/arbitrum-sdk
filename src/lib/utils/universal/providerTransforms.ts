@@ -3,9 +3,11 @@ import EthersV5, {
   StaticJsonRpcProvider,
   WebSocketProvider,
 } from '@ethersproject/providers'
+import { BigNumber } from 'ethers'
 import EthersV6 from 'ethers-v6'
 import { PublicClient, createWalletClient, http } from 'viem'
 import Web3, { Web3BaseProvider } from 'web3'
+import { isWalletClient, createViemSigner } from './signerTransforms'
 
 export type Providerish =
   | PublicClient
@@ -115,7 +117,8 @@ export function isPublicClient(object: any): object is PublicClient {
     object.transport !== null &&
     typeof object.transport === 'object' &&
     'url' in object.transport &&
-    typeof object.transport.url === 'string'
+    typeof object.transport.url === 'string' &&
+    object.type === 'publicClient'
   )
 }
 
@@ -165,4 +168,61 @@ export const transformEthersProviderToWalletClient = async (
     return walletClient
   }
   throw new Error('Invalid provider')
+}
+
+export function useViemSigner(
+  target: any,
+  propertyKey: string,
+  descriptor: PropertyDescriptor
+) {
+  const originalMethod = descriptor.value
+
+  descriptor.value = function (...args: any[]) {
+    args = args.map(arg => {
+      if (arg && typeof arg === 'object') {
+        Object.keys(arg).forEach(key => {
+          // Check if the property is a PublicClient instance
+          if (isPublicClient(arg[key])) {
+            arg[key] = publicClientToProvider(arg[key])
+          }
+
+          // Check if the property is a WalletClient instance
+          if (isWalletClient(arg[key])) {
+            arg[key] = createViemSigner(arg[key])
+          }
+          // Check and convert bigint to BigNumber
+          if (typeof arg[key] === 'bigint') {
+            arg[key] = BigNumber.from(arg[key].toString())
+          }
+        })
+      }
+      return arg
+    })
+
+    // Call the original method with the transformed arguments
+    return originalMethod.apply(this, args)
+  }
+
+  return descriptor
+}
+
+export function applyUseViemSignerToAllMethods(constructor: any) {
+  Object.getOwnPropertyNames(constructor.prototype).forEach(method => {
+    if (
+      typeof constructor.prototype[method] === 'function' &&
+      method !== 'constructor'
+    ) {
+      const descriptor = Object.getOwnPropertyDescriptor(
+        constructor.prototype,
+        method
+      )
+      if (descriptor) {
+        Object.defineProperty(
+          constructor.prototype,
+          method,
+          useViemSigner(constructor.prototype, method, descriptor)
+        )
+      }
+    }
+  })
 }
