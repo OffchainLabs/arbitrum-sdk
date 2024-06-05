@@ -302,7 +302,7 @@ export class Erc20Bridger extends AssetBridger<
     }
   }
 
-  protected isApproveParams(
+  private isApproveParams(
     params: ApproveParamsOrTxRequest
   ): params is SignerTokenApproveParams {
     return (params as SignerTokenApproveParams).erc20L1Address != undefined
