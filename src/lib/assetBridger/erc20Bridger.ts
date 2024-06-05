@@ -882,7 +882,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     return { ...txRequest, to: this.nativeToken! }
   }
 
-  async approveGasTokenForCustomSpender({
+  public async approveGasTokenForCustomSpender({
     spender,
     l1Signer,
   }: {
