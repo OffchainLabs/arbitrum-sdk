@@ -854,6 +854,55 @@ interface TokenAndGateway {
  * Admin functionality for the token bridge
  */
 export class AdminErc20Bridger extends Erc20Bridger {
+  public async getApproveTokenForCustomSpenderRequest(
+    spender: string
+  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
+    const iErc20Interface = ERC20__factory.createInterface()
+    const data = iErc20Interface.encodeFunctionData('approve', [
+      spender,
+      Erc20Bridger.MAX_APPROVAL,
+    ])
+
+    return {
+      to: spender,
+      data,
+      value: BigNumber.from(0),
+    }
+  }
+
+  public async getApproveGasTokenForCustomSpenderRequest(
+    spender: string
+  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
+    if (this.nativeTokenIsEth) {
+      throw new Error('chain uses ETH as its native/gas token')
+    }
+
+    const txRequest = await this.getApproveTokenForCustomSpenderRequest(spender)
+
+    return { ...txRequest, to: this.nativeToken! }
+  }
+
+  async approveGasTokenForCustomSpender({
+    spender,
+    l1Signer,
+  }: {
+    spender: string
+    l1Signer: Signer
+  }): Promise<ethers.ContractTransaction> {
+    if (this.nativeTokenIsEth) {
+      throw new Error('chain uses ETH as its native/gas token')
+    }
+
+    await this.checkL1Network(l1Signer)
+
+    const approveGasTokenRequest =
+      await this.getApproveGasTokenForCustomSpenderRequest(spender)
+
+    return l1Signer.sendTransaction({
+      ...approveGasTokenRequest,
+      // TODO: ...overrides,
+    })
+  }
   /**
    * Register a custom token on the Arbitrum bridge
    * See https://developer.offchainlabs.com/docs/bridging_assets#the-arbitrum-generic-custom-gateway for more details
@@ -879,6 +928,19 @@ export class AdminErc20Bridger extends Erc20Bridger {
 
     const l1Token = ICustomToken__factory.connect(l1TokenAddress, l1Signer)
     const l2Token = IArbToken__factory.connect(l2TokenAddress, l2Provider)
+
+    if (!this.nativeTokenIsEth && this.nativeToken) {
+      const nativeTokenAllowance = await ERC20__factory.connect(
+        this.nativeToken,
+        l1Signer
+      ).allowance(l1SenderAddress, l1Token.address)
+
+      // TODO: if not enough allowance
+      await this.approveGasTokenForCustomSpender({
+        spender: l1Token.address,
+        l1Signer,
+      })
+    }
 
     // sanity checks
     await l1Token.deployed()
