@@ -151,6 +151,16 @@ const registerCustomToken = async (
   l2Signer: Signer,
   adminErc20Bridger: AdminErc20Bridger
 ) => {
+  const deployL2CustomToken = async () => {
+    const l2CustomTokenFac = new TestArbCustomToken__factory(l2Signer)
+    const l2CustomToken = await l2CustomTokenFac.deploy(
+      l2Network.tokenBridge.l2CustomGateway,
+      l1CustomToken.address
+    )
+    await l2CustomToken.deployed()
+    return l2CustomToken
+  }
+
   // create a custom token on L1 and L2
   const l1CustomTokenFactory = isL2NetworkWithCustomFeeToken()
     ? new TestOrbitCustomTokenL1__factory(l1Signer)
@@ -160,6 +170,18 @@ const registerCustomToken = async (
     l2Network.tokenBridge.l1GatewayRouter
   )
   await l1CustomToken.deployed()
+
+  // it should fail without the approval
+  try {
+    await deployL2CustomToken()
+    throw 'L2 custom token is not approved but got deployed'
+  } catch (e) {
+    expect(
+      e,
+      'Incorrect error thrown, expected insufficient allowance'
+    ).to.contain('Insufficient allowance')
+  }
+
   const amount = ethers.utils.parseEther('1')
 
   if (isL2NetworkWithCustomFeeToken()) {
@@ -170,12 +192,7 @@ const registerCustomToken = async (
     await approvalTx.wait()
   }
 
-  const l2CustomTokenFac = new TestArbCustomToken__factory(l2Signer)
-  const l2CustomToken = await l2CustomTokenFac.deploy(
-    l2Network.tokenBridge.l2CustomGateway,
-    l1CustomToken.address
-  )
-  await l2CustomToken.deployed()
+  const l2CustomToken = await deployL2CustomToken()
 
   // check starting conditions - should initially use the default gateway
   const l1GatewayRouter = new L1GatewayRouter__factory(l1Signer).attach(
