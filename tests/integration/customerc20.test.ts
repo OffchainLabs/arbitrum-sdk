@@ -172,14 +172,16 @@ const registerCustomToken = async (
   await l1CustomToken.deployed()
 
   // it should fail without the approval
-  try {
-    await deployL2CustomToken()
-    throw 'L2 custom token is not approved but got deployed'
-  } catch (e) {
-    expect(
-      e,
-      'Incorrect error thrown, expected insufficient allowance'
-    ).to.contain('Insufficient allowance')
+  if (isL2NetworkWithCustomFeeToken()) {
+    try {
+      await deployL2CustomToken()
+      throw 'L2 custom token is not approved but got deployed'
+    } catch (e) {
+      expect(
+        e,
+        'Incorrect error thrown, expected insufficient allowance'
+      ).to.contain('Insufficient allowance')
+    }
   }
 
   const amount = ethers.utils.parseEther('1')
