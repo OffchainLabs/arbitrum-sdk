@@ -885,9 +885,11 @@ export class AdminErc20Bridger extends Erc20Bridger {
   public async approveGasTokenForCustomSpender({
     spender,
     l1Signer,
+    overrides,
   }: {
     spender: string
     l1Signer: Signer
+    overrides?: Overrides
   }): Promise<ethers.ContractTransaction> {
     if (this.nativeTokenIsEth) {
       throw new Error('chain uses ETH as its native/gas token')
@@ -900,7 +902,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
 
     return l1Signer.sendTransaction({
       ...approveGasTokenRequest,
-      // TODO: ...overrides,
+      ...overrides,
     })
   }
   /**
