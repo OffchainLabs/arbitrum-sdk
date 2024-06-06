@@ -220,9 +220,9 @@ const registerCustomToken = async (
         l2Signer.provider!
       )
       await regTx.wait()
-      throw 'L2 custom token is not approved but got deployed'
-    } catch (e) {
-      expect(e).to.contain('Insufficient allowance')
+      throw new Error('L2 custom token is not approved but got deployed')
+    } catch (err) {
+      expect((err as Error).message).to.contain('Insufficient allowance')
     }
   }
 
