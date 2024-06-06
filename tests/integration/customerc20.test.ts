@@ -161,16 +161,6 @@ const registerCustomToken = async (
   )
   await l1CustomToken.deployed()
 
-  const amount = ethers.utils.parseEther('1')
-
-  if (isL2NetworkWithCustomFeeToken()) {
-    const approvalTx = await ERC20__factory.connect(
-      l2Network.nativeToken!,
-      l1Signer
-    ).approve(l1CustomToken.address, amount)
-    await approvalTx.wait()
-  }
-
   const l2CustomTokenFac = new TestArbCustomToken__factory(l2Signer)
   const l2CustomToken = await l2CustomTokenFac.deploy(
     l2Network.tokenBridge.l2CustomGateway,
@@ -234,6 +224,16 @@ const registerCustomToken = async (
     } catch (err) {
       expect((err as Error).message).to.contain('Insufficient allowance')
     }
+  }
+
+  const amount = ethers.utils.parseEther('1')
+
+  if (isL2NetworkWithCustomFeeToken()) {
+    const approvalTx = await ERC20__factory.connect(
+      l2Network.nativeToken!,
+      l1Signer
+    ).approve(l1CustomToken.address, amount)
+    await approvalTx.wait()
   }
 
   // send the messages
