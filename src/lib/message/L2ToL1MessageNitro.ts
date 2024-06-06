@@ -589,24 +589,6 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     if (l2Network.isBold) {
       logs = (
         await eventFetcher.getEvents(
-          RollupUserLogic__factory,
-          t => t.filters.NodeCreated(),
-          {
-            fromBlock: Math.max(
-              latestBlock -
-                BigNumber.from(l2Network.confirmPeriodBlocks)
-                  .add(ASSERTION_CONFIRMED_PADDING)
-                  .toNumber(),
-              0
-            ),
-            toBlock: 'latest',
-            address: rollup.address,
-          }
-        )
-      ).sort((a, b) => a.event.nodeNum.toNumber() - b.event.nodeNum.toNumber())
-    } else {
-      logs = (
-        await eventFetcher.getEvents(
           BoldRollupUserLogic__factory,
           t => t.filters.AssertionCreated(),
           {
@@ -622,6 +604,24 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
           }
         )
       ).sort((a, b) => a.blockNumber - b.blockNumber)
+    } else {
+      logs = (
+        await eventFetcher.getEvents(
+          RollupUserLogic__factory,
+          t => t.filters.NodeCreated(),
+          {
+            fromBlock: Math.max(
+              latestBlock -
+                BigNumber.from(l2Network.confirmPeriodBlocks)
+                  .add(ASSERTION_CONFIRMED_PADDING)
+                  .toNumber(),
+              0
+            ),
+            toBlock: 'latest',
+            address: rollup.address,
+          }
+        )
+      ).sort((a, b) => a.event.nodeNum.toNumber() - b.event.nodeNum.toNumber())
     }
 
     const lastL2Block =
