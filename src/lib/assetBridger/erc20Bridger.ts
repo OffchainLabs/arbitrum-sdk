@@ -895,11 +895,17 @@ export class AdminErc20Bridger extends Erc20Bridger {
         l1Token.address
       )
 
-      if (allowance.lt(BigNumber.from(50_000_000_000_000))) {
-        throw new Error(
-          `Insufficient allowance. Please increase spending for: owner - ${l1SenderAddress}, spender - ${l1Token.address}.`
-        )
-      }
+      const gEstimator = new L1ToL2MessageGasEstimator(l2Provider)
+
+      const maxFeePerGas = await gEstimator.estimateMaxFeePerGas({
+        percentIncrease: BigNumber.from(500),
+      })
+
+      // if (allowance.lt(BigNumber.from(50_000_000_000_000))) {
+      //   throw new Error(
+      //     `Insufficient allowance. Please increase spending for: owner - ${l1SenderAddress}, spender - ${l1Token.address}.`
+      //   )
+      // }
     }
 
     const l1AddressFromL2 = await l2Token.l1Address()
@@ -955,6 +961,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     }
 
     const gEstimator = new L1ToL2MessageGasEstimator(l2Provider)
+
     const setTokenEstimates2 = await gEstimator.populateFunctionParams(
       (params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>) =>
         encodeFuncData(
@@ -986,6 +993,8 @@ export class AdminErc20Bridger extends Erc20Bridger {
         ),
       l1Provider
     )
+
+    throw `gas: ${setGatewayEstimates2.estimates.}`
 
     const registerTx = await l1Signer.sendTransaction({
       to: l1Token.address,
