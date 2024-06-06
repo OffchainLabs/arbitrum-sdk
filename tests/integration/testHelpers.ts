@@ -145,14 +145,13 @@ export const withdrawToken = async (params: WithdrawalParams) => {
     expectedL2Gateway
   )
 
-  const gatewayWithdrawEvents =
-    await params.erc20Bridger.getChildWithdrawalEvents(
-      params.childSigner.provider!,
-      gatewayAddress,
-      { fromBlock: withdrawRec.blockNumber, toBlock: 'latest' },
-      params.parentToken.address,
-      walletAddress
-    )
+  const gatewayWithdrawEvents = await params.erc20Bridger.getWithdrawalEvents(
+    params.childSigner.provider!,
+    gatewayAddress,
+    { fromBlock: withdrawRec.blockNumber, toBlock: 'latest' },
+    params.parentToken.address,
+    walletAddress
+  )
   expect(gatewayWithdrawEvents.length).to.equal(1, 'token query failed')
 
   const balBefore = await params.parentToken.balanceOf(

@@ -355,7 +355,7 @@ export class Erc20Bridger extends AssetBridger<
    * @param filter
    * @returns
    */
-  public async getChildWithdrawalEvents(
+  public async getWithdrawalEvents(
     childProvider: Provider,
     gatewayAddress: string,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
@@ -548,7 +548,7 @@ export class Erc20Bridger extends AssetBridger<
    * @param parentProvider
    * @returns
    */
-  public async parentTokenIsDisabled(
+  public async isDepositDisabled(
     parentTokenAddress: string,
     parentProvider: Provider
   ): Promise<boolean> {
