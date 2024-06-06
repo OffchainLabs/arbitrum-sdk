@@ -982,6 +982,60 @@ export class AdminErc20Bridger extends Erc20Bridger {
   }
 
   /**
+   * Get all the gateway set events on the L1 gateway router
+   * @param l1Provider
+   * @param customNetworkL1GatewayRouter
+   * @returns
+   */
+  public async getL1GatewaySetEvents(
+    l1Provider: Provider,
+    filter: { fromBlock: BlockTag; toBlock: BlockTag }
+  ): Promise<EventArgs<GatewaySetEvent>[]> {
+    await this.checkL1Network(l1Provider)
+
+    const l1GatewayRouterAddress = this.l2Network.tokenBridge.l1GatewayRouter
+    const eventFetcher = new EventFetcher(l1Provider)
+    return (
+      await eventFetcher.getEvents(
+        L1GatewayRouter__factory,
+        t => t.filters.GatewaySet(),
+        { ...filter, address: l1GatewayRouterAddress }
+      )
+    ).map(a => a.event)
+  }
+
+  /**
+   * Get all the gateway set events on the L2 gateway router
+   * @param l1Provider
+   * @param customNetworkL1GatewayRouter
+   * @returns
+   */
+  public async getL2GatewaySetEvents(
+    l2Provider: Provider,
+    filter: { fromBlock: BlockTag; toBlock: BlockTag },
+    customNetworkL2GatewayRouter?: string
+  ): Promise<EventArgs<GatewaySetEvent>[]> {
+    if (this.l2Network.isCustom && !customNetworkL2GatewayRouter) {
+      throw new ArbSdkError(
+        'Must supply customNetworkL2GatewayRouter for custom network '
+      )
+    }
+    await this.checkL2Network(l2Provider)
+
+    const l2GatewayRouterAddress =
+      customNetworkL2GatewayRouter || this.l2Network.tokenBridge.l2GatewayRouter
+
+    const eventFetcher = new EventFetcher(l2Provider)
+    return (
+      await eventFetcher.getEvents(
+        L1GatewayRouter__factory,
+        t => t.filters.GatewaySet(),
+        { ...filter, address: l2GatewayRouterAddress }
+      )
+    ).map(a => a.event)
+  }
+
+  /**
    * Register the provided token addresses against the provided gateways
    * @param l1Signer
    * @param l2Provider
