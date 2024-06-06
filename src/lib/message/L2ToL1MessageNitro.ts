@@ -54,7 +54,7 @@ import { EventArgs } from '../dataEntities/event'
 import { L2ToL1MessageStatus } from '../dataEntities/message'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
 
-// 
+//
 
 /**
  * Conditional type for Signer or Provider. If T is of type Provider
@@ -247,10 +247,10 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
   private parseAssertionCreatedEvent(e: FetchedEvent<AssertionCreatedEvent>) {
     return {
       afterState: {
-        blockHash: (e as FetchedEvent<AssertionCreatedEvent>).event.assertion.afterState
-          .globalState.bytes32Vals[0],
-        sendRoot: (e as FetchedEvent<AssertionCreatedEvent>).event.assertion.afterState
-          .globalState.bytes32Vals[1],
+        blockHash: (e as FetchedEvent<AssertionCreatedEvent>).event.assertion
+          .afterState.globalState.bytes32Vals[0],
+        sendRoot: (e as FetchedEvent<AssertionCreatedEvent>).event.assertion
+          .afterState.globalState.bytes32Vals[1],
       },
     }
   }
@@ -259,7 +259,8 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     log: FetchedEvent<NodeCreatedEvent> | FetchedEvent<AssertionCreatedEvent>
   ): log is FetchedEvent<AssertionCreatedEvent> {
     return (
-      (log as FetchedEvent<AssertionCreatedEvent>).event.challengeManager != undefined
+      (log as FetchedEvent<AssertionCreatedEvent>).event.challengeManager !=
+      undefined
     )
   }
 
@@ -445,10 +446,9 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
               address: rollup.address,
             }
           )
-          latestCreatedAssertionId = (
-            assertionCreatedEvents[assertionCreatedEvents.length - 1]
-              .event
-          ).assertionHash
+          latestCreatedAssertionId =
+            assertionCreatedEvents[assertionCreatedEvents.length - 1].event
+              .assertionHash
         } else {
           latestCreatedAssertionId = await rollup.callStatic.latestNodeCreated()
         }
@@ -665,8 +665,8 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     }
 
     if (l2Network.isBold) {
-      const assertionHash = (foundLog as FetchedEvent<AssertionCreatedEvent>).event
-        .assertionHash
+      const assertionHash = (foundLog as FetchedEvent<AssertionCreatedEvent>)
+        .event.assertionHash
       const assertion = await (rollup as BoldRollupUserLogic).getAssertion(
         assertionHash
       )
