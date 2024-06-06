@@ -167,6 +167,15 @@ const registerCustomToken = async (
     l1CustomToken.address
   )
   await l2CustomToken.deployed()
+  const amount = ethers.utils.parseEther('1')
+
+  if (isL2NetworkWithCustomFeeToken()) {
+    const approvalTx = await ERC20__factory.connect(
+      l2Network.nativeToken!,
+      l1Signer
+    ).approve(l1CustomToken.address, amount)
+    await approvalTx.wait()
+  }
 
   // check starting conditions - should initially use the default gateway
   const l1GatewayRouter = new L1GatewayRouter__factory(l1Signer).attach(
@@ -225,16 +234,6 @@ const registerCustomToken = async (
   //     expect((err as Error).message).to.contain('Insufficient allowance')
   //   }
   // }
-
-  const amount = ethers.utils.parseEther('1')
-
-  if (isL2NetworkWithCustomFeeToken()) {
-    const approvalTx = await ERC20__factory.connect(
-      l2Network.nativeToken!,
-      l1Signer
-    ).approve(l1CustomToken.address, amount)
-    await approvalTx.wait()
-  }
 
   // send the messages
   const regTx = await adminErc20Bridger.registerCustomToken(
