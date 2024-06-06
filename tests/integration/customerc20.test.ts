@@ -231,9 +231,8 @@ const registerCustomToken = async (
   }
 
   const gEstimator = new L1ToL2MessageGasEstimator(l2Signer.provider!)
-  const maxFeePerGas = await gEstimator.estimateMaxFeePerGas({
-    percentIncrease: BigNumber.from(500),
-  })
+  // increase by 500%
+  const maxFeePerGas = (await gEstimator.estimateMaxFeePerGas()).mul(6)
   // hardcode gas limit to 60k
   const estimatedGas = BigNumber.from(60_000).mul(maxFeePerGas)
 
