@@ -161,12 +161,6 @@ const registerCustomToken = async (
   )
   await l1CustomToken.deployed()
 
-  const l2CustomTokenFac = new TestArbCustomToken__factory(l2Signer)
-  const l2CustomToken = await l2CustomTokenFac.deploy(
-    l2Network.tokenBridge.l2CustomGateway,
-    l1CustomToken.address
-  )
-  await l2CustomToken.deployed()
   const amount = ethers.utils.parseEther('1')
 
   if (isL2NetworkWithCustomFeeToken()) {
@@ -176,6 +170,13 @@ const registerCustomToken = async (
     ).approve(l1CustomToken.address, amount)
     await approvalTx.wait()
   }
+
+  const l2CustomTokenFac = new TestArbCustomToken__factory(l2Signer)
+  const l2CustomToken = await l2CustomTokenFac.deploy(
+    l2Network.tokenBridge.l2CustomGateway,
+    l1CustomToken.address
+  )
+  await l2CustomToken.deployed()
 
   // check starting conditions - should initially use the default gateway
   const l1GatewayRouter = new L1GatewayRouter__factory(l1Signer).attach(
