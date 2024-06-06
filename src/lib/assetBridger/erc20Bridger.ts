@@ -996,8 +996,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
       l1Provider
     )
 
-    throw `gas: ${setGatewayEstimates2.estimates.gasLimit}`
-
     const registerTx = await l1Signer.sendTransaction({
       to: l1Token.address,
       data: setGatewayEstimates2.data,
