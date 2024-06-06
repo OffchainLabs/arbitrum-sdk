@@ -875,6 +875,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     await this.checkL1Network(l1Signer)
     await this.checkL2Network(l2Provider)
 
+    const l1Provider = l1Signer.provider!
     const l1SenderAddress = await l1Signer.getAddress()
 
     const l1Token = ICustomToken__factory.connect(l1TokenAddress, l1Signer)
@@ -883,6 +884,23 @@ export class AdminErc20Bridger extends Erc20Bridger {
     // sanity checks
     await l1Token.deployed()
     await l2Token.deployed()
+
+    if (!this.nativeTokenIsEth) {
+      const nativeTokenContract = ERC20__factory.connect(
+        this.nativeToken!,
+        l1Provider
+      )
+      const allowance = await nativeTokenContract.allowance(
+        l1SenderAddress,
+        l1Token.address
+      )
+
+      if (allowance.lt(BigNumber.from(50_000_000_000_000))) {
+        throw new Error(
+          `Insufficient allowance. Please increase spending for: owner - ${l1SenderAddress}, spender - ${l1Token.address}.`
+        )
+      }
+    }
 
     const l1AddressFromL2 = await l2Token.l1Address()
     if (l1AddressFromL2 !== l1TokenAddress) {
@@ -936,7 +954,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
       }
     }
 
-    const l1Provider = l1Signer.provider!
     const gEstimator = new L1ToL2MessageGasEstimator(l2Provider)
     const setTokenEstimates2 = await gEstimator.populateFunctionParams(
       (params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>) =>
@@ -969,8 +986,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
         ),
       l1Provider
     )
-
-    throw `deposit: ${setGatewayEstimates2.estimates.deposit.toString()}`
 
     const registerTx = await l1Signer.sendTransaction({
       to: l1Token.address,
