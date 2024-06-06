@@ -121,7 +121,9 @@ describe('Ether', async () => {
       'balance failed to update after eth deposit'
     )
 
-    const waitResult = await rec.waitForChildTx(childSigner.provider!)
+    const waitResult = await rec.waitForChildTransactionReceipt(
+      childSigner.provider!
+    )
 
     const l1ToL2Messages = await rec.getEthDeposits(childSigner.provider!)
     expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
