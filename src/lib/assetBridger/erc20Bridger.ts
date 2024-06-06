@@ -1005,6 +1005,9 @@ export class AdminErc20Bridger extends Erc20Bridger {
         l1Token.address
       )
 
+      console.warn('throw error.')
+      throw `Allowance: ${allowance.toString()}, gas: ${gEstimates.estimates.deposit.toString()}`
+
       if (allowance.lt(gEstimates.estimates.deposit)) {
         throw new Error(
           `Insufficient allowance, current - ${allowance.toString()}, expected - ${gEstimates.estimates.deposit.toString()}. Please increase approval amount for: owner - ${l1SenderAddress}, spender - ${
