@@ -133,7 +133,7 @@ describe('Ether', async () => {
       ethToDeposit.toString()
     )
 
-    prettyLog('chainTxHash: ' + waitResult.message.chainDepositTxHash)
+    prettyLog('childDepositTxHash: ' + waitResult.message.childDepositTxHash)
     prettyLog('chain transaction found!')
     expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
     expect(waitResult.txReceipt).to.exist
