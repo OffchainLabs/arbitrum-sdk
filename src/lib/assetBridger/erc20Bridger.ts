@@ -901,11 +901,14 @@ export class AdminErc20Bridger extends Erc20Bridger {
         percentIncrease: BigNumber.from(500),
       })
 
-      // if (allowance.lt(BigNumber.from(50_000_000_000_000))) {
-      //   throw new Error(
-      //     `Insufficient allowance. Please increase spending for: owner - ${l1SenderAddress}, spender - ${l1Token.address}.`
-      //   )
-      // }
+      // hardcode gas limit to 60k
+      const estimatedGas = BigNumber.from(60_000).mul(maxFeePerGas)
+
+      if (allowance.lt(BigNumber.from(estimatedGas))) {
+        throw new Error(
+          `Insufficient allowance. Please increase spending for: owner - ${l1SenderAddress}, spender - ${l1Token.address}.`
+        )
+      }
     }
 
     const l1AddressFromL2 = await l2Token.l1Address()
@@ -961,7 +964,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
     }
 
     const gEstimator = new L1ToL2MessageGasEstimator(l2Provider)
-
     const setTokenEstimates2 = await gEstimator.populateFunctionParams(
       (params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>) =>
         encodeFuncData(

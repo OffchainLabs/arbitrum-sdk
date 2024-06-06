@@ -211,20 +211,20 @@ const registerCustomToken = async (
   ).to.eq(constants.AddressZero)
 
   // it should fail without the approval
-  // if (isL2NetworkWithCustomFeeToken()) {
-  //   try {
-  //     const regTx = await adminErc20Bridger.registerCustomToken(
-  //       l1CustomToken.address,
-  //       l2CustomToken.address,
-  //       l1Signer,
-  //       l2Signer.provider!
-  //     )
-  //     await regTx.wait()
-  //     throw new Error('L2 custom token is not approved but got deployed')
-  //   } catch (err) {
-  //     expect((err as Error).message).to.contain('Insufficient allowance')
-  //   }
-  // }
+  if (isL2NetworkWithCustomFeeToken()) {
+    try {
+      const regTx = await adminErc20Bridger.registerCustomToken(
+        l1CustomToken.address,
+        l2CustomToken.address,
+        l1Signer,
+        l2Signer.provider!
+      )
+      await regTx.wait()
+      throw new Error('L2 custom token is not approved but got deployed')
+    } catch (err) {
+      expect((err as Error).message).to.contain('Insufficient allowance')
+    }
+  }
 
   const amount = ethers.utils.parseEther('1')
 
