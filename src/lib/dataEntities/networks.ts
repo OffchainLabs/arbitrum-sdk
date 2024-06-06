@@ -69,6 +69,13 @@ export interface ArbitrumNetwork {
 }
 
 /**
+ * Represents an Arbitrum network with a token bridge.
+ */
+export type ArbitrumNetworkWithTokenBridge = ArbitrumNetwork & {
+  tokenBridge: TokenBridge
+}
+
+/**
  * This type is only here for when you want to achieve backwards compatibility between SDK v3 and v4.
  *
  * Please see {@link ArbitrumNetwork} for the latest type.
