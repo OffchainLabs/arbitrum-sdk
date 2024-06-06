@@ -17,7 +17,7 @@
 'use strict'
 
 import { expect } from 'chai'
-import { Signer, Wallet, constants, utils, ethers } from 'ethers'
+import { Signer, Wallet, constants, utils } from 'ethers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Logger, LogLevel } from '@ethersproject/logger'
 Logger.setLogLevel(LogLevel.ERROR)
