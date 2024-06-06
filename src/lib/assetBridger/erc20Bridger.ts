@@ -850,105 +850,10 @@ interface TokenAndGateway {
   gatewayAddr: string
 }
 
-type GasParams = {
-  maxSubmissionCost: BigNumber
-  gasLimit: BigNumber
-}
-
 /**
  * Admin functionality for the token bridge
  */
 export class AdminErc20Bridger extends Erc20Bridger {
-  private async registerCustomTokenEstimateGas({
-    l1Signer,
-    l2Provider,
-    l1TokenAddress,
-    l2TokenAddress,
-  }: {
-    l1Signer: Signer
-    l2Provider: Provider
-    l1TokenAddress: string
-    l2TokenAddress: string
-  }) {
-    const l1Token = ICustomToken__factory.connect(l1TokenAddress, l1Signer)
-    const from = await l1Signer.getAddress()
-    const l1SenderAddress = await l1Signer.getAddress()
-
-    const l1Provider = l1Signer.provider!
-
-    const encodeFuncData = (
-      setTokenGas: GasParams,
-      setGatewayGas: GasParams,
-      maxFeePerGas: BigNumber
-    ) => {
-      // if we set maxFeePerGas to be the error triggering param then it will
-      // always trigger for the setToken call and never make it ti setGateways
-      // so we here we just use the gas limit to trigger retryable data
-      const multipliedFeePerGas = maxFeePerGas.eq(
-        RetryableDataTools.ErrorTriggeringParams.maxFeePerGas
-      )
-        ? RetryableDataTools.ErrorTriggeringParams.maxFeePerGas.mul(5)
-        : maxFeePerGas
-      const setTokenDeposit = setTokenGas.gasLimit
-        .mul(multipliedFeePerGas)
-        .add(setTokenGas.maxSubmissionCost)
-      const setGatewayDeposit = setGatewayGas.gasLimit
-        .mul(multipliedFeePerGas)
-        .add(setGatewayGas.maxSubmissionCost)
-
-      const data = l1Token.interface.encodeFunctionData('registerTokenOnL2', [
-        l2TokenAddress,
-        setTokenGas.maxSubmissionCost,
-        setGatewayGas.maxSubmissionCost,
-        setTokenGas.gasLimit,
-        setGatewayGas.gasLimit,
-        multipliedFeePerGas,
-        setTokenDeposit,
-        setGatewayDeposit,
-        l1SenderAddress,
-      ])
-
-      return {
-        data,
-        value: setTokenDeposit.add(setGatewayDeposit),
-        to: l1Token.address,
-        from,
-      }
-    }
-
-    const gEstimator = new L1ToL2MessageGasEstimator(l2Provider)
-    const setTokenEstimates2 = await gEstimator.populateFunctionParams(
-      (params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>) =>
-        encodeFuncData(
-          {
-            gasLimit: params.gasLimit,
-            maxSubmissionCost: params.maxSubmissionCost,
-          },
-          {
-            gasLimit: RetryableDataTools.ErrorTriggeringParams.gasLimit,
-            maxSubmissionCost: BigNumber.from(1),
-          },
-          params.maxFeePerGas
-        ),
-      l1Provider
-    )
-
-    return gEstimator.populateFunctionParams(
-      (params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>) =>
-        encodeFuncData(
-          {
-            gasLimit: setTokenEstimates2.estimates.gasLimit,
-            maxSubmissionCost: setTokenEstimates2.estimates.maxSubmissionCost,
-          },
-          {
-            gasLimit: params.gasLimit,
-            maxSubmissionCost: params.maxSubmissionCost,
-          },
-          params.maxFeePerGas
-        ),
-      l1Provider
-    )
-  }
   /**
    * Register a custom token on the Arbitrum bridge
    * See https://developer.offchainlabs.com/docs/bridging_assets#the-arbitrum-generic-custom-gateway for more details
@@ -967,11 +872,9 @@ export class AdminErc20Bridger extends Erc20Bridger {
     if (!SignerProviderUtils.signerHasProvider(l1Signer)) {
       throw new MissingProviderArbSdkError('l1Signer')
     }
-
     await this.checkL1Network(l1Signer)
     await this.checkL2Network(l2Provider)
 
-    const l1Provider = l1Signer.provider!
     const l1SenderAddress = await l1Signer.getAddress()
 
     const l1Token = ICustomToken__factory.connect(l1TokenAddress, l1Signer)
@@ -988,96 +891,94 @@ export class AdminErc20Bridger extends Erc20Bridger {
       )
     }
 
-    const gEstimates = await this.registerCustomTokenEstimateGas({
-      l1Signer,
-      l2Provider,
-      l1TokenAddress,
-      l2TokenAddress,
-    })
-
-    if (!this.nativeTokenIsEth) {
-      const nativeTokenContract = ERC20__factory.connect(
-        this.nativeToken!,
-        l1Provider
+    type GasParams = {
+      maxSubmissionCost: BigNumber
+      gasLimit: BigNumber
+    }
+    const from = await l1Signer.getAddress()
+    const encodeFuncData = (
+      setTokenGas: GasParams,
+      setGatewayGas: GasParams,
+      maxFeePerGas: BigNumber
+    ) => {
+      // if we set maxFeePerGas to be the error triggering param then it will
+      // always trigger for the setToken call and never make it ti setGateways
+      // so we here we just use the gas limit to trigger retryable data
+      const doubleFeePerGas = maxFeePerGas.eq(
+        RetryableDataTools.ErrorTriggeringParams.maxFeePerGas
       )
-      const allowance = await nativeTokenContract.allowance(
+        ? RetryableDataTools.ErrorTriggeringParams.maxFeePerGas.mul(2)
+        : maxFeePerGas
+      const setTokenDeposit = setTokenGas.gasLimit
+        .mul(doubleFeePerGas)
+        .add(setTokenGas.maxSubmissionCost)
+      const setGatewayDeposit = setGatewayGas.gasLimit
+        .mul(doubleFeePerGas)
+        .add(setGatewayGas.maxSubmissionCost)
+
+      const data = l1Token.interface.encodeFunctionData('registerTokenOnL2', [
+        l2TokenAddress,
+        setTokenGas.maxSubmissionCost,
+        setGatewayGas.maxSubmissionCost,
+        setTokenGas.gasLimit,
+        setGatewayGas.gasLimit,
+        doubleFeePerGas,
+        setTokenDeposit,
+        setGatewayDeposit,
         l1SenderAddress,
-        l1Token.address
-      )
+      ])
 
-      console.warn('throw error.')
-      throw `Allowance: ${allowance.toString()}, gas: ${gEstimates.estimates.deposit.toString()}`
-
-      if (allowance.lt(gEstimates.estimates.deposit)) {
-        throw new Error(
-          `Insufficient allowance, current - ${allowance.toString()}, expected - ${gEstimates.estimates.deposit.toString()}. Please increase approval amount for: owner - ${l1SenderAddress}, spender - ${
-            l1Token.address
-          }.`
-        )
+      return {
+        data,
+        value: setTokenDeposit.add(setGatewayDeposit),
+        to: l1Token.address,
+        from,
       }
     }
 
+    const l1Provider = l1Signer.provider!
+    const gEstimator = new L1ToL2MessageGasEstimator(l2Provider)
+    const setTokenEstimates2 = await gEstimator.populateFunctionParams(
+      (params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>) =>
+        encodeFuncData(
+          {
+            gasLimit: params.gasLimit,
+            maxSubmissionCost: params.maxSubmissionCost,
+          },
+          {
+            gasLimit: RetryableDataTools.ErrorTriggeringParams.gasLimit,
+            maxSubmissionCost: BigNumber.from(1),
+          },
+          params.maxFeePerGas
+        ),
+      l1Provider
+    )
+
+    const setGatewayEstimates2 = await gEstimator.populateFunctionParams(
+      (params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>) =>
+        encodeFuncData(
+          {
+            gasLimit: setTokenEstimates2.estimates.gasLimit,
+            maxSubmissionCost: setTokenEstimates2.estimates.maxSubmissionCost,
+          },
+          {
+            gasLimit: params.gasLimit,
+            maxSubmissionCost: params.maxSubmissionCost,
+          },
+          params.maxFeePerGas
+        ),
+      l1Provider
+    )
+
+    throw `deposit: ${setGatewayEstimates2.estimates.deposit.toString()}`
+
     const registerTx = await l1Signer.sendTransaction({
       to: l1Token.address,
-      data: gEstimates.data,
-      value: gEstimates.value,
+      data: setGatewayEstimates2.data,
+      value: setGatewayEstimates2.value,
     })
 
     return L1TransactionReceipt.monkeyPatchWait(registerTx)
-  }
-
-  /**
-   * Get all the gateway set events on the L1 gateway router
-   * @param l1Provider
-   * @param customNetworkL1GatewayRouter
-   * @returns
-   */
-  public async getL1GatewaySetEvents(
-    l1Provider: Provider,
-    filter: { fromBlock: BlockTag; toBlock: BlockTag }
-  ): Promise<EventArgs<GatewaySetEvent>[]> {
-    await this.checkL1Network(l1Provider)
-
-    const l1GatewayRouterAddress = this.l2Network.tokenBridge.l1GatewayRouter
-    const eventFetcher = new EventFetcher(l1Provider)
-    return (
-      await eventFetcher.getEvents(
-        L1GatewayRouter__factory,
-        t => t.filters.GatewaySet(),
-        { ...filter, address: l1GatewayRouterAddress }
-      )
-    ).map(a => a.event)
-  }
-
-  /**
-   * Get all the gateway set events on the L2 gateway router
-   * @param l1Provider
-   * @param customNetworkL1GatewayRouter
-   * @returns
-   */
-  public async getL2GatewaySetEvents(
-    l2Provider: Provider,
-    filter: { fromBlock: BlockTag; toBlock: BlockTag },
-    customNetworkL2GatewayRouter?: string
-  ): Promise<EventArgs<GatewaySetEvent>[]> {
-    if (this.l2Network.isCustom && !customNetworkL2GatewayRouter) {
-      throw new ArbSdkError(
-        'Must supply customNetworkL2GatewayRouter for custom network '
-      )
-    }
-    await this.checkL2Network(l2Provider)
-
-    const l2GatewayRouterAddress =
-      customNetworkL2GatewayRouter || this.l2Network.tokenBridge.l2GatewayRouter
-
-    const eventFetcher = new EventFetcher(l2Provider)
-    return (
-      await eventFetcher.getEvents(
-        L1GatewayRouter__factory,
-        t => t.filters.GatewaySet(),
-        { ...filter, address: l2GatewayRouterAddress }
-      )
-    ).map(a => a.event)
   }
 
   /**
