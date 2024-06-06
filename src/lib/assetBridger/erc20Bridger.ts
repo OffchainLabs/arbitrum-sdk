@@ -45,7 +45,12 @@ import {
   ParentToChildMessageGasEstimator,
 } from '../message/ParentToChildMessageGasEstimator'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
-import { ArbitrumNetwork, getArbitrumNetwork } from '../dataEntities/networks'
+import {
+  ArbitrumNetwork,
+  ArbitrumNetworkWithTokenBridge,
+  assertHasTokenBridge,
+  getArbitrumNetwork,
+} from '../dataEntities/networks'
 import { ArbSdkError, MissingProviderArbSdkError } from '../dataEntities/errors'
 import { DISABLED_GATEWAY } from '../dataEntities/constants'
 import { EventFetcher } from '../utils/eventFetcher'
@@ -183,11 +188,15 @@ export class Erc20Bridger extends AssetBridger<
   public static MAX_APPROVAL: BigNumber = MaxUint256
   public static MIN_CUSTOM_DEPOSIT_GAS_LIMIT = BigNumber.from(275000)
 
+  public readonly childChain: ArbitrumNetworkWithTokenBridge
+
   /**
    * Bridger for moving ERC20 tokens back and forth between parent-to-child
    */
   public constructor(childChain: ArbitrumNetwork) {
     super(childChain)
+    assertHasTokenBridge(childChain)
+    this.childChain = childChain
   }
 
   /**

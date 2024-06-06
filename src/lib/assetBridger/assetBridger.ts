@@ -21,11 +21,7 @@ import { constants } from 'ethers'
 import { ParentContractTransaction } from '../message/ParentTransaction'
 import { ChildContractTransaction } from '../message/ChildTransaction'
 
-import {
-  ArbitrumNetwork,
-  TokenBridge,
-  assertHasTokenBridge,
-} from '../dataEntities/networks'
+import { ArbitrumNetwork } from '../dataEntities/networks'
 import {
   SignerOrProvider,
   SignerProviderUtils,
@@ -41,11 +37,8 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    * In case of a chain that uses an ERC-20 token from the parent chain as its native/gas token, this is the address of said token on the parent chain
    */
   public readonly nativeToken?: string
-  public readonly childChain: ArbitrumNetwork & { tokenBridge: TokenBridge }
 
-  public constructor(childChain: ArbitrumNetwork) {
-    assertHasTokenBridge(childChain)
-    this.childChain = childChain
+  public constructor(public readonly childChain: ArbitrumNetwork) {
     this.nativeToken = childChain.nativeToken
   }
 
