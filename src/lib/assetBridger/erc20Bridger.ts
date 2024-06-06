@@ -904,7 +904,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
       // hardcode gas limit to 60k
       const estimatedGas = BigNumber.from(60_000).mul(maxFeePerGas)
 
-      if (allowance.lt(BigNumber.from(estimatedGas))) {
+      if (allowance.lt(estimatedGas)) {
         throw new Error(
           `Insufficient allowance. Please increase spending for: owner - ${l1SenderAddress}, spender - ${l1Token.address}.`
         )
