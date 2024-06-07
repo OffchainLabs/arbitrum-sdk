@@ -97,12 +97,12 @@ export class InboxTools {
   ): Promise<Block> {
     const isParentChainArbitrum = await isArbitrumChain(this.l1Provider)
 
-    const nodeInterface = NodeInterface__factory.connect(
-      NODE_INTERFACE_ADDRESS,
-      this.l1Provider
-    )
-
     if (isParentChainArbitrum) {
+      const nodeInterface = NodeInterface__factory.connect(
+        NODE_INTERFACE_ADDRESS,
+        this.l1Provider
+      )
+
       try {
         blockNumber = (
           await nodeInterface.l2BlockRangeForL1(blockNumber - 1)
@@ -131,9 +131,9 @@ export class InboxTools {
     const diff = block.timestamp - blockTimestamp
     if (diff < 0) return block
 
-    // we take a long average block time of 14s
+    // we take a long average block time of 12s
     // and always move at least 10 blocks
-    const diffBlocks = Math.max(Math.ceil(diff / this.l1Network.blockTime), 10)
+    const diffBlocks = Math.max(Math.ceil(diff / 12), 10)
 
     return await this.findFirstBlockBelow(
       blockNumber - diffBlocks,
@@ -204,9 +204,7 @@ export class InboxTools {
       const arbProvider = new ArbitrumProvider(
         this.l1Provider as JsonRpcProvider
       )
-      const currentArbBlock = await arbProvider.getBlock(
-        await arbProvider.getBlockNumber()
-      )
+      const currentArbBlock = await arbProvider.getBlock('latest')
       currentL1BlockNumber = currentArbBlock.l1BlockNumber
     }
 
@@ -233,9 +231,12 @@ export class InboxTools {
     const [maxTimeVariation, currentBlockNumber, currentBlockTimestamp] =
       await multicall.multiCall(multicallInput, true)
 
+    const blockNumber = isParentChainArbitrum
+      ? currentL1BlockNumber!
+      : currentBlockNumber.toNumber()
+
     const firstEligibleBlockNumber =
-      (currentL1BlockNumber ?? currentBlockNumber.toNumber()) -
-      maxTimeVariation.delayBlocks.toNumber()
+      blockNumber - maxTimeVariation.delayBlocks.toNumber()
     const firstEligibleTimestamp =
       currentBlockTimestamp.toNumber() -
       maxTimeVariation.delaySeconds.toNumber()
