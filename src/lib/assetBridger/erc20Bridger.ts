@@ -901,7 +901,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     await this.checkL1Network(params.l1Signer)
 
     const approveGasTokenRequest = this.isApproveParams(params)
-      ? await this.getApproveGasTokenRequest({
+      ? await this.getApproveGasTokenRequestForCustomTokenRegistration({
           ...params,
           l1Provider: SignerProviderUtils.getProviderOrThrow(params.l1Signer),
         })
