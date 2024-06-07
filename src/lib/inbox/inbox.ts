@@ -191,7 +191,7 @@ export class InboxTools {
    * @returns
    */
   private async getForceIncludableBlockRange(blockNumberRangeSize: number) {
-    let currentL1BlockNumber
+    let currentL1BlockNumber: number | undefined
 
     const sequencerInbox = SequencerInbox__factory.connect(
       this.l2Network.ethBridge.sequencerInbox,
