@@ -28,7 +28,7 @@ import {
   mapL2NetworkToArbitrumNetwork,
   getArbitrumNetwork,
   registerCustomArbitrumNetwork,
-  ArbitrumNetworkWithTokenBridge,
+  TokenBridge,
   assertHasTokenBridge,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
@@ -74,7 +74,9 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
 }
 
 export const testSetup = async (): Promise<{
-  childChain: ArbitrumNetworkWithTokenBridge
+  childChain: ArbitrumNetwork & {
+    tokenBridge: TokenBridge
+  }
   parentSigner: Signer
   childSigner: Signer
   parentProvider: Provider

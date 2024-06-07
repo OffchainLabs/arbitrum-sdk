@@ -47,7 +47,7 @@ import {
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import {
   ArbitrumNetwork,
-  ArbitrumNetworkWithTokenBridge,
+  TokenBridge,
   assertHasTokenBridge,
   getArbitrumNetwork,
 } from '../dataEntities/networks'
@@ -188,7 +188,9 @@ export class Erc20Bridger extends AssetBridger<
   public static MAX_APPROVAL: BigNumber = MaxUint256
   public static MIN_CUSTOM_DEPOSIT_GAS_LIMIT = BigNumber.from(275000)
 
-  public readonly childChain: ArbitrumNetworkWithTokenBridge
+  public readonly childChain: ArbitrumNetwork & {
+    tokenBridge: TokenBridge
+  }
 
   /**
    * Bridger for moving ERC20 tokens back and forth between parent-to-child
