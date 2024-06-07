@@ -164,8 +164,8 @@ const registerCustomToken = async (
     ? new TestOrbitCustomTokenL1__factory(parentSigner)
     : new TestCustomTokenL1__factory(parentSigner)
   const l1CustomToken = await l1CustomTokenFactory.deploy(
-    childChain.tokenBridge.l1CustomGateway,
-    childChain.tokenBridge.l1GatewayRouter
+    childChain.tokenBridge.parentCustomGateway,
+    childChain.tokenBridge.parentGatewayRouter
   )
   await l1CustomToken.deployed()
   const amount = ethers.utils.parseEther('1')
@@ -180,46 +180,46 @@ const registerCustomToken = async (
 
   const l2CustomTokenFac = new TestArbCustomToken__factory(childSigner)
   const l2CustomToken = await l2CustomTokenFac.deploy(
-    childChain.tokenBridge.l2CustomGateway,
+    childChain.tokenBridge.childCustomGateway,
     l1CustomToken.address
   )
   await l2CustomToken.deployed()
 
   // check starting conditions - should initially use the default gateway
-  const l1GatewayRouter = new L1GatewayRouter__factory(parentSigner).attach(
-    childChain.tokenBridge.l1GatewayRouter
+  const parentGatewayRouter = new L1GatewayRouter__factory(parentSigner).attach(
+    childChain.tokenBridge.parentGatewayRouter
   )
-  const l2GatewayRouter = new L2GatewayRouter__factory(childSigner).attach(
-    childChain.tokenBridge.l2GatewayRouter
+  const childGatewayRouter = new L2GatewayRouter__factory(childSigner).attach(
+    childChain.tokenBridge.childGatewayRouter
   )
-  const l1CustomGateway = new L1CustomGateway__factory(parentSigner).attach(
-    childChain.tokenBridge.l1CustomGateway
+  const parentCustomGateway = new L1CustomGateway__factory(parentSigner).attach(
+    childChain.tokenBridge.parentCustomGateway
   )
-  const l2CustomGateway = new L1CustomGateway__factory(childSigner).attach(
-    childChain.tokenBridge.l2CustomGateway
+  const childCustomGateway = new L1CustomGateway__factory(childSigner).attach(
+    childChain.tokenBridge.childCustomGateway
   )
-  const startL1GatewayAddress = await l1GatewayRouter.l1TokenToGateway(
+  const startL1GatewayAddress = await parentGatewayRouter.l1TokenToGateway(
     l1CustomToken.address
   )
   expect(
     startL1GatewayAddress,
     'Start l1GatewayAddress not equal empty address'
   ).to.eq(constants.AddressZero)
-  const startL2GatewayAddress = await l2GatewayRouter.l1TokenToGateway(
+  const startL2GatewayAddress = await childGatewayRouter.l1TokenToGateway(
     l2CustomToken.address
   )
   expect(
     startL2GatewayAddress,
     'Start l2GatewayAddress not equal empty address'
   ).to.eq(constants.AddressZero)
-  const startL1Erc20Address = await l1CustomGateway.l1ToL2Token(
+  const startL1Erc20Address = await parentCustomGateway.l1ToL2Token(
     l1CustomToken.address
   )
   expect(
     startL1Erc20Address,
     'Start l1Erc20Address not equal empty address'
   ).to.eq(constants.AddressZero)
-  const startL2Erc20Address = await l2CustomGateway.l1ToL2Token(
+  const startL2Erc20Address = await childCustomGateway.l1ToL2Token(
     l1CustomToken.address
   )
   expect(
@@ -253,23 +253,23 @@ const registerCustomToken = async (
   )
 
   // check end conditions
-  const endL1GatewayAddress = await l1GatewayRouter.l1TokenToGateway(
+  const endL1GatewayAddress = await parentGatewayRouter.l1TokenToGateway(
     l1CustomToken.address
   )
   expect(
     endL1GatewayAddress,
     'End l1GatewayAddress not equal to l1 custom gateway'
-  ).to.eq(childChain.tokenBridge.l1CustomGateway)
+  ).to.eq(childChain.tokenBridge.parentCustomGateway)
 
-  const endL2GatewayAddress = await l2GatewayRouter.l1TokenToGateway(
+  const endL2GatewayAddress = await childGatewayRouter.l1TokenToGateway(
     l1CustomToken.address
   )
   expect(
     endL2GatewayAddress,
     'End l2GatewayAddress not equal to l2 custom gateway'
-  ).to.eq(childChain.tokenBridge.l2CustomGateway)
+  ).to.eq(childChain.tokenBridge.childCustomGateway)
 
-  const endL1Erc20Address = await l1CustomGateway.l1ToL2Token(
+  const endL1Erc20Address = await parentCustomGateway.l1ToL2Token(
     l1CustomToken.address
   )
   expect(
@@ -277,7 +277,7 @@ const registerCustomToken = async (
     'End l1Erc20Address not equal l1CustomToken address'
   ).to.eq(l2CustomToken.address)
 
-  const endL2Erc20Address = await l2CustomGateway.l1ToL2Token(
+  const endL2Erc20Address = await childCustomGateway.l1ToL2Token(
     l1CustomToken.address
   )
   expect(
