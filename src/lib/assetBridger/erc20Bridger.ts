@@ -142,9 +142,6 @@ export type L2ToL1TxReqAndSigner = L2ToL1TransactionRequest & {
 
 type SignerTokenApproveParams = TokenApproveParams & { l1Signer: Signer }
 type ProviderTokenApproveParams = TokenApproveParams & { l1Provider: Provider }
-type AdminProviderTokenApproveParams = ProviderTokenApproveParams & {
-  spender: string
-}
 export type ApproveParamsOrTxRequest =
   | SignerTokenApproveParams
   | {
@@ -305,7 +302,7 @@ export class Erc20Bridger extends AssetBridger<
     }
   }
 
-  protected isApproveParams(
+  private isApproveParams(
     params: ApproveParamsOrTxRequest
   ): params is SignerTokenApproveParams {
     return (params as SignerTokenApproveParams).erc20L1Address != undefined
@@ -861,36 +858,41 @@ export class AdminErc20Bridger extends Erc20Bridger {
     return num.add(num.mul(increase).div(100))
   }
 
-  override async getApproveTokenRequest(
-    params: AdminProviderTokenApproveParams
-  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
-    const iErc20Interface = ERC20__factory.createInterface()
-    const data = iErc20Interface.encodeFunctionData('approve', [
-      params.spender,
-      params.amount || Erc20Bridger.MAX_APPROVAL,
-    ])
-
-    return {
-      to: params.erc20L1Address,
-      data,
-      value: BigNumber.from(0),
-    }
-  }
-
-  override async getApproveGasTokenRequest(
-    params: AdminProviderTokenApproveParams
+  public async getApproveTokenRequestForCustomTokenRegistration(
+    params: ProviderTokenApproveParams
   ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
     if (this.nativeTokenIsEth) {
       throw new Error('chain uses ETH as its native/gas token')
     }
 
-    const txRequest = await this.getApproveTokenRequest(params)
+    const iErc20Interface = ERC20__factory.createInterface()
+    const data = iErc20Interface.encodeFunctionData('approve', [
+      params.erc20L1Address,
+      params.amount || Erc20Bridger.MAX_APPROVAL,
+    ])
+
+    return {
+      to: this.nativeToken!,
+      data,
+      value: BigNumber.from(0),
+    }
+  }
+
+  public async getApproveGasTokenRequestForCustomTokenRegistration(
+    params: ProviderTokenApproveParams
+  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
+    if (this.nativeTokenIsEth) {
+      throw new Error('chain uses ETH as its native/gas token')
+    }
+
+    const txRequest =
+      await this.getApproveTokenRequestForCustomTokenRegistration(params)
     // just reuse the approve token request but direct it towards the native token contract
     return { ...txRequest, to: this.nativeToken! }
   }
 
-  override async approveGasToken(
-    params: ApproveParamsOrTxRequest & { spender: string }
+  public async approveGasTokenForCustomTokenRegistration(
+    params: ApproveParamsOrTxRequest
   ): Promise<ethers.ContractTransaction> {
     if (this.nativeTokenIsEth) {
       throw new Error('chain uses ETH as its native/gas token')
