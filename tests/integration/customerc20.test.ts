@@ -237,7 +237,8 @@ const registerCustomToken = async (
     await adminErc20Bridger.approveGasToken({
       l1Signer,
       amount: estimatedGasFee,
-      erc20L1Address: l1CustomToken.address,
+      erc20L1Address: l2Network.nativeToken!,
+      spender: l1CustomToken.address,
     })
   }
 
