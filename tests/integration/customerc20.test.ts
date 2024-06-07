@@ -38,11 +38,7 @@ import {
   GatewayType,
   withdrawToken,
 } from './testHelpers'
-import {
-  L1ToL2MessageGasEstimator,
-  L1ToL2MessageStatus,
-  L2Network,
-} from '../../src'
+import { L1ToL2MessageStatus, L2Network } from '../../src'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
@@ -230,18 +226,19 @@ const registerCustomToken = async (
     }
   }
 
-  const gEstimator = new L1ToL2MessageGasEstimator(l2Signer.provider!)
-  // increase by 500%
-  const maxFeePerGas = (await gEstimator.estimateMaxFeePerGas()).mul(6)
+  const maxFeePerGasOnL2 = (await l2Signer.provider!.getFeeData()).maxFeePerGas
+  const maxFeePerGasOnL2WithBuffer = maxFeePerGasOnL2?.mul(7)
   // hardcode gas limit to 60k
-  const estimatedGas = BigNumber.from(60_000).mul(maxFeePerGas)
+  const estimatedGasFee = BigNumber.from(60_000).mul(
+    maxFeePerGasOnL2WithBuffer!
+  )
 
   if (isL2NetworkWithCustomFeeToken()) {
-    const approvalTx = await ERC20__factory.connect(
-      l2Network.nativeToken!,
-      l1Signer
-    ).approve(l1CustomToken.address, estimatedGas)
-    await approvalTx.wait()
+    await adminErc20Bridger.approveGasToken({
+      l1Signer,
+      amount: estimatedGasFee,
+      erc20L1Address: l1CustomToken.address,
+    })
   }
 
   // send the messages

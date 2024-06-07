@@ -854,6 +854,9 @@ interface TokenAndGateway {
  * Admin functionality for the token bridge
  */
 export class AdminErc20Bridger extends Erc20Bridger {
+  private percentIncrease(num: BigNumber, increase: BigNumber): BigNumber {
+    return num.add(num.mul(increase).div(100))
+  }
   /**
    * Register a custom token on the Arbitrum bridge
    * See https://developer.offchainlabs.com/docs/bridging_assets#the-arbitrum-generic-custom-gateway for more details
@@ -895,15 +898,17 @@ export class AdminErc20Bridger extends Erc20Bridger {
         l1Token.address
       )
 
-      const gEstimator = new L1ToL2MessageGasEstimator(l2Provider)
-
-      // increase by 500%
-      const maxFeePerGas = (await gEstimator.estimateMaxFeePerGas()).mul(6)
-
+      const maxFeePerGasOnL2 = (await l2Provider.getFeeData()).maxFeePerGas
+      const maxFeePerGasOnL2WithBuffer = this.percentIncrease(
+        maxFeePerGasOnL2!,
+        BigNumber.from(500)
+      )
       // hardcode gas limit to 60k
-      const estimatedGas = BigNumber.from(60_000).mul(maxFeePerGas)
+      const estimatedGasFee = BigNumber.from(60_000).mul(
+        maxFeePerGasOnL2WithBuffer
+      )
 
-      if (allowance.lt(estimatedGas)) {
+      if (allowance.lt(estimatedGasFee)) {
         throw new Error(
           `Insufficient allowance. Please increase spending for: owner - ${l1SenderAddress}, spender - ${l1Token.address}.`
         )
