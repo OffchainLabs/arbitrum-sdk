@@ -50,7 +50,7 @@ const main = async () => {
   }
 
   /** Check if disabled */
-  const isDisabled = await erc20Bridger.l1TokenIsDisabled(
+  const isDisabled = await erc20Bridger.isDepositDisabled(
     l1TokenAddress,
     l1Provider
   )
