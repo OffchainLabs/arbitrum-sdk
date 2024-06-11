@@ -124,7 +124,7 @@ jobs:
         run: CI=true yarn test:unit
 
   test-integration:
-    name: Test (Integration) on Node.js v${{ matrix.node-version }}${{ matrix.orbit-test == '1' && ' with L3' || '' }}${{ matrix.custom-fee == '1' && ' with custom gas token' + ${{ matrix.decimals-6 && '(6 decimals)' || '(24 decimals)'  }} || '' }}
+    name: Test (Integration) on Node.js v${{ matrix.node-version }}${{ matrix.orbit-test == '1' && ' with L3' || '' }}${{ matrix.custom-fee == '1' && ' with custom gas token (non-18 decimals)' || '' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false # runs all tests to completion even if one fails
