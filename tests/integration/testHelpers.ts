@@ -37,6 +37,7 @@ import { ArbSdkError } from '../../src/lib/dataEntities/errors'
 import { ERC20 } from '../../src/lib/abi/ERC20'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
+import { getNativeTokenDecimals } from '../../src/lib/utils/lib'
 
 export const preFundAmount = parseEther('0.1')
 
@@ -444,8 +445,9 @@ export const skipIfMainnet = (() => {
   }
 })()
 
-export const skipIfNon18Decimals = (() => {
-  const decimals = process.env.DECIMALS
+export const skipIfNon18Decimals = (async () => {
+  const { l1Provider, l2Network } = await testSetup()
+  const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
 
   return async (testContext: Mocha.Context) => {
     if (decimals && Number(decimals) !== 18) {
