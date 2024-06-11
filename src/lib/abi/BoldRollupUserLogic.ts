@@ -128,22 +128,29 @@ export declare namespace IRollupCore {
     latestStakedAssertion: BytesLike;
     index: BigNumberish;
     isStaked: boolean;
+    withdrawalAddress: string;
   };
 
-  export type StakerStructOutput = [BigNumber, string, BigNumber, boolean] & {
+  export type StakerStructOutput = [
+    BigNumber,
+    string,
+    BigNumber,
+    boolean,
+    string
+  ] & {
     amountStaked: BigNumber;
     latestStakedAssertion: string;
     index: BigNumber;
     isStaked: boolean;
+    withdrawalAddress: string;
   };
 }
 
 export interface BoldRollupUserLogicInterface extends utils.Interface {
   contractName: "BoldRollupUserLogic";
   functions: {
-    "VALIDATOR_AFK_BLOCKS()": FunctionFragment;
     "_stakerMap(address)": FunctionFragment;
-    "addToDeposit(address,uint256)": FunctionFragment;
+    "addToDeposit(address,address,uint256)": FunctionFragment;
     "amountStaked(address)": FunctionFragment;
     "anyTrustFastConfirmer()": FunctionFragment;
     "baseStake()": FunctionFragment;
@@ -163,6 +170,7 @@ export interface BoldRollupUserLogicInterface extends utils.Interface {
     "getSecondChildCreationBlock(bytes32)": FunctionFragment;
     "getStaker(address)": FunctionFragment;
     "getStakerAddress(uint64)": FunctionFragment;
+    "getValidators()": FunctionFragment;
     "inbox()": FunctionFragment;
     "initialize(address)": FunctionFragment;
     "isFirstChild(bytes32)": FunctionFragment;
@@ -173,7 +181,8 @@ export interface BoldRollupUserLogicInterface extends utils.Interface {
     "latestStakedAssertion(address)": FunctionFragment;
     "loserStakeEscrow()": FunctionFragment;
     "minimumAssertionPeriod()": FunctionFragment;
-    "newStakeOnNewAssertion(uint256,((bytes32,bytes32,(bytes32,uint256,address,uint64,uint64)),((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32)),bytes32)": FunctionFragment;
+    "newStake(uint256,address)": FunctionFragment;
+    "newStakeOnNewAssertion(uint256,((bytes32,bytes32,(bytes32,uint256,address,uint64,uint64)),((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32)),bytes32,address)": FunctionFragment;
     "outbox()": FunctionFragment;
     "owner()": FunctionFragment;
     "paused()": FunctionFragment;
@@ -182,6 +191,7 @@ export interface BoldRollupUserLogicInterface extends utils.Interface {
     "removeWhitelistAfterFork()": FunctionFragment;
     "removeWhitelistAfterValidatorAfk()": FunctionFragment;
     "returnOldDeposit()": FunctionFragment;
+    "returnOldDepositFor(address)": FunctionFragment;
     "rollupDeploymentBlock()": FunctionFragment;
     "rollupEventInbox()": FunctionFragment;
     "sequencerInbox()": FunctionFragment;
@@ -191,21 +201,19 @@ export interface BoldRollupUserLogicInterface extends utils.Interface {
     "totalWithdrawableFunds()": FunctionFragment;
     "validateAssertionHash(bytes32,((bytes32[2],uint64[2]),uint8,bytes32),bytes32,bytes32)": FunctionFragment;
     "validateConfig(bytes32,(bytes32,uint256,address,uint64,uint64))": FunctionFragment;
+    "validatorAfkBlocks()": FunctionFragment;
     "validatorWalletCreator()": FunctionFragment;
     "validatorWhitelistDisabled()": FunctionFragment;
     "wasmModuleRoot()": FunctionFragment;
     "withdrawStakerFunds()": FunctionFragment;
     "withdrawableFunds(address)": FunctionFragment;
+    "withdrawalAddress(address)": FunctionFragment;
   };
 
-  encodeFunctionData(
-    functionFragment: "VALIDATOR_AFK_BLOCKS",
-    values?: undefined
-  ): string;
   encodeFunctionData(functionFragment: "_stakerMap", values: [string]): string;
   encodeFunctionData(
     functionFragment: "addToDeposit",
-    values: [string, BigNumberish]
+    values: [string, string, BigNumberish]
   ): string;
   encodeFunctionData(
     functionFragment: "amountStaked",
@@ -278,6 +286,10 @@ export interface BoldRollupUserLogicInterface extends utils.Interface {
     functionFragment: "getStakerAddress",
     values: [BigNumberish]
   ): string;
+  encodeFunctionData(
+    functionFragment: "getValidators",
+    values?: undefined
+  ): string;
   encodeFunctionData(functionFragment: "inbox", values?: undefined): string;
   encodeFunctionData(functionFragment: "initialize", values: [string]): string;
   encodeFunctionData(
@@ -307,8 +319,12 @@ export interface BoldRollupUserLogicInterface extends utils.Interface {
     values?: undefined
   ): string;
   encodeFunctionData(
+    functionFragment: "newStake",
+    values: [BigNumberish, string]
+  ): string;
+  encodeFunctionData(
     functionFragment: "newStakeOnNewAssertion",
-    values: [BigNumberish, AssertionInputsStruct, BytesLike]
+    values: [BigNumberish, AssertionInputsStruct, BytesLike, string]
   ): string;
   encodeFunctionData(functionFragment: "outbox", values?: undefined): string;
   encodeFunctionData(functionFragment: "owner", values?: undefined): string;
@@ -332,6 +348,10 @@ export interface BoldRollupUserLogicInterface extends utils.Interface {
   encodeFunctionData(
     functionFragment: "returnOldDeposit",
     values?: undefined
+  ): string;
+  encodeFunctionData(
+    functionFragment: "returnOldDepositFor",
+    values: [string]
   ): string;
   encodeFunctionData(
     functionFragment: "rollupDeploymentBlock",
@@ -370,6 +390,10 @@ export interface BoldRollupUserLogicInterface extends utils.Interface {
     values: [BytesLike, ConfigDataStruct]
   ): string;
   encodeFunctionData(
+    functionFragment: "validatorAfkBlocks",
+    values?: undefined
+  ): string;
+  encodeFunctionData(
     functionFragment: "validatorWalletCreator",
     values?: undefined
   ): string;
@@ -389,11 +413,11 @@ export interface BoldRollupUserLogicInterface extends utils.Interface {
     functionFragment: "withdrawableFunds",
     values: [string]
   ): string;
+  encodeFunctionData(
+    functionFragment: "withdrawalAddress",
+    values: [string]
+  ): string;
 
-  decodeFunctionResult(
-    functionFragment: "VALIDATOR_AFK_BLOCKS",
-    data: BytesLike
-  ): Result;
   decodeFunctionResult(functionFragment: "_stakerMap", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "addToDeposit",
@@ -463,6 +487,10 @@ export interface BoldRollupUserLogicInterface extends utils.Interface {
     functionFragment: "getStakerAddress",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "getValidators",
+    data: BytesLike
+  ): Result;
   decodeFunctionResult(functionFragment: "inbox", data: BytesLike): Result;
   decodeFunctionResult(functionFragment: "initialize", data: BytesLike): Result;
   decodeFunctionResult(
@@ -491,6 +519,7 @@ export interface BoldRollupUserLogicInterface extends utils.Interface {
     functionFragment: "minimumAssertionPeriod",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(functionFragment: "newStake", data: BytesLike): Result;
   decodeFunctionResult(
     functionFragment: "newStakeOnNewAssertion",
     data: BytesLike
@@ -516,6 +545,10 @@ export interface BoldRollupUserLogicInterface extends utils.Interface {
   ): Result;
   decodeFunctionResult(
     functionFragment: "returnOldDeposit",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
+    functionFragment: "returnOldDepositFor",
     data: BytesLike
   ): Result;
   decodeFunctionResult(
@@ -552,6 +585,10 @@ export interface BoldRollupUserLogicInterface extends utils.Interface {
     data: BytesLike
   ): Result;
   decodeFunctionResult(
+    functionFragment: "validatorAfkBlocks",
+    data: BytesLike
+  ): Result;
+  decodeFunctionResult(
     functionFragment: "validatorWalletCreator",
     data: BytesLike
   ): Result;
@@ -571,6 +608,10 @@ export interface BoldRollupUserLogicInterface extends utils.Interface {
     functionFragment: "withdrawableFunds",
     data: BytesLike
   ): Result;
+  decodeFunctionResult(
+    functionFragment: "withdrawalAddress",
+    data: BytesLike
+  ): Result;
 
   events: {
     "AdminChanged(address,address)": EventFragment;
@@ -584,7 +625,7 @@ export interface BoldRollupUserLogicInterface extends utils.Interface {
     "Unpaused(address)": EventFragment;
     "Upgraded(address)": EventFragment;
     "UpgradedSecondary(address)": EventFragment;
-    "UserStakeUpdated(address,uint256,uint256)": EventFragment;
+    "UserStakeUpdated(address,address,uint256,uint256)": EventFragment;
     "UserWithdrawableFundsUpdated(address,uint256,uint256)": EventFragment;
   };
 
@@ -698,8 +739,13 @@ export type UpgradedSecondaryEventFilter =
   TypedEventFilter<UpgradedSecondaryEvent>;
 
 export type UserStakeUpdatedEvent = TypedEvent<
-  [string, BigNumber, BigNumber],
-  { user: string; initialBalance: BigNumber; finalBalance: BigNumber }
+  [string, string, BigNumber, BigNumber],
+  {
+    user: string;
+    withdrawalAddress: string;
+    initialBalance: BigNumber;
+    finalBalance: BigNumber;
+  }
 >;
 
 export type UserStakeUpdatedEventFilter =
@@ -741,22 +787,22 @@ export interface BoldRollupUserLogic extends BaseContract {
   removeListener: OnEvent<this>;
 
   functions: {
-    VALIDATOR_AFK_BLOCKS(overrides?: CallOverrides): Promise<[BigNumber]>;
-
     _stakerMap(
       arg0: string,
       overrides?: CallOverrides
     ): Promise<
-      [BigNumber, string, BigNumber, boolean] & {
+      [BigNumber, string, BigNumber, boolean, string] & {
         amountStaked: BigNumber;
         latestStakedAssertion: string;
         index: BigNumber;
         isStaked: boolean;
+        withdrawalAddress: string;
       }
     >;
 
     addToDeposit(
       stakerAddress: string,
+      expectedWithdrawalAddress: string,
       tokenAmount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
@@ -843,6 +889,8 @@ export interface BoldRollupUserLogic extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[string]>;
 
+    getValidators(overrides?: CallOverrides): Promise<[string[]]>;
+
     inbox(overrides?: CallOverrides): Promise<[string]>;
 
     initialize(_stakeToken: string, overrides?: CallOverrides): Promise<[void]>;
@@ -859,7 +907,10 @@ export interface BoldRollupUserLogic extends BaseContract {
 
     isStaked(staker: string, overrides?: CallOverrides): Promise<[boolean]>;
 
-    isValidator(arg0: string, overrides?: CallOverrides): Promise<[boolean]>;
+    isValidator(
+      validator: string,
+      overrides?: CallOverrides
+    ): Promise<[boolean]>;
 
     latestConfirmed(overrides?: CallOverrides): Promise<[string]>;
 
@@ -872,7 +923,21 @@ export interface BoldRollupUserLogic extends BaseContract {
 
     minimumAssertionPeriod(overrides?: CallOverrides): Promise<[BigNumber]>;
 
-    newStakeOnNewAssertion(
+    newStake(
+      tokenAmount: BigNumberish,
+      _withdrawalAddress: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    "newStakeOnNewAssertion(uint256,((bytes32,bytes32,(bytes32,uint256,address,uint64,uint64)),((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32)),bytes32,address)"(
+      tokenAmount: BigNumberish,
+      assertion: AssertionInputsStruct,
+      expectedAssertionHash: BytesLike,
+      _withdrawalAddress: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    "newStakeOnNewAssertion(uint256,((bytes32,bytes32,(bytes32,uint256,address,uint64,uint64)),((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32)),bytes32)"(
       tokenAmount: BigNumberish,
       assertion: AssertionInputsStruct,
       expectedAssertionHash: BytesLike,
@@ -901,6 +966,11 @@ export interface BoldRollupUserLogic extends BaseContract {
     ): Promise<ContractTransaction>;
 
     returnOldDeposit(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<ContractTransaction>;
+
+    returnOldDepositFor(
+      stakerAddress: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<ContractTransaction>;
 
@@ -936,6 +1006,8 @@ export interface BoldRollupUserLogic extends BaseContract {
       overrides?: CallOverrides
     ): Promise<[void]>;
 
+    validatorAfkBlocks(overrides?: CallOverrides): Promise<[BigNumber]>;
+
     validatorWalletCreator(overrides?: CallOverrides): Promise<[string]>;
 
     validatorWhitelistDisabled(overrides?: CallOverrides): Promise<[boolean]>;
@@ -950,24 +1022,29 @@ export interface BoldRollupUserLogic extends BaseContract {
       user: string,
       overrides?: CallOverrides
     ): Promise<[BigNumber]>;
-  };
 
-  VALIDATOR_AFK_BLOCKS(overrides?: CallOverrides): Promise<BigNumber>;
+    withdrawalAddress(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<[string]>;
+  };
 
   _stakerMap(
     arg0: string,
     overrides?: CallOverrides
   ): Promise<
-    [BigNumber, string, BigNumber, boolean] & {
+    [BigNumber, string, BigNumber, boolean, string] & {
       amountStaked: BigNumber;
       latestStakedAssertion: string;
       index: BigNumber;
       isStaked: boolean;
+      withdrawalAddress: string;
     }
   >;
 
   addToDeposit(
     stakerAddress: string,
+    expectedWithdrawalAddress: string,
     tokenAmount: BigNumberish,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
@@ -1051,6 +1128,8 @@ export interface BoldRollupUserLogic extends BaseContract {
     overrides?: CallOverrides
   ): Promise<string>;
 
+  getValidators(overrides?: CallOverrides): Promise<string[]>;
+
   inbox(overrides?: CallOverrides): Promise<string>;
 
   initialize(_stakeToken: string, overrides?: CallOverrides): Promise<void>;
@@ -1067,7 +1146,7 @@ export interface BoldRollupUserLogic extends BaseContract {
 
   isStaked(staker: string, overrides?: CallOverrides): Promise<boolean>;
 
-  isValidator(arg0: string, overrides?: CallOverrides): Promise<boolean>;
+  isValidator(validator: string, overrides?: CallOverrides): Promise<boolean>;
 
   latestConfirmed(overrides?: CallOverrides): Promise<string>;
 
@@ -1080,7 +1159,21 @@ export interface BoldRollupUserLogic extends BaseContract {
 
   minimumAssertionPeriod(overrides?: CallOverrides): Promise<BigNumber>;
 
-  newStakeOnNewAssertion(
+  newStake(
+    tokenAmount: BigNumberish,
+    _withdrawalAddress: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  "newStakeOnNewAssertion(uint256,((bytes32,bytes32,(bytes32,uint256,address,uint64,uint64)),((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32)),bytes32,address)"(
+    tokenAmount: BigNumberish,
+    assertion: AssertionInputsStruct,
+    expectedAssertionHash: BytesLike,
+    _withdrawalAddress: string,
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  "newStakeOnNewAssertion(uint256,((bytes32,bytes32,(bytes32,uint256,address,uint64,uint64)),((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32)),bytes32)"(
     tokenAmount: BigNumberish,
     assertion: AssertionInputsStruct,
     expectedAssertionHash: BytesLike,
@@ -1109,6 +1202,11 @@ export interface BoldRollupUserLogic extends BaseContract {
   ): Promise<ContractTransaction>;
 
   returnOldDeposit(
+    overrides?: Overrides & { from?: string | Promise<string> }
+  ): Promise<ContractTransaction>;
+
+  returnOldDepositFor(
+    stakerAddress: string,
     overrides?: Overrides & { from?: string | Promise<string> }
   ): Promise<ContractTransaction>;
 
@@ -1144,6 +1242,8 @@ export interface BoldRollupUserLogic extends BaseContract {
     overrides?: CallOverrides
   ): Promise<void>;
 
+  validatorAfkBlocks(overrides?: CallOverrides): Promise<BigNumber>;
+
   validatorWalletCreator(overrides?: CallOverrides): Promise<string>;
 
   validatorWhitelistDisabled(overrides?: CallOverrides): Promise<boolean>;
@@ -1159,23 +1259,25 @@ export interface BoldRollupUserLogic extends BaseContract {
     overrides?: CallOverrides
   ): Promise<BigNumber>;
 
-  callStatic: {
-    VALIDATOR_AFK_BLOCKS(overrides?: CallOverrides): Promise<BigNumber>;
+  withdrawalAddress(staker: string, overrides?: CallOverrides): Promise<string>;
 
+  callStatic: {
     _stakerMap(
       arg0: string,
       overrides?: CallOverrides
     ): Promise<
-      [BigNumber, string, BigNumber, boolean] & {
+      [BigNumber, string, BigNumber, boolean, string] & {
         amountStaked: BigNumber;
         latestStakedAssertion: string;
         index: BigNumber;
         isStaked: boolean;
+        withdrawalAddress: string;
       }
     >;
 
     addToDeposit(
       stakerAddress: string,
+      expectedWithdrawalAddress: string,
       tokenAmount: BigNumberish,
       overrides?: CallOverrides
     ): Promise<void>;
@@ -1259,6 +1361,8 @@ export interface BoldRollupUserLogic extends BaseContract {
       overrides?: CallOverrides
     ): Promise<string>;
 
+    getValidators(overrides?: CallOverrides): Promise<string[]>;
+
     inbox(overrides?: CallOverrides): Promise<string>;
 
     initialize(_stakeToken: string, overrides?: CallOverrides): Promise<void>;
@@ -1275,7 +1379,7 @@ export interface BoldRollupUserLogic extends BaseContract {
 
     isStaked(staker: string, overrides?: CallOverrides): Promise<boolean>;
 
-    isValidator(arg0: string, overrides?: CallOverrides): Promise<boolean>;
+    isValidator(validator: string, overrides?: CallOverrides): Promise<boolean>;
 
     latestConfirmed(overrides?: CallOverrides): Promise<string>;
 
@@ -1288,7 +1392,21 @@ export interface BoldRollupUserLogic extends BaseContract {
 
     minimumAssertionPeriod(overrides?: CallOverrides): Promise<BigNumber>;
 
-    newStakeOnNewAssertion(
+    newStake(
+      tokenAmount: BigNumberish,
+      _withdrawalAddress: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    "newStakeOnNewAssertion(uint256,((bytes32,bytes32,(bytes32,uint256,address,uint64,uint64)),((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32)),bytes32,address)"(
+      tokenAmount: BigNumberish,
+      assertion: AssertionInputsStruct,
+      expectedAssertionHash: BytesLike,
+      _withdrawalAddress: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
+
+    "newStakeOnNewAssertion(uint256,((bytes32,bytes32,(bytes32,uint256,address,uint64,uint64)),((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32)),bytes32)"(
       tokenAmount: BigNumberish,
       assertion: AssertionInputsStruct,
       expectedAssertionHash: BytesLike,
@@ -1313,6 +1431,11 @@ export interface BoldRollupUserLogic extends BaseContract {
     removeWhitelistAfterValidatorAfk(overrides?: CallOverrides): Promise<void>;
 
     returnOldDeposit(overrides?: CallOverrides): Promise<void>;
+
+    returnOldDepositFor(
+      stakerAddress: string,
+      overrides?: CallOverrides
+    ): Promise<void>;
 
     rollupDeploymentBlock(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -1346,6 +1469,8 @@ export interface BoldRollupUserLogic extends BaseContract {
       overrides?: CallOverrides
     ): Promise<void>;
 
+    validatorAfkBlocks(overrides?: CallOverrides): Promise<BigNumber>;
+
     validatorWalletCreator(overrides?: CallOverrides): Promise<string>;
 
     validatorWhitelistDisabled(overrides?: CallOverrides): Promise<boolean>;
@@ -1358,6 +1483,11 @@ export interface BoldRollupUserLogic extends BaseContract {
       user: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
+
+    withdrawalAddress(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<string>;
   };
 
   filters: {
@@ -1450,13 +1580,15 @@ export interface BoldRollupUserLogic extends BaseContract {
       implementation?: string | null
     ): UpgradedSecondaryEventFilter;
 
-    "UserStakeUpdated(address,uint256,uint256)"(
+    "UserStakeUpdated(address,address,uint256,uint256)"(
       user?: string | null,
+      withdrawalAddress?: string | null,
       initialBalance?: null,
       finalBalance?: null
     ): UserStakeUpdatedEventFilter;
     UserStakeUpdated(
       user?: string | null,
+      withdrawalAddress?: string | null,
       initialBalance?: null,
       finalBalance?: null
     ): UserStakeUpdatedEventFilter;
@@ -1474,12 +1606,11 @@ export interface BoldRollupUserLogic extends BaseContract {
   };
 
   estimateGas: {
-    VALIDATOR_AFK_BLOCKS(overrides?: CallOverrides): Promise<BigNumber>;
-
     _stakerMap(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
 
     addToDeposit(
       stakerAddress: string,
+      expectedWithdrawalAddress: string,
       tokenAmount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
@@ -1560,6 +1691,8 @@ export interface BoldRollupUserLogic extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    getValidators(overrides?: CallOverrides): Promise<BigNumber>;
+
     inbox(overrides?: CallOverrides): Promise<BigNumber>;
 
     initialize(
@@ -1579,7 +1712,10 @@ export interface BoldRollupUserLogic extends BaseContract {
 
     isStaked(staker: string, overrides?: CallOverrides): Promise<BigNumber>;
 
-    isValidator(arg0: string, overrides?: CallOverrides): Promise<BigNumber>;
+    isValidator(
+      validator: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
 
     latestConfirmed(overrides?: CallOverrides): Promise<BigNumber>;
 
@@ -1592,7 +1728,21 @@ export interface BoldRollupUserLogic extends BaseContract {
 
     minimumAssertionPeriod(overrides?: CallOverrides): Promise<BigNumber>;
 
-    newStakeOnNewAssertion(
+    newStake(
+      tokenAmount: BigNumberish,
+      _withdrawalAddress: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    "newStakeOnNewAssertion(uint256,((bytes32,bytes32,(bytes32,uint256,address,uint64,uint64)),((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32)),bytes32,address)"(
+      tokenAmount: BigNumberish,
+      assertion: AssertionInputsStruct,
+      expectedAssertionHash: BytesLike,
+      _withdrawalAddress: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    "newStakeOnNewAssertion(uint256,((bytes32,bytes32,(bytes32,uint256,address,uint64,uint64)),((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32)),bytes32)"(
       tokenAmount: BigNumberish,
       assertion: AssertionInputsStruct,
       expectedAssertionHash: BytesLike,
@@ -1621,6 +1771,11 @@ export interface BoldRollupUserLogic extends BaseContract {
     ): Promise<BigNumber>;
 
     returnOldDeposit(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<BigNumber>;
+
+    returnOldDepositFor(
+      stakerAddress: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<BigNumber>;
 
@@ -1656,6 +1811,8 @@ export interface BoldRollupUserLogic extends BaseContract {
       overrides?: CallOverrides
     ): Promise<BigNumber>;
 
+    validatorAfkBlocks(overrides?: CallOverrides): Promise<BigNumber>;
+
     validatorWalletCreator(overrides?: CallOverrides): Promise<BigNumber>;
 
     validatorWhitelistDisabled(overrides?: CallOverrides): Promise<BigNumber>;
@@ -1670,13 +1827,14 @@ export interface BoldRollupUserLogic extends BaseContract {
       user: string,
       overrides?: CallOverrides
     ): Promise<BigNumber>;
+
+    withdrawalAddress(
+      staker: string,
+      overrides?: CallOverrides
+    ): Promise<BigNumber>;
   };
 
   populateTransaction: {
-    VALIDATOR_AFK_BLOCKS(
-      overrides?: CallOverrides
-    ): Promise<PopulatedTransaction>;
-
     _stakerMap(
       arg0: string,
       overrides?: CallOverrides
@@ -1684,6 +1842,7 @@ export interface BoldRollupUserLogic extends BaseContract {
 
     addToDeposit(
       stakerAddress: string,
+      expectedWithdrawalAddress: string,
       tokenAmount: BigNumberish,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
@@ -1778,6 +1937,8 @@ export interface BoldRollupUserLogic extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
+    getValidators(overrides?: CallOverrides): Promise<PopulatedTransaction>;
+
     inbox(overrides?: CallOverrides): Promise<PopulatedTransaction>;
 
     initialize(
@@ -1801,7 +1962,7 @@ export interface BoldRollupUserLogic extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     isValidator(
-      arg0: string,
+      validator: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
@@ -1818,7 +1979,21 @@ export interface BoldRollupUserLogic extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
-    newStakeOnNewAssertion(
+    newStake(
+      tokenAmount: BigNumberish,
+      _withdrawalAddress: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    "newStakeOnNewAssertion(uint256,((bytes32,bytes32,(bytes32,uint256,address,uint64,uint64)),((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32)),bytes32,address)"(
+      tokenAmount: BigNumberish,
+      assertion: AssertionInputsStruct,
+      expectedAssertionHash: BytesLike,
+      _withdrawalAddress: string,
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    "newStakeOnNewAssertion(uint256,((bytes32,bytes32,(bytes32,uint256,address,uint64,uint64)),((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32)),bytes32)"(
       tokenAmount: BigNumberish,
       assertion: AssertionInputsStruct,
       expectedAssertionHash: BytesLike,
@@ -1847,6 +2022,11 @@ export interface BoldRollupUserLogic extends BaseContract {
     ): Promise<PopulatedTransaction>;
 
     returnOldDeposit(
+      overrides?: Overrides & { from?: string | Promise<string> }
+    ): Promise<PopulatedTransaction>;
+
+    returnOldDepositFor(
+      stakerAddress: string,
       overrides?: Overrides & { from?: string | Promise<string> }
     ): Promise<PopulatedTransaction>;
 
@@ -1886,6 +2066,10 @@ export interface BoldRollupUserLogic extends BaseContract {
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
 
+    validatorAfkBlocks(
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
     validatorWalletCreator(
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
@@ -1902,6 +2086,11 @@ export interface BoldRollupUserLogic extends BaseContract {
 
     withdrawableFunds(
       user: string,
+      overrides?: CallOverrides
+    ): Promise<PopulatedTransaction>;
+
+    withdrawalAddress(
+      staker: string,
       overrides?: CallOverrides
     ): Promise<PopulatedTransaction>;
   };
