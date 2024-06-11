@@ -445,11 +445,11 @@ export const skipIfMainnet = (() => {
   }
 })()
 
-export const skipIfNon18Decimals = (async () => {
-  const { l1Provider, l2Network } = await testSetup()
-  const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
-
+export const skipIfNon18Decimals = (() => {
   return async (testContext: Mocha.Context) => {
+    const { l1Provider, l2Network } = await testSetup()
+    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+
     if (decimals && Number(decimals) !== 18) {
       console.warn('Skip for non 18 decimals')
       testContext.skip()
