@@ -54,8 +54,6 @@ import { EventArgs } from '../dataEntities/event'
 import { L2ToL1MessageStatus } from '../dataEntities/message'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
 
-//
-
 /**
  * Conditional type for Signer or Provider. If T is of type Provider
  * then L2ToL1MessageReaderOrWriter<T> will be of type L2ToL1MessageReader.
