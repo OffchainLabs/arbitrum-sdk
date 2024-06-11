@@ -37,7 +37,6 @@ import {
   depositToken,
   GatewayType,
   withdrawToken,
-  skipIfNon18Decimals,
 } from './testHelpers'
 import { L1ToL2MessageStatus, L2Network } from '../../src'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
@@ -54,7 +53,6 @@ const withdrawalAmount = BigNumber.from(10)
 describe('Custom ERC20', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
-    await skipIfNon18Decimals(this)
   })
 
   // test globals
