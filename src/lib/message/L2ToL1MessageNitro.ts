@@ -24,6 +24,7 @@ import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { BigNumber } from '@ethersproject/bignumber'
 import { BlockTag } from '@ethersproject/abstract-provider'
+import { ErrorCode, Logger } from '@ethersproject/logger'
 
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { RollupUserLogic__factory } from '../abi/factories/RollupUserLogic__factory'
@@ -529,7 +530,14 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
       await rollup.extraChallengeTimeBlocks()
       return undefined
     } catch (err) {
-      return remoteRollupAddr
+      if (
+        err instanceof Error &&
+        (err as unknown as { code: ErrorCode }).code ===
+          Logger.errors.CALL_EXCEPTION
+      ) {
+        return remoteRollupAddr
+      }
+      throw err
     }
   }
 
