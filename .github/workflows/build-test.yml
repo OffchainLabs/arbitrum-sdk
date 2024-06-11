@@ -130,25 +130,33 @@ jobs:
       fail-fast: false # runs all tests to completion even if one fails
       matrix:
         node-version: [16, 18, 20]
-        orbit-test: ['0', '1']
-        decimals-6: ['0']
-        decimals-24: ['0']
-        custom-fee: ['0']
+        orbit-test: [0, 1]
+        decimals-6: [0]
+        decimals-24: [0]
         include:
           - orbit-test: '1'
             decimals-6: '1'
+            decimals-24: '0'
+            node-version: 16
+          - orbit-test: '1'
+            decimals-6: '0'
             decimals-24: '1'
-            custom-fee: '1'
             node-version: 16
           - orbit-test: '1'
             decimals-6: '1'
+            decimals-24: '0'
+            node-version: 18
+          - orbit-test: '1'
+            decimals-6: '0'
             decimals-24: '1'
-            custom-fee: '1'
             node-version: 18
           - orbit-test: '1'
             decimals-6: '1'
+            decimals-24: '0'
+            node-version: 20
+          - orbit-test: '1'
+            decimals-6: '0'
             decimals-24: '1'
-            custom-fee: '1'
             node-version: 20
 
     needs: install
