@@ -215,7 +215,11 @@ export async function getNativeTokenDecimals({
     l1Provider
   )
 
-  return nativeTokenContract.decimals()
+  try {
+    return await nativeTokenContract.decimals()
+  } catch {
+    return 0
+  }
 }
 
 export function scaleToNativeDecimals({
@@ -230,17 +234,21 @@ export function scaleToNativeDecimals({
     return amount
   }
 
-  const multiplier = BigNumber.from(10).pow(BigNumber.from(18 - decimals))
-
   if (decimals < 18) {
-    const scaledAmount = amount.div(multiplier)
+    const scaledAmount = amount.div(
+      BigNumber.from(10).pow(BigNumber.from(18 - decimals))
+    )
     // round up if necessary
-    if (scaledAmount.mul(multiplier).lt(amount)) {
+    if (
+      scaledAmount
+        .mul(BigNumber.from(10).pow(BigNumber.from(18 - decimals)))
+        .lt(amount)
+    ) {
       return scaledAmount.add(BigNumber.from(1))
     }
     return scaledAmount
   }
 
   // decimals > 18
-  return amount.mul(multiplier)
+  return amount.mul(BigNumber.from(10).pow(BigNumber.from(decimals - 18)))
 }

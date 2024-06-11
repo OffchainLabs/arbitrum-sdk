@@ -30,8 +30,7 @@ import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
 const depositAmount = BigNumber.from(100)
 import { ERC20Inbox__factory } from '../../src/lib/abi/factories/ERC20Inbox__factory'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
-
-const DECIMALS = Number(process.env.DECIMALS)
+import { getNativeTokenDecimals } from '../../src/lib/utils/lib'
 
 describe('RevertData', () => {
   beforeEach('skipIfMainnet', async function () {
@@ -147,8 +146,11 @@ describe('RevertData', () => {
   })
 
   it('is the same as what we estimate in erc20Bridger', async () => {
-    const { erc20Bridger, l1Signer, l2Signer } = await testSetup()
-    await fundL1(l1Signer, parseUnits('2', DECIMALS))
+    const { erc20Bridger, l1Signer, l1Provider, l2Signer, l2Network } =
+      await testSetup()
+    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+
+    await fundL1(l1Signer, parseUnits('2', decimals))
 
     const deployErc20 = new TestERC20__factory().connect(l1Signer)
     const testToken = await deployErc20.deploy()
