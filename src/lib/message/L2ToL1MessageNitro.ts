@@ -527,7 +527,7 @@ export class L2ToL1MessageReaderNitro extends L2ToL1MessageNitro {
     )
     try {
       // bold rollup does not have an extraChallengeTimeBlocks function
-      await rollup.extraChallengeTimeBlocks()
+      await rollup.callStatic.extraChallengeTimeBlocks()
       return undefined
     } catch (err) {
       if (
