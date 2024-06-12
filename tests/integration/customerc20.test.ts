@@ -39,10 +39,7 @@ import {
   withdrawToken,
 } from './testHelpers'
 import { ParentToChildMessageStatus } from '../../src'
-import {
-  ArbitrumNetwork,
-  assertArbitrumNetworkHasTokenBridge,
-} from '../../src/lib/dataEntities/networks'
+import { ArbitrumNetwork } from '../../src/lib/dataEntities/networks'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
