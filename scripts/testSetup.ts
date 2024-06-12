@@ -28,8 +28,8 @@ import {
   mapL2NetworkToArbitrumNetwork,
   getArbitrumNetwork,
   registerCustomArbitrumNetwork,
-  ArbitrumNetworkWithTokenBridge,
-  assertHasTokenBridge,
+  TokenBridge,
+  assertArbitrumNetworkHasTokenBridge,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
@@ -74,7 +74,9 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
 }
 
 export const testSetup = async (): Promise<{
-  childChain: ArbitrumNetworkWithTokenBridge
+  childChain: ArbitrumNetwork & {
+    tokenBridge: TokenBridge
+  }
   parentSigner: Signer
   childSigner: Signer
   parentProvider: Provider
@@ -108,7 +110,7 @@ export const testSetup = async (): Promise<{
     setChildChain = registerCustomArbitrumNetwork(childChain)
   }
 
-  assertHasTokenBridge(setChildChain)
+  assertArbitrumNetworkHasTokenBridge(setChildChain)
 
   const erc20Bridger = new Erc20Bridger(setChildChain)
   const adminErc20Bridger = new AdminErc20Bridger(setChildChain)
