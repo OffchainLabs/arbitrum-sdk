@@ -38,7 +38,6 @@ import {
 import { ArbSdkError } from '../dataEntities/errors'
 import { ethers, Overrides } from 'ethers'
 import { ChildTransactionReceipt, RedeemTransaction } from './ChildTransaction'
-import { getArbitrumNetwork } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt, isDefined } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
@@ -319,7 +318,6 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
    * @returns TransactionReceipt of the first successful redeem if exists, otherwise the current status of the message.
    */
   public async getSuccessfulRedeem(): Promise<ParentToChildMessageWaitForStatusResult> {
-    const chainNetwork = await getArbitrumNetwork(this.childProvider)
     const eventFetcher = new EventFetcher(this.childProvider)
     const creationReceipt = await this.getRetryableCreationReceipt()
 
@@ -360,9 +358,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
     let fromBlock = await this.childProvider.getBlock(
       creationReceipt.blockNumber
     )
-    let timeout =
-      fromBlock.timestamp +
-      (chainNetwork.retryableLifetimeSeconds ?? SEVEN_DAYS_IN_SECONDS)
+    let timeout = fromBlock.timestamp + SEVEN_DAYS_IN_SECONDS
     const queriedRange: { from: number; to: number }[] = []
     const maxBlock = await this.childProvider.getBlockNumber()
     while (fromBlock.number < maxBlock) {

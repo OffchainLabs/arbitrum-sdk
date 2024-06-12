@@ -153,7 +153,7 @@ describe('Networks', async () => {
 
     it('returns correct children for arbitrum sepolia', () => {
       const children = getChildrenForNetwork(421614).map(c => c.chainId)
-      expect(children).to.have.members([23011913])
+      expect(children).to.have.members([13331371, 23011913])
     })
   })
 

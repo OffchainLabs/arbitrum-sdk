@@ -24,7 +24,7 @@
     "prepare": "yarn run gen:abi",
     "gen:abi": "node ./scripts/genAbi.js",
     "gen:network": "ts-node ./scripts/genNetwork.ts",
-    "prepublishOnly": "yarn build && yarn format",  sw
+    "prepublishOnly": "yarn build && yarn format",
     "preversion": "yarn lint",
     "build": "./scripts/builder",
     "watch": "tsc --watch",

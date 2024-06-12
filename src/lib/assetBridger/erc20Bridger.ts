@@ -908,7 +908,9 @@ export class AdminErc20Bridger extends Erc20Bridger {
     const approveGasTokenRequest = this.isApproveParams(params)
       ? this.getApproveGasTokenForCustomTokenRegistrationRequest({
           ...params,
-          parentProvider: SignerProviderUtils.getProviderOrThrow(params.parentSigner),
+          parentProvider: SignerProviderUtils.getProviderOrThrow(
+            params.parentSigner
+          ),
         })
       : params.txRequest
 
@@ -965,7 +967,8 @@ export class AdminErc20Bridger extends Erc20Bridger {
         parentToken.address
       )
 
-      const maxFeePerGasOnChild = (await childProvider.getFeeData()).maxFeePerGas
+      const maxFeePerGasOnChild = (await childProvider.getFeeData())
+        .maxFeePerGas
       const maxFeePerGasOnChildWithBuffer = this.percentIncrease(
         maxFeePerGasOnChild!,
         BigNumber.from(500)
