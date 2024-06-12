@@ -72,6 +72,7 @@ import { RetryableDataTools } from '../dataEntities/retryableData'
 import { EventArgs } from '../dataEntities/event'
 import { L1ToL2MessageGasParams } from '../message/L1ToL2MessageCreator'
 import { isArbitrumChain } from '../utils/lib'
+import { L2ERC20Gateway__factory } from '../abi/factories/L2ERC20Gateway__factory'
 
 export interface TokenApproveParams {
   /**
@@ -977,6 +978,40 @@ export class AdminErc20Bridger extends Erc20Bridger {
     })
 
     return L1TransactionReceipt.monkeyPatchWait(registerTx)
+  }
+
+  /**
+   * Checks if custom gateway has been registered
+   * @param erc20L1Address
+   * @param l1Provider
+   * @param l2Provider
+   * @returns
+   */
+  public async isCustomGatewayRegistered({
+    erc20L1Address,
+    l1Provider,
+    l2Provider,
+  }: {
+    erc20L1Address: string
+    l1Provider: Provider
+    l2Provider: Provider
+  }) {
+    const tokenL2AddressFromL1GatewayRouter = await this.getL2ERC20Address(
+      erc20L1Address,
+      l1Provider
+    )
+
+    const l2GatewayAddressFromL2Router = await this.getL2GatewayAddress(
+      erc20L1Address,
+      l2Provider
+    )
+
+    const l2AddressFromL2Gateway = await L2ERC20Gateway__factory.connect(
+      l2GatewayAddressFromL2Router,
+      l2Provider
+    ).calculateL2TokenAddress(erc20L1Address)
+
+    return tokenL2AddressFromL1GatewayRouter === l2AddressFromL2Gateway
   }
 
   /**

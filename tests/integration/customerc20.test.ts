@@ -162,6 +162,19 @@ const registerCustomToken = async (
   await l1CustomToken.deployed()
   const amount = ethers.utils.parseEther('1')
 
+  adminErc20Bridger
+    .isCustomGatewayRegistered({
+      erc20L1Address: l1CustomToken.address,
+      l1Provider: l1Signer.provider!,
+      l2Provider: l2Signer.provider!,
+    })
+    .then(isCustomGatewayRegistered => {
+      expect(
+        isCustomGatewayRegistered,
+        'expected isCustomGatewayRegistered to be false'
+      ).to.be.false
+    })
+
   if (isL2NetworkWithCustomFeeToken()) {
     const approvalTx = await ERC20__factory.connect(
       l2Network.nativeToken!,
@@ -274,6 +287,19 @@ const registerCustomToken = async (
     endL2Erc20Address,
     'End l2Erc20Address not equal l2CustomToken address'
   ).to.eq(l2CustomToken.address)
+
+  adminErc20Bridger
+    .isCustomGatewayRegistered({
+      erc20L1Address: l1CustomToken.address,
+      l1Provider: l1Signer.provider!,
+      l2Provider: l2Signer.provider!,
+    })
+    .then(isCustomGatewayRegistered => {
+      expect(
+        isCustomGatewayRegistered,
+        'expected isCustomGatewayRegistered to be true'
+      ).to.be.true
+    })
 
   return {
     l1CustomToken,
