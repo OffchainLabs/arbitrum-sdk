@@ -858,7 +858,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     return num.add(num.mul(increase).div(100))
   }
 
-  public getApproveGasTokenRequestForCustomTokenRegistration(
+  public getApproveGasTokenForCustomTokenRegistrationRequest(
     params: ProviderTokenApproveParams
   ): Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>> {
     if (this.nativeTokenIsEth) {
@@ -888,7 +888,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     await this.checkL1Network(params.l1Signer)
 
     const approveGasTokenRequest = this.isApproveParams(params)
-      ? await this.getApproveGasTokenRequestForCustomTokenRegistration({
+      ? this.getApproveGasTokenForCustomTokenRegistrationRequest({
           ...params,
           l1Provider: SignerProviderUtils.getProviderOrThrow(params.l1Signer),
         })

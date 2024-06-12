@@ -226,17 +226,9 @@ const registerCustomToken = async (
     }
   }
 
-  const maxFeePerGasOnL2 = (await l2Signer.provider!.getFeeData()).maxFeePerGas
-  const maxFeePerGasOnL2WithBuffer = maxFeePerGasOnL2?.mul(7)
-  // hardcode gas limit to 60k
-  const estimatedGasFee = BigNumber.from(60_000).mul(
-    maxFeePerGasOnL2WithBuffer!
-  )
-
   if (isL2NetworkWithCustomFeeToken()) {
     await adminErc20Bridger.approveGasTokenForCustomTokenRegistration({
       l1Signer,
-      amount: estimatedGasFee,
       erc20L1Address: l1CustomToken.address,
     })
   }
