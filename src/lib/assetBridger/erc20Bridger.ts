@@ -858,7 +858,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     return num.add(num.mul(increase).div(100))
   }
 
-  public getApproveTokenRequestForCustomTokenRegistration(
+  public getApproveGasTokenRequestForCustomTokenRegistration(
     params: ProviderTokenApproveParams
   ): Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>> {
     if (this.nativeTokenIsEth) {
@@ -872,23 +872,10 @@ export class AdminErc20Bridger extends Erc20Bridger {
     ])
 
     return {
-      to: this.nativeToken!,
       data,
       value: BigNumber.from(0),
+      to: this.nativeToken!,
     }
-  }
-
-  public async getApproveGasTokenRequestForCustomTokenRegistration(
-    params: ProviderTokenApproveParams
-  ): Promise<Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>>> {
-    if (this.nativeTokenIsEth) {
-      throw new Error('chain uses ETH as its native/gas token')
-    }
-
-    const txRequest =
-      this.getApproveTokenRequestForCustomTokenRegistration(params)
-    // just reuse the approve token request but direct it towards the native token contract
-    return { ...txRequest, to: this.nativeToken! }
   }
 
   public async approveGasTokenForCustomTokenRegistration(
