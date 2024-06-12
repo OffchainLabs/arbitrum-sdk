@@ -47,7 +47,7 @@ export interface ArbitrumNetwork {
   /**
    * The token bridge contracts.
    */
-  tokenBridge: TokenBridge
+  tokenBridge?: TokenBridge
   /**
    * The time allowed for validators to dispute or challenge state assertions. Measured in L1 blocks.
    */
@@ -510,6 +510,7 @@ export async function getMulticallAddress(
 
   // The provided chain is found in the list
   if (typeof chain !== 'undefined') {
+    assertArbitrumNetworkHasTokenBridge(chain)
     // Return the address of Multicall on the chain
     return chain.tokenBridge.l2Multicall
   }
@@ -525,6 +526,7 @@ export async function getMulticallAddress(
     )
   }
 
+  assertArbitrumNetworkHasTokenBridge(childChain)
   // Return the address of Multicall on the parent chain
   return childChain.tokenBridge.l1MultiCall
 }
@@ -541,6 +543,27 @@ export function mapL2NetworkToArbitrumNetwork(
     // Map properties that were changed
     chainId: l2Network.chainID,
     parentChainId: l2Network.partnerChainID,
+  }
+}
+
+/**
+ * Asserts that the given object has a token bridge. This is useful because not all Arbitrum network
+ * operations require a token bridge.
+ *
+ * @param network {@link ArbitrumNetwork} object
+ * @throws ArbSdkError if the object does not have a token bridge
+ */
+export function assertArbitrumNetworkHasTokenBridge<T extends ArbitrumNetwork>(
+  network: T
+): asserts network is T & { tokenBridge: TokenBridge } {
+  if (
+    typeof network === 'undefined' ||
+    !('tokenBridge' in network) ||
+    typeof network.tokenBridge === 'undefined'
+  ) {
+    throw new ArbSdkError(
+      `The ArbitrumNetwork object with chainId ${network.chainId} is missing the token bridge contracts addresses. Please add them in the "tokenBridge" property.`
+    )
   }
 }
 
