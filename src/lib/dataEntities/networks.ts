@@ -55,6 +55,7 @@ export interface ArbitrumNetwork {
   /**
    * Represents how long a retryable ticket lasts for before it expires (in seconds). Defaults to 7 days.
    */
+  retryableLifetimeSeconds?: number
   /**
    * In case of a chain that uses ETH as its native/gas token, this is either `undefined` or the zero address
    *
