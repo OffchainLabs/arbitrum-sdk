@@ -41,7 +41,7 @@ import {
 import { ParentToChildMessageStatus } from '../../src'
 import {
   ArbitrumNetwork,
-  assertHasTokenBridge,
+  assertArbitrumNetworkHasTokenBridge,
 } from '../../src/lib/dataEntities/networks'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 import { testSetup } from '../../scripts/testSetup'
@@ -157,7 +157,7 @@ const registerCustomToken = async (
   childSigner: Signer,
   adminErc20Bridger: AdminErc20Bridger
 ) => {
-  assertHasTokenBridge(childChain)
+  assertArbitrumNetworkHasTokenBridge(childChain)
 
   // create a custom token on L1 and L2
   const l1CustomTokenFactory = isArbitrumNetworkWithCustomFeeToken()

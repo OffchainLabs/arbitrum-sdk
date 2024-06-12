@@ -30,7 +30,7 @@ import { Erc20Bridger, ChildToParentMessageStatus } from '../../src'
 import { ParentToChildMessageStatus } from '../../src/lib/message/ParentToChildMessage'
 import {
   ArbitrumNetwork,
-  assertHasTokenBridge,
+  assertArbitrumNetworkHasTokenBridge,
 } from '../../src/lib/dataEntities/networks'
 import { GasOverrides } from '../../src/lib/message/ParentToChildMessageGasEstimator'
 import { ArbSdkError } from '../../src/lib/dataEntities/errors'
@@ -198,7 +198,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
 }
 
 const getGateways = (gatewayType: GatewayType, l2Network: ArbitrumNetwork) => {
-  assertHasTokenBridge(l2Network)
+  assertArbitrumNetworkHasTokenBridge(l2Network)
 
   switch (gatewayType) {
     case GatewayType.CUSTOM:

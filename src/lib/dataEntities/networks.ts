@@ -480,7 +480,7 @@ export async function getMulticallAddress(
 
   // The provided chain is found in the list
   if (typeof chain !== 'undefined') {
-    assertHasTokenBridge(chain)
+    assertArbitrumNetworkHasTokenBridge(chain)
     // Return the address of Multicall on the chain
     return chain.tokenBridge.l2Multicall
   }
@@ -496,7 +496,7 @@ export async function getMulticallAddress(
     )
   }
 
-  assertHasTokenBridge(childChain)
+  assertArbitrumNetworkHasTokenBridge(childChain)
   // Return the address of Multicall on the parent chain
   return childChain.tokenBridge.l1MultiCall
 }
@@ -523,7 +523,7 @@ export function mapL2NetworkToArbitrumNetwork(
  * @param network {@link ArbitrumNetwork} object
  * @throws ArbSdkError if the object does not have a token bridge
  */
-export function assertHasTokenBridge<T extends ArbitrumNetwork>(
+export function assertArbitrumNetworkHasTokenBridge<T extends ArbitrumNetwork>(
   network: T
 ): asserts network is T & { tokenBridge: TokenBridge } {
   if (
@@ -531,7 +531,9 @@ export function assertHasTokenBridge<T extends ArbitrumNetwork>(
     !('tokenBridge' in network) ||
     typeof network.tokenBridge === 'undefined'
   ) {
-    throw new ArbSdkError('Token bridge addresses required for network')
+    throw new ArbSdkError(
+      `The ArbitrumNetwork object with chainId ${network.chainId} is missing the token bridge contracts addresses. Please add them in the "tokenBridge" property.`
+    )
   }
 }
 

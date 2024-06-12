@@ -48,7 +48,7 @@ import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import {
   ArbitrumNetwork,
   TokenBridge,
-  assertHasTokenBridge,
+  assertArbitrumNetworkHasTokenBridge,
   getArbitrumNetwork,
 } from '../dataEntities/networks'
 import { ArbSdkError, MissingProviderArbSdkError } from '../dataEntities/errors'
@@ -197,7 +197,7 @@ export class Erc20Bridger extends AssetBridger<
    */
   public constructor(childChain: ArbitrumNetwork) {
     super(childChain)
-    assertHasTokenBridge(childChain)
+    assertArbitrumNetworkHasTokenBridge(childChain)
     this.childChain = childChain
   }
 
