@@ -28,7 +28,10 @@ import { config, getSigner, testSetup } from '../../scripts/testSetup'
 import { Signer, Wallet } from 'ethers'
 import { Erc20Bridger, ChildToParentMessageStatus } from '../../src'
 import { ParentToChildMessageStatus } from '../../src/lib/message/ParentToChildMessage'
-import { ArbitrumNetwork } from '../../src/lib/dataEntities/networks'
+import {
+  ArbitrumNetwork,
+  assertArbitrumNetworkHasTokenBridge,
+} from '../../src/lib/dataEntities/networks'
 import { GasOverrides } from '../../src/lib/message/ParentToChildMessageGasEstimator'
 import { ArbSdkError } from '../../src/lib/dataEntities/errors'
 import { ERC20 } from '../../src/lib/abi/ERC20'
@@ -195,6 +198,8 @@ export const withdrawToken = async (params: WithdrawalParams) => {
 }
 
 const getGateways = (gatewayType: GatewayType, l2Network: ArbitrumNetwork) => {
+  assertArbitrumNetworkHasTokenBridge(l2Network)
+
   switch (gatewayType) {
     case GatewayType.CUSTOM:
       return {
