@@ -73,7 +73,7 @@ describeOnlyWhenEth('WETH', async () => {
       expectedGatewayType: GatewayType.WETH,
     })
 
-    const l2WethGateway = await erc20Bridger.getL2GatewayAddress(
+    const l2WethGateway = await erc20Bridger.getChildGatewayAddress(
       l1WethAddress,
       childSigner.provider!
     )

@@ -81,7 +81,7 @@ describe('standard ERC20', () => {
     async () => {
       const { parentSigner, erc20Bridger } = await testSetup()
 
-      const gatewayAddress = await erc20Bridger.getL1GatewayAddress(
+      const gatewayAddress = await erc20Bridger.getParentGatewayAddress(
         testState.parentToken.address,
         parentSigner.provider!
       )
