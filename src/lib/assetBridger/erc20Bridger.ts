@@ -841,6 +841,40 @@ export class Erc20Bridger extends AssetBridger<
     })
     return L2TransactionReceipt.monkeyPatchWait(tx)
   }
+
+  /**
+   * Checks if custom gateway has been registered
+   * @param erc20L1Address
+   * @param l1Provider
+   * @param l2Provider
+   * @returns
+   */
+  public async isCustomGatewayRegistered({
+    erc20L1Address,
+    l1Provider,
+    l2Provider,
+  }: {
+    erc20L1Address: string
+    l1Provider: Provider
+    l2Provider: Provider
+  }) {
+    const tokenL2AddressFromL1GatewayRouter = await this.getL2ERC20Address(
+      erc20L1Address,
+      l1Provider
+    )
+
+    const l2GatewayAddressFromL2Router = await this.getL2GatewayAddress(
+      erc20L1Address,
+      l2Provider
+    )
+
+    const l2AddressFromL2Gateway = await L2ERC20Gateway__factory.connect(
+      l2GatewayAddressFromL2Router,
+      l2Provider
+    ).calculateL2TokenAddress(erc20L1Address)
+
+    return tokenL2AddressFromL1GatewayRouter === l2AddressFromL2Gateway
+  }
 }
 
 /**
@@ -978,40 +1012,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
     })
 
     return L1TransactionReceipt.monkeyPatchWait(registerTx)
-  }
-
-  /**
-   * Checks if custom gateway has been registered
-   * @param erc20L1Address
-   * @param l1Provider
-   * @param l2Provider
-   * @returns
-   */
-  public async isCustomGatewayRegistered({
-    erc20L1Address,
-    l1Provider,
-    l2Provider,
-  }: {
-    erc20L1Address: string
-    l1Provider: Provider
-    l2Provider: Provider
-  }) {
-    const tokenL2AddressFromL1GatewayRouter = await this.getL2ERC20Address(
-      erc20L1Address,
-      l1Provider
-    )
-
-    const l2GatewayAddressFromL2Router = await this.getL2GatewayAddress(
-      erc20L1Address,
-      l2Provider
-    )
-
-    const l2AddressFromL2Gateway = await L2ERC20Gateway__factory.connect(
-      l2GatewayAddressFromL2Router,
-      l2Provider
-    ).calculateL2TokenAddress(erc20L1Address)
-
-    return tokenL2AddressFromL1GatewayRouter === l2AddressFromL2Gateway
   }
 
   /**
