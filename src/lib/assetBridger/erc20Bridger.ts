@@ -49,7 +49,11 @@ import { L2Network, getL2Network } from '../dataEntities/networks'
 import { ArbSdkError, MissingProviderArbSdkError } from '../dataEntities/errors'
 import { DISABLED_GATEWAY } from '../dataEntities/constants'
 import { EventFetcher } from '../utils/eventFetcher'
-import { EthDepositParams, EthWithdrawParams } from './ethBridger'
+import {
+  EthDepositParams,
+  EthWithdrawParams,
+  L1ToL2TxReqAndSigner,
+} from './ethBridger'
 import { AssetBridger } from './assetBridger'
 import {
   L1ContractCallTransaction,
@@ -133,6 +137,7 @@ export interface Erc20WithdrawParams extends EthWithdrawParams {
 
 export type L1ToL2TxReqAndSignerProvider = L1ToL2TransactionRequest & {
   l1Signer: Signer
+  l2Provider: Provider
   overrides?: Overrides
 }
 
@@ -551,6 +556,36 @@ export class Erc20Bridger extends AssetBridger<
     }
   }
 
+  private getErc20L1AddressFromL1ToL2TxRequest(
+    txReq: L1ToL2TxReqAndSigner
+  ): string {
+    const {
+      txRequest: { data },
+    } = txReq
+
+    const iGatewayRouter = L1GatewayRouter__factory.createInterface()
+
+    try {
+      const decodedData = iGatewayRouter.decodeFunctionData(
+        'outboundTransfer',
+        data
+      )
+
+      return decodedData['_token']
+    } catch {
+      try {
+        const decodedData = iGatewayRouter.decodeFunctionData(
+          'outboundTransferCustomRefund',
+          data
+        )
+
+        return decodedData['_token']
+      } catch {
+        throw new Error('data signature not matching deposits methods')
+      }
+    }
+  }
+
   /**
    * Get the call value for the deposit transaction request
    * @param depositParams
@@ -735,6 +770,19 @@ export class Erc20Bridger extends AssetBridger<
     }
 
     const l1Provider = SignerProviderUtils.getProviderOrThrow(params.l1Signer)
+
+    if (
+      !this.isCustomGatewayRegistered({
+        erc20L1Address: isL1ToL2TransactionRequest(params)
+          ? this.getErc20L1AddressFromL1ToL2TxRequest(params)
+          : params.erc20L1Address,
+        l1Provider,
+        l2Provider: params.l2Provider,
+      })
+    ) {
+      throw new Error('Token not registered on the gateway')
+    }
+
     const tokenDeposit = isL1ToL2TransactionRequest(params)
       ? params
       : await this.getDepositRequest({
