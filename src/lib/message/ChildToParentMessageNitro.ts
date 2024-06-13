@@ -30,7 +30,7 @@ import { RollupUserLogic__factory } from '../abi/factories/RollupUserLogic__fact
 import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
-import { L2ToL1TxEvent as ChildToParentChainTxEvent } from '../abi/ArbSys'
+import { L2ToL1TxEvent as ChildToParentTxEvent } from '../abi/ArbSys'
 import { ContractTransaction, Overrides } from 'ethers'
 import { Mutex } from 'async-mutex'
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
@@ -50,127 +50,121 @@ import { ChildToParentMessageStatus } from '../dataEntities/message'
 
 /**
  * Conditional type for Signer or Provider. If T is of type Provider
- * then ChildToParentChainMessageReaderOrWriter<T> will be of type ChildToParentChainMessageReader.
- * If T is of type Signer then ChildToParentChainMessageReaderOrWriter<T> will be of
- * type ChildToParentChainMessageWriter.
+ * then ChildToParentMessageReaderOrWriter<T> will be of type ChildToParentMessageReader.
+ * If T is of type Signer then ChildToParentMessageReaderOrWriter<T> will be of
+ * type ChildToParentMessageWriter.
  */
-export type ChildToParentChainMessageReaderOrWriterNitro<
+export type ChildToParentMessageReaderOrWriterNitro<
   T extends SignerOrProvider
 > = T extends Provider
-  ? ChildToParentChainMessageReaderNitro
-  : ChildToParentChainMessageWriterNitro
+  ? ChildToParentMessageReaderNitro
+  : ChildToParentMessageWriterNitro
 
 // expected number of parent chain blocks that it takes for a Child chain tx to be included in a parent chain assertion
 const ASSERTION_CREATED_PADDING = 50
 // expected number of parent chain blocks that it takes for a validator to confirm a parent chain block after the node deadline is passed
 const ASSERTION_CONFIRMED_PADDING = 20
 
-const childChainBlockRangeCache: { [key in string]: (number | undefined)[] } =
-  {}
+const childBlockRangeCache: { [key in string]: (number | undefined)[] } = {}
 const mutex = new Mutex()
 
-function getChildChainBlockRangeCacheKey({
+function getChildBlockRangeCacheKey({
   childChainId,
-  parentChainBlockNumber,
+  parentBlockNumber,
 }: {
   childChainId: number
-  parentChainBlockNumber: number
+  parentBlockNumber: number
 }) {
-  return `${childChainId}-${parentChainBlockNumber}`
+  return `${childChainId}-${parentBlockNumber}`
 }
 
-function setChildChainBlockRangeCache(
-  key: string,
-  value: (number | undefined)[]
-) {
-  childChainBlockRangeCache[key] = value
+function setChildBlockRangeCache(key: string, value: (number | undefined)[]) {
+  childBlockRangeCache[key] = value
 }
 
 async function getBlockRangesForL1BlockWithCache({
   parentProvider,
   childProvider,
-  forParentChainBlock,
+  forParentBlock,
 }: {
   parentProvider: JsonRpcProvider
   childProvider: JsonRpcProvider
-  forParentChainBlock: number
+  forParentBlock: number
 }) {
   const childChainId = (await childProvider.getNetwork()).chainId
-  const key = getChildChainBlockRangeCacheKey({
+  const key = getChildBlockRangeCacheKey({
     childChainId,
-    parentChainBlockNumber: forParentChainBlock,
+    parentBlockNumber: forParentBlock,
   })
 
-  if (childChainBlockRangeCache[key]) {
-    return childChainBlockRangeCache[key]
+  if (childBlockRangeCache[key]) {
+    return childBlockRangeCache[key]
   }
 
   // implements a lock that only fetches cache once
   const release = await mutex.acquire()
 
   // if cache has been acquired while awaiting the lock
-  if (childChainBlockRangeCache[key]) {
+  if (childBlockRangeCache[key]) {
     release()
-    return childChainBlockRangeCache[key]
+    return childBlockRangeCache[key]
   }
 
   try {
-    const childChainBlockRange = await getBlockRangesForL1Block({
-      forL1Block: forParentChainBlock,
+    const childBlockRange = await getBlockRangesForL1Block({
+      forL1Block: forParentBlock,
       provider: parentProvider,
     })
-    setChildChainBlockRangeCache(key, childChainBlockRange)
+    setChildBlockRangeCache(key, childBlockRange)
   } finally {
     release()
   }
 
-  return childChainBlockRangeCache[key]
+  return childBlockRangeCache[key]
 }
 
 /**
  * Base functionality for nitro Child->Parent messages
  */
-export class ChildToParentChainMessageNitro {
+export class ChildToParentMessageNitro {
   protected constructor(
-    public readonly event: EventArgs<ChildToParentChainTxEvent>
+    public readonly event: EventArgs<ChildToParentTxEvent>
   ) {}
 
   /**
-   * Instantiates a new `ChildToParentChainMessageWriterNitro` or `ChildToParentChainMessageReaderNitro` object.
+   * Instantiates a new `ChildToParentMessageWriterNitro` or `ChildToParentMessageReaderNitro` object.
    *
    * @param {SignerOrProvider} parentSignerOrProvider Signer or provider to be used for executing or reading the Child-to-Parent message.
-   * @param {EventArgs<ChildToParentChainTxEvent>} event The event containing the data of the Child-to-Parent message.
+   * @param {EventArgs<ChildToParentTxEvent>} event The event containing the data of the Child-to-Parent message.
    * @param {Provider} [parentProvider] Optional. Used to override the Provider which is attached to `parentSignerOrProvider` in case you need more control. This will be a required parameter in a future major version update.
    */
   public static fromEvent<T extends SignerOrProvider>(
     parentSignerOrProvider: T,
-    event: EventArgs<ChildToParentChainTxEvent>,
+    event: EventArgs<ChildToParentTxEvent>,
     parentProvider?: Provider
-  ): ChildToParentChainMessageReaderOrWriterNitro<T>
+  ): ChildToParentMessageReaderOrWriterNitro<T>
   public static fromEvent<T extends SignerOrProvider>(
     parentSignerOrProvider: T,
-    event: EventArgs<ChildToParentChainTxEvent>,
+    event: EventArgs<ChildToParentTxEvent>,
     parentProvider?: Provider
-  ):
-    | ChildToParentChainMessageReaderNitro
-    | ChildToParentChainMessageWriterNitro {
+  ): ChildToParentMessageReaderNitro | ChildToParentMessageWriterNitro {
     return SignerProviderUtils.isSigner(parentSignerOrProvider)
-      ? new ChildToParentChainMessageWriterNitro(
+      ? new ChildToParentMessageWriterNitro(
           parentSignerOrProvider,
           event,
           parentProvider
         )
-      : new ChildToParentChainMessageReaderNitro(parentSignerOrProvider, event)
+      : new ChildToParentMessageReaderNitro(parentSignerOrProvider, event)
   }
 
-  public static async getChildToParentChainEvents(
+  public static async getChildToParentEvents(
     childProvider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
     position?: BigNumber,
     destination?: string,
     hash?: BigNumber
   ): Promise<
-    (EventArgs<ChildToParentChainTxEvent> & { transactionHash: string })[]
+    (EventArgs<ChildToParentTxEvent> & { transactionHash: string })[]
   > {
     const eventFetcher = new EventFetcher(childProvider)
     return (
@@ -186,7 +180,7 @@ export class ChildToParentChainMessageNitro {
 /**
  * Provides read-only access nitro for child-to-parent-messages
  */
-export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMessageNitro {
+export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
   protected sendRootHash?: string
   protected sendRootSize?: BigNumber
   protected sendRootConfirmed?: boolean
@@ -195,7 +189,7 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
 
   constructor(
     protected readonly parentProvider: Provider,
-    event: EventArgs<ChildToParentChainTxEvent>
+    event: EventArgs<ChildToParentTxEvent>
   ) {
     super(event)
   }
@@ -267,20 +261,20 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
     }
 
     const parsedLog = this.parseNodeCreatedAssertion(log)
-    const childChainBlock = await arbitrumProvider.getBlock(
+    const childBlock = await arbitrumProvider.getBlock(
       parsedLog.afterState.blockHash
     )
-    if (!childChainBlock) {
+    if (!childBlock) {
       throw new ArbSdkError(
         `Block not found. ${parsedLog.afterState.blockHash}`
       )
     }
-    if (childChainBlock.sendRoot !== parsedLog.afterState.sendRoot) {
+    if (childBlock.sendRoot !== parsedLog.afterState.sendRoot) {
       throw new ArbSdkError(
-        `Child chain block send root doesn't match parsed log. ${childChainBlock.sendRoot} ${parsedLog.afterState.sendRoot}`
+        `Child chain block send root doesn't match parsed log. ${childBlock.sendRoot} ${parsedLog.afterState.sendRoot}`
       )
     }
-    return childChainBlock
+    return childBlock
   }
 
   private async getBlockFromNodeNum(
@@ -313,7 +307,7 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
           const l2BlockRange = await getBlockRangesForL1BlockWithCache({
             parentProvider: this.parentProvider as JsonRpcProvider,
             childProvider: childProvider as JsonRpcProvider,
-            forParentChainBlock: createdAtBlock.toNumber(),
+            forParentBlock: createdAtBlock.toNumber(),
           })
           const startBlock = l2BlockRange[0]
           const endBlock = l2BlockRange[1]
@@ -383,18 +377,18 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
       )
 
       const latestConfirmedNodeNum = await rollup.callStatic.latestConfirmed()
-      const childChainBlockConfirmed = await this.getBlockFromNodeNum(
+      const childBlockConfirmed = await this.getBlockFromNodeNum(
         rollup,
         latestConfirmedNodeNum,
         childProvider
       )
 
       const sendRootSizeConfirmed = BigNumber.from(
-        childChainBlockConfirmed.sendCount
+        childBlockConfirmed.sendCount
       )
       if (sendRootSizeConfirmed.gt(this.event.position)) {
         this.sendRootSize = sendRootSizeConfirmed
-        this.sendRootHash = childChainBlockConfirmed.sendRoot
+        this.sendRootHash = childBlockConfirmed.sendRoot
         this.sendRootConfirmed = true
       } else {
         // if the node has yet to be confirmed we'll still try to find proof info from unconfirmed nodes
@@ -402,16 +396,16 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
         if (latestNodeNum.gt(latestConfirmedNodeNum)) {
           // In rare case latestNodeNum can be equal to latestConfirmedNodeNum
           // eg immediately after an upgrade, or at genesis, or on a chain where confirmation time = 0 like AnyTrust may have
-          const childChainBlock = await this.getBlockFromNodeNum(
+          const childBlock = await this.getBlockFromNodeNum(
             rollup,
             latestNodeNum,
             childProvider
           )
 
-          const sendRootSize = BigNumber.from(childChainBlock.sendCount)
+          const sendRootSize = BigNumber.from(childBlock.sendCount)
           if (sendRootSize.gt(this.event.position)) {
             this.sendRootSize = sendRootSize
-            this.sendRootHash = childChainBlock.sendRoot
+            this.sendRootHash = childBlock.sendRoot
           }
         }
       }
@@ -470,7 +464,7 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
 
     // consistency check in case we change the enum in the future
     if (status !== ChildToParentMessageStatus.UNCONFIRMED)
-      throw new ArbSdkError('ChildToParentChainMsg expected to be unconfirmed')
+      throw new ArbSdkError('ChildToParentMsg expected to be unconfirmed')
 
     const latestBlock = await this.parentProvider.getBlockNumber()
     const eventFetcher = new EventFetcher(this.parentProvider)
@@ -492,15 +486,15 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
       )
     ).sort((a, b) => a.event.nodeNum.toNumber() - b.event.nodeNum.toNumber())
 
-    const lastChildChainBlock =
+    const lastChildBlock =
       logs.length === 0
         ? undefined
         : await this.getBlockFromNodeLog(
             childProvider as JsonRpcProvider,
             logs[logs.length - 1]
           )
-    const lastSendCount = lastChildChainBlock
-      ? BigNumber.from(lastChildChainBlock.sendCount)
+    const lastSendCount = lastChildBlock
+      ? BigNumber.from(lastChildBlock.sendCount)
       : BigNumber.from(0)
 
     // here we assume the Child to Parent tx is actually valid, so the user needs to wait the max time
@@ -519,11 +513,11 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
     while (left <= right) {
       const mid = Math.floor((left + right) / 2)
       const log = logs[mid]
-      const childChainBlock = await this.getBlockFromNodeLog(
+      const childBlock = await this.getBlockFromNodeLog(
         childProvider as JsonRpcProvider,
         log
       )
-      const sendCount = BigNumber.from(childChainBlock.sendCount)
+      const sendCount = BigNumber.from(childBlock.sendCount)
       if (sendCount.gt(this.event.position)) {
         foundLog = log
         right = mid - 1
@@ -541,24 +535,24 @@ export class ChildToParentChainMessageReaderNitro extends ChildToParentChainMess
 /**
  * Provides read and write access for nitro child-to-Parent-messages
  */
-export class ChildToParentChainMessageWriterNitro extends ChildToParentChainMessageReaderNitro {
+export class ChildToParentMessageWriterNitro extends ChildToParentMessageReaderNitro {
   /**
-   * Instantiates a new `ChildToParentChainMessageWriterNitro` object.
+   * Instantiates a new `ChildToParentMessageWriterNitro` object.
    *
    * @param {Signer} parentSigner The signer to be used for executing the Child-to-Parent message.
-   * @param {EventArgs<ChildToParentChainTxEvent>} event The event containing the data of the Child-to-Parent message.
+   * @param {EventArgs<ChildToParentTxEvent>} event The event containing the data of the Child-to-Parent message.
    * @param {Provider} [parentProvider] Optional. Used to override the Provider which is attached to `parentSigner` in case you need more control. This will be a required parameter in a future major version update.
    */
   constructor(
     private readonly parentSigner: Signer,
-    event: EventArgs<ChildToParentChainTxEvent>,
+    event: EventArgs<ChildToParentTxEvent>,
     parentProvider?: Provider
   ) {
     super(parentProvider ?? parentSigner.provider!, event)
   }
 
   /**
-   * Executes the ChildToParentChainMessage on Parent Chain.
+   * Executes the ChildToParentMessage on Parent Chain.
    * Will throw an error if the outbox entry has not been created, which happens when the
    * corresponding assertion is confirmed.
    * @returns

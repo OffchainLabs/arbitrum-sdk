@@ -362,7 +362,7 @@ export class ParentEthDepositTransactionReceipt extends ParentTransactionReceipt
    * @param confirmations Amount of confirmations the retryable ticket and the auto redeem receipt should have
    * @param timeout Amount of time to wait for the retryable ticket to be created
    * Defaults to 15 minutes, as by this time all transactions are expected to be included on the child chain. Throws on timeout.
-   * @returns The wait result contains `complete`, a `status`, the ParentToChildMessage and optionally the `childChainTxReceipt`
+   * @returns The wait result contains `complete`, a `status`, the ParentToChildMessage and optionally the `childTxReceipt`
    * If `complete` is true then this message is in the terminal state.
    * For eth deposits complete this is when the status is FUNDS_DEPOSITED, EXPIRED or REDEEMED.
    */
@@ -400,7 +400,7 @@ export class ParentContractCallTransactionReceipt extends ParentTransactionRecei
    * @param confirmations Amount of confirmations the retryable ticket and the auto redeem receipt should have
    * @param timeout Amount of time to wait for the retryable ticket to be created
    * Defaults to 15 minutes, as by this time all transactions are expected to be included on the child chain. Throws on timeout.
-   * @returns The wait result contains `complete`, a `status`, a {@link ParentToChildMessage} and optionally the `childChainTxReceipt`.
+   * @returns The wait result contains `complete`, a `status`, a {@link ParentToChildMessage} and optionally the `childTxReceipt`.
    * If `complete` is true then this message is in the terminal state.
    * For contract calls this is true only if the status is REDEEMED.
    */
