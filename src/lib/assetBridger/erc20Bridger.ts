@@ -957,7 +957,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     await this.checkChildChain(childProvider)
 
     const parentProvider = parentSigner.provider!
-    const l1SenderAddress = await parentSigner.getAddress()
+    const parentSenderAddress = await parentSigner.getAddress()
 
     const parentToken = ICustomToken__factory.connect(
       parentTokenAddress,
@@ -978,31 +978,32 @@ export class AdminErc20Bridger extends Erc20Bridger {
         parentProvider
       )
       const allowance = await nativeTokenContract.allowance(
-        l1SenderAddress,
+        parentSenderAddress,
         parentToken.address
       )
 
-      const maxFeePerGasOnL2 = (await childProvider.getFeeData()).maxFeePerGas
-      const maxFeePerGasOnL2WithBuffer = this.percentIncrease(
-        maxFeePerGasOnL2!,
+      const maxFeePerGasOnChild = (await childProvider.getFeeData())
+        .maxFeePerGas
+      const maxFeePerGasOnChildWithBuffer = this.percentIncrease(
+        maxFeePerGasOnChild!,
         BigNumber.from(500)
       )
       // hardcode gas limit to 60k
       const estimatedGasFee = BigNumber.from(60_000).mul(
-        maxFeePerGasOnL2WithBuffer
+        maxFeePerGasOnChildWithBuffer
       )
 
       if (allowance.lt(estimatedGasFee)) {
         throw new Error(
-          `Insufficient allowance. Please increase spending for: owner - ${l1SenderAddress}, spender - ${parentToken.address}.`
+          `Insufficient allowance. Please increase spending for: owner - ${parentSenderAddress}, spender - ${parentToken.address}.`
         )
       }
     }
 
-    const l1AddressFromL2 = await childToken.l1Address()
-    if (l1AddressFromL2 !== parentTokenAddress) {
+    const parentAddressFromChild = await childToken.l1Address()
+    if (parentAddressFromChild !== parentTokenAddress) {
       throw new ArbSdkError(
-        `L2 token does not have l1 address set. Set address: ${l1AddressFromL2}, expected address: ${parentTokenAddress}.`
+        `child token does not have parent address set. Set address: ${parentAddressFromChild}, expected address: ${parentTokenAddress}.`
       )
     }
 
@@ -1042,7 +1043,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
           doubleFeePerGas,
           setTokenDeposit,
           setGatewayDeposit,
-          l1SenderAddress,
+          parentSenderAddress,
         ]
       )
 
