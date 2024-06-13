@@ -161,6 +161,16 @@ const registerCustomToken = async (
   )
   await l1CustomToken.deployed()
 
+  adminErc20Bridger
+    .isRegistered({
+      erc20L1Address: l1CustomToken.address,
+      l1Provider: l1Signer.provider!,
+      l2Provider: l2Signer.provider!,
+    })
+    .then(isRegistered => {
+      expect(isRegistered, 'expected token not to be registered').to.be.false
+    })
+
   const l2CustomTokenFac = new TestArbCustomToken__factory(l2Signer)
   const l2CustomToken = await l2CustomTokenFac.deploy(
     l2Network.tokenBridge.l2CustomGateway,
@@ -288,6 +298,16 @@ const registerCustomToken = async (
     endL2Erc20Address,
     'End l2Erc20Address not equal l2CustomToken address'
   ).to.eq(l2CustomToken.address)
+
+  adminErc20Bridger
+    .isRegistered({
+      erc20L1Address: l1CustomToken.address,
+      l1Provider: l1Signer.provider!,
+      l2Provider: l2Signer.provider!,
+    })
+    .then(isRegistered => {
+      expect(isRegistered, 'expected token to be registered').to.be.true
+    })
 
   return {
     l1CustomToken,
