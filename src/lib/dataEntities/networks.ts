@@ -255,7 +255,7 @@ export const networks: Networks = {
       sequencerInbox: '0x00A0F15b79d1D3e5991929FaAbCF2AA65623530c',
     },
     isCustom: false,
-    name: 'Stylus Testnet',
+    name: 'Stylus Testnet v1',
     parentChainId: 421614,
     tokenBridge: {
       parentCustomGateway: '0xd624D491A5Bc32de52a2e1481846752213bF7415',
@@ -272,6 +272,36 @@ export const networks: Networks = {
       childProxyAdmin: '0xE914c0d417E8250d0237d2F4827ed3612e6A9C3B',
       childWeth: '0x61Dc4b961D2165623A25EB775260785fE78BD37C',
       childWethGateway: '0x7021B4Edd9f047772242fc948441d6e0b9121175',
+    },
+  },
+  13331371: {
+    chainId: 13331371,
+    confirmPeriodBlocks: 20,
+    ethBridge: {
+      bridge: '0x024a10506f8a27E4CfEDeB18fd30AA1529A2960E',
+      inbox: '0xcdCF1F59f5d4A65a3c67E1341f8b85Cba50E0a7C',
+      outbox: '0xf731Fc4F7B70A0a6F9915f452d88Dc405a59D8b1',
+      rollup: '0x01a8a2b32aa5328466Be47A1808a03aC6c35d94f',
+      sequencerInbox: '0x1Ea8B3853355604673e1301A501766EbB2987a09',
+    },
+    isCustom: false,
+    name: 'Stylus Testnet v2',
+    parentChainId: 421614,
+    tokenBridge: {
+      l1CustomGateway: '0x093353B9f723047abf37Ebe01cE48d7dDA8320F4',
+      l1ERC20Gateway: '0xD2C4693Dd8d44703af5CF9484fa8faAD6e33E392',
+      l1GatewayRouter: '0xAC4F454320A253267C6Ae95e4784b9A4f9F78359',
+      l1MultiCall: '0xce1CAd780c529e66e3aa6D952a1ED9A6447791c1',
+      l1ProxyAdmin: '0xBD76fd3fB5F3CD7165fB6e0DB895FFE1d81463e3',
+      l1Weth: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73',
+      l1WethGateway: '0x4FEbc93233aAc1523f36Abe297de9323f6C8ce79',
+      l2CustomGateway: '0xE102D94df0179082B39Ddcad58c9430dedc89aE3',
+      l2ERC20Gateway: '0xCf3a4aF3c48Ba19c5FccFB44FA3E3A0F2A6e60dA',
+      l2GatewayRouter: '0xD60FD4c5D335b00287202C93C5B4EE0478D92686',
+      l2Multicall: '0x39E068582873B2011F5a1e8E0F7D9D993c8111BC',
+      l2ProxyAdmin: '0x9DC4Da9a940AFEbBC8329aA6534aD767b60d968c',
+      l2Weth: '0xa3bD1fdeEb903142d16B3bd22f2aC9A82C714D62',
+      l2WethGateway: '0xec018E81eE818b04CFb1E013D91F1b779a2AC440',
     },
   },
 }
@@ -508,7 +538,7 @@ export async function getMulticallAddress(
 
   // The provided chain is found in the list
   if (typeof chain !== 'undefined') {
-    assertHasTokenBridge(chain)
+    assertArbitrumNetworkHasTokenBridge(chain)
     // Return the address of Multicall on the chain
     return chain.tokenBridge.childMulticall
   }
@@ -524,7 +554,7 @@ export async function getMulticallAddress(
     )
   }
 
-  assertHasTokenBridge(childChain)
+  assertArbitrumNetworkHasTokenBridge(childChain)
   // Return the address of Multicall on the parent chain
   return childChain.tokenBridge.parentMultiCall
 }
@@ -605,6 +635,27 @@ export function assertHasTokenBridge<T extends ArbitrumNetwork>(
     typeof network.tokenBridge === 'undefined'
   ) {
     throw new ArbSdkError('Token bridge addresses required for network')
+  }
+}
+
+/**
+ * Asserts that the given object has a token bridge. This is useful because not all Arbitrum network
+ * operations require a token bridge.
+ *
+ * @param network {@link ArbitrumNetwork} object
+ * @throws ArbSdkError if the object does not have a token bridge
+ */
+export function assertArbitrumNetworkHasTokenBridge<T extends ArbitrumNetwork>(
+  network: T
+): asserts network is T & { tokenBridge: TokenBridge } {
+  if (
+    typeof network === 'undefined' ||
+    !('tokenBridge' in network) ||
+    typeof network.tokenBridge === 'undefined'
+  ) {
+    throw new ArbSdkError(
+      `The ArbitrumNetwork object with chainId ${network.chainId} is missing the token bridge contracts addresses. Please add them in the "tokenBridge" property.`
+    )
   }
 }
 

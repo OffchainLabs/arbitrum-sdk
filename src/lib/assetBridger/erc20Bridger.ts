@@ -47,8 +47,8 @@ import {
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import {
   ArbitrumNetwork,
-  ArbitrumNetworkWithTokenBridge,
-  assertHasTokenBridge,
+  TokenBridge,
+  assertArbitrumNetworkHasTokenBridge,
   getArbitrumNetwork,
 } from '../dataEntities/networks'
 import { ArbSdkError, MissingProviderArbSdkError } from '../dataEntities/errors'
@@ -188,14 +188,16 @@ export class Erc20Bridger extends AssetBridger<
   public static MAX_APPROVAL: BigNumber = MaxUint256
   public static MIN_CUSTOM_DEPOSIT_GAS_LIMIT = BigNumber.from(275000)
 
-  public readonly childChain: ArbitrumNetworkWithTokenBridge
+  public readonly childChain: ArbitrumNetwork & {
+    tokenBridge: TokenBridge
+  }
 
   /**
    * Bridger for moving ERC20 tokens back and forth between parent-to-child
    */
   public constructor(childChain: ArbitrumNetwork) {
     super(childChain)
-    assertHasTokenBridge(childChain)
+    assertArbitrumNetworkHasTokenBridge(childChain)
     this.childChain = childChain
   }
 
@@ -316,7 +318,7 @@ export class Erc20Bridger extends AssetBridger<
     }
   }
 
-  private isApproveParams(
+  protected isApproveParams(
     params: ApproveParamsOrTxRequest
   ): params is SignerTokenApproveParams {
     return (params as SignerTokenApproveParams).erc20ParentAddress != undefined
@@ -887,6 +889,54 @@ interface TokenAndGateway {
  * Admin functionality for the token bridge
  */
 export class AdminErc20Bridger extends Erc20Bridger {
+  private percentIncrease(num: BigNumber, increase: BigNumber): BigNumber {
+    return num.add(num.mul(increase).div(100))
+  }
+
+  public getApproveGasTokenForCustomTokenRegistrationRequest(
+    params: ProviderTokenApproveParams
+  ): Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>> {
+    if (this.nativeTokenIsEth) {
+      throw new Error('chain uses ETH as its native/gas token')
+    }
+
+    const iErc20Interface = ERC20__factory.createInterface()
+    const data = iErc20Interface.encodeFunctionData('approve', [
+      params.erc20ParentAddress,
+      params.amount || Erc20Bridger.MAX_APPROVAL,
+    ])
+
+    return {
+      data,
+      value: BigNumber.from(0),
+      to: this.nativeToken!,
+    }
+  }
+
+  public async approveGasTokenForCustomTokenRegistration(
+    params: ApproveParamsOrTxRequest
+  ): Promise<ethers.ContractTransaction> {
+    if (this.nativeTokenIsEth) {
+      throw new Error('chain uses ETH as its native/gas token')
+    }
+
+    await this.checkParentChain(params.parentSigner)
+
+    const approveGasTokenRequest = this.isApproveParams(params)
+      ? this.getApproveGasTokenForCustomTokenRegistrationRequest({
+          ...params,
+          parentProvider: SignerProviderUtils.getProviderOrThrow(
+            params.parentSigner
+          ),
+        })
+      : params.txRequest
+
+    return params.parentSigner.sendTransaction({
+      ...approveGasTokenRequest,
+      ...params.overrides,
+    })
+  }
+
   /**
    * Register a custom token on the Arbitrum bridge
    * See https://developer.offchainlabs.com/docs/bridging_assets#the-arbitrum-generic-custom-gateway for more details
@@ -908,6 +958,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     await this.checkParentChain(parentSigner)
     await this.checkChildChain(childProvider)
 
+    const parentProvider = parentSigner.provider!
     const parentSenderAddress = await parentSigner.getAddress()
 
     const parentToken = ICustomToken__factory.connect(
@@ -923,10 +974,38 @@ export class AdminErc20Bridger extends Erc20Bridger {
     await parentToken.deployed()
     await childToken.deployed()
 
-    const parentAddressFromChildChain = await childToken.l1Address()
-    if (parentAddressFromChildChain !== parentTokenAddress) {
+    if (!this.nativeTokenIsEth) {
+      const nativeTokenContract = ERC20__factory.connect(
+        this.nativeToken!,
+        parentProvider
+      )
+      const allowance = await nativeTokenContract.allowance(
+        parentSenderAddress,
+        parentToken.address
+      )
+
+      const maxFeePerGasOnChild = (await childProvider.getFeeData())
+        .maxFeePerGas
+      const maxFeePerGasOnChildWithBuffer = this.percentIncrease(
+        maxFeePerGasOnChild!,
+        BigNumber.from(500)
+      )
+      // hardcode gas limit to 60k
+      const estimatedGasFee = BigNumber.from(60_000).mul(
+        maxFeePerGasOnChildWithBuffer
+      )
+
+      if (allowance.lt(estimatedGasFee)) {
+        throw new Error(
+          `Insufficient allowance. Please increase spending for: owner - ${parentSenderAddress}, spender - ${parentToken.address}.`
+        )
+      }
+    }
+
+    const parentAddressFromChild = await childToken.l1Address()
+    if (parentAddressFromChild !== parentTokenAddress) {
       throw new ArbSdkError(
-        `Child token does not have parent address set. Set address: ${parentAddressFromChildChain}, expected address: ${parentTokenAddress}.`
+        `child token does not have parent address set. Set address: ${parentAddressFromChild}, expected address: ${parentTokenAddress}.`
       )
     }
 
@@ -978,7 +1057,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
       }
     }
 
-    const parentProvider = parentSigner.provider!
     const gEstimator = new ParentToChildMessageGasEstimator(childProvider)
     const setTokenEstimates2 = await gEstimator.populateFunctionParams(
       (params: OmitTyped<ParentToChildMessageGasParams, 'deposit'>) =>
