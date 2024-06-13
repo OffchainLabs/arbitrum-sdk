@@ -1,6 +1,9 @@
 'use strict'
 
-import { getL2Network } from '../../src/lib/dataEntities/networks'
+import {
+  getArbitrumNetwork,
+  getNitroGenesisBlock,
+} from '../../src/lib/dataEntities/networks'
 import { providers } from 'ethers'
 import { mock, when, anything, instance, deepEqual } from 'ts-mockito'
 import { expect } from 'chai'
@@ -9,18 +12,18 @@ import { MultiCaller } from '../../src'
 
 describe('Multicall', () => {
   const createProviderMock = async (networkChoiceOverride?: number) => {
-    const l2Network = await getL2Network(networkChoiceOverride || 42161)
+    const l2Network = await getArbitrumNetwork(networkChoiceOverride || 42161)
 
     const l2ProviderMock = mock(providers.JsonRpcProvider)
-    const latestBlock = l2Network.nitroGenesisBlock + 1000
+    const latestBlock = getNitroGenesisBlock(l2Network) + 1000
     when(l2ProviderMock.getBlockNumber()).thenResolve(latestBlock)
     when(l2ProviderMock.getNetwork()).thenResolve({
-      chainId: l2Network.chainID,
+      chainId: l2Network.chainId,
     } as any)
     when(l2ProviderMock._isProvider).thenReturn(true)
     when(l2ProviderMock.getLogs(anything())).thenResolve([])
 
-    /* 
+    /*
     This test data is taken from an actual example of a mainnet multicall. To produce this data we do the following:
     1. Pass mainnet args to the multicall class, instantiated with a mock provider
     2. Capture the .call request that was made on the provider

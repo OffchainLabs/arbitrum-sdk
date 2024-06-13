@@ -30,7 +30,10 @@ import { InboxTools } from '../../src'
 
 import { ethers, network } from 'hardhat'
 import { hexZeroPad } from '@ethersproject/bytes'
-import { L2Network, getL2Network } from '../../src/lib/dataEntities/networks'
+import {
+  ArbitrumNetwork,
+  getArbitrumNetwork,
+} from '../../src/lib/dataEntities/networks'
 import { solidityKeccak256 } from 'ethers/lib/utils'
 import { ContractTransaction, Signer } from 'ethers'
 
@@ -43,7 +46,7 @@ const submitL2Tx = async (
     maxFeePerGas: BigNumber
     gasLimit: BigNumber
   },
-  l2Network: L2Network,
+  l2Network: ArbitrumNetwork,
   l1Signer: Signer
 ): Promise<ContractTransaction> => {
   const inbox = Inbox__factory.connect(l2Network.ethBridge.inbox, l1Signer)
@@ -64,7 +67,7 @@ describe('Inbox tools', () => {
     const signer = signers[0]
     const provider = signer.provider!
 
-    const arbitrumOne = await getL2Network(42161)
+    const arbitrumOne = await getArbitrumNetwork(42161)
 
     const sequencerInbox = SequencerInbox__factory.connect(
       arbitrumOne.ethBridge.sequencerInbox,

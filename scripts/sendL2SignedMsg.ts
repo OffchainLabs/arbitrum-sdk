@@ -18,19 +18,19 @@
 
 import { BigNumber } from 'ethers'
 import { InboxTools } from '../src/lib/inbox/inbox'
-import { getL2Network } from '../src/lib/dataEntities/networks'
+import { getArbitrumNetwork } from '../src/lib/dataEntities/networks'
 import { testSetup } from '../scripts/testSetup'
 const sendSignedMsg = async () => {
   const { l1Deployer, l2Deployer } = await testSetup()
-  const l2Network = await getL2Network(await l2Deployer.getChainId())
+  const l2Network = await getArbitrumNetwork(await l2Deployer.getChainId())
   const inbox = new InboxTools(l1Deployer, l2Network)
   const message = {
     to: await l2Deployer.getAddress(),
     value: BigNumber.from(0),
     data: '0x12',
   }
-  const signedTx = await inbox.signL2Tx(message, l2Deployer)
-  await inbox.sendL2SignedTx(signedTx)
+  const signedTx = await inbox.signChildChainTx(message, l2Deployer)
+  await inbox.sendChildChainSignedTx(signedTx)
 }
 
 sendSignedMsg()

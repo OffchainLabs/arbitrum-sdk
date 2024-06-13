@@ -27,26 +27,26 @@ import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
 import { AssetBridger } from './assetBridger'
 import {
-  L1EthDepositTransaction,
-  L1ContractCallTransaction,
-  L1TransactionReceipt,
-} from '../message/L1Transaction'
+  ParentEthDepositTransaction,
+  ParentContractCallTransaction,
+  ParentTransactionReceipt,
+} from '../message/ParentTransaction'
 import {
-  L2ContractTransaction,
-  L2TransactionReceipt,
-} from '../message/L2Transaction'
-import { L1ToL2MessageCreator } from '../message/L1ToL2MessageCreator'
-import { GasOverrides } from '../message/L1ToL2MessageGasEstimator'
+  ChildContractTransaction,
+  ChildTransactionReceipt,
+} from '../message/ChildTransaction'
+import { ParentToChildMessageCreator } from '../message/ParentToChildMessageCreator'
+import { GasOverrides } from '../message/ParentToChildMessageGasEstimator'
 import {
-  isL1ToL2TransactionRequest,
-  isL2ToL1TransactionRequest,
-  L1ToL2TransactionRequest,
-  L2ToL1TransactionRequest,
+  isParentToChildTransactionRequest,
+  isChildToParentTransactionRequest,
+  ParentToChildTransactionRequest,
+  ChildToParentTransactionRequest,
 } from '../dataEntities/transactionRequest'
 import { OmitTyped } from '../utils/types'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
-import { getL2Network } from '../dataEntities/networks'
+import { getArbitrumNetwork } from '../dataEntities/networks'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { isArbitrumChain } from '../utils/lib'
 
@@ -76,8 +76,8 @@ export type ApproveGasTokenParamsOrTxRequest =
   | ApproveGasTokenParams
   | ApproveGasTokenTxRequest
 
-type WithL1Signer<T extends ApproveGasTokenParamsOrTxRequest> = T & {
-  l1Signer: Signer
+type WithParentSigner<T extends ApproveGasTokenParamsOrTxRequest> = T & {
+  parentSigner: Signer
 }
 
 export interface EthWithdrawParams {
@@ -86,7 +86,7 @@ export interface EthWithdrawParams {
    */
   amount: BigNumber
   /**
-   * The L1 address to receive the value.
+   * The parent chain address to receive the value.
    */
   destinationAddress: string
   /**
@@ -101,9 +101,9 @@ export interface EthWithdrawParams {
 
 export type EthDepositParams = {
   /**
-   * The L1 provider or signer
+   * Parent chain provider or signer
    */
-  l1Signer: Signer
+  parentSigner: Signer
   /**
    * The amount of ETH or tokens to be deposited
    */
@@ -116,11 +116,11 @@ export type EthDepositParams = {
 
 export type EthDepositToParams = EthDepositParams & {
   /**
-   * An L2 provider
+   * Child chain provider
    */
-  l2Provider: Provider
+  childProvider: Provider
   /**
-   * L2 address of the entity receiving the funds
+   * Child chain address of the entity receiving the funds
    */
   destinationAddress: string
   /**
@@ -129,29 +129,29 @@ export type EthDepositToParams = EthDepositParams & {
   retryableGasOverrides?: GasOverrides
 }
 
-export type L1ToL2TxReqAndSigner = L1ToL2TransactionRequest & {
-  l1Signer: Signer
+export type ParentToChildTxReqAndSigner = ParentToChildTransactionRequest & {
+  parentSigner: Signer
   overrides?: Overrides
 }
 
-export type L2ToL1TxReqAndSigner = L2ToL1TransactionRequest & {
-  l2Signer: Signer
+export type ChildToParentTxReqAndSigner = ChildToParentTransactionRequest & {
+  childSigner: Signer
   overrides?: Overrides
 }
 
 type EthDepositRequestParams = OmitTyped<
   EthDepositParams,
-  'overrides' | 'l1Signer'
+  'overrides' | 'parentSigner'
 > & { from: string }
 
 type EthDepositToRequestParams = OmitTyped<
   EthDepositToParams,
-  'overrides' | 'l1Signer'
+  'overrides' | 'parentSigner'
 > & {
   /**
-   * The L1 provider
+   * Parent chain provider
    */
-  l1Provider: Provider
+  parentProvider: Provider
   /**
    * Address that is depositing the ETH
    */
@@ -159,19 +159,19 @@ type EthDepositToRequestParams = OmitTyped<
 }
 
 /**
- * Bridger for moving ETH back and forth between L1 to L2
+ * Bridger for moving ETH back and forth between parent and child chain
  */
 export class EthBridger extends AssetBridger<
-  EthDepositParams | EthDepositToParams | L1ToL2TxReqAndSigner,
-  EthWithdrawParams | L2ToL1TxReqAndSigner
+  EthDepositParams | EthDepositToParams | ParentToChildTxReqAndSigner,
+  EthWithdrawParams | ChildToParentTxReqAndSigner
 > {
   /**
-   * Instantiates a new EthBridger from an L2 Provider
-   * @param l2Provider
+   * Instantiates a new EthBridger from a child chain Provider
+   * @param childProvider
    * @returns
    */
-  public static async fromProvider(l2Provider: Provider) {
-    return new EthBridger(await getL2Network(l2Provider))
+  public static async fromProvider(childProvider: Provider) {
+    return new EthBridger(await getArbitrumNetwork(childProvider))
   }
 
   /**
@@ -180,7 +180,7 @@ export class EthBridger extends AssetBridger<
    */
   private isApproveGasTokenParams(
     params: ApproveGasTokenParamsOrTxRequest
-  ): params is WithL1Signer<ApproveGasTokenParams> {
+  ): params is WithParentSigner<ApproveGasTokenParams> {
     return typeof (params as ApproveGasTokenTxRequest).txRequest === 'undefined'
   }
 
@@ -199,7 +199,7 @@ export class EthBridger extends AssetBridger<
       'approve',
       [
         // spender
-        this.l2Network.ethBridge.inbox,
+        this.childChain.ethBridge.inbox,
         // value
         params?.amount ?? constants.MaxUint256,
       ]
@@ -217,7 +217,7 @@ export class EthBridger extends AssetBridger<
    * @param params
    */
   public async approveGasToken(
-    params: WithL1Signer<ApproveGasTokenParamsOrTxRequest>
+    params: WithParentSigner<ApproveGasTokenParamsOrTxRequest>
   ) {
     if (this.nativeTokenIsEth) {
       throw new Error('chain uses ETH as its native/gas token')
@@ -227,7 +227,7 @@ export class EthBridger extends AssetBridger<
       ? this.getApproveGasTokenRequest(params)
       : params.txRequest
 
-    return params.l1Signer.sendTransaction({
+    return params.parentSigner.sendTransaction({
       ...approveGasTokenRequest,
       ...params.overrides,
     })
@@ -267,10 +267,10 @@ export class EthBridger extends AssetBridger<
    */
   public async getDepositRequest(
     params: EthDepositRequestParams
-  ): Promise<OmitTyped<L1ToL2TransactionRequest, 'retryableData'>> {
+  ): Promise<OmitTyped<ParentToChildTransactionRequest, 'retryableData'>> {
     return {
       txRequest: {
-        to: this.l2Network.ethBridge.inbox,
+        to: this.childChain.ethBridge.inbox,
         value: this.nativeTokenIsEth ? params.amount : 0,
         data: this.getDepositRequestData(params),
         from: params.from,
@@ -280,38 +280,38 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Deposit ETH from L1 onto L2
+   * Deposit ETH from Parent onto Child chain
    * @param params
    * @returns
    */
   public async deposit(
-    params: EthDepositParams | L1ToL2TxReqAndSigner
-  ): Promise<L1EthDepositTransaction> {
-    await this.checkL1Network(params.l1Signer)
+    params: EthDepositParams | ParentToChildTxReqAndSigner
+  ): Promise<ParentEthDepositTransaction> {
+    await this.checkParentChain(params.parentSigner)
 
-    const ethDeposit = isL1ToL2TransactionRequest(params)
+    const ethDeposit = isParentToChildTransactionRequest(params)
       ? params
       : await this.getDepositRequest({
           ...params,
-          from: await params.l1Signer.getAddress(),
+          from: await params.parentSigner.getAddress(),
         })
 
-    const tx = await params.l1Signer.sendTransaction({
+    const tx = await params.parentSigner.sendTransaction({
       ...ethDeposit.txRequest,
       ...params.overrides,
     })
 
-    return L1TransactionReceipt.monkeyPatchEthDepositWait(tx)
+    return ParentTransactionReceipt.monkeyPatchEthDepositWait(tx)
   }
 
   /**
-   * Get a transaction request for an ETH deposit to a different L2 address using Retryables
+   * Get a transaction request for an ETH deposit to a different child chain address using Retryables
    * @param params
    * @returns
    */
   public async getDepositToRequest(
     params: EthDepositToRequestParams
-  ): Promise<L1ToL2TransactionRequest> {
+  ): Promise<ParentToChildTransactionRequest> {
     const requestParams = {
       ...params,
       to: params.destinationAddress,
@@ -323,43 +323,45 @@ export class EthBridger extends AssetBridger<
     // Gas overrides can be passed in the parameters
     const gasOverrides = params.retryableGasOverrides || undefined
 
-    return L1ToL2MessageCreator.getTicketCreationRequest(
+    return ParentToChildMessageCreator.getTicketCreationRequest(
       requestParams,
-      params.l1Provider,
-      params.l2Provider,
+      params.parentProvider,
+      params.childProvider,
       gasOverrides
     )
   }
 
   /**
-   * Deposit ETH from L1 onto a different L2 address
+   * Deposit ETH from parent chain onto a different child chain address
    * @param params
    * @returns
    */
   public async depositTo(
     params:
       | EthDepositToParams
-      | (L1ToL2TxReqAndSigner & { l2Provider: Provider })
-  ): Promise<L1ContractCallTransaction> {
-    await this.checkL1Network(params.l1Signer)
-    await this.checkL2Network(params.l2Provider)
+      | (ParentToChildTxReqAndSigner & { childProvider: Provider })
+  ): Promise<ParentContractCallTransaction> {
+    await this.checkParentChain(params.parentSigner)
+    await this.checkChildChain(params.childProvider)
 
-    const retryableTicketRequest = isL1ToL2TransactionRequest(params)
+    const retryableTicketRequest = isParentToChildTransactionRequest(params)
       ? params
       : await this.getDepositToRequest({
           ...params,
-          from: await params.l1Signer.getAddress(),
-          l1Provider: params.l1Signer.provider!,
+          from: await params.parentSigner.getAddress(),
+          parentProvider: params.parentSigner.provider!,
         })
 
-    const l1ToL2MessageCreator = new L1ToL2MessageCreator(params.l1Signer)
+    const l1ToL2MessageCreator = new ParentToChildMessageCreator(
+      params.parentSigner
+    )
 
     const tx = await l1ToL2MessageCreator.createRetryableTicket(
       retryableTicketRequest,
-      params.l2Provider
+      params.childProvider
     )
 
-    return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
+    return ParentTransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
   /**
@@ -369,7 +371,7 @@ export class EthBridger extends AssetBridger<
    */
   public async getWithdrawalRequest(
     params: EthWithdrawParams
-  ): Promise<L2ToL1TransactionRequest> {
+  ): Promise<ChildToParentTransactionRequest> {
     const iArbSys = ArbSys__factory.createInterface()
     const functionData = iArbSys.encodeFunctionData('withdrawEth', [
       params.destinationAddress,
@@ -383,8 +385,8 @@ export class EthBridger extends AssetBridger<
         from: params.from,
       },
       // todo: do proper estimation
-      estimateL1GasLimit: async (l1Provider: Provider) => {
-        if (await isArbitrumChain(l1Provider)) {
+      estimateParentGasLimit: async (parentProvider: Provider) => {
+        if (await isArbitrumChain(parentProvider)) {
           // values for L3 are dependent on the L1 base fee, so hardcoding can never be accurate
           // however, this is only an estimate used for display, so should be good enough
           //
@@ -399,28 +401,30 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Withdraw ETH from L2 onto L1
+   * Withdraw ETH from child chain onto parent chain
    * @param params
    * @returns
    */
   public async withdraw(
-    params: (EthWithdrawParams & { l2Signer: Signer }) | L2ToL1TxReqAndSigner
-  ): Promise<L2ContractTransaction> {
-    if (!SignerProviderUtils.signerHasProvider(params.l2Signer)) {
-      throw new MissingProviderArbSdkError('l2Signer')
+    params:
+      | (EthWithdrawParams & { childSigner: Signer })
+      | ChildToParentTxReqAndSigner
+  ): Promise<ChildContractTransaction> {
+    if (!SignerProviderUtils.signerHasProvider(params.childSigner)) {
+      throw new MissingProviderArbSdkError('childSigner')
     }
-    await this.checkL2Network(params.l2Signer)
+    await this.checkChildChain(params.childSigner)
 
-    const request = isL2ToL1TransactionRequest<
-      EthWithdrawParams & { l2Signer: Signer }
+    const request = isChildToParentTransactionRequest<
+      EthWithdrawParams & { childSigner: Signer }
     >(params)
       ? params
       : await this.getWithdrawalRequest(params)
 
-    const tx = await params.l2Signer.sendTransaction({
+    const tx = await params.childSigner.sendTransaction({
       ...request.txRequest,
       ...params.overrides,
     })
-    return L2TransactionReceipt.monkeyPatchWait(tx)
+    return ChildTransactionReceipt.monkeyPatchWait(tx)
   }
 }

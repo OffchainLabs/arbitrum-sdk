@@ -26,7 +26,7 @@ const main = async () => {
   )
   const l1Provider = l1Signer.provider!
   const l2Provider = l2Signer.provider!
-  const gatewayAddress = await erc20Bridger.getL1GatewayAddress(
+  const gatewayAddress = await erc20Bridger.getParentGatewayAddress(
     l1TokenAddress,
     l1Provider
   )
@@ -102,7 +102,7 @@ const main = async () => {
   }
 
   /* check token not yet deployed */
-  const l2TokenAddress = await erc20Bridger.getL2ERC20Address(
+  const l2TokenAddress = await erc20Bridger.getChildERC20Address(
     l1TokenAddress,
     l1Provider
   )

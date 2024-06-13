@@ -19,8 +19,8 @@
 import { ContractReceipt } from '@ethersproject/contracts'
 
 import { ERC20__factory } from '../src/lib/abi/factories/ERC20__factory'
-import { L1ToL2MessageStatus } from '../src/lib/message/L1ToL2Message'
-import { L1TransactionReceipt } from '../src/lib/message/L1Transaction'
+import { L1ToL2MessageStatus } from '../src/lib/message/ParentToChildMessage'
+import { L1TransactionReceipt } from '../src/lib/message/ParentTransaction'
 import { testSetup } from '../scripts/testSetup'
 
 export const setStandardGateWays = async (
@@ -39,9 +39,10 @@ export const setGateWays = async (
   type: 'standard' | 'arbCustom',
   overrideGateways: string[] = []
 ): Promise<ContractReceipt> => {
-  const { adminErc20Bridger, l1Signer, l2Network, l2Signer } = await testSetup()
-  const l1Provider = l1Signer.provider!
-  const l2Provider = l2Signer.provider!
+  const { adminErc20Bridger, parentSigner, childChain, childSigner } =
+    await testSetup()
+  const parentProvider = parentSigner.provider!
+  const childProvider = childSigner.provider!
   if (tokens.length === 0) {
     throw new Error('Include some tokens to set')
   }
@@ -55,7 +56,7 @@ export const setGateWays = async (
 
   for (const tokenAddress of tokens) {
     try {
-      const token = await ERC20__factory.connect(tokenAddress, l1Provider)
+      const token = await ERC20__factory.connect(tokenAddress, parentProvider)
       console.warn('calling name for ', tokenAddress)
 
       const symbol = await token.symbol()
@@ -85,17 +86,17 @@ export const setGateWays = async (
     if (overrideGateways.length > 0) {
       return overrideGateways
     } else if (type === 'standard') {
-      return tokens.map(() => l2Network.tokenBridge.l1ERC20Gateway)
+      return tokens.map(() => childChain.tokenBridge.l1ERC20Gateway)
     } else if (type === 'arbCustom') {
-      return tokens.map(() => l2Network.tokenBridge.l1CustomGateway)
+      return tokens.map(() => childChain.tokenBridge.l1CustomGateway)
     } else {
       throw new Error('Unhandled else case')
     }
   })()
 
   const res = await adminErc20Bridger.setGateways(
-    l1Signer,
-    l2Provider,
+    parentSigner,
+    childProvider,
     gateways.map((g, i) => ({
       tokenAddr: tokens[i],
       gatewayAddr: gateways[i],
@@ -110,7 +111,7 @@ export const setGateWays = async (
   }
 
   console.log('redeeming retryable ticket:')
-  const l2Tx = (await rec.getL1ToL2Messages(l2Signer))[0]
+  const l2Tx = (await rec.getParentToChildMessages(childSigner))[0]
   if (!l2Tx) throw new Error('No l1 to l2 message found.')
   const messageRes = await l2Tx.waitForStatus()
   if (messageRes.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
@@ -123,13 +124,13 @@ export const setGateWays = async (
 }
 
 export const checkRetryableStatus = async (l1Hash: string): Promise<void> => {
-  const { l1Signer, l2Signer } = await testSetup()
-  const l1Provider = l1Signer.provider!
-  const l2Provider = l2Signer.provider!
-  const rec = await l1Provider.getTransactionReceipt(l1Hash)
+  const { parentSigner, childSigner } = await testSetup()
+  const parentProvider = parentSigner.provider!
+  const childProvider = childSigner.provider!
+  const rec = await parentProvider.getTransactionReceipt(l1Hash)
   if (!rec) throw new Error('L1 tx not found!')
-  const messages = await new L1TransactionReceipt(rec).getL1ToL2Messages(
-    l2Provider
+  const messages = await new L1TransactionReceipt(rec).getParentToChildMessages(
+    childProvider
   )
 
   for (const message of messages) {

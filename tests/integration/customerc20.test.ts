@@ -31,20 +31,24 @@ import { TestCustomTokenL1 } from '../../src/lib/abi/TestCustomTokenL1'
 import { TestCustomTokenL1__factory } from '../../src/lib/abi/factories/TestCustomTokenL1__factory'
 
 import {
-  fundL1,
-  fundL2,
+  fundParentSigner,
+  fundChildSigner,
   skipIfMainnet,
   depositToken,
   GatewayType,
   withdrawToken,
 } from './testHelpers'
-import { L1ToL2MessageStatus, L2Network } from '../../src'
+import { ParentToChildMessageStatus } from '../../src'
+import {
+  ArbitrumNetwork,
+  assertArbitrumNetworkHasTokenBridge,
+} from '../../src/lib/dataEntities/networks'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import {
-  fundL1CustomFeeToken,
-  isL2NetworkWithCustomFeeToken,
+  fundParentCustomFeeToken,
+  isArbitrumNetworkWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
 
 const depositAmount = BigNumber.from(100)
@@ -57,10 +61,10 @@ describe('Custom ERC20', () => {
 
   // test globals
   let testState: {
-    l1Signer: Signer
-    l2Signer: Signer
+    parentSigner: Signer
+    childSigner: Signer
     adminErc20Bridger: AdminErc20Bridger
-    l2Network: L2Network
+    childChain: ArbitrumNetwork
     l1CustomToken: TestCustomTokenL1 | TestOrbitCustomTokenL1
   }
 
@@ -69,19 +73,19 @@ describe('Custom ERC20', () => {
       ...(await testSetup()),
       l1CustomToken: {} as any,
     }
-    await fundL1(testState.l1Signer)
-    await fundL2(testState.l2Signer)
+    await fundParentSigner(testState.parentSigner)
+    await fundChildSigner(testState.childSigner)
 
-    if (isL2NetworkWithCustomFeeToken()) {
-      await fundL1CustomFeeToken(testState.l1Signer)
+    if (isArbitrumNetworkWithCustomFeeToken()) {
+      await fundParentCustomFeeToken(testState.parentSigner)
     }
   })
 
   it('register custom token', async () => {
     const { l1CustomToken: l1Token } = await registerCustomToken(
-      testState.l2Network,
-      testState.l1Signer,
-      testState.l2Signer,
+      testState.childChain,
+      testState.parentSigner,
+      testState.childSigner,
       testState.adminErc20Bridger
     )
     testState.l1CustomToken = l1Token
@@ -89,15 +93,15 @@ describe('Custom ERC20', () => {
 
   it('deposit', async () => {
     await (
-      await testState.l1CustomToken.connect(testState.l1Signer).mint()
+      await testState.l1CustomToken.connect(testState.parentSigner).mint()
     ).wait()
     await depositToken({
       depositAmount,
-      l1TokenAddress: testState.l1CustomToken.address,
+      parentTokenAddress: testState.l1CustomToken.address,
       erc20Bridger: testState.adminErc20Bridger,
-      l1Signer: testState.l1Signer,
-      l2Signer: testState.l2Signer,
-      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
+      expectedStatus: ParentToChildMessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.CUSTOM,
     })
   })
@@ -105,13 +109,15 @@ describe('Custom ERC20', () => {
   it('withdraws erc20', async function () {
     await withdrawToken({
       ...testState,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
       erc20Bridger: testState.adminErc20Bridger,
       amount: withdrawalAmount,
       gatewayType: GatewayType.CUSTOM,
       startBalance: depositAmount,
-      l1Token: ERC20__factory.connect(
+      parentToken: ERC20__factory.connect(
         testState.l1CustomToken.address,
-        testState.l1Signer.provider!
+        testState.parentSigner.provider!
       ),
     })
   })
@@ -120,25 +126,25 @@ describe('Custom ERC20', () => {
     await depositToken({
       depositAmount,
       ethDepositAmount: utils.parseEther('0.0005'),
-      l1TokenAddress: testState.l1CustomToken.address,
+      parentTokenAddress: testState.l1CustomToken.address,
       erc20Bridger: testState.adminErc20Bridger,
-      l1Signer: testState.l1Signer,
-      l2Signer: testState.l2Signer,
-      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
+      expectedStatus: ParentToChildMessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.CUSTOM,
     })
   })
 
-  it('deposits erc20 with extra ETH to a specific L2 address', async () => {
+  it('deposits erc20 with extra ETH to a specific child chain address', async () => {
     const randomAddress = Wallet.createRandom().address
     await depositToken({
       depositAmount,
       ethDepositAmount: utils.parseEther('0.0005'),
-      l1TokenAddress: testState.l1CustomToken.address,
+      parentTokenAddress: testState.l1CustomToken.address,
       erc20Bridger: testState.adminErc20Bridger,
-      l1Signer: testState.l1Signer,
-      l2Signer: testState.l2Signer,
-      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
+      expectedStatus: ParentToChildMessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.CUSTOM,
       destinationAddress: randomAddress,
     })
@@ -146,26 +152,28 @@ describe('Custom ERC20', () => {
 })
 
 const registerCustomToken = async (
-  l2Network: L2Network,
-  l1Signer: Signer,
-  l2Signer: Signer,
+  childChain: ArbitrumNetwork,
+  parentSigner: Signer,
+  childSigner: Signer,
   adminErc20Bridger: AdminErc20Bridger
 ) => {
+  assertArbitrumNetworkHasTokenBridge(childChain)
+
   // create a custom token on L1 and L2
-  const l1CustomTokenFactory = isL2NetworkWithCustomFeeToken()
-    ? new TestOrbitCustomTokenL1__factory(l1Signer)
-    : new TestCustomTokenL1__factory(l1Signer)
+  const l1CustomTokenFactory = isArbitrumNetworkWithCustomFeeToken()
+    ? new TestOrbitCustomTokenL1__factory(parentSigner)
+    : new TestCustomTokenL1__factory(parentSigner)
   const l1CustomToken = await l1CustomTokenFactory.deploy(
-    l2Network.tokenBridge.l1CustomGateway,
-    l2Network.tokenBridge.l1GatewayRouter
+    childChain.tokenBridge.l1CustomGateway,
+    childChain.tokenBridge.l1GatewayRouter
   )
   await l1CustomToken.deployed()
 
   adminErc20Bridger
     .isCustomGatewayRegistered({
-      erc20L1Address: l1CustomToken.address,
-      l1Provider: l1Signer.provider!,
-      l2Provider: l2Signer.provider!,
+      erc20ParentAddress: l1CustomToken.address,
+      parentProvider: parentSigner.provider!,
+      childProvider: childSigner.provider!,
     })
     .then(isCustomGatewayRegistered => {
       expect(
@@ -174,25 +182,25 @@ const registerCustomToken = async (
       ).to.be.false
     })
 
-  const l2CustomTokenFac = new TestArbCustomToken__factory(l2Signer)
+  const l2CustomTokenFac = new TestArbCustomToken__factory(childSigner)
   const l2CustomToken = await l2CustomTokenFac.deploy(
-    l2Network.tokenBridge.l2CustomGateway,
+    childChain.tokenBridge.l2CustomGateway,
     l1CustomToken.address
   )
   await l2CustomToken.deployed()
 
   // check starting conditions - should initially use the default gateway
-  const l1GatewayRouter = new L1GatewayRouter__factory(l1Signer).attach(
-    l2Network.tokenBridge.l1GatewayRouter
+  const l1GatewayRouter = new L1GatewayRouter__factory(parentSigner).attach(
+    childChain.tokenBridge.l1GatewayRouter
   )
-  const l2GatewayRouter = new L2GatewayRouter__factory(l2Signer).attach(
-    l2Network.tokenBridge.l2GatewayRouter
+  const l2GatewayRouter = new L2GatewayRouter__factory(childSigner).attach(
+    childChain.tokenBridge.l2GatewayRouter
   )
-  const l1CustomGateway = new L1CustomGateway__factory(l1Signer).attach(
-    l2Network.tokenBridge.l1CustomGateway
+  const l1CustomGateway = new L1CustomGateway__factory(parentSigner).attach(
+    childChain.tokenBridge.l1CustomGateway
   )
-  const l2CustomGateway = new L1CustomGateway__factory(l2Signer).attach(
-    l2Network.tokenBridge.l2CustomGateway
+  const l2CustomGateway = new L1CustomGateway__factory(childSigner).attach(
+    childChain.tokenBridge.l2CustomGateway
   )
   const startL1GatewayAddress = await l1GatewayRouter.l1TokenToGateway(
     l1CustomToken.address
@@ -224,13 +232,13 @@ const registerCustomToken = async (
   ).to.eq(constants.AddressZero)
 
   // it should fail without the approval
-  if (isL2NetworkWithCustomFeeToken()) {
+  if (isArbitrumNetworkWithCustomFeeToken()) {
     try {
       const regTx = await adminErc20Bridger.registerCustomToken(
         l1CustomToken.address,
         l2CustomToken.address,
-        l1Signer,
-        l2Signer.provider!
+        parentSigner,
+        childSigner.provider!
       )
       await regTx.wait()
       throw new Error('L2 custom token is not approved but got deployed')
@@ -239,10 +247,10 @@ const registerCustomToken = async (
     }
   }
 
-  if (isL2NetworkWithCustomFeeToken()) {
+  if (isArbitrumNetworkWithCustomFeeToken()) {
     await adminErc20Bridger.approveGasTokenForCustomTokenRegistration({
-      l1Signer,
-      erc20L1Address: l1CustomToken.address,
+      parentSigner,
+      erc20ParentAddress: l1CustomToken.address,
     })
   }
 
@@ -250,23 +258,25 @@ const registerCustomToken = async (
   const regTx = await adminErc20Bridger.registerCustomToken(
     l1CustomToken.address,
     l2CustomToken.address,
-    l1Signer,
-    l2Signer.provider!
+    parentSigner,
+    childSigner.provider!
   )
   const regRec = await regTx.wait()
 
   // wait on messages
-  const l1ToL2Messages = await regRec.getL1ToL2Messages(l2Signer.provider!)
+  const l1ToL2Messages = await regRec.getParentToChildMessages(
+    childSigner.provider!
+  )
   expect(l1ToL2Messages.length, 'Should be 2 messages.').to.eq(2)
 
   const setTokenTx = await l1ToL2Messages[0].waitForStatus()
   expect(setTokenTx.status, 'Set token not redeemed.').to.eq(
-    L1ToL2MessageStatus.REDEEMED
+    ParentToChildMessageStatus.REDEEMED
   )
 
   const setGateways = await l1ToL2Messages[1].waitForStatus()
   expect(setGateways.status, 'Set gateways not redeemed.').to.eq(
-    L1ToL2MessageStatus.REDEEMED
+    ParentToChildMessageStatus.REDEEMED
   )
 
   // check end conditions
@@ -276,7 +286,7 @@ const registerCustomToken = async (
   expect(
     endL1GatewayAddress,
     'End l1GatewayAddress not equal to l1 custom gateway'
-  ).to.eq(l2Network.tokenBridge.l1CustomGateway)
+  ).to.eq(childChain.tokenBridge.l1CustomGateway)
 
   const endL2GatewayAddress = await l2GatewayRouter.l1TokenToGateway(
     l1CustomToken.address
@@ -284,7 +294,7 @@ const registerCustomToken = async (
   expect(
     endL2GatewayAddress,
     'End l2GatewayAddress not equal to l2 custom gateway'
-  ).to.eq(l2Network.tokenBridge.l2CustomGateway)
+  ).to.eq(childChain.tokenBridge.l2CustomGateway)
 
   const endL1Erc20Address = await l1CustomGateway.l1ToL2Token(
     l1CustomToken.address
@@ -304,9 +314,9 @@ const registerCustomToken = async (
 
   adminErc20Bridger
     .isCustomGatewayRegistered({
-      erc20L1Address: l1CustomToken.address,
-      l1Provider: l1Signer.provider!,
-      l2Provider: l2Signer.provider!,
+      erc20ParentAddress: l1CustomToken.address,
+      parentProvider: parentSigner.provider!,
+      childProvider: childSigner.provider!,
     })
     .then(isCustomGatewayRegistered => {
       expect(

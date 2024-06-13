@@ -23,13 +23,15 @@ import dotenv from 'dotenv'
 import { parseEther } from '@ethersproject/units'
 
 import {
-  fundL1 as fundL1Ether,
+  fundParentSigner as fundParentSignerEther,
   mineUntilStop,
   skipIfMainnet,
   wait,
 } from '../testHelpers'
-import { L2ToL1Message, L2ToL1MessageStatus } from '../../../src'
+
 import { describeOnlyWhenCustomGasToken } from './mochaExtensions'
+import { ChildToParentMessageStatus } from '../../../src'
+import { ChildToParentMessage } from '../../../src/lib/message/ChildToParentMessage'
 
 dotenv.config()
 
@@ -38,9 +40,9 @@ describeOnlyWhenCustomGasToken(
   async () => {
     const {
       testSetup,
-      fundL1CustomFeeToken,
-      fundL2CustomFeeToken,
-      approveL1CustomFeeToken,
+      fundParentCustomFeeToken,
+      fundChildCustomFeeToken,
+      approveParentCustomFeeToken,
     } = await import('./customFeeTokenTestHelpers')
 
     beforeEach('skipIfMainnet', async function () {
@@ -48,21 +50,22 @@ describeOnlyWhenCustomGasToken(
     })
 
     it('approves the custom fee token to be spent by the Inbox on the parent chain (arbitrary amount, using params)', async function () {
-      const { ethBridger, nativeTokenContract, l1Signer } = await testSetup()
+      const { ethBridger, nativeTokenContract, parentSigner } =
+        await testSetup()
       const amount = ethers.utils.parseEther('1')
 
-      await fundL1Ether(l1Signer)
-      await fundL1CustomFeeToken(l1Signer)
+      await fundParentSignerEther(parentSigner)
+      await fundParentCustomFeeToken(parentSigner)
 
       const approvalTx = await ethBridger.approveGasToken({
         amount,
-        l1Signer,
+        parentSigner,
       })
       await approvalTx.wait()
 
       const allowance = await nativeTokenContract.allowance(
-        await l1Signer.getAddress(),
-        ethBridger.l2Network.ethBridge.inbox
+        await parentSigner.getAddress(),
+        ethBridger.childChain.ethBridge.inbox
       )
 
       expect(allowance.toString()).to.equal(
@@ -72,20 +75,21 @@ describeOnlyWhenCustomGasToken(
     })
 
     it('approves the custom fee token to be spent by the Inbox on the parent chain (max amount, using tx request)', async function () {
-      const { ethBridger, nativeTokenContract, l1Signer } = await testSetup()
+      const { ethBridger, nativeTokenContract, parentSigner } =
+        await testSetup()
 
-      await fundL1Ether(l1Signer)
-      await fundL1CustomFeeToken(l1Signer)
+      await fundParentSignerEther(parentSigner)
+      await fundParentCustomFeeToken(parentSigner)
 
       const approvalTx = await ethBridger.approveGasToken({
         txRequest: ethBridger.getApproveGasTokenRequest(),
-        l1Signer,
+        parentSigner,
       })
       await approvalTx.wait()
 
       const allowance = await nativeTokenContract.allowance(
-        await l1Signer.getAddress(),
-        ethBridger.l2Network.ethBridge.inbox
+        await parentSigner.getAddress(),
+        ethBridger.childChain.ethBridge.inbox
       )
 
       expect(allowance.toString()).to.equal(
@@ -98,24 +102,24 @@ describeOnlyWhenCustomGasToken(
       const {
         ethBridger,
         nativeTokenContract,
-        l1Signer,
-        l2Signer,
-        l2Provider,
+        parentSigner,
+        childSigner,
+        childProvider,
       } = await testSetup()
-      const bridge = ethBridger.l2Network.ethBridge.bridge
+      const bridge = ethBridger.childChain.ethBridge.bridge
       const amount = parseEther('2')
 
-      await fundL1Ether(l1Signer)
-      await fundL1CustomFeeToken(l1Signer)
-      await approveL1CustomFeeToken(l1Signer)
+      await fundParentSignerEther(parentSigner)
+      await fundParentCustomFeeToken(parentSigner)
+      await approveParentCustomFeeToken(parentSigner)
 
       const initialBalanceBridge = await nativeTokenContract.balanceOf(bridge)
-      const initialBalanceDepositor = await l2Signer.getBalance()
+      const initialBalanceDepositor = await childSigner.getBalance()
 
       // perform the deposit
       const depositTx = await ethBridger.deposit({
         amount,
-        l1Signer,
+        parentSigner,
       })
       const depositTxReceipt = await depositTx.wait()
       expect(depositTxReceipt.status).to.equal(1, 'deposit tx failed')
@@ -133,20 +137,22 @@ describeOnlyWhenCustomGasToken(
       await wait(30 * 1000)
 
       // check for cross-chain messages
-      const depositMessages = await depositTxReceipt.getEthDeposits(l2Provider)
+      const depositMessages = await depositTxReceipt.getEthDeposits(
+        childProvider
+      )
       expect(depositMessages.length).to.equal(
         1,
         'failed to find deposit message'
       )
       const [depositMessage] = depositMessages
       expect(depositMessage.value.toString()).to.equal(amount.toString())
-      expect(depositMessage.to).to.equal(await l2Signer.getAddress())
+      expect(depositMessage.to).to.equal(await childSigner.getAddress())
 
       expect(
         // balance in the depositor account after the deposit
-        (await l2Signer.getBalance()).toString()
+        (await childSigner.getBalance()).toString()
       ).to.equal(
-        // balance in the depositor account after the deposit should equal to the initial balance in th depositor account + the amount deposited
+        // balance in the depositor account after the deposit should equal to the initial balance in the depositor account + the amount deposited
         initialBalanceDepositor.add(amount).toString(),
         'incorrect balance in depositor account after deposit'
       )
@@ -154,21 +160,21 @@ describeOnlyWhenCustomGasToken(
 
     it('withdraws custom fee token', async () => {
       const {
-        l1Signer,
-        l1Provider,
-        l2Signer,
-        l2Provider,
+        parentSigner,
+        parentProvider,
+        childSigner,
+        childProvider,
         ethBridger,
         nativeTokenContract,
       } = await testSetup()
-      const bridge = ethBridger.l2Network.ethBridge.bridge
+      const bridge = ethBridger.childChain.ethBridge.bridge
       const amount = parseEther('0.2')
 
-      await fundL1Ether(l1Signer)
-      await fundL2CustomFeeToken(l2Signer)
+      await fundParentSignerEther(parentSigner)
+      await fundChildCustomFeeToken(childSigner)
 
-      const from = await l2Signer.getAddress()
-      const destinationAddress = await l1Signer.getAddress()
+      const from = await childSigner.getAddress()
+      const destinationAddress = await parentSigner.getAddress()
 
       const initialBalanceBridge = await nativeTokenContract.balanceOf(bridge)
       const initialBalanceDestination = await nativeTokenContract.balanceOf(
@@ -181,13 +187,13 @@ describeOnlyWhenCustomGasToken(
         from,
       })
 
-      const l1GasEstimate = await withdrawalTxRequest.estimateL1GasLimit(
-        l1Provider
+      const l1GasEstimate = await withdrawalTxRequest.estimateParentGasLimit(
+        parentProvider
       )
 
       const withdrawalTx = await ethBridger.withdraw({
         amount,
-        l2Signer: l2Signer,
+        childSigner,
         destinationAddress,
         from,
       })
@@ -198,18 +204,21 @@ describeOnlyWhenCustomGasToken(
         'initiate withdrawal tx failed'
       )
 
-      const messages = await withdrawalTxReceipt.getL2ToL1Messages(l1Signer)
+      const messages = await withdrawalTxReceipt.getChildToParentMessages(
+        parentSigner
+      )
       expect(messages.length).to.equal(
         1,
         'custom fee token withdraw getWithdrawalsInL2Transaction query came back empty'
       )
 
-      const withdrawalEvents = await L2ToL1Message.getL2ToL1Events(
-        l2Provider,
-        { fromBlock: withdrawalTxReceipt.blockNumber, toBlock: 'latest' },
-        undefined,
-        destinationAddress
-      )
+      const withdrawalEvents =
+        await ChildToParentMessage.getChildToParentEvents(
+          childProvider,
+          { fromBlock: withdrawalTxReceipt.blockNumber, toBlock: 'latest' },
+          undefined,
+          destinationAddress
+        )
 
       expect(withdrawalEvents.length).to.equal(
         1,
@@ -217,30 +226,30 @@ describeOnlyWhenCustomGasToken(
       )
 
       const [message] = messages
-      const messageStatus = await message.status(l2Provider)
+      const messageStatus = await message.status(childProvider)
       expect(
         messageStatus,
         `custom fee token withdraw status returned ${messageStatus}`
-      ).to.be.eq(L2ToL1MessageStatus.UNCONFIRMED)
+      ).to.be.eq(ChildToParentMessageStatus.UNCONFIRMED)
 
       // run a miner whilst withdrawing
-      const miner1 = Wallet.createRandom().connect(l1Provider)
-      const miner2 = Wallet.createRandom().connect(l2Provider)
-      await fundL1Ether(miner1, parseEther('1'))
-      await fundL2CustomFeeToken(miner2)
+      const miner1 = Wallet.createRandom().connect(parentProvider)
+      const miner2 = Wallet.createRandom().connect(childProvider)
+      await fundParentSignerEther(miner1, parseEther('1'))
+      await fundChildCustomFeeToken(miner2)
       const state = { mining: true }
       await Promise.race([
         mineUntilStop(miner1, state),
         mineUntilStop(miner2, state),
-        message.waitUntilReadyToExecute(l2Provider),
+        message.waitUntilReadyToExecute(childProvider),
       ])
       state.mining = false
 
-      expect(await message.status(l2Provider), 'confirmed status')
+      expect(await message.status(childProvider), 'confirmed status')
         //
-        .to.eq(L2ToL1MessageStatus.CONFIRMED)
+        .to.eq(ChildToParentMessageStatus.CONFIRMED)
 
-      const execTx = await message.execute(l2Provider)
+      const execTx = await message.execute(childProvider)
       const execTxReceipt = await execTx.wait()
 
       expect(
@@ -248,9 +257,9 @@ describeOnlyWhenCustomGasToken(
         'gas used greater than estimate'
       ).to.be.lessThan(l1GasEstimate.toNumber())
 
-      expect(await message.status(l2Provider), 'executed status')
+      expect(await message.status(childProvider), 'executed status')
         //
-        .to.eq(L2ToL1MessageStatus.EXECUTED)
+        .to.eq(ChildToParentMessageStatus.EXECUTED)
 
       expect(
         // balance in the bridge after the withdrawal

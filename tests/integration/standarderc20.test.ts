@@ -17,23 +17,21 @@
 'use strict'
 
 import { expect } from 'chai'
-import { Signer, Wallet, utils, constants } from 'ethers'
+import { Wallet, utils, constants } from 'ethers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import {
-  fundL1,
+  fundParentSigner,
   skipIfMainnet,
   depositToken,
   GatewayType,
   withdrawToken,
-  fundL2,
+  fundChildSigner,
 } from './testHelpers'
 import {
-  Erc20Bridger,
-  L1ToL2MessageStatus,
-  L1ToL2MessageWriter,
-  L2Network,
-  L2TransactionReceipt,
+  ParentToChildMessageStatus,
+  ParentToChildMessageWriter,
+  ChildTransactionReceipt,
 } from '../../src'
 import { TestERC20 } from '../../src/lib/abi/TestERC20'
 import { testSetup } from '../../scripts/testSetup'
@@ -46,11 +44,12 @@ import { ArbRetryableTx__factory } from '../../src/lib/abi/factories/ArbRetryabl
 import { NodeInterface__factory } from '../../src/lib/abi/factories/NodeInterface__factory'
 import { isDefined } from '../../src/lib/utils/lib'
 import {
-  getL1CustomFeeTokenAllowance,
-  approveL1CustomFeeTokenForErc20Deposit,
-  isL2NetworkWithCustomFeeToken,
+  getParentCustomFeeTokenAllowance,
+  approveParentCustomFeeTokenForErc20Deposit,
+  isArbitrumNetworkWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
 import { itOnlyWhenCustomGasToken } from './custom-fee-token/mochaExtensions'
+
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
@@ -60,39 +59,35 @@ describe('standard ERC20', () => {
   })
 
   // test globals
-  let testState: {
-    l1Signer: Signer
-    l2Signer: Signer
-    erc20Bridger: Erc20Bridger
-    l2Network: L2Network
-    l1Token: TestERC20
+  let testState: Awaited<ReturnType<typeof testSetup>> & {
+    parentToken: TestERC20
   }
 
   before('init', async () => {
     const setup = await testSetup()
-    await fundL1(setup.l1Signer)
-    await fundL2(setup.l2Signer)
-    const deployErc20 = new TestERC20__factory().connect(setup.l1Signer)
+    await fundParentSigner(setup.parentSigner)
+    await fundChildSigner(setup.childSigner)
+    const deployErc20 = new TestERC20__factory().connect(setup.parentSigner)
     const testToken = await deployErc20.deploy()
     await testToken.deployed()
 
     await (await testToken.mint()).wait()
 
-    testState = { ...setup, l1Token: testToken }
+    testState = { ...setup, parentToken: testToken }
   })
 
   itOnlyWhenCustomGasToken(
     'approves custom gas token to be spent by the relevant gateway',
     async () => {
-      const { l1Signer, erc20Bridger } = await testSetup()
+      const { parentSigner, erc20Bridger } = await testSetup()
 
-      const gatewayAddress = await erc20Bridger.getL1GatewayAddress(
-        testState.l1Token.address,
-        l1Signer.provider!
+      const gatewayAddress = await erc20Bridger.getParentGatewayAddress(
+        testState.parentToken.address,
+        parentSigner.provider!
       )
 
-      const initialAllowance = await getL1CustomFeeTokenAllowance(
-        await l1Signer.getAddress(),
+      const initialAllowance = await getParentCustomFeeTokenAllowance(
+        await parentSigner.getAddress(),
         gatewayAddress
       )
 
@@ -102,13 +97,13 @@ describe('standard ERC20', () => {
       )
 
       const tx = await erc20Bridger.approveGasToken({
-        l1Signer: l1Signer,
-        erc20L1Address: testState.l1Token.address,
+        parentSigner,
+        erc20ParentAddress: testState.parentToken.address,
       })
       await tx.wait()
 
-      const finalAllowance = await getL1CustomFeeTokenAllowance(
-        await l1Signer.getAddress(),
+      const finalAllowance = await getParentCustomFeeTokenAllowance(
+        await parentSigner.getAddress(),
         gatewayAddress
       )
 
@@ -120,26 +115,26 @@ describe('standard ERC20', () => {
   )
 
   it('deposits erc20', async () => {
-    if (isL2NetworkWithCustomFeeToken()) {
-      await approveL1CustomFeeTokenForErc20Deposit(
-        testState.l1Signer,
-        testState.l1Token.address
+    if (isArbitrumNetworkWithCustomFeeToken()) {
+      await approveParentCustomFeeTokenForErc20Deposit(
+        testState.parentSigner,
+        testState.parentToken.address
       )
     }
 
     await depositToken({
       depositAmount,
-      l1TokenAddress: testState.l1Token.address,
+      parentTokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
-      l1Signer: testState.l1Signer,
-      l2Signer: testState.l2Signer,
-      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
+      expectedStatus: ParentToChildMessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.STANDARD,
     })
   })
 
   const redeemAndTest = async (
-    message: L1ToL2MessageWriter,
+    message: ParentToChildMessageWriter,
     expectedStatus: 0 | 1,
     gasLimit?: BigNumber
   ) => {
@@ -150,24 +145,24 @@ describe('standard ERC20', () => {
 
     expect(retryRec.blockHash, 'redeemed in same block').to.eq(blockHash)
     expect(retryRec.to, 'redeemed in same block').to.eq(
-      testState.l2Network.tokenBridge.l2ERC20Gateway
+      testState.childChain.tokenBridge.l2ERC20Gateway
     )
     expect(retryRec.status, 'tx didnt fail').to.eq(expectedStatus)
     expect(await message.status(), 'message status').to.eq(
       expectedStatus === 0
-        ? L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
-        : L1ToL2MessageStatus.REDEEMED
+        ? ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+        : ParentToChildMessageStatus.REDEEMED
     )
   }
 
   it('deposit with no funds, manual redeem', async () => {
     const { waitRes } = await depositToken({
       depositAmount,
-      l1TokenAddress: testState.l1Token.address,
+      parentTokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
-      l1Signer: testState.l1Signer,
-      l2Signer: testState.l2Signer,
-      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
+      expectedStatus: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
         gasLimit: { base: BigNumber.from(0) },
@@ -181,11 +176,11 @@ describe('standard ERC20', () => {
   it('deposit with low funds, manual redeem', async () => {
     const { waitRes } = await depositToken({
       depositAmount,
-      l1TokenAddress: testState.l1Token.address,
+      parentTokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
-      l1Signer: testState.l1Signer,
-      l2Signer: testState.l2Signer,
-      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
+      expectedStatus: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
         gasLimit: { base: BigNumber.from(5) },
@@ -201,11 +196,11 @@ describe('standard ERC20', () => {
     // redeem transaction
     const { waitRes } = await depositToken({
       depositAmount,
-      l1TokenAddress: testState.l1Token.address,
+      parentTokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
-      l1Signer: testState.l1Signer,
-      l2Signer: testState.l2Signer,
-      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
+      expectedStatus: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
         gasLimit: { base: BigNumber.from(21000) },
@@ -217,11 +212,11 @@ describe('standard ERC20', () => {
       await waitRes.message.getRetryableCreationReceipt()
     if (!isDefined(retryableCreation))
       throw new Error('Missing retryable creation.')
-    const l2Receipt = new L2TransactionReceipt(retryableCreation)
+    const l2Receipt = new ChildTransactionReceipt(retryableCreation)
     const redeemsScheduled = l2Receipt.getRedeemScheduledEvents()
     expect(redeemsScheduled.length, 'Unexpected redeem length').to.eq(1)
     const retryReceipt =
-      await testState.l2Signer.provider!.getTransactionReceipt(
+      await testState.childSigner.provider!.getTransactionReceipt(
         redeemsScheduled[0].retryTxHash
       )
     expect(isDefined(retryReceipt), 'Retry should not exist').to.be.false
@@ -233,11 +228,11 @@ describe('standard ERC20', () => {
   it('deposit with low funds, fails first redeem, succeeds seconds', async () => {
     const { waitRes } = await depositToken({
       depositAmount,
-      l1TokenAddress: testState.l1Token.address,
+      parentTokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
-      l1Signer: testState.l1Signer,
-      l2Signer: testState.l2Signer,
-      expectedStatus: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
+      expectedStatus: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
         gasLimit: { base: BigNumber.from(5) },
@@ -246,11 +241,11 @@ describe('standard ERC20', () => {
     })
     const arbRetryableTx = ArbRetryableTx__factory.connect(
       ARB_RETRYABLE_TX_ADDRESS,
-      testState.l2Signer.provider!
+      testState.childSigner.provider!
     )
     const nInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
-      testState.l2Signer.provider!
+      testState.childSigner.provider!
     )
     const gasComponents = await nInterface.callStatic.gasEstimateComponents(
       arbRetryableTx.address,
@@ -267,18 +262,18 @@ describe('standard ERC20', () => {
   })
 
   it('withdraws erc20', async function () {
-    const l2TokenAddr = await testState.erc20Bridger.getL2ERC20Address(
-      testState.l1Token.address,
-      testState.l1Signer.provider!
+    const l2TokenAddr = await testState.erc20Bridger.getChildERC20Address(
+      testState.parentToken.address,
+      testState.parentSigner.provider!
     )
-    const l2Token = testState.erc20Bridger.getL2TokenContract(
-      testState.l2Signer.provider!,
+    const l2Token = testState.erc20Bridger.getChildTokenContract(
+      testState.childSigner.provider!,
       l2TokenAddr
     )
     // 5 deposits above - increase this number if more deposit tests added
     const startBalance = depositAmount.mul(5)
     const l2BalanceStart = await l2Token.balanceOf(
-      await testState.l2Signer.getAddress()
+      await testState.childSigner.getAddress()
     )
     expect(l2BalanceStart.toString(), 'l2 balance start').to.eq(
       l2BalanceStart.toString()
@@ -286,12 +281,14 @@ describe('standard ERC20', () => {
 
     await withdrawToken({
       ...testState,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
       amount: withdrawalAmount,
       gatewayType: GatewayType.STANDARD,
       startBalance: startBalance,
-      l1Token: ERC20__factory.connect(
-        testState.l1Token.address,
-        testState.l1Signer.provider!
+      parentToken: ERC20__factory.connect(
+        testState.parentToken.address,
+        testState.parentSigner.provider!
       ),
     })
   })
@@ -300,25 +297,25 @@ describe('standard ERC20', () => {
     await depositToken({
       depositAmount,
       ethDepositAmount: utils.parseEther('0.0005'),
-      l1TokenAddress: testState.l1Token.address,
+      parentTokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
-      l1Signer: testState.l1Signer,
-      l2Signer: testState.l2Signer,
-      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
+      expectedStatus: ParentToChildMessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.STANDARD,
     })
   })
 
-  it('deposits erc20 with extra ETH to a specific L2 address', async () => {
+  it('deposits erc20 with extra ETH to a specific child chain address', async () => {
     const randomAddress = Wallet.createRandom().address
     await depositToken({
       depositAmount,
       ethDepositAmount: utils.parseEther('0.0005'),
-      l1TokenAddress: testState.l1Token.address,
+      parentTokenAddress: testState.parentToken.address,
       erc20Bridger: testState.erc20Bridger,
-      l1Signer: testState.l1Signer,
-      l2Signer: testState.l2Signer,
-      expectedStatus: L1ToL2MessageStatus.REDEEMED,
+      parentSigner: testState.parentSigner,
+      childSigner: testState.childSigner,
+      expectedStatus: ParentToChildMessageStatus.REDEEMED,
       expectedGatewayType: GatewayType.STANDARD,
       destinationAddress: randomAddress,
     })
