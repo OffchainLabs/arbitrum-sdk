@@ -843,13 +843,13 @@ export class Erc20Bridger extends AssetBridger<
   }
 
   /**
-   * Checks if custom gateway has been registered
+   * Checks if the token has been properly registered on both gateways. Mostly useful for tokens that use a custom gateway.
    * @param erc20L1Address
    * @param l1Provider
    * @param l2Provider
    * @returns
    */
-  public async isCustomGatewayRegistered({
+  public async isRegistered({
     erc20L1Address,
     l1Provider,
     l2Provider,
@@ -873,7 +873,10 @@ export class Erc20Bridger extends AssetBridger<
       l2Provider
     ).calculateL2TokenAddress(erc20L1Address)
 
-    return tokenL2AddressFromL1GatewayRouter === l2AddressFromL2Gateway
+    return (
+      tokenL2AddressFromL1GatewayRouter.toLowerCase() ===
+      l2AddressFromL2Gateway.toLowerCase()
+    )
   }
 }
 
