@@ -132,7 +132,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   ).to.eq(params.startBalance.sub(params.amount).toNumber())
   const walletAddress = await params.parentSigner.getAddress()
 
-  const gatewayAddress = await params.erc20Bridger.getL2GatewayAddress(
+  const gatewayAddress = await params.erc20Bridger.getChildGatewayAddress(
     params.parentToken.address,
     params.childSigner.provider!
   )
@@ -145,7 +145,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
     expectedL2Gateway
   )
 
-  const gatewayWithdrawEvents = await params.erc20Bridger.getL2WithdrawalEvents(
+  const gatewayWithdrawEvents = await params.erc20Bridger.getWithdrawalEvents(
     params.childSigner.provider!,
     gatewayAddress,
     { fromBlock: withdrawRec.blockNumber, toBlock: 'latest' },
@@ -260,10 +260,11 @@ export const depositToken = async ({
   ).wait()
 
   const senderAddress = await parentSigner.getAddress()
-  const expectedParentGatewayAddress = await erc20Bridger.getL1GatewayAddress(
-    parentTokenAddress,
-    parentSigner.provider!
-  )
+  const expectedParentGatewayAddress =
+    await erc20Bridger.getParentGatewayAddress(
+      parentTokenAddress,
+      parentSigner.provider!
+    )
   const parentToken = erc20Bridger.getParentTokenContract(
     parentSigner.provider!,
     parentTokenAddress
@@ -350,7 +351,7 @@ export const depositToken = async ({
     erc20Bridger.childChain
   )
 
-  const parentGateway = await erc20Bridger.getL1GatewayAddress(
+  const parentGateway = await erc20Bridger.getParentGatewayAddress(
     parentTokenAddress,
     parentSigner.provider!
   )
@@ -358,7 +359,7 @@ export const depositToken = async ({
     expectedL1Gateway
   )
 
-  const childGateway = await erc20Bridger.getL2GatewayAddress(
+  const childGateway = await erc20Bridger.getChildGatewayAddress(
     parentTokenAddress,
     childSigner.provider!
   )

@@ -157,7 +157,7 @@ describe('sanity checks (read-only)', async () => {
   itOnlyWhenEth('l1 gateway router points to right weth gateways', async () => {
     const { adminErc20Bridger, parentSigner, childChain } = await testSetup()
 
-    const gateway = await adminErc20Bridger.getL1GatewayAddress(
+    const gateway = await adminErc20Bridger.getParentGatewayAddress(
       childChain.tokenBridge.l1Weth,
       parentSigner.provider!
     )
@@ -171,16 +171,15 @@ describe('sanity checks (read-only)', async () => {
 
     const address = hexlify(randomBytes(20))
 
-    const erc20L2AddressAsPerL1 = await erc20Bridger.getChildERC20Address(
-      address,
-      parentSigner.provider!
-    )
-    const l2gr = L2GatewayRouter__factory.connect(
+    const erc20ChildAddressAsPerParent =
+      await erc20Bridger.getChildERC20Address(address, parentSigner.provider!)
+    const childGatewayRouter = L2GatewayRouter__factory.connect(
       childChain.tokenBridge.l2GatewayRouter,
       childSigner.provider!
     )
-    const erc20L2AddressAsPerL2 = await l2gr.calculateL2TokenAddress(address)
+    const erc20ChildAddressAsPerChild =
+      await childGatewayRouter.calculateL2TokenAddress(address)
 
-    expect(erc20L2AddressAsPerL2).to.equal(erc20L2AddressAsPerL1)
+    expect(erc20ChildAddressAsPerChild).to.equal(erc20ChildAddressAsPerParent)
   })
 })
