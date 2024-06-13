@@ -303,7 +303,7 @@ export class Erc20Bridger extends AssetBridger<
     }
   }
 
-  private isApproveParams(
+  protected isApproveParams(
     params: ApproveParamsOrTxRequest
   ): params is SignerTokenApproveParams {
     return (params as SignerTokenApproveParams).erc20L1Address != undefined
@@ -889,6 +889,52 @@ interface TokenAndGateway {
  * Admin functionality for the token bridge
  */
 export class AdminErc20Bridger extends Erc20Bridger {
+  private percentIncrease(num: BigNumber, increase: BigNumber): BigNumber {
+    return num.add(num.mul(increase).div(100))
+  }
+
+  public getApproveGasTokenForCustomTokenRegistrationRequest(
+    params: ProviderTokenApproveParams
+  ): Required<Pick<TransactionRequest, 'to' | 'data' | 'value'>> {
+    if (this.nativeTokenIsEth) {
+      throw new Error('chain uses ETH as its native/gas token')
+    }
+
+    const iErc20Interface = ERC20__factory.createInterface()
+    const data = iErc20Interface.encodeFunctionData('approve', [
+      params.erc20L1Address,
+      params.amount || Erc20Bridger.MAX_APPROVAL,
+    ])
+
+    return {
+      data,
+      value: BigNumber.from(0),
+      to: this.nativeToken!,
+    }
+  }
+
+  public async approveGasTokenForCustomTokenRegistration(
+    params: ApproveParamsOrTxRequest
+  ): Promise<ethers.ContractTransaction> {
+    if (this.nativeTokenIsEth) {
+      throw new Error('chain uses ETH as its native/gas token')
+    }
+
+    await this.checkL1Network(params.l1Signer)
+
+    const approveGasTokenRequest = this.isApproveParams(params)
+      ? this.getApproveGasTokenForCustomTokenRegistrationRequest({
+          ...params,
+          l1Provider: SignerProviderUtils.getProviderOrThrow(params.l1Signer),
+        })
+      : params.txRequest
+
+    return params.l1Signer.sendTransaction({
+      ...approveGasTokenRequest,
+      ...params.overrides,
+    })
+  }
+
   /**
    * Register a custom token on the Arbitrum bridge
    * See https://developer.offchainlabs.com/docs/bridging_assets#the-arbitrum-generic-custom-gateway for more details
@@ -910,6 +956,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     await this.checkL1Network(l1Signer)
     await this.checkL2Network(l2Provider)
 
+    const l1Provider = l1Signer.provider!
     const l1SenderAddress = await l1Signer.getAddress()
 
     const l1Token = ICustomToken__factory.connect(l1TokenAddress, l1Signer)
@@ -918,6 +965,33 @@ export class AdminErc20Bridger extends Erc20Bridger {
     // sanity checks
     await l1Token.deployed()
     await l2Token.deployed()
+
+    if (!this.nativeTokenIsEth) {
+      const nativeTokenContract = ERC20__factory.connect(
+        this.nativeToken!,
+        l1Provider
+      )
+      const allowance = await nativeTokenContract.allowance(
+        l1SenderAddress,
+        l1Token.address
+      )
+
+      const maxFeePerGasOnL2 = (await l2Provider.getFeeData()).maxFeePerGas
+      const maxFeePerGasOnL2WithBuffer = this.percentIncrease(
+        maxFeePerGasOnL2!,
+        BigNumber.from(500)
+      )
+      // hardcode gas limit to 60k
+      const estimatedGasFee = BigNumber.from(60_000).mul(
+        maxFeePerGasOnL2WithBuffer
+      )
+
+      if (allowance.lt(estimatedGasFee)) {
+        throw new Error(
+          `Insufficient allowance. Please increase spending for: owner - ${l1SenderAddress}, spender - ${l1Token.address}.`
+        )
+      }
+    }
 
     const l1AddressFromL2 = await l2Token.l1Address()
     if (l1AddressFromL2 !== l1TokenAddress) {
@@ -971,7 +1045,6 @@ export class AdminErc20Bridger extends Erc20Bridger {
       }
     }
 
-    const l1Provider = l1Signer.provider!
     const gEstimator = new L1ToL2MessageGasEstimator(l2Provider)
     const setTokenEstimates2 = await gEstimator.populateFunctionParams(
       (params: OmitTyped<L1ToL2MessageGasParams, 'deposit'>) =>
@@ -1061,7 +1134,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     const eventFetcher = new EventFetcher(l2Provider)
     return (
       await eventFetcher.getEvents(
-        L1GatewayRouter__factory,
+        L2GatewayRouter__factory,
         t => t.filters.GatewaySet(),
         { ...filter, address: l2GatewayRouterAddress }
       )
