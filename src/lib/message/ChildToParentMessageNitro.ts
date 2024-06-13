@@ -70,12 +70,12 @@ const mutex = new Mutex()
 
 function getChildBlockRangeCacheKey({
   childChainId,
-  parentBlockNumber,
+  l1BlockNumber,
 }: {
   childChainId: number
-  parentBlockNumber: number
+  l1BlockNumber: number
 }) {
-  return `${childChainId}-${parentBlockNumber}`
+  return `${childChainId}-${l1BlockNumber}`
 }
 
 function setChildBlockRangeCache(key: string, value: (number | undefined)[]) {
@@ -85,16 +85,16 @@ function setChildBlockRangeCache(key: string, value: (number | undefined)[]) {
 async function getBlockRangesForL1BlockWithCache({
   parentProvider,
   childProvider,
-  forParentBlock,
+  forL1Block,
 }: {
   parentProvider: JsonRpcProvider
   childProvider: JsonRpcProvider
-  forParentBlock: number
+  forL1Block: number
 }) {
   const childChainId = (await childProvider.getNetwork()).chainId
   const key = getChildBlockRangeCacheKey({
     childChainId,
-    parentBlockNumber: forParentBlock,
+    l1BlockNumber: forL1Block,
   })
 
   if (childBlockRangeCache[key]) {
@@ -112,8 +112,8 @@ async function getBlockRangesForL1BlockWithCache({
 
   try {
     const childBlockRange = await getBlockRangesForL1Block({
-      forL1Block: forParentBlock,
-      provider: parentProvider,
+      forL1Block,
+      arbitrumProvider: parentProvider,
     })
     setChildBlockRangeCache(key, childBlockRange)
   } finally {
@@ -307,7 +307,7 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
           const l2BlockRange = await getBlockRangesForL1BlockWithCache({
             parentProvider: this.parentProvider as JsonRpcProvider,
             childProvider: childProvider as JsonRpcProvider,
-            forParentBlock: createdAtBlock.toNumber(),
+            forL1Block: createdAtBlock.toNumber(),
           })
           const startBlock = l2BlockRange[0]
           const endBlock = l2BlockRange[1]

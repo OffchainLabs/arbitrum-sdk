@@ -68,8 +68,8 @@ export const isArbitrumChain = async (provider: Provider): Promise<boolean> => {
 }
 
 type GetFirstBlockForL1BlockProps = {
+  arbitrumProvider: JsonRpcProvider
   forL1Block: number
-  provider: JsonRpcProvider
   allowGreater?: boolean
   minArbitrumBlock?: number
   maxArbitrumBlock?: number | 'latest'
@@ -79,7 +79,7 @@ type GetFirstBlockForL1BlockProps = {
  * This function performs a binary search to find the first Arbitrum block that corresponds to a given L1 block number.
  * The function returns a Promise that resolves to a number if a block is found, or undefined otherwise.
  *
- * @param {JsonRpcProvider} provider - The Arbitrum provider to use for the search.
+ * @param {JsonRpcProvider} arbitrumProvider - The Arbitrum provider to use for the search.
  * @param {number} forL1Block - The L1 block number to search for.
  * @param {boolean} [allowGreater=false] - Whether to allow the search to go past the specified `forL1Block`.
  * @param {number|string} minArbitrumBlock - The minimum Arbitrum block number to start the search from. Cannot be below the network's Nitro genesis block.
@@ -87,18 +87,18 @@ type GetFirstBlockForL1BlockProps = {
  * @returns {Promise<number | undefined>} - A Promise that resolves to a number if a block is found, or undefined otherwise.
  */
 export async function getFirstBlockForL1Block({
-  provider,
+  arbitrumProvider,
   forL1Block,
   allowGreater = false,
   minArbitrumBlock,
   maxArbitrumBlock = 'latest',
 }: GetFirstBlockForL1BlockProps): Promise<number | undefined> {
-  if (!(await isArbitrumChain(provider))) {
+  if (!(await isArbitrumChain(arbitrumProvider))) {
     // Provider is L1.
     return forL1Block
   }
 
-  const arbProvider = new ArbitrumProvider(provider)
+  const arbProvider = new ArbitrumProvider(arbitrumProvider)
   const currentArbBlock = await arbProvider.getBlockNumber()
   const arbitrumChainId = (await arbProvider.getNetwork()).chainId
   const nitroGenesisBlock = getNitroGenesisBlock(arbitrumChainId)
@@ -167,7 +167,7 @@ export async function getFirstBlockForL1Block({
 export const getBlockRangesForL1Block = async (
   props: GetFirstBlockForL1BlockProps
 ) => {
-  const arbProvider = new ArbitrumProvider(props.provider)
+  const arbProvider = new ArbitrumProvider(props.arbitrumProvider)
   const currentArbitrumBlock = await arbProvider.getBlockNumber()
 
   if (!props.maxArbitrumBlock || props.maxArbitrumBlock === 'latest') {

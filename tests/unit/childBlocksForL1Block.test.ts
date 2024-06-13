@@ -75,7 +75,7 @@ describe('Child blocks lookup for a Parent block', () => {
 
   it('successfully searches for an Child block range', async function () {
     const childBlocks = await getBlockRangesForL1Block({
-      provider: arbProvider,
+      arbitrumProvider: arbProvider,
       forL1Block: 17926532,
       // Expected result: 121907680. Narrows down the range to speed up the search.
       minArbitrumBlock: 121800000,
@@ -86,7 +86,7 @@ describe('Child blocks lookup for a Parent block', () => {
 
   it('fails to search for an Child block range', async function () {
     const childBlocks = await getBlockRangesForL1Block({
-      provider: arbProvider,
+      arbitrumProvider: arbProvider,
       forL1Block: 17926533,
       minArbitrumBlock: 121800000,
       maxArbitrumBlock: 122000000,
@@ -101,7 +101,7 @@ describe('Child blocks lookup for a Parent block', () => {
   it('successfully searches for the first Child block', async function () {
     const childBlocks = [
       await getFirstBlockForL1Block({
-        provider: arbProvider,
+        arbitrumProvider: arbProvider,
         forL1Block: 17926532,
         // Expected result: 121907680. Narrows down the range to speed up the search.
         minArbitrumBlock: 121800000,
@@ -114,7 +114,7 @@ describe('Child blocks lookup for a Parent block', () => {
   it('fails to search for the first Child block, while not using `allowGreater` flag', async function () {
     const childBlocks = [
       await getFirstBlockForL1Block({
-        provider: arbProvider,
+        arbitrumProvider: arbProvider,
         forL1Block: 17926533,
         allowGreater: false,
         minArbitrumBlock: 121800000,
@@ -131,7 +131,7 @@ describe('Child blocks lookup for a Parent block', () => {
   it('successfully searches for the first Child block, while using `allowGreater` flag', async function () {
     const childBlocks = [
       await getFirstBlockForL1Block({
-        provider: arbProvider,
+        arbitrumProvider: arbProvider,
         forL1Block: 17926533,
         allowGreater: true,
         // Expected result: 121907740. Narrows down the range to speed up the search.
