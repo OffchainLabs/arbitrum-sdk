@@ -183,7 +183,7 @@ jobs:
           nitro-contracts-branch: e2e-decimals
           token-bridge-branch: non-18-decimals
           l3-node: ${{ matrix.decimals-6 == '1' || matrix.decimals-24 == '1' || matrix.orbit-test == '1' }}
-          args: ${{ matrix.decimals-6 == '1' && '--l3-fee-token --l3-fee-token-decimals 6' || matrix.decimals-24 == '1' && '--l3-fee-token --l3-fee-token-decimals 24' || matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
+          args: ${{ matrix.decimals-6 == '1' && '--l3-fee-token --l3-fee-token-decimals 6' || matrix.decimals-24 == '1' && '--l3-fee-token --l3-fee-token-decimals 20' || matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
