@@ -86,9 +86,9 @@ export const setGateWays = async (
     if (overrideGateways.length > 0) {
       return overrideGateways
     } else if (type === 'standard') {
-      return tokens.map(() => childChain.tokenBridge.l1ERC20Gateway)
+      return tokens.map(() => childChain.tokenBridge.parentERC20Gateway)
     } else if (type === 'arbCustom') {
-      return tokens.map(() => childChain.tokenBridge.l1CustomGateway)
+      return tokens.map(() => childChain.tokenBridge.parentCustomGateway)
     } else {
       throw new Error('Unhandled else case')
     }

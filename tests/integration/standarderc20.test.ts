@@ -145,7 +145,7 @@ describe('standard ERC20', () => {
 
     expect(retryRec.blockHash, 'redeemed in same block').to.eq(blockHash)
     expect(retryRec.to, 'redeemed in same block').to.eq(
-      testState.childChain.tokenBridge.l2ERC20Gateway
+      testState.childChain.tokenBridge.childERC20Gateway
     )
     expect(retryRec.status, 'tx didnt fail').to.eq(expectedStatus)
     expect(await message.status(), 'message status').to.eq(
