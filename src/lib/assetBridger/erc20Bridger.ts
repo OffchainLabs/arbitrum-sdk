@@ -893,12 +893,12 @@ export class Erc20Bridger extends AssetBridger<
     l1Provider: Provider
     l2Provider: Provider
   }) {
-    const tokenL2AddressFromL1GatewayRouter = await this.getL2ERC20Address(
+    const tokenL2AddressFromL1GatewayRouter = await this.getChildERC20Address(
       erc20L1Address,
       l1Provider
     )
 
-    const l2GatewayAddressFromL2Router = await this.getL2GatewayAddress(
+    const l2GatewayAddressFromL2Router = await this.getChildGatewayAddress(
       erc20L1Address,
       l2Provider
     )
