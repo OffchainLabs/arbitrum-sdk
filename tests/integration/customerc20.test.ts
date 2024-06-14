@@ -169,6 +169,16 @@ const registerCustomToken = async (
   )
   await parentCustomToken.deployed()
 
+  adminErc20Bridger
+    .isRegistered({
+      erc20L1Address: parentCustomToken.address,
+      l1Provider: parentSigner.provider!,
+      l2Provider: childSigner.provider!,
+    })
+    .then(isRegistered => {
+      expect(isRegistered, 'expected token not to be registered').to.be.false
+    })
+
   const childCustomTokenFac = new TestArbCustomToken__factory(childSigner)
   const childCustomToken = await childCustomTokenFac.deploy(
     childChain.tokenBridge.childCustomGateway,
@@ -298,6 +308,16 @@ const registerCustomToken = async (
     endChildErc20Address,
     'End childErc20Address not equal childCustomToken address'
   ).to.eq(childCustomToken.address)
+
+  adminErc20Bridger
+    .isRegistered({
+      erc20L1Address: parentCustomToken.address,
+      l1Provider: parentSigner.provider!,
+      l2Provider: childSigner.provider!,
+    })
+    .then(isRegistered => {
+      expect(isRegistered, 'expected token to be registered').to.be.true
+    })
 
   return {
     parentCustomToken,

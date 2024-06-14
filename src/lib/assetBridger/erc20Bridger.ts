@@ -77,6 +77,7 @@ import { RetryableDataTools } from '../dataEntities/retryableData'
 import { EventArgs } from '../dataEntities/event'
 import { ParentToChildMessageGasParams } from '../message/ParentToChildMessageCreator'
 import { isArbitrumChain } from '../utils/lib'
+import { L2ERC20Gateway__factory } from '../abi/factories/L2ERC20Gateway__factory'
 
 export interface TokenApproveParams {
   /**
@@ -875,6 +876,43 @@ export class Erc20Bridger extends AssetBridger<
     })
     return ChildTransactionReceipt.monkeyPatchWait(tx)
   }
+
+  /**
+   * Checks if the token has been properly registered on both gateways. Mostly useful for tokens that use a custom gateway.
+   * @param erc20L1Address
+   * @param l1Provider
+   * @param l2Provider
+   * @returns
+   */
+  public async isRegistered({
+    erc20L1Address,
+    l1Provider,
+    l2Provider,
+  }: {
+    erc20L1Address: string
+    l1Provider: Provider
+    l2Provider: Provider
+  }) {
+    const tokenL2AddressFromL1GatewayRouter = await this.getChildERC20Address(
+      erc20L1Address,
+      l1Provider
+    )
+
+    const l2GatewayAddressFromL2Router = await this.getChildGatewayAddress(
+      erc20L1Address,
+      l2Provider
+    )
+
+    const l2AddressFromL2Gateway = await L2ERC20Gateway__factory.connect(
+      l2GatewayAddressFromL2Router,
+      l2Provider
+    ).calculateL2TokenAddress(erc20L1Address)
+
+    return (
+      tokenL2AddressFromL1GatewayRouter.toLowerCase() ===
+      l2AddressFromL2Gateway.toLowerCase()
+    )
+  }
 }
 
 /**
@@ -1148,7 +1186,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     const eventFetcher = new EventFetcher(childProvider)
     return (
       await eventFetcher.getEvents(
-        L1GatewayRouter__factory,
+        L2GatewayRouter__factory,
         t => t.filters.GatewaySet(),
         { ...filter, address: childGatewayRouterAddress }
       )
