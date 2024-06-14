@@ -21,7 +21,7 @@ import chalk from 'chalk'
 
 import { BigNumber } from '@ethersproject/bignumber'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { parseEther } from '@ethersproject/units'
+import { parseEther, parseUnits } from '@ethersproject/units'
 
 import { config, getSigner, testSetup } from '../../scripts/testSetup'
 
@@ -39,7 +39,7 @@ import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeToken
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { getNativeTokenDecimals } from '../../src/lib/utils/lib'
 
-export const preFundAmount = parseEther('0.1')
+const preFundAmount = '0.1'
 
 export const prettyLog = (text: string): void => {
   console.log(chalk.blue(`    *** ${text}`))
@@ -404,11 +404,16 @@ const fund = async (
   amount?: BigNumber,
   fundingKey?: string
 ) => {
+  const { l1Provider, l2Network } = await testSetup()
+
   const wallet = getSigner(signer.provider! as JsonRpcProvider, fundingKey)
+  const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+  const value = parseUnits(amount ? amount.toString() : preFundAmount, decimals)
+
   await (
     await wallet.sendTransaction({
       to: await signer.getAddress(),
-      value: amount || preFundAmount,
+      value,
     })
   ).wait()
 }
