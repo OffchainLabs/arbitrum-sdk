@@ -295,7 +295,6 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
           this.parentProvider
         )
 
-        // @ts-ignore
         const l2BlockRangeFromNode = await nodeInterface.l2BlockRangeForL1(
           createdAtBlock
         )
