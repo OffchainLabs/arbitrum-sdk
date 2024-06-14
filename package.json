@@ -1,6 +1,6 @@
 {
   "name": "@arbitrum/sdk",
-  "version": "4.0.0-alpha.3",
+  "version": "4.0.0-alpha.4",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -26,6 +26,7 @@
     "gen:network": "ts-node ./scripts/genNetwork.ts",
     "prepublishOnly": "yarn build && yarn format",
     "preversion": "yarn lint",
+    "prebuild": "yarn gen:abi",
     "build": "./scripts/builder",
     "watch": "tsc --watch",
     "test": "mocha",

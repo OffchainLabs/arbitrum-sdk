@@ -145,7 +145,7 @@ describe('standard ERC20', () => {
 
     expect(retryRec.blockHash, 'redeemed in same block').to.eq(blockHash)
     expect(retryRec.to, 'redeemed in same block').to.eq(
-      testState.childChain.tokenBridge.l2ERC20Gateway
+      testState.childChain.tokenBridge.childErc20Gateway
     )
     expect(retryRec.status, 'tx didnt fail').to.eq(expectedStatus)
     expect(await message.status(), 'message status').to.eq(
@@ -262,7 +262,7 @@ describe('standard ERC20', () => {
   })
 
   it('withdraws erc20', async function () {
-    const l2TokenAddr = await testState.erc20Bridger.getChildERC20Address(
+    const l2TokenAddr = await testState.erc20Bridger.getChildErc20Address(
       testState.parentToken.address,
       testState.parentSigner.provider!
     )

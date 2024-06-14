@@ -23,13 +23,11 @@ import dotenv from 'dotenv'
 
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
-  L2Network,
   ArbitrumNetwork,
-  mapL2NetworkToArbitrumNetwork,
   getArbitrumNetwork,
   registerCustomArbitrumNetwork,
-  ArbitrumNetworkWithTokenBridge,
-  assertHasTokenBridge,
+  TokenBridge,
+  assertArbitrumNetworkHasTokenBridge,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
@@ -74,7 +72,9 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
 }
 
 export const testSetup = async (): Promise<{
-  childChain: ArbitrumNetworkWithTokenBridge
+  childChain: ArbitrumNetwork & {
+    tokenBridge: TokenBridge
+  }
   parentSigner: Signer
   childSigner: Signer
   parentProvider: Provider
@@ -108,7 +108,7 @@ export const testSetup = async (): Promise<{
     setChildChain = registerCustomArbitrumNetwork(childChain)
   }
 
-  assertHasTokenBridge(setChildChain)
+  assertArbitrumNetworkHasTokenBridge(setChildChain)
 
   const erc20Bridger = new Erc20Bridger(setChildChain)
   const adminErc20Bridger = new AdminErc20Bridger(setChildChain)
@@ -144,9 +144,7 @@ export function getLocalNetworksFromFile(): {
     throw new ArbSdkError('localNetwork.json not found, must gen:network first')
   }
   const localNetworksFile = fs.readFileSync(pathToLocalNetworkFile, 'utf8')
-  const localL2: L2Network = JSON.parse(localNetworksFile).l2Network
+  const localL2: ArbitrumNetwork = JSON.parse(localNetworksFile).l2Network
 
-  return {
-    l2Network: mapL2NetworkToArbitrumNetwork(localL2),
-  }
+  return { l2Network: localL2 }
 }

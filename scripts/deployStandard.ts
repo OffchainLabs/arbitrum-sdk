@@ -102,7 +102,7 @@ const main = async () => {
   }
 
   /* check token not yet deployed */
-  const l2TokenAddress = await erc20Bridger.getChildERC20Address(
+  const l2TokenAddress = await erc20Bridger.getChildErc20Address(
     l1TokenAddress,
     l1Provider
   )
