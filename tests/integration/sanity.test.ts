@@ -39,11 +39,11 @@ describe('sanity checks (read-only)', async () => {
   it('standard gateways public storage vars properly set', async () => {
     const { parentSigner, childSigner, childChain } = await testSetup()
     const l1Gateway = await L1ERC20Gateway__factory.connect(
-      childChain.tokenBridge.parentERC20Gateway,
+      childChain.tokenBridge.parentErc20Gateway,
       parentSigner
     )
     const l2Gateway = await L2ERC20Gateway__factory.connect(
-      childChain.tokenBridge.childERC20Gateway,
+      childChain.tokenBridge.childErc20Gateway,
       childSigner
     )
 
@@ -57,12 +57,12 @@ describe('sanity checks (read-only)', async () => {
 
     const l1GatewayCounterParty = await l1Gateway.counterpartGateway()
     expect(l1GatewayCounterParty).to.equal(
-      childChain.tokenBridge.childERC20Gateway
+      childChain.tokenBridge.childErc20Gateway
     )
 
     const l2GatewayCounterParty = await l2Gateway.counterpartGateway()
     expect(l2GatewayCounterParty).to.equal(
-      childChain.tokenBridge.parentERC20Gateway
+      childChain.tokenBridge.parentErc20Gateway
     )
 
     const l1Router = await l1Gateway.router()
@@ -172,7 +172,7 @@ describe('sanity checks (read-only)', async () => {
     const address = hexlify(randomBytes(20))
 
     const erc20ChildAddressAsPerParent =
-      await erc20Bridger.getChildERC20Address(address, parentSigner.provider!)
+      await erc20Bridger.getChildErc20Address(address, parentSigner.provider!)
     const childGatewayRouter = L2GatewayRouter__factory.connect(
       childChain.tokenBridge.childGatewayRouter,
       childSigner.provider!

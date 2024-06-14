@@ -115,7 +115,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
     ChildToParentMessageStatus.UNCONFIRMED
   )
 
-  const childTokenAddr = await params.erc20Bridger.getChildERC20Address(
+  const childTokenAddr = await params.erc20Bridger.getChildErc20Address(
     params.parentToken.address,
     params.parentSigner.provider!
   )
@@ -208,8 +208,8 @@ const getGateways = (gatewayType: GatewayType, l2Network: ArbitrumNetwork) => {
       }
     case GatewayType.STANDARD:
       return {
-        expectedL1Gateway: l2Network.tokenBridge.parentERC20Gateway,
-        expectedL2Gateway: l2Network.tokenBridge.childERC20Gateway,
+        expectedL1Gateway: l2Network.tokenBridge.parentErc20Gateway,
+        expectedL2Gateway: l2Network.tokenBridge.childErc20Gateway,
       }
     case GatewayType.WETH:
       return {
@@ -367,7 +367,7 @@ export const depositToken = async ({
     expectedL2Gateway
   )
 
-  const childErc20Addr = await erc20Bridger.getChildERC20Address(
+  const childErc20Addr = await erc20Bridger.getChildErc20Address(
     parentTokenAddress,
     parentSigner.provider!
   )
@@ -375,7 +375,7 @@ export const depositToken = async ({
     childSigner.provider!,
     childErc20Addr
   )
-  const parentErc20Addr = await erc20Bridger.getParentERC20Address(
+  const parentErc20Addr = await erc20Bridger.getParentErc20Address(
     childErc20Addr,
     childSigner.provider!
   )

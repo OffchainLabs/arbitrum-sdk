@@ -482,7 +482,7 @@ export class Erc20Bridger extends AssetBridger<
    * @param parentProvider
    * @returns
    */
-  public async getChildERC20Address(
+  public async getChildErc20Address(
     erc20ParentAddress: string,
     parentProvider: Provider
   ): Promise<string> {
@@ -505,7 +505,7 @@ export class Erc20Bridger extends AssetBridger<
    * @param childProvider
    * @returns
    */
-  public async getParentERC20Address(
+  public async getParentErc20Address(
     erc20ChildChainAddress: string,
     childProvider: Provider
   ): Promise<string> {
@@ -893,7 +893,7 @@ export class Erc20Bridger extends AssetBridger<
     l1Provider: Provider
     l2Provider: Provider
   }) {
-    const tokenL2AddressFromL1GatewayRouter = await this.getChildERC20Address(
+    const tokenL2AddressFromL1GatewayRouter = await this.getChildErc20Address(
       erc20L1Address,
       l1Provider
     )
