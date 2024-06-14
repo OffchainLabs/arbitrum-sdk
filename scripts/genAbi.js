@@ -1,6 +1,6 @@
 const { runTypeChain, glob } = require('typechain')
 const { execSync } = require('child_process')
-const { unlinkSync } = require('fs')
+const { unlinkSync, existsSync, rmSync } = require('fs')
 
 const getPackagePath = packageName => {
   const path = require.resolve(`${packageName}/package.json`)
@@ -8,6 +8,11 @@ const getPackagePath = packageName => {
 }
 
 async function main() {
+  if (existsSync('./src/lib/abi/')) {
+    console.log('Removing previously generated ABIs.\n')
+    rmSync('./src/lib/abi/', { recursive: true })
+  }
+
   const cwd = process.cwd()
 
   const nitroPath = getPackagePath('@arbitrum/nitro-contracts')
