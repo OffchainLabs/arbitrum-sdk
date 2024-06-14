@@ -17,7 +17,7 @@
 'use strict'
 
 import { expect } from 'chai'
-import { Signer, Wallet, utils, constants } from 'ethers'
+import { Wallet, utils, constants } from 'ethers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import {
@@ -29,12 +29,10 @@ import {
   fundChildSigner,
 } from './testHelpers'
 import {
-  Erc20Bridger,
   ParentToChildMessageStatus,
   ParentToChildMessageWriter,
   ChildTransactionReceipt,
 } from '../../src'
-import { ArbitrumNetwork } from '../../src/lib/dataEntities/networks'
 import { TestERC20 } from '../../src/lib/abi/TestERC20'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
@@ -61,11 +59,7 @@ describe('standard ERC20', () => {
   })
 
   // test globals
-  let testState: {
-    parentSigner: Signer
-    childSigner: Signer
-    erc20Bridger: Erc20Bridger
-    childChain: ArbitrumNetwork
+  let testState: Awaited<ReturnType<typeof testSetup>> & {
     parentToken: TestERC20
   }
 
@@ -87,7 +81,7 @@ describe('standard ERC20', () => {
     async () => {
       const { parentSigner, erc20Bridger } = await testSetup()
 
-      const gatewayAddress = await erc20Bridger.getL1GatewayAddress(
+      const gatewayAddress = await erc20Bridger.getParentGatewayAddress(
         testState.parentToken.address,
         parentSigner.provider!
       )
@@ -151,7 +145,7 @@ describe('standard ERC20', () => {
 
     expect(retryRec.blockHash, 'redeemed in same block').to.eq(blockHash)
     expect(retryRec.to, 'redeemed in same block').to.eq(
-      testState.childChain.tokenBridge.l2ERC20Gateway
+      testState.childChain.tokenBridge.childErc20Gateway
     )
     expect(retryRec.status, 'tx didnt fail').to.eq(expectedStatus)
     expect(await message.status(), 'message status').to.eq(
@@ -268,7 +262,7 @@ describe('standard ERC20', () => {
   })
 
   it('withdraws erc20', async function () {
-    const l2TokenAddr = await testState.erc20Bridger.getChildERC20Address(
+    const l2TokenAddr = await testState.erc20Bridger.getChildErc20Address(
       testState.parentToken.address,
       testState.parentSigner.provider!
     )

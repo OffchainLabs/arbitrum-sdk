@@ -121,7 +121,7 @@ describe('Networks', async () => {
       const arbitrumNetworksEntries = Object.entries(arbitrumNetworks)
       const arbitrumNetworksKeys = arbitrumNetworksEntries.map(([key]) => key)
 
-      const expected = [42161, 42170, 421614, 23011913]
+      const expected = [42161, 42170, 421614, 23011913, 13331371]
         //
         .map(id => id.toString())
 
@@ -153,7 +153,7 @@ describe('Networks', async () => {
 
     it('returns correct children for arbitrum sepolia', () => {
       const children = getChildrenForNetwork(421614).map(c => c.chainId)
-      expect(children).to.have.members([23011913])
+      expect(children).to.have.members([13331371, 23011913])
     })
   })
 

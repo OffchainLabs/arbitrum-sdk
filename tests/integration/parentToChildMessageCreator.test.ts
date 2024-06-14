@@ -68,16 +68,16 @@ describe('ParentToChildMessageCreator', () => {
     }
 
     // And submitting the ticket
-    const parentChainSubmissionTx =
+    const parentSubmissionTx =
       await parentToChildMessageCreator.createRetryableTicket(
         retryableTicketParams,
         arbProvider
       )
-    const parentChainSubmissionTxReceipt = await parentChainSubmissionTx.wait()
+    const parentSubmissionTxReceipt = await parentSubmissionTx.wait()
 
     // Getting the ParentToChildMessage
     const parentToChildMessages =
-      await parentChainSubmissionTxReceipt.getParentToChildMessages(arbProvider)
+      await parentSubmissionTxReceipt.getParentToChildMessages(arbProvider)
     expect(parentToChildMessages.length).to.eq(1)
     const parentToChildMessage = parentToChildMessages[0]
 
@@ -137,16 +137,16 @@ describe('ParentToChildMessageCreator', () => {
       )
 
     // And create the retryable ticket
-    const parentChainSubmissionTx =
+    const parentSubmissionTx =
       await parentToChildMessageCreator.createRetryableTicket(
         parentToChildTransactionRequest,
         arbProvider
       )
-    const parentChainSubmissionTxReceipt = await parentChainSubmissionTx.wait()
+    const parentSubmissionTxReceipt = await parentSubmissionTx.wait()
 
     // Getting the ParentToChildMessage
     const parentToChildMessages =
-      await parentChainSubmissionTxReceipt.getParentToChildMessages(arbProvider)
+      await parentSubmissionTxReceipt.getParentToChildMessages(arbProvider)
     expect(parentToChildMessages.length).to.eq(1)
     const parentToChildMessage = parentToChildMessages[0]
 
