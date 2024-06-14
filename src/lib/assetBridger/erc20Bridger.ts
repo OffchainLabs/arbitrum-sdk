@@ -481,7 +481,7 @@ export class Erc20Bridger extends AssetBridger<
    * @param parentProvider
    * @returns
    */
-  public async getChildERC20Address(
+  public async getChildErc20Address(
     erc20ParentAddress: string,
     parentProvider: Provider
   ): Promise<string> {
@@ -504,7 +504,7 @@ export class Erc20Bridger extends AssetBridger<
    * @param childProvider
    * @returns
    */
-  public async getParentERC20Address(
+  public async getParentErc20Address(
     erc20ChildChainAddress: string,
     childProvider: Provider
   ): Promise<string> {
