@@ -21,7 +21,7 @@ import chalk from 'chalk'
 
 import { BigNumber } from '@ethersproject/bignumber'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { parseEther, parseUnits } from '@ethersproject/units'
+import { parseUnits } from '@ethersproject/units'
 
 import { config, getSigner, testSetup } from '../../scripts/testSetup'
 
@@ -160,8 +160,8 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   // whilst waiting for status we miner on both l1 and l2
   const miner1 = Wallet.createRandom().connect(params.l1Signer.provider!)
   const miner2 = Wallet.createRandom().connect(params.l2Signer.provider!)
-  await fundL1(miner1, parseEther('1'))
-  await fundL2(miner2, parseEther('1'))
+  await fundL1(miner1, '1')
+  await fundL2(miner2, '1')
   const state = { mining: true }
   await Promise.race([
     mineUntilStop(miner1, state),
@@ -399,11 +399,7 @@ export const depositToken = async ({
   return { l1Token, waitRes, l2Token }
 }
 
-const fund = async (
-  signer: Signer,
-  amount?: BigNumber,
-  fundingKey?: string
-) => {
+const fund = async (signer: Signer, amount?: string, fundingKey?: string) => {
   const { l1Provider, l2Network } = await testSetup()
 
   const wallet = getSigner(signer.provider! as JsonRpcProvider, fundingKey)
@@ -420,14 +416,14 @@ const fund = async (
 
 export const fundL1 = async (
   l1Signer: Signer,
-  amount?: BigNumber
+  amount?: string
 ): Promise<void> => {
   await fund(l1Signer, amount, config.ethKey)
 }
 
 export const fundL2 = async (
   l2Signer: Signer,
-  amount?: BigNumber
+  amount?: string
 ): Promise<void> => {
   await fund(l2Signer, amount, config.arbKey)
 }

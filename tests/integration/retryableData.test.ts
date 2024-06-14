@@ -24,13 +24,12 @@ import { fundL1, skipIfMainnet } from './testHelpers'
 import { RetryableDataTools } from '../../src'
 import { Wallet } from 'ethers'
 import { testSetup } from '../../scripts/testSetup'
-import { parseUnits, randomBytes } from 'ethers/lib/utils'
+import { randomBytes } from 'ethers/lib/utils'
 import { Inbox__factory } from '../../src/lib/abi/factories/Inbox__factory'
 import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
 const depositAmount = BigNumber.from(100)
 import { ERC20Inbox__factory } from '../../src/lib/abi/factories/ERC20Inbox__factory'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
-import { getNativeTokenDecimals } from '../../src/lib/utils/lib'
 
 describe('RevertData', () => {
   beforeEach('skipIfMainnet', async function () {
@@ -146,11 +145,9 @@ describe('RevertData', () => {
   })
 
   it('is the same as what we estimate in erc20Bridger', async () => {
-    const { erc20Bridger, l1Signer, l1Provider, l2Signer, l2Network } =
-      await testSetup()
-    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+    const { erc20Bridger, l1Signer, l2Signer } = await testSetup()
 
-    await fundL1(l1Signer, parseUnits('2', decimals))
+    await fundL1(l1Signer, '2')
 
     const deployErc20 = new TestERC20__factory().connect(l1Signer)
     const testToken = await deployErc20.deploy()
