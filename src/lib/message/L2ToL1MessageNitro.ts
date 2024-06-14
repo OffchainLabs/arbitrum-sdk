@@ -28,7 +28,7 @@ import { ErrorCode, Logger } from '@ethersproject/logger'
 
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { RollupUserLogic__factory } from '../abi/factories/RollupUserLogic__factory'
-import { BoldRollupUserLogic__factory } from '../abi/factories/BoldRollupUserLogic__factory'
+import { BoldRollupUserLogic__factory } from '../abi-bold/factories/BoldRollupUserLogic__factory'
 import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
@@ -47,7 +47,7 @@ import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
 import {
   AssertionCreatedEvent,
   BoldRollupUserLogic,
-} from '../abi/BoldRollupUserLogic'
+} from '../abi-bold/BoldRollupUserLogic'
 import { ArbitrumProvider } from '../utils/arbProvider'
 import { ArbBlock } from '../dataEntities/rpc'
 import { JsonRpcProvider } from '@ethersproject/providers'
