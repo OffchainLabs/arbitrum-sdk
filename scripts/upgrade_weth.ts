@@ -32,7 +32,7 @@ const main = async () => {
   console.log('aeWeth logic deployed to ', logicAddress)
 
   const connectedProxy = TransparentUpgradeableProxy__factory.connect(
-    l2Network.tokenBridge.l2Weth,
+    l2Network.tokenBridge.childWeth,
     l2Signer
   )
   const upgradeRes = await connectedProxy.upgradeTo(logicAddress)
@@ -45,13 +45,13 @@ const main = async () => {
 //   const { bridge, l2Network } = await instantiateBridge()
 //   const { l2Signer } = bridge.l2Bridge
 
-//   const aeWeth = AeWETH__factory.connect(l2Network.tokenBridge.l2Weth, l2Signer)
+//   const aeWeth = AeWETH__factory.connect(l2Network.tokenBridge.childWeth, l2Signer)
 //   const res = await aeWeth.initialize(
 //     'Wrapped Ether',
 //     'WETH',
 //     18,
-//     l2Network.tokenBridge.l2WethGateway,
-//     l2Network.tokenBridge.l1Weth
+//     l2Network.tokenBridge.childWethGateway,
+//     l2Network.tokenBridge.parentWeth
 //   )
 
 //   const rec = await res.wait()

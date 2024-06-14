@@ -203,18 +203,18 @@ const getGateways = (gatewayType: GatewayType, l2Network: ArbitrumNetwork) => {
   switch (gatewayType) {
     case GatewayType.CUSTOM:
       return {
-        expectedL1Gateway: l2Network.tokenBridge.l1CustomGateway,
-        expectedL2Gateway: l2Network.tokenBridge.l2CustomGateway,
+        expectedL1Gateway: l2Network.tokenBridge.parentCustomGateway,
+        expectedL2Gateway: l2Network.tokenBridge.childCustomGateway,
       }
     case GatewayType.STANDARD:
       return {
-        expectedL1Gateway: l2Network.tokenBridge.l1ERC20Gateway,
-        expectedL2Gateway: l2Network.tokenBridge.l2ERC20Gateway,
+        expectedL1Gateway: l2Network.tokenBridge.parentERC20Gateway,
+        expectedL2Gateway: l2Network.tokenBridge.childERC20Gateway,
       }
     case GatewayType.WETH:
       return {
-        expectedL1Gateway: l2Network.tokenBridge.l1WethGateway,
-        expectedL2Gateway: l2Network.tokenBridge.l2WethGateway,
+        expectedL1Gateway: l2Network.tokenBridge.parentWethGateway,
+        expectedL2Gateway: l2Network.tokenBridge.childWethGateway,
       }
     default:
       throw new ArbSdkError(`Unexpected gateway type: ${gatewayType}`)
