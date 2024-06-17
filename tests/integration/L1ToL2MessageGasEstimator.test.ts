@@ -30,6 +30,7 @@ import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeToken
 
 describe('L1ToL2MessageGasEstimator', () => {
   beforeEach('skipIfMainnet', async function () {
+    console.log('trigger beforeEach')
     await skipIfMainnet(this)
   })
 
