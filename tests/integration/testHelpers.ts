@@ -415,7 +415,7 @@ const fund = async (signer: Signer, amount?: string, fundingKey?: string) => {
     decimals,
   })
 
-  console.log('value: ', value.toString())
+  console.warn('value: ', value.toString())
 
   await (
     await wallet.sendTransaction({
@@ -424,7 +424,7 @@ const fund = async (signer: Signer, amount?: string, fundingKey?: string) => {
     })
   ).wait()
 
-  console.log('fund end')
+  console.warn('fund end')
 }
 
 export const fundL1 = async (

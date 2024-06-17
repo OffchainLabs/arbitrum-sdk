@@ -100,6 +100,7 @@ export const testSetup = async (): Promise<{
   l1Deployer: Signer
   l2Deployer: Signer
 }> => {
+  console.warn('testSetup')
   const ethProvider = new JsonRpcProvider(config.ethUrl)
   const arbProvider = new JsonRpcProvider(config.arbUrl)
 
@@ -165,11 +166,11 @@ export const testSetup = async (): Promise<{
   const ethBridger = new EthBridger(setL2Network)
   const inboxTools = new InboxTools(l1Signer, setL2Network)
 
-  if (isL2NetworkWithCustomFeeToken()) {
-    await fundL1(l1Signer)
-    await fundL1CustomFeeToken(l1Signer)
-    await approveL1CustomFeeToken(l1Signer)
-  }
+  // if (isL2NetworkWithCustomFeeToken()) {
+  //   await fundL1(l1Signer)
+  //   await fundL1CustomFeeToken(l1Signer)
+  //   await approveL1CustomFeeToken(l1Signer)
+  // }
 
   return {
     l1Signer,
