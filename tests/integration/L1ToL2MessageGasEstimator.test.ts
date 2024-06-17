@@ -35,6 +35,7 @@ describe('L1ToL2MessageGasEstimator', () => {
   itOnlyWhenEth(
     `"estimateSubmissionFee" returns non-0 for eth chain`,
     async () => {
+      console.log('not skipping - before testSetup')
       const { l1Provider, l2Provider } = await testSetup()
 
       console.log('not skipping')
