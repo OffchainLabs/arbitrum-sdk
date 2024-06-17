@@ -100,7 +100,6 @@ export const testSetup = async (): Promise<{
   l1Deployer: Signer
   l2Deployer: Signer
 }> => {
-  console.warn('testSetup')
   const ethProvider = new JsonRpcProvider(config.ethUrl)
   const arbProvider = new JsonRpcProvider(config.arbUrl)
 
@@ -167,13 +166,9 @@ export const testSetup = async (): Promise<{
   const inboxTools = new InboxTools(l1Signer, setL2Network)
 
   if (isL2NetworkWithCustomFeeToken()) {
-    console.warn('fund l1')
     await fundL1(l1Signer)
-    console.warn('fundL1CustomFeeToken')
     await fundL1CustomFeeToken(l1Signer)
-    console.warn('approve')
     await approveL1CustomFeeToken(l1Signer)
-    console.warn('-- end --')
   }
 
   return {
