@@ -21,6 +21,7 @@ import chalk from 'chalk'
 
 import { BigNumber } from '@ethersproject/bignumber'
 import { JsonRpcProvider } from '@ethersproject/providers'
+import { parseEther } from 'ethers/lib/utils'
 
 import { config, getSigner, testSetup } from '../../scripts/testSetup'
 
@@ -407,7 +408,7 @@ const fund = async (signer: Signer, amount?: string, fundingKey?: string) => {
   const wallet = getSigner(signer.provider! as JsonRpcProvider, fundingKey)
   const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
   const value = scaleToNativeDecimals({
-    amount: BigNumber.from(amount ?? preFundAmount),
+    amount: parseEther(amount ?? preFundAmount),
     decimals,
   })
 
