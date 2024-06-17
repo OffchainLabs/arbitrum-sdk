@@ -18,17 +18,19 @@ Throughout the codebase, most instances of the terms "L1" and "L2" have been rep
 
 | v3 Name                      | v4 Name                             |
 | ---------------------------- | ----------------------------------- |
-| `L2TransactionReceipt`       | `ChildTransactionReceipt`           |
-| `L1ContractTransaction`      | `ParentContractTransaction`         |
 | `L1TransactionReceipt`       | `ParentTransactionReceipt`          |
+| `L1ContractTransaction`      | `ParentContractTransaction`         |
 | `L1ToL2Message`              | `ParentToChildMessage`              |
 | `L1ToL2MessageWriter`        | `ParentToChildMessageWriter`        |
 | `L1ToL2MessageReader`        | `ParentToChildMessageReader`        |
-| `L1ToL2MessageStatus`        | `ParentToChildMessageStatus`        |
 | `L1ToL2MessageReaderClassic` | `ParentToChildMessageReaderClassic` |
-| `L1ToL2MessageWriter`        | `ParentToChildMessageWriter`        |
 | `L1ToL2MessageStatus`        | `ParentToChildMessageStatus`        |
 | `L1ToL2MessageGasEstimator`  | `ParentToChildMessageGasEstimator`  |
+| `L2TransactionReceipt`       | `ChildTransactionReceipt`           |
+| `L2ContractTransaction`      | `ChildContractTransaction`          |
+| `L2ToL1Message`              | `ChildToParentMessage`              |
+| `L2ToL1MessageWriter`        | `ChildToParentMessageWriter`        |
+| `L2ToL1MessageReader`        | `ChildToParentMessageReader`        |
 | `L2ToL1MessageStatus`        | `ChildToParentMessageStatus`        |
 | `L2Network`                  | `ArbitrumNetwork`                   |
 | `getL2Network`               | `getArbitrumNetwork`                |
