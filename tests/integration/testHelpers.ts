@@ -407,10 +407,15 @@ const fund = async (signer: Signer, amount?: string, fundingKey?: string) => {
 
   const wallet = getSigner(signer.provider! as JsonRpcProvider, fundingKey)
   const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+
+  console.warn({ decimals })
+
   const value = scaleToNativeDecimals({
     amount: parseEther(amount ?? preFundAmount),
     decimals,
   })
+
+  console.log('value: ', value.toString())
 
   await (
     await wallet.sendTransaction({
@@ -418,6 +423,8 @@ const fund = async (signer: Signer, amount?: string, fundingKey?: string) => {
       value,
     })
   ).wait()
+
+  console.log('fund end')
 }
 
 export const fundL1 = async (
