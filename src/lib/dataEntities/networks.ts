@@ -69,13 +69,6 @@ export interface ArbitrumNetwork {
 }
 
 /**
- * Represents an Arbitrum network with a token bridge.
- */
-export type ArbitrumNetworkWithTokenBridge = ArbitrumNetwork & {
-  tokenBridge: TokenBridge
-}
-
-/**
  * This type is only here for when you want to achieve backwards compatibility between SDK v3 and v4.
  *
  * Please see {@link ArbitrumNetwork} for the latest type.
@@ -621,25 +614,6 @@ export function assertArbitrumNetworkHasTokenBridge<T extends ArbitrumNetwork>(
     throw new ArbSdkError(
       `The ArbitrumNetwork object with chainId ${network.chainId} is missing the token bridge contracts addresses. Please add them in the "tokenBridge" property.`
     )
-  }
-}
-
-/**
- * Asserts that the given object has a token bridge. This is useful because not all Arbitrum network
- * operations require a token bridge.
- *
- * @param network {@link ArbitrumNetwork} object
- * @throws ArbSdkError if the object does not have a token bridge
- */
-export function assertHasTokenBridge<T extends ArbitrumNetwork>(
-  network: T
-): asserts network is T & { tokenBridge: TokenBridge } {
-  if (
-    typeof network === 'undefined' ||
-    !('tokenBridge' in network) ||
-    typeof network.tokenBridge === 'undefined'
-  ) {
-    throw new ArbSdkError('Token bridge addresses required for network')
   }
 }
 
