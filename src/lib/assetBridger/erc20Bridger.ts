@@ -893,6 +893,20 @@ export class Erc20Bridger extends AssetBridger<
     l1Provider: Provider
     l2Provider: Provider
   }) {
+    const l1StandardGatewayAddressFromChainConfig =
+      this.childChain.tokenBridge.parentErc20Gateway
+
+    const l1GatewayAddressFromL1GatewayRouter =
+      await this.getParentGatewayAddress(erc20L1Address, l1Provider)
+
+    // token uses standard gateway; no need to check further
+    if (
+      l1StandardGatewayAddressFromChainConfig.toLowerCase() ===
+      l1GatewayAddressFromL1GatewayRouter.toLowerCase()
+    ) {
+      return true
+    }
+
     const tokenL2AddressFromL1GatewayRouter = await this.getChildErc20Address(
       erc20L1Address,
       l1Provider
