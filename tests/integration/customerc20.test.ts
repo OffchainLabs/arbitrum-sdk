@@ -71,10 +71,10 @@ describe('Custom ERC20', () => {
       l1CustomToken: {} as any,
     }
 
-    if (!isL2NetworkWithCustomFeeToken()) {
-      await fundL1(testState.l1Signer)
-      await fundL2(testState.l2Signer)
-    }
+    await fundL1(testState.l1Signer)
+    await fundL2(testState.l2Signer)
+    // if (!isL2NetworkWithCustomFeeToken()) {
+    // }
   })
 
   it('register custom token', async () => {

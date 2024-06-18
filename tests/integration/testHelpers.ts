@@ -39,7 +39,7 @@ import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeToken
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { getNativeTokenDecimals } from '../../src/lib/utils/lib'
 
-const preFundAmount = '1'
+const preFundAmount = '0.1'
 
 export const prettyLog = (text: string): void => {
   console.log(chalk.blue(`    *** ${text}`))
