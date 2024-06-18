@@ -63,39 +63,45 @@ The `Erc20Bridger` class methods have been renamed to reflect the new Parent/Chi
 
 #### Message Classes
 
-##### `ChildToParentMessageClassic` methods
+##### `ChildToParentMessageClassic`
 
 | v3 Name           | v4 Name                  |
 | ----------------- | ------------------------ |
 | `getL2ToL1Events` | `getChildToParentEvents` |
 
-##### `ChildToParentChainMessageNitro` methods
+##### `ChildToParentChainMessageNitro`
 
 | v3 Name           | v4 Name                  |
 | ----------------- | ------------------------ |
 | `getL2ToL1Events` | `getChildToParentEvents` |
 
-##### `ChildTransactionReceipt` methods
+##### `ChildTransactionReceipt`
 
 | v3 Name             | v4 Name                    |
 | ------------------- | -------------------------- |
 | `getL2ToL1Events`   | `getChildToParentEvents`   |
 | `getL2ToL1Messages` | `getChildToParentMessages` |
 
-##### `ParentTransactionReceipt` methods
+##### `ParentToChildMessage`
+
+| v3 Name            | v4 Name                   |
+| ------------------ | ------------------------- |
+| `EthDepositStatus` | `EthDepositMessageStatus` |
+
+##### `ParentTransactionReceipt`
 
 | v3 Name                    | v4 Name                           |
 | -------------------------- | --------------------------------- |
 | `getL1ToL2MessagesClassic` | `getParentToChildMessagesClassic` |
 | `getL1ToL2Messages`        | `getParentToChildMessages`        |
 
-##### `ParentEthDepositTransactionReceipt` methods
+##### `ParentEthDepositTransactionReceipt`
 
 | v3 Name     | v4 Name                          |
 | ----------- | -------------------------------- |
 | `waitForL2` | `waitForChildTransactionReceipt` |
 
-##### `ParentContractCallTransactionReceipt` methods
+##### `ParentContractCallTransactionReceipt`
 
 | v3 Name     | v4 Name                          |
 | ----------- | -------------------------------- |
