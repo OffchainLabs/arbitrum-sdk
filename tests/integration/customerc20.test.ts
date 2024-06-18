@@ -151,6 +151,7 @@ const registerCustomToken = async (
   l2Signer: Signer,
   adminErc20Bridger: AdminErc20Bridger
 ) => {
+  console.warn('registerCustomToken')
   // create a custom token on L1 and L2
   const l1CustomTokenFactory = isL2NetworkWithCustomFeeToken()
     ? new TestOrbitCustomTokenL1__factory(l1Signer)
@@ -171,6 +172,7 @@ const registerCustomToken = async (
       expect(isRegistered, 'expected token not to be registered').to.be.false
     })
 
+  console.warn('isRegistered false')
   const l2CustomTokenFac = new TestArbCustomToken__factory(l2Signer)
   const l2CustomToken = await l2CustomTokenFac.deploy(
     l2Network.tokenBridge.l2CustomGateway,
@@ -194,6 +196,7 @@ const registerCustomToken = async (
   const startL1GatewayAddress = await l1GatewayRouter.l1TokenToGateway(
     l1CustomToken.address
   )
+  console.warn('h1')
   expect(
     startL1GatewayAddress,
     'Start l1GatewayAddress not equal empty address'
@@ -220,6 +223,8 @@ const registerCustomToken = async (
     'Start l2Erc20Address not equal empty address'
   ).to.eq(constants.AddressZero)
 
+  console.warn('h2')
+
   // it should fail without the approval
   if (isL2NetworkWithCustomFeeToken()) {
     try {
@@ -236,12 +241,16 @@ const registerCustomToken = async (
     }
   }
 
+  console.warn('h3')
+
   if (isL2NetworkWithCustomFeeToken()) {
     await adminErc20Bridger.approveGasTokenForCustomTokenRegistration({
       l1Signer,
       erc20L1Address: l1CustomToken.address,
     })
   }
+
+  console.warn('h4')
 
   // send the messages
   const regTx = await adminErc20Bridger.registerCustomToken(
@@ -299,6 +308,8 @@ const registerCustomToken = async (
     'End l2Erc20Address not equal l2CustomToken address'
   ).to.eq(l2CustomToken.address)
 
+  console.warn('h5')
+
   adminErc20Bridger
     .isRegistered({
       erc20L1Address: l1CustomToken.address,
@@ -308,6 +319,8 @@ const registerCustomToken = async (
     .then(isRegistered => {
       expect(isRegistered, 'expected token to be registered').to.be.true
     })
+
+  console.warn('h6')
 
   return {
     l1CustomToken,
