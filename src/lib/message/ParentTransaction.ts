@@ -366,7 +366,7 @@ export class ParentEthDepositTransactionReceipt extends ParentTransactionReceipt
    * If `complete` is true then this message is in the terminal state.
    * For eth deposits complete this is when the status is FUNDS_DEPOSITED, EXPIRED or REDEEMED.
    */
-  public async waitForChildTx(
+  public async waitForChildTransactionReceipt(
     childProvider: Provider,
     confirmations?: number,
     timeout?: number
@@ -404,7 +404,7 @@ export class ParentContractCallTransactionReceipt extends ParentTransactionRecei
    * If `complete` is true then this message is in the terminal state.
    * For contract calls this is true only if the status is REDEEMED.
    */
-  public async waitForChildTx<T extends SignerOrProvider>(
+  public async waitForChildTransactionReceipt<T extends SignerOrProvider>(
     childSignerOrProvider: T,
     confirmations?: number,
     timeout?: number

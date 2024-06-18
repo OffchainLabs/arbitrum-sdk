@@ -38,11 +38,11 @@ import {
 import { ArbSdkError } from '../dataEntities/errors'
 import { ethers, Overrides } from 'ethers'
 import { ChildTransactionReceipt, RedeemTransaction } from './ChildTransaction'
-import { getArbitrumNetwork } from '../../lib/dataEntities/networks'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt, isDefined } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
 import { ErrorCode, Logger } from '@ethersproject/logger'
+import { getArbitrumNetwork } from '../dataEntities/networks'
 
 export enum ParentToChildMessageStatus {
   /**

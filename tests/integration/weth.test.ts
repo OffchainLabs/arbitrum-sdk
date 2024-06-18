@@ -42,30 +42,30 @@ describeOnlyWhenEth('WETH', async () => {
     const { childChain, parentSigner, childSigner, erc20Bridger } =
       await testSetup()
 
-    const l1WethAddress = childChain.tokenBridge.l1Weth
+    const parentWethAddress = childChain.tokenBridge.parentWeth
 
     const wethToWrap = parseEther('0.00001')
     const wethToDeposit = parseEther('0.0000001')
 
     await fundParentSigner(parentSigner, parseEther('1'))
 
-    const l2WETH = AeWETH__factory.connect(
-      childChain.tokenBridge.l2Weth,
+    const childWETH = AeWETH__factory.connect(
+      childChain.tokenBridge.childWeth,
       childSigner.provider!
     )
     expect(
-      (await l2WETH.balanceOf(await childSigner.getAddress())).toString(),
+      (await childWETH.balanceOf(await childSigner.getAddress())).toString(),
       'start balance weth'
     ).to.eq('0')
 
-    const l1WETH = AeWETH__factory.connect(l1WethAddress, parentSigner)
-    const res = await l1WETH.deposit({
+    const parentWETH = AeWETH__factory.connect(parentWethAddress, parentSigner)
+    const res = await parentWETH.deposit({
       value: wethToWrap,
     })
     await res.wait()
     await depositToken({
       depositAmount: wethToDeposit,
-      parentTokenAddress: l1WethAddress,
+      parentTokenAddress: parentWethAddress,
       erc20Bridger,
       parentSigner,
       childSigner,
@@ -73,25 +73,27 @@ describeOnlyWhenEth('WETH', async () => {
       expectedGatewayType: GatewayType.WETH,
     })
 
-    const l2WethGateway = await erc20Bridger.getChildGatewayAddress(
-      l1WethAddress,
+    const childWethGateway = await erc20Bridger.getChildGatewayAddress(
+      parentWethAddress,
       childSigner.provider!
     )
-    expect(l2WethGateway, 'l2 weth gateway').to.eq(
-      childChain.tokenBridge.l2WethGateway
+    expect(childWethGateway, 'child weth gateway').to.eq(
+      childChain.tokenBridge.childWethGateway
     )
-    const l2Token = erc20Bridger.getChildTokenContract(
+    const childToken = erc20Bridger.getChildTokenContract(
       childSigner.provider!,
-      childChain.tokenBridge.l2Weth
+      childChain.tokenBridge.childWeth
     )
-    expect(l2Token.address, 'l2 weth').to.eq(childChain.tokenBridge.l2Weth)
+    expect(childToken.address, 'child weth').to.eq(
+      childChain.tokenBridge.childWeth
+    )
 
     // now try to withdraw the funds
     await fundChildSigner(childSigner)
-    const l2Weth = AeWETH__factory.connect(l2Token.address, childSigner)
+    const childWeth = AeWETH__factory.connect(childToken.address, childSigner)
     const randomAddr = Wallet.createRandom().address
     await (
-      await l2Weth.connect(childSigner).withdrawTo(randomAddr, wethToDeposit)
+      await childWeth.connect(childSigner).withdrawTo(randomAddr, wethToDeposit)
     ).wait()
     const afterBalance = await childSigner.provider!.getBalance(randomAddr)
 
@@ -109,11 +111,11 @@ describeOnlyWhenEth('WETH', async () => {
     await fundParentSigner(parentSigner)
     await fundChildSigner(childSigner)
 
-    const l2Weth = AeWETH__factory.connect(
-      childChain.tokenBridge.l2Weth,
+    const childWeth = AeWETH__factory.connect(
+      childChain.tokenBridge.childWeth,
       childSigner
     )
-    const res = await l2Weth.deposit({
+    const res = await childWeth.deposit({
       value: wethToWrap,
     })
     const rec = await res.wait()
@@ -125,7 +127,7 @@ describeOnlyWhenEth('WETH', async () => {
       gatewayType: GatewayType.WETH,
       parentSigner: parentSigner,
       parentToken: ERC20__factory.connect(
-        childChain.tokenBridge.l1Weth,
+        childChain.tokenBridge.parentWeth,
         parentSigner.provider!
       ),
       childSigner: childSigner,

@@ -159,7 +159,7 @@ type EthDepositToRequestParams = OmitTyped<
 }
 
 /**
- * Bridger for moving ETH back and forth between parent and child chain
+ * Bridger for moving either ETH or custom gas tokens back and forth between parent and child chains
  */
 export class EthBridger extends AssetBridger<
   EthDepositParams | EthDepositToParams | ParentToChildTxReqAndSigner,
@@ -352,11 +352,11 @@ export class EthBridger extends AssetBridger<
           parentProvider: params.parentSigner.provider!,
         })
 
-    const l1ToL2MessageCreator = new ParentToChildMessageCreator(
+    const parentToChildMessageCreator = new ParentToChildMessageCreator(
       params.parentSigner
     )
 
-    const tx = await l1ToL2MessageCreator.createRetryableTicket(
+    const tx = await parentToChildMessageCreator.createRetryableTicket(
       retryableTicketRequest,
       params.childProvider
     )

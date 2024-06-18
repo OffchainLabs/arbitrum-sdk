@@ -115,7 +115,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
     ChildToParentMessageStatus.UNCONFIRMED
   )
 
-  const childTokenAddr = await params.erc20Bridger.getChildERC20Address(
+  const childTokenAddr = await params.erc20Bridger.getChildErc20Address(
     params.parentToken.address,
     params.parentSigner.provider!
   )
@@ -203,18 +203,18 @@ const getGateways = (gatewayType: GatewayType, l2Network: ArbitrumNetwork) => {
   switch (gatewayType) {
     case GatewayType.CUSTOM:
       return {
-        expectedL1Gateway: l2Network.tokenBridge.l1CustomGateway,
-        expectedL2Gateway: l2Network.tokenBridge.l2CustomGateway,
+        expectedL1Gateway: l2Network.tokenBridge.parentCustomGateway,
+        expectedL2Gateway: l2Network.tokenBridge.childCustomGateway,
       }
     case GatewayType.STANDARD:
       return {
-        expectedL1Gateway: l2Network.tokenBridge.l1ERC20Gateway,
-        expectedL2Gateway: l2Network.tokenBridge.l2ERC20Gateway,
+        expectedL1Gateway: l2Network.tokenBridge.parentErc20Gateway,
+        expectedL2Gateway: l2Network.tokenBridge.childErc20Gateway,
       }
     case GatewayType.WETH:
       return {
-        expectedL1Gateway: l2Network.tokenBridge.l1WethGateway,
-        expectedL2Gateway: l2Network.tokenBridge.l2WethGateway,
+        expectedL1Gateway: l2Network.tokenBridge.parentWethGateway,
+        expectedL2Gateway: l2Network.tokenBridge.childWethGateway,
       }
     default:
       throw new ArbSdkError(`Unexpected gateway type: ${gatewayType}`)
@@ -332,7 +332,7 @@ export const depositToken = async ({
     parentTokenBalanceBefore.sub(depositAmount).toString()
   )
 
-  const waitRes = await depositRec.waitForChildTx(childSigner)
+  const waitRes = await depositRec.waitForChildTransactionReceipt(childSigner)
 
   const childEthBalanceAfter = await childSigner.provider!.getBalance(
     destinationAddress || senderAddress
@@ -367,7 +367,7 @@ export const depositToken = async ({
     expectedL2Gateway
   )
 
-  const childErc20Addr = await erc20Bridger.getChildERC20Address(
+  const childErc20Addr = await erc20Bridger.getChildErc20Address(
     parentTokenAddress,
     parentSigner.provider!
   )
@@ -375,7 +375,7 @@ export const depositToken = async ({
     childSigner.provider!,
     childErc20Addr
   )
-  const parentErc20Addr = await erc20Bridger.getParentERC20Address(
+  const parentErc20Addr = await erc20Bridger.getParentErc20Address(
     childErc20Addr,
     childSigner.provider!
   )
