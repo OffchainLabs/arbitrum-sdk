@@ -73,12 +73,13 @@ describe('Custom ERC20', () => {
     console.warn('fund L1')
     await fundL1(testState.l1Signer)
     console.warn('fund L2')
-    await fundL2(testState.l2Signer)
 
     if (isL2NetworkWithCustomFeeToken()) {
       console.log('fund custom fee token L1')
       await fundL1CustomFeeToken(testState.l1Signer)
       await approveL1CustomFeeToken(testState.l1Signer)
+    } else {
+      await fundL2(testState.l2Signer)
     }
   })
 
