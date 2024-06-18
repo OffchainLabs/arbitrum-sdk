@@ -319,19 +319,6 @@ const registerCustomToken = async (
       expect(isRegistered, 'expected token to be registered').to.be.true
     })
 
-  adminErc20Bridger
-    .isRegistered({
-      erc20ParentAddress: parentCustomToken.address,
-      parentProvider: parentSigner.provider!,
-      childProvider: childSigner.provider!,
-    })
-    .then(isCustomGatewayRegistered => {
-      expect(
-        isCustomGatewayRegistered,
-        'expected isCustomGatewayRegistered to be true'
-      ).to.be.true
-    })
-
   return {
     parentCustomToken,
     childCustomToken,
