@@ -43,6 +43,7 @@ import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import {
+  approveL1CustomFeeToken,
   fundL1CustomFeeToken,
   isL2NetworkWithCustomFeeToken,
 } from './custom-fee-token/customFeeTokenTestHelpers'
@@ -69,11 +70,15 @@ describe('Custom ERC20', () => {
       ...(await testSetup()),
       l1CustomToken: {} as any,
     }
+    console.warn('fund L1')
     await fundL1(testState.l1Signer)
+    console.warn('fund L2')
     await fundL2(testState.l2Signer)
 
     if (isL2NetworkWithCustomFeeToken()) {
+      console.log('fund custom fee token L1')
       await fundL1CustomFeeToken(testState.l1Signer)
+      await approveL1CustomFeeToken(testState.l1Signer)
     }
   })
 

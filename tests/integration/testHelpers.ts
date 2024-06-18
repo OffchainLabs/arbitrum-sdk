@@ -37,10 +37,7 @@ import { ArbSdkError } from '../../src/lib/dataEntities/errors'
 import { ERC20 } from '../../src/lib/abi/ERC20'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
-import {
-  getNativeTokenDecimals,
-  scaleToNativeDecimals,
-} from '../../src/lib/utils/lib'
+import { getNativeTokenDecimals } from '../../src/lib/utils/lib'
 
 const preFundAmount = '1'
 
@@ -404,6 +401,9 @@ export const depositToken = async ({
 
 const fund = async (signer: Signer, amount?: string, fundingKey?: string) => {
   const wallet = getSigner(signer.provider! as JsonRpcProvider, fundingKey)
+  const bal = await wallet.getBalance()
+
+  console.warn('balance: ', bal.toString())
 
   await (
     await wallet.sendTransaction({
