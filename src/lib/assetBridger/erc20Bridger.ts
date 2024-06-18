@@ -954,20 +954,21 @@ export class Erc20Bridger extends AssetBridger<
       return true
     }
 
-    const tokenChildAddressFromParentGatewayRouter =
+    const childTokenAddressFromParentGatewayRouter =
       await this.getChildErc20Address(erc20ParentAddress, parentProvider)
 
     const childGatewayAddressFromChildRouter =
       await this.getChildGatewayAddress(erc20ParentAddress, childProvider)
 
-    const childAddressFromChildGateway = await L2ERC20Gateway__factory.connect(
-      childGatewayAddressFromChildRouter,
-      childProvider
-    ).calculateL2TokenAddress(erc20ParentAddress)
+    const childTokenAddressFromChildGateway =
+      await L2ERC20Gateway__factory.connect(
+        childGatewayAddressFromChildRouter,
+        childProvider
+      ).calculateL2TokenAddress(erc20ParentAddress)
 
     return (
-      tokenChildAddressFromParentGatewayRouter.toLowerCase() ===
-      childAddressFromChildGateway.toLowerCase()
+      childTokenAddressFromParentGatewayRouter.toLowerCase() ===
+      childTokenAddressFromChildGateway.toLowerCase()
     )
   }
 }
