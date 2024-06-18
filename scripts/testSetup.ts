@@ -166,11 +166,11 @@ export const testSetup = async (): Promise<{
   const ethBridger = new EthBridger(setL2Network)
   const inboxTools = new InboxTools(l1Signer, setL2Network)
 
-  // if (isL2NetworkWithCustomFeeToken()) {
-  //   await fundL1(l1Signer)
-  //   await fundL1CustomFeeToken(l1Signer)
-  //   await approveL1CustomFeeToken(l1Signer)
-  // }
+  if (isL2NetworkWithCustomFeeToken()) {
+    await fundL1(l1Signer)
+    await fundL1CustomFeeToken(l1Signer)
+    await approveL1CustomFeeToken(l1Signer)
+  }
 
   return {
     l1Signer,
