@@ -166,18 +166,18 @@ export const testSetup = async (): Promise<{
   const ethBridger = new EthBridger(setL2Network)
   const inboxTools = new InboxTools(l1Signer, setL2Network)
 
-  // if (isL2NetworkWithCustomFeeToken()) {
-  //   const l1Bal = await ethProvider.getBalance(seed.address)
-  //   console.warn('l1Bal: ', l1Bal.toString())
+  if (isL2NetworkWithCustomFeeToken()) {
+    const l1Bal = await ethProvider.getBalance(seed.address)
+    console.warn('l1Bal: ', l1Bal.toString())
 
-  //   console.warn('start fund')
-  //   await fundL1(l1Signer)
-  //   console.warn('funded L1')
-  //   await fundL1CustomFeeToken(l1Signer)
-  //   console.warn('funded L1 custom fee token')
-  //   await approveL1CustomFeeToken(l1Signer)
-  //   console.warn('approved L1 custom fee token')
-  // }
+    console.warn('start fund')
+    await fundL1(l1Signer)
+    console.warn('funded L1')
+    await fundL1CustomFeeToken(l1Signer)
+    console.warn('funded L1 custom fee token')
+    await approveL1CustomFeeToken(l1Signer)
+    console.warn('approved L1 custom fee token')
+  }
 
   return {
     l1Signer,
