@@ -99,6 +99,11 @@
     // Uncontrolled resource consumption in braces
     // eslint and hardhat dependency, only used in dev
     // from: hardhat>braces & eslint>braces
-    "GHSA-grv7-fg5c-xmjg"
+    "GHSA-grv7-fg5c-xmjg",
+    // https://github.com/advisories/GHSA-3787-6prv-h9w3
+    // Undici proxy-authorization header not cleared on cross-origin redirect in fetch
+    // hardhat requests are only done during development
+    // from: hardhat>undici
+    "GHSA-3787-6prv-h9w3"
   ]
 }
