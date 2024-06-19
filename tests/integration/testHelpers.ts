@@ -37,7 +37,10 @@ import { ArbSdkError } from '../../src/lib/dataEntities/errors'
 import { ERC20 } from '../../src/lib/abi/ERC20'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
-import { getNativeTokenDecimals } from '../../src/lib/utils/lib'
+import {
+  getNativeTokenDecimals,
+  scaleToNativeDecimals,
+} from '../../src/lib/utils/lib'
 
 const preFundAmount = '0.1'
 
@@ -249,6 +252,8 @@ export const depositToken = async ({
   retryableOverrides?: GasOverrides
   destinationAddress?: string
 }) => {
+  let feeTokenBalanceBefore: BigNumber | undefined
+
   await (
     await erc20Bridger.approveToken({
       erc20L1Address: l1TokenAddress,
@@ -289,14 +294,14 @@ export const depositToken = async ({
       feeTokenAllowance.eq(Erc20Bridger.MAX_APPROVAL),
       'set fee token allowance failed'
     ).to.be.true
+
+    feeTokenBalanceBefore = await ERC20__factory.connect(
+      erc20Bridger.nativeToken!,
+      l1Signer
+    ).balanceOf(senderAddress)
+
+    console.warn('feeTokenBalanceBefore: ', feeTokenBalanceBefore.toString())
   }
-
-  const feeTokenBalanceBefore = await ERC20__factory.connect(
-    erc20Bridger.nativeToken!,
-    l1Signer
-  ).balanceOf(senderAddress)
-
-  console.warn('feeTokenBalanceBefore: ', feeTokenBalanceBefore.toString())
 
   const initialBridgeTokenBalance = await l1Token.balanceOf(
     expectedL1GatewayAddress
@@ -335,12 +340,33 @@ export const depositToken = async ({
     tokenBalL1Before.sub(depositAmount).toString()
   )
 
-  const feeTokenBalanceAfter = await ERC20__factory.connect(
-    erc20Bridger.nativeToken!,
-    l1Signer
-  ).balanceOf(senderAddress)
+  if (isL2NetworkWithCustomFeeToken()) {
+    const feeTokenBalanceAfter = await ERC20__factory.connect(
+      erc20Bridger.nativeToken!,
+      l1Signer
+    ).balanceOf(senderAddress)
+    console.warn('feeTokenBalanceAfter: ', feeTokenBalanceAfter.toString())
 
-  console.warn('feeTokenBalanceAfter: ', feeTokenBalanceAfter.toString())
+    // makes sure gas spent was rescaled correctly for non-18 decimal fee tokens
+    const feeTokenDecimals = await ERC20__factory.connect(
+      erc20Bridger.nativeToken!,
+      l1Signer
+    ).decimals()
+
+    const MAX_BASE_ESTIMATED_GAS_FEE = BigNumber.from(500_000_000_000_000)
+
+    const maxScaledEstimatedGasFee = scaleToNativeDecimals({
+      amount: MAX_BASE_ESTIMATED_GAS_FEE,
+      decimals: feeTokenDecimals,
+    })
+
+    expect(
+      feeTokenBalanceBefore!
+        .sub(feeTokenBalanceAfter)
+        .lte(maxScaledEstimatedGasFee),
+      'Too much custom fee token used as gas'
+    ).to.be.true
+  }
 
   const waitRes = await depositRec.waitForL2(l2Signer)
 
