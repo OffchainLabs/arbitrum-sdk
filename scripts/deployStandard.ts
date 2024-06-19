@@ -50,7 +50,7 @@ const main = async () => {
   }
 
   /** Check if disabled */
-  const isDisabled = await erc20Bridger.l1TokenIsDisabled(
+  const isDisabled = await erc20Bridger.isDepositDisabled(
     l1TokenAddress,
     l1Provider
   )
@@ -102,7 +102,7 @@ const main = async () => {
   }
 
   /* check token not yet deployed */
-  const l2TokenAddress = await erc20Bridger.getChildERC20Address(
+  const l2TokenAddress = await erc20Bridger.getChildErc20Address(
     l1TokenAddress,
     l1Provider
   )

@@ -86,8 +86,8 @@ export type L2Network = Prettify<
 export interface TokenBridge {
   parentGatewayRouter: string
   childGatewayRouter: string
-  parentERC20Gateway: string
-  childERC20Gateway: string
+  parentErc20Gateway: string
+  childErc20Gateway: string
   parentCustomGateway: string
   childCustomGateway: string
   parentWethGateway: string
@@ -142,8 +142,8 @@ export interface Networks {
 const mainnetTokenBridge: TokenBridge = {
   parentGatewayRouter: '0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef',
   childGatewayRouter: '0x5288c571Fd7aD117beA99bF60FE0846C4E84F933',
-  parentERC20Gateway: '0xa3A7B6F88361F48403514059F1F16C8E78d60EeC',
-  childERC20Gateway: '0x09e9222E96E7B4AE2a407B98d48e330053351EEe',
+  parentErc20Gateway: '0xa3A7B6F88361F48403514059F1F16C8E78d60EeC',
+  childErc20Gateway: '0x09e9222E96E7B4AE2a407B98d48e330053351EEe',
   parentCustomGateway: '0xcEe284F754E854890e311e3280b767F80797180d',
   childCustomGateway: '0x096760F208390250649E3e8763348E783AEF5562',
   parentWethGateway: '0xd92023E9d9911199a6711321D1277285e6d4e2db',
@@ -196,14 +196,14 @@ export const networks: Networks = {
     parentChainId: 1,
     tokenBridge: {
       parentCustomGateway: '0x23122da8C581AA7E0d07A36Ff1f16F799650232f',
-      parentERC20Gateway: '0xB2535b988dcE19f9D71dfB22dB6da744aCac21bf',
+      parentErc20Gateway: '0xB2535b988dcE19f9D71dfB22dB6da744aCac21bf',
       parentGatewayRouter: '0xC840838Bc438d73C16c2f8b22D2Ce3669963cD48',
       parentMultiCall: '0x8896D23AfEA159a5e9b72C9Eb3DC4E2684A38EA3',
       parentProxyAdmin: '0xa8f7DdEd54a726eB873E98bFF2C95ABF2d03e560',
       parentWeth: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
       parentWethGateway: '0xE4E2121b479017955Be0b175305B35f312330BaE',
       childCustomGateway: '0xbf544970E6BD77b21C6492C281AB60d0770451F4',
-      childERC20Gateway: '0xcF9bAb7e53DDe48A6DC4f286CB14e05298799257',
+      childErc20Gateway: '0xcF9bAb7e53DDe48A6DC4f286CB14e05298799257',
       childGatewayRouter: '0x21903d3F8176b1a0c17E953Cd896610Be9fFDFa8',
       childMulticall: '0x5e1eE626420A354BbC9a95FeA1BAd4492e3bcB86',
       childProxyAdmin: '0xada790b026097BfB36a5ed696859b97a96CEd92C',
@@ -226,14 +226,14 @@ export const networks: Networks = {
     parentChainId: 11155111,
     tokenBridge: {
       parentCustomGateway: '0xba2F7B6eAe1F9d174199C5E4867b563E0eaC40F3',
-      parentERC20Gateway: '0x902b3E5f8F19571859F4AB1003B960a5dF693aFF',
+      parentErc20Gateway: '0x902b3E5f8F19571859F4AB1003B960a5dF693aFF',
       parentGatewayRouter: '0xcE18836b233C83325Cc8848CA4487e94C6288264',
       parentMultiCall: '0xded9AD2E65F3c4315745dD915Dbe0A4Df61b2320',
       parentProxyAdmin: '0xDBFC2FfB44A5D841aB42b0882711ed6e5A9244b0',
       parentWeth: '0x7b79995e5f793A07Bc00c21412e50Ecae098E7f9',
       parentWethGateway: '0xA8aD8d7e13cbf556eE75CB0324c13535d8100e1E',
       childCustomGateway: '0x8Ca1e1AC0f260BC4dA7Dd60aCA6CA66208E642C5',
-      childERC20Gateway: '0x6e244cD02BBB8a6dbd7F626f05B2ef82151Ab502',
+      childErc20Gateway: '0x6e244cD02BBB8a6dbd7F626f05B2ef82151Ab502',
       childGatewayRouter: '0x9fDD1C4E4AA24EEc1d913FABea925594a20d43C7',
       childMulticall: '0xA115146782b7143fAdB3065D86eACB54c169d092',
       childProxyAdmin: '0x715D99480b77A8d9D603638e593a539E21345FdF',
@@ -256,14 +256,14 @@ export const networks: Networks = {
     parentChainId: 421614,
     tokenBridge: {
       parentCustomGateway: '0xd624D491A5Bc32de52a2e1481846752213bF7415',
-      parentERC20Gateway: '0x7348Fdf6F3e090C635b23D970945093455214F3B',
+      parentErc20Gateway: '0x7348Fdf6F3e090C635b23D970945093455214F3B',
       parentGatewayRouter: '0x0057892cb8bb5f1cE1B3C6f5adE899732249713f',
       parentMultiCall: '0xBEbe3BfBF52FFEA965efdb3f14F2101c0264c940',
       parentProxyAdmin: '0xB9E77732f32831f09e2a50D6E71B2Cca227544bf',
       parentWeth: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73',
       parentWethGateway: '0x39845e4a230434D218b907459a305eBA61A790d4',
       childCustomGateway: '0xF6dbB0e312dF4652d59ce405F5E00CC3430f19c5',
-      childERC20Gateway: '0xe027f79CE40a1eF8e47B51d0D46Dc4ea658C5860',
+      childErc20Gateway: '0xe027f79CE40a1eF8e47B51d0D46Dc4ea658C5860',
       childGatewayRouter: '0x4c3a1f7011F02Fe4769fC704359c3696a6A60D89',
       childMulticall: '0xEb4A260FD16aaf18c04B1aeaDFE20E622e549bd3',
       childProxyAdmin: '0xE914c0d417E8250d0237d2F4827ed3612e6A9C3B',
@@ -286,14 +286,14 @@ export const networks: Networks = {
     parentChainId: 421614,
     tokenBridge: {
       parentCustomGateway: '0x093353B9f723047abf37Ebe01cE48d7dDA8320F4',
-      parentERC20Gateway: '0xD2C4693Dd8d44703af5CF9484fa8faAD6e33E392',
+      parentErc20Gateway: '0xD2C4693Dd8d44703af5CF9484fa8faAD6e33E392',
       parentGatewayRouter: '0xAC4F454320A253267C6Ae95e4784b9A4f9F78359',
       parentMultiCall: '0xce1CAd780c529e66e3aa6D952a1ED9A6447791c1',
       parentProxyAdmin: '0xBD76fd3fB5F3CD7165fB6e0DB895FFE1d81463e3',
       parentWeth: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73',
       parentWethGateway: '0x4FEbc93233aAc1523f36Abe297de9323f6C8ce79',
       childCustomGateway: '0xE102D94df0179082B39Ddcad58c9430dedc89aE3',
-      childERC20Gateway: '0xCf3a4aF3c48Ba19c5FccFB44FA3E3A0F2A6e60dA',
+      childErc20Gateway: '0xCf3a4aF3c48Ba19c5FccFB44FA3E3A0F2A6e60dA',
       childGatewayRouter: '0xD60FD4c5D335b00287202C93C5B4EE0478D92686',
       childMulticall: '0x39E068582873B2011F5a1e8E0F7D9D993c8111BC',
       childProxyAdmin: '0x9DC4Da9a940AFEbBC8329aA6534aD767b60d968c',
@@ -472,14 +472,14 @@ export const addDefaultLocalNetwork = (): ArbitrumNetwork => {
     parentChainId: 1337,
     tokenBridge: {
       parentCustomGateway: '0x3DF948c956e14175f43670407d5796b95Bb219D8',
-      parentERC20Gateway: '0x4A2bA922052bA54e29c5417bC979Daaf7D5Fe4f4',
+      parentErc20Gateway: '0x4A2bA922052bA54e29c5417bC979Daaf7D5Fe4f4',
       parentGatewayRouter: '0x525c2aBA45F66987217323E8a05EA400C65D06DC',
       parentMultiCall: '0xDB2D15a3EB70C347E0D2C2c7861cAFb946baAb48',
       parentProxyAdmin: '0xe1080224B632A93951A7CFA33EeEa9Fd81558b5e',
       parentWeth: '0x408Da76E87511429485C32E4Ad647DD14823Fdc4',
       parentWethGateway: '0xF5FfD11A55AFD39377411Ab9856474D2a7Cb697e',
       childCustomGateway: '0x525c2aBA45F66987217323E8a05EA400C65D06DC',
-      childERC20Gateway: '0xe1080224B632A93951A7CFA33EeEa9Fd81558b5e',
+      childErc20Gateway: '0xe1080224B632A93951A7CFA33EeEa9Fd81558b5e',
       childGatewayRouter: '0x1294b86822ff4976BfE136cB06CF43eC7FCF2574',
       childMulticall: '0xDB2D15a3EB70C347E0D2C2c7861cAFb946baAb48',
       childProxyAdmin: '0xda52b25ddB0e3B9CC393b0690Ac62245Ac772527',
@@ -565,8 +565,8 @@ export function mapL2NetworkTokenBridgeToTokenBridge(
   return {
     parentGatewayRouter: input.l1GatewayRouter,
     childGatewayRouter: input.l2GatewayRouter,
-    parentERC20Gateway: input.l1ERC20Gateway,
-    childERC20Gateway: input.l2ERC20Gateway,
+    parentErc20Gateway: input.l1ERC20Gateway,
+    childErc20Gateway: input.l2ERC20Gateway,
     parentCustomGateway: input.l1CustomGateway,
     childCustomGateway: input.l2CustomGateway,
     parentWethGateway: input.l1WethGateway,

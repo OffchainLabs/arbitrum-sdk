@@ -86,7 +86,7 @@ export const setGateWays = async (
     if (overrideGateways.length > 0) {
       return overrideGateways
     } else if (type === 'standard') {
-      return tokens.map(() => childChain.tokenBridge.parentERC20Gateway)
+      return tokens.map(() => childChain.tokenBridge.parentErc20Gateway)
     } else if (type === 'arbCustom') {
       return tokens.map(() => childChain.tokenBridge.parentCustomGateway)
     } else {
