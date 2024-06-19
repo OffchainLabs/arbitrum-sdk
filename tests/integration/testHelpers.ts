@@ -353,7 +353,7 @@ export const depositToken = async ({
       l1Signer
     ).decimals()
 
-    const MAX_BASE_ESTIMATED_GAS_FEE = BigNumber.from(500_000_000_000_000)
+    const MAX_BASE_ESTIMATED_GAS_FEE = BigNumber.from(1_000_000_000_000_000)
 
     const maxScaledEstimatedGasFee = scaleToNativeDecimals({
       amount: MAX_BASE_ESTIMATED_GAS_FEE,
