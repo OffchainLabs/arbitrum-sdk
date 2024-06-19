@@ -241,8 +241,6 @@ const registerCustomToken = async (
     })
   }
 
-  console.warn('registerCustomToken')
-
   // send the messages
   const regTx = await adminErc20Bridger.registerCustomToken(
     l1CustomToken.address,

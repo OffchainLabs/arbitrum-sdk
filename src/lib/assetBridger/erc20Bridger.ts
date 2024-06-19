@@ -1056,21 +1056,9 @@ export class AdminErc20Bridger extends Erc20Bridger {
       )
         ? RetryableDataTools.ErrorTriggeringParams.maxFeePerGas.mul(2)
         : maxFeePerGas
-      // const setTokenDeposit = scaleToNativeDecimals({
-      //   amount: setTokenGas.gasLimit
-      //     .mul(doubleFeePerGas)
-      //     .add(setTokenGas.maxSubmissionCost),
-      //   decimals: nativeTokenDecimals,
-      // })
       const setTokenDeposit = setTokenGas.gasLimit
         .mul(doubleFeePerGas)
         .add(setTokenGas.maxSubmissionCost)
-      // const setGatewayDeposit = scaleToNativeDecimals({
-      //   amount: setGatewayGas.gasLimit
-      //     .mul(doubleFeePerGas)
-      //     .add(setGatewayGas.maxSubmissionCost),
-      //   decimals: nativeTokenDecimals,
-      // })
       const setGatewayDeposit = setGatewayGas.gasLimit
         .mul(doubleFeePerGas)
         .add(setGatewayGas.maxSubmissionCost)
@@ -1082,8 +1070,18 @@ export class AdminErc20Bridger extends Erc20Bridger {
         setTokenGas.gasLimit,
         setGatewayGas.gasLimit,
         doubleFeePerGas,
-        setTokenDeposit,
-        setGatewayDeposit,
+        scaleToNativeDecimals({
+          amount: setTokenGas.gasLimit
+            .mul(doubleFeePerGas)
+            .add(setTokenGas.maxSubmissionCost),
+          decimals: nativeTokenDecimals,
+        }),
+        scaleToNativeDecimals({
+          amount: setGatewayGas.gasLimit
+            .mul(doubleFeePerGas)
+            .add(setGatewayGas.maxSubmissionCost),
+          decimals: nativeTokenDecimals,
+        }),
         l1SenderAddress,
       ])
 
