@@ -50,7 +50,6 @@ const isTestingOrbitChains = process.env.ORBIT_TEST === '1'
  *
  * @note When the `ORBIT_TEST` env variable is `true`, we treat `ethUrl` as the L2 and `arbUrl` as the L3
  */
-
 export const config = isTestingOrbitChains
   ? {
       arbUrl: process.env['ORBIT_URL'] as string,

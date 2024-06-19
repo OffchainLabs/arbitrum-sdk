@@ -299,8 +299,6 @@ export const depositToken = async ({
       erc20Bridger.nativeToken!,
       l1Signer
     ).balanceOf(senderAddress)
-
-    console.warn('feeTokenBalanceBefore: ', feeTokenBalanceBefore.toString())
   }
 
   const initialBridgeTokenBalance = await l1Token.balanceOf(
@@ -345,7 +343,6 @@ export const depositToken = async ({
       erc20Bridger.nativeToken!,
       l1Signer
     ).balanceOf(senderAddress)
-    console.warn('feeTokenBalanceAfter: ', feeTokenBalanceAfter.toString())
 
     // makes sure gas spent was rescaled correctly for non-18 decimal fee tokens
     const feeTokenDecimals = await ERC20__factory.connect(
@@ -445,7 +442,6 @@ const fund = async (
   fundingKey?: string
 ) => {
   const wallet = getSigner(signer.provider! as JsonRpcProvider, fundingKey)
-
   await (
     await wallet.sendTransaction({
       to: await signer.getAddress(),

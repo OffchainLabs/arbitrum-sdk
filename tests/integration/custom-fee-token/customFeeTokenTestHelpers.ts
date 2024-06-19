@@ -54,9 +54,6 @@ export async function fundL1CustomFeeToken(l1SignerOrAddress: Signer | string) {
   const tokenContract = ERC20__factory.connect(nativeToken, deployerWallet)
   const decimals = await tokenContract.decimals()
 
-  const tokenBal = await tokenContract.balanceOf(deployerWallet.address)
-  console.warn('tokenBal: ', tokenBal.toString())
-
   const tx = await tokenContract.transfer(
     address,
     scaleToNativeDecimals({ amount: utils.parseEther('10'), decimals })
