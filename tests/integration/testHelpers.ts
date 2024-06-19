@@ -339,16 +339,17 @@ export const depositToken = async ({
   )
 
   if (isL2NetworkWithCustomFeeToken()) {
-    const feeTokenBalanceAfter = await ERC20__factory.connect(
+    const nativeTokenContract = ERC20__factory.connect(
       erc20Bridger.nativeToken!,
       l1Signer
-    ).balanceOf(senderAddress)
+    )
+
+    const feeTokenBalanceAfter = await nativeTokenContract.balanceOf(
+      senderAddress
+    )
 
     // makes sure gas spent was rescaled correctly for non-18 decimal fee tokens
-    const feeTokenDecimals = await ERC20__factory.connect(
-      erc20Bridger.nativeToken!,
-      l1Signer
-    ).decimals()
+    const feeTokenDecimals = await nativeTokenContract.decimals()
 
     const MAX_BASE_ESTIMATED_GAS_FEE = BigNumber.from(1_000_000_000_000_000)
 
