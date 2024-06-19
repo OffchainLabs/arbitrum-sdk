@@ -291,6 +291,13 @@ export const depositToken = async ({
     ).to.be.true
   }
 
+  const feeTokenBalanceBefore = await ERC20__factory.connect(
+    erc20Bridger.nativeToken!,
+    l1Signer
+  ).balanceOf(senderAddress)
+
+  console.warn('feeTokenBalanceBefore: ', feeTokenBalanceBefore.toString())
+
   const initialBridgeTokenBalance = await l1Token.balanceOf(
     expectedL1GatewayAddress
   )
@@ -327,6 +334,13 @@ export const depositToken = async ({
   expect(tokenBalL1After.toString(), 'user bal after').to.eq(
     tokenBalL1Before.sub(depositAmount).toString()
   )
+
+  const feeTokenBalanceAfter = await ERC20__factory.connect(
+    erc20Bridger.nativeToken!,
+    l1Signer
+  ).balanceOf(senderAddress)
+
+  console.warn('feeTokenBalanceAfter: ', feeTokenBalanceAfter.toString())
 
   const waitRes = await depositRec.waitForL2(l2Signer)
 
