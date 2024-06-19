@@ -94,6 +94,8 @@
     "dist/**/*"
   ],
   "resolutions": {
-    "lodash.pick": "https://github.com/lodash/lodash/archive/refs/tags/4.17.21.tar.gz"
+    "lodash.pick": "https://github.com/lodash/lodash/archive/refs/tags/4.17.21.tar.gz",
+    "**/@ethersproject/providers/ws": "7.5.10",
+    "**/hardhat/ws": "7.5.10"
   }
 }
