@@ -154,7 +154,6 @@ export const testSetup = async (): Promise<{
   if (isL2NetworkWithCustomFeeToken()) {
     await fundL1(l1Signer)
     await fundL1CustomFeeToken(l1Signer)
-    await fundL2CustomFeeToken(l2Signer)
     await approveL1CustomFeeToken(l1Signer)
   }
 
