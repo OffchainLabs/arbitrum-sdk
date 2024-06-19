@@ -145,7 +145,7 @@ jobs:
             decimals-18: '0'
             decimals-24: '1'
             node-version: 16
-          - orbit-test: '§'
+          - orbit-test: '1'
             decimals-6: '0'
             decimals-18: '1'
             decimals-24: '0'
@@ -206,7 +206,7 @@ jobs:
           nitro-contracts-branch: e2e-decimals
           token-bridge-branch: non-18-decimals
           l3-node: ${{ matrix.decimals-6 == '1' || matrix.decimals-24 == '1' || matrix.orbit-test == '1' }}
-          args: ${{ matrix.decimals-6 == '1' && '--l3-fee-token --l3-fee-token-decimals 6' || || matrix.decimals-18 == '1' && '--l3-fee-token' matrix.decimals-24 == '1' && '--l3-fee-token --l3-fee-token-decimals 24' || matrix.decimals-18 == '1' && '--l3-fee-token' || '' }}
+          args: ${{ matrix.decimals-6 == '1' && '--l3-fee-token --l3-fee-token-decimals 6' || matrix.decimals-24 == '1' && '--l3-fee-token --l3-fee-token-decimals 24' || matrix.decimals-18 == '1' && '--l3-fee-token' || '' }}
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
