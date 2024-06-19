@@ -37,7 +37,6 @@ import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import {
   approveL1CustomFeeToken,
   fundL1CustomFeeToken,
-  fundL2CustomFeeToken,
   isL2NetworkWithCustomFeeToken,
 } from '../tests/integration/custom-fee-token/customFeeTokenTestHelpers'
 import { fundL1 } from '../tests/integration/testHelpers'

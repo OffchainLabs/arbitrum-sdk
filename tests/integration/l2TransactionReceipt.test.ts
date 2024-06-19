@@ -28,9 +28,8 @@ import {
 import { L2TransactionReceipt } from '../../src'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { BigNumber, Wallet } from 'ethers'
-import { parseEther, parseUnits } from 'ethers/lib/utils'
+import { parseEther } from 'ethers/lib/utils'
 import { testSetup } from '../../scripts/testSetup'
-import { getNativeTokenDecimals } from '../../src/lib/utils/lib'
 
 async function waitForL1BatchConfirmations(
   arbTxReceipt: L2TransactionReceipt,
@@ -66,9 +65,8 @@ describe('ArbProvider', () => {
   })
 
   it('does find l1 batch info', async () => {
-    const { l1Provider, l1Signer, l2Network, l2Signer } = await testSetup()
+    const { l1Signer, l2Signer } = await testSetup()
     const l2Provider = l2Signer.provider! as JsonRpcProvider
-    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
 
     // set up miners
     const miner1 = Wallet.createRandom().connect(l1Signer.provider!)
@@ -81,7 +79,7 @@ describe('ArbProvider', () => {
 
     await fundL2(l2Signer)
     const randomAddress = Wallet.createRandom().address
-    const amountToSend = parseUnits('0.000005', decimals)
+    const amountToSend = parseEther('0.000005')
 
     // send an l2 transaction, and get the receipt
     const tx = await l2Signer.sendTransaction({
