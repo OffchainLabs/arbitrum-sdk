@@ -26,7 +26,6 @@ import {
   itOnlyWhenEth,
   itOnlyWhenCustomGasToken,
 } from './custom-fee-token/mochaExtensions'
-import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 
 describe('L1ToL2MessageGasEstimator', () => {
   beforeEach('skipIfMainnet', async function () {
@@ -37,10 +36,6 @@ describe('L1ToL2MessageGasEstimator', () => {
   itOnlyWhenEth(
     `"estimateSubmissionFee" returns non-0 for eth chain`,
     async () => {
-      const _isL2NetworkWithCustomFeeToken = isL2NetworkWithCustomFeeToken()
-
-      console.log({ _isL2NetworkWithCustomFeeToken })
-
       const { l1Provider, l2Provider } = await testSetup()
 
       const submissionFee = await new L1ToL2MessageGasEstimator(

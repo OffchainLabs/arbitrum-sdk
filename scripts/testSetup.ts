@@ -100,7 +100,6 @@ export const testSetup = async (): Promise<{
   l1Deployer: Signer
   l2Deployer: Signer
 }> => {
-  console.warn('testSetup')
   const ethProvider = new JsonRpcProvider(config.ethUrl)
   const arbProvider = new JsonRpcProvider(config.arbUrl)
 
