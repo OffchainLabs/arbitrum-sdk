@@ -29,7 +29,6 @@ import {
 
 describe('L1ToL2MessageGasEstimator', () => {
   beforeEach('skipIfMainnet', async function () {
-    console.log('trigger beforeEach')
     await skipIfMainnet(this)
   })
 

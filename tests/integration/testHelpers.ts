@@ -42,7 +42,7 @@ import {
   scaleToNativeDecimals,
 } from '../../src/lib/utils/lib'
 
-const preFundAmount = '0.1'
+const preFundAmount = parseEther('0.1')
 
 export const prettyLog = (text: string): void => {
   console.log(chalk.blue(`    *** ${text}`))
@@ -163,8 +163,8 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   // whilst waiting for status we miner on both l1 and l2
   const miner1 = Wallet.createRandom().connect(params.l1Signer.provider!)
   const miner2 = Wallet.createRandom().connect(params.l2Signer.provider!)
-  await fundL1(miner1, '1')
-  await fundL2(miner2, '1')
+  await fundL1(miner1, parseEther('1'))
+  await fundL2(miner2, parseEther('1'))
   const state = { mining: true }
   await Promise.race([
     mineUntilStop(miner1, state),
@@ -439,35 +439,31 @@ export const depositToken = async ({
   return { l1Token, waitRes, l2Token }
 }
 
-const fund = async (signer: Signer, amount?: string, fundingKey?: string) => {
+const fund = async (
+  signer: Signer,
+  amount?: BigNumber,
+  fundingKey?: string
+) => {
   const wallet = getSigner(signer.provider! as JsonRpcProvider, fundingKey)
-  const bal = await wallet.getBalance()
-
-  console.warn('balance: ', bal.toString())
-  console.warn(
-    'process.env.NON_18_DECIMALS_TEST: ',
-    process.env.NON_18_DECIMALS_TEST
-  )
-  console.warn('arbUrl: ', config.arbUrl)
 
   await (
     await wallet.sendTransaction({
       to: await signer.getAddress(),
-      value: parseEther(amount ?? preFundAmount),
+      value: amount || preFundAmount,
     })
   ).wait()
 }
 
 export const fundL1 = async (
   l1Signer: Signer,
-  amount?: string
+  amount?: BigNumber
 ): Promise<void> => {
   await fund(l1Signer, amount, config.ethKey)
 }
 
 export const fundL2 = async (
   l2Signer: Signer,
-  amount?: string
+  amount?: BigNumber
 ): Promise<void> => {
   await fund(l2Signer, amount, config.arbKey)
 }

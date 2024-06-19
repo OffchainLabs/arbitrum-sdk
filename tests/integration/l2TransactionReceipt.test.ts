@@ -28,7 +28,7 @@ import {
 import { L2TransactionReceipt } from '../../src'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { BigNumber, Wallet } from 'ethers'
-import { parseUnits } from 'ethers/lib/utils'
+import { parseEther, parseUnits } from 'ethers/lib/utils'
 import { testSetup } from '../../scripts/testSetup'
 import { getNativeTokenDecimals } from '../../src/lib/utils/lib'
 
@@ -73,8 +73,8 @@ describe('ArbProvider', () => {
     // set up miners
     const miner1 = Wallet.createRandom().connect(l1Signer.provider!)
     const miner2 = Wallet.createRandom().connect(l2Signer.provider!)
-    await fundL1(miner1, '0.1')
-    await fundL2(miner2, '0.1')
+    await fundL1(miner1, parseEther('0.1'))
+    await fundL2(miner2, parseEther('0.1'))
     const state = { mining: true }
     mineUntilStop(miner1, state)
     mineUntilStop(miner2, state)

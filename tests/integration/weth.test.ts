@@ -46,7 +46,7 @@ describeOnlyWhenEth('WETH', async () => {
     const wethToWrap = parseEther('0.00001')
     const wethToDeposit = parseEther('0.0000001')
 
-    await fundL1(l1Signer, '1')
+    await fundL1(l1Signer, parseEther('1'))
 
     const l2WETH = AeWETH__factory.connect(
       l2Network.tokenBridge.l2Weth,

@@ -42,11 +42,7 @@ import { L1ToL2MessageStatus, L2Network } from '../../src'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
-import {
-  approveL1CustomFeeToken,
-  fundL1CustomFeeToken,
-  isL2NetworkWithCustomFeeToken,
-} from './custom-fee-token/customFeeTokenTestHelpers'
+import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
@@ -70,11 +66,8 @@ describe('Custom ERC20', () => {
       ...(await testSetup()),
       l1CustomToken: {} as any,
     }
-
     await fundL1(testState.l1Signer)
     await fundL2(testState.l2Signer)
-    // if (!isL2NetworkWithCustomFeeToken()) {
-    // }
   })
 
   it('register custom token', async () => {

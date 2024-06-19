@@ -342,8 +342,8 @@ describe('Ether', async () => {
     // run a miner whilst withdrawing
     const miner1 = Wallet.createRandom().connect(l1Signer.provider!)
     const miner2 = Wallet.createRandom().connect(l2Signer.provider!)
-    await fundL1(miner1, '1')
-    await fundL2(miner2, '1')
+    await fundL1(miner1, parseEther('1'))
+    await fundL2(miner2, parseEther('1'))
     const state = { mining: true }
     await Promise.race([
       mineUntilStop(miner1, state),
