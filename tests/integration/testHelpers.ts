@@ -442,7 +442,6 @@ const fund = async (
   amount?: BigNumber,
   fundingKey?: string
 ) => {
-  console.warn('CONFIG: ', JSON.stringify(config))
   const wallet = getSigner(signer.provider! as JsonRpcProvider, fundingKey)
   await (
     await wallet.sendTransaction({
