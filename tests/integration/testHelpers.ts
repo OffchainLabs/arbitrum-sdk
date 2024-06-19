@@ -404,6 +404,11 @@ const fund = async (signer: Signer, amount?: string, fundingKey?: string) => {
   const bal = await wallet.getBalance()
 
   console.warn('balance: ', bal.toString())
+  console.warn(
+    'process.env.NON_18_DECIMALS_TEST: ',
+    process.env.NON_18_DECIMALS_TEST
+  )
+  console.warn('arbUrl: ', config.arbUrl)
 
   await (
     await wallet.sendTransaction({
