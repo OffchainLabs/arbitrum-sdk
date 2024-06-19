@@ -37,6 +37,7 @@ import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import {
   approveL1CustomFeeToken,
   fundL1CustomFeeToken,
+  fundL2CustomFeeToken,
   isL2NetworkWithCustomFeeToken,
 } from '../tests/integration/custom-fee-token/customFeeTokenTestHelpers'
 import { fundL1 } from '../tests/integration/testHelpers'
@@ -153,6 +154,7 @@ export const testSetup = async (): Promise<{
   if (isL2NetworkWithCustomFeeToken()) {
     await fundL1(l1Signer)
     await fundL1CustomFeeToken(l1Signer)
+    await fundL2CustomFeeToken(l2Signer)
     await approveL1CustomFeeToken(l1Signer)
   }
 
