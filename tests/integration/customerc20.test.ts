@@ -144,7 +144,6 @@ const registerCustomToken = async (
   l2Signer: Signer,
   adminErc20Bridger: AdminErc20Bridger
 ) => {
-  console.warn('registerCustomToken')
   // create a custom token on L1 and L2
   const l1CustomTokenFactory = isL2NetworkWithCustomFeeToken()
     ? new TestOrbitCustomTokenL1__factory(l1Signer)
@@ -154,8 +153,6 @@ const registerCustomToken = async (
     l2Network.tokenBridge.l1GatewayRouter
   )
   await l1CustomToken.deployed()
-
-  console.warn('deployed 1')
 
   adminErc20Bridger
     .isRegistered({
@@ -173,8 +170,6 @@ const registerCustomToken = async (
     l1CustomToken.address
   )
   await l2CustomToken.deployed()
-
-  console.warn('deployed 2')
 
   // check starting conditions - should initially use the default gateway
   const l1GatewayRouter = new L1GatewayRouter__factory(l1Signer).attach(

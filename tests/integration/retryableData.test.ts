@@ -20,7 +20,7 @@ import { assert, expect } from 'chai'
 import { BigNumber } from '@ethersproject/bignumber'
 import { hexlify } from '@ethersproject/bytes'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
-import { fundL1, skipIfMainnet } from './testHelpers'
+import { fundL1, skipIfMainnet, skipIfNon18Decimals } from './testHelpers'
 import { RetryableDataTools } from '../../src'
 import { Wallet } from 'ethers'
 import { testSetup } from '../../scripts/testSetup'
@@ -34,6 +34,7 @@ import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeToken
 describe('RevertData', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
+    await skipIfNon18Decimals(this)
   })
 
   const createRevertParams = () => {
