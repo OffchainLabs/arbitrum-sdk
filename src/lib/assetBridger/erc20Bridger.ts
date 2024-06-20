@@ -595,6 +595,7 @@ export class Erc20Bridger extends AssetBridger<
           depositParams.maxSubmissionCost, // will be zero
           // callHookData
           '0x',
+          // nativeTokenTotalFee
           scaleToNativeDecimals({
             amount: depositParams.gasLimit
               .mul(depositParams.maxFeePerGas)
@@ -1071,15 +1072,11 @@ export class AdminErc20Bridger extends Erc20Bridger {
         setGatewayGas.gasLimit,
         doubleFeePerGas,
         scaleToNativeDecimals({
-          amount: setTokenGas.gasLimit
-            .mul(doubleFeePerGas)
-            .add(setTokenGas.maxSubmissionCost),
+          amount: setTokenDeposit,
           decimals: nativeTokenDecimals,
         }),
         scaleToNativeDecimals({
-          amount: setGatewayGas.gasLimit
-            .mul(doubleFeePerGas)
-            .add(setGatewayGas.maxSubmissionCost),
+          amount: setGatewayDeposit,
           decimals: nativeTokenDecimals,
         }),
         l1SenderAddress,

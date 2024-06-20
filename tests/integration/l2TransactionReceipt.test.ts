@@ -65,7 +65,7 @@ describe('ArbProvider', () => {
   })
 
   it('does find l1 batch info', async () => {
-    const { l1Signer, l2Signer } = await testSetup()
+    const { l2Signer, l1Signer } = await testSetup()
     const l2Provider = l2Signer.provider! as JsonRpcProvider
 
     // set up miners
