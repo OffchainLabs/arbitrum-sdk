@@ -63,6 +63,8 @@ The `Erc20Bridger` class methods have been renamed to reflect the new Parent/Chi
 
 #### Message Classes
 
+The message classes have been renamed to reflect the new Parent/Child terminology. Also, we've taken the opportunity to improve some of the method names.
+
 ##### `ChildToParentMessageClassic`
 
 | v3 Name           | v4 Name                  |
