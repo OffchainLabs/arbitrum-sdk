@@ -54,7 +54,7 @@ Cross-chain communication is handled through `ParentToChildMessage` and `ChildTo
 
 ### Network Configuration
 
-The SDK comes pre-configured for Arbitrum Mainnet and Sepolia testnet, along with their Ethereum counterparts. Custom Arbitrum instances can be registered using the networks functionality, which is crucial for utilizing other SDK features.
+The SDK comes pre-configured for Arbitrum Mainnet and Sepolia testnet, along with their Arbitrum counterparts. Custom Arbitrum instances can be registered using `registerCustomArbitrumNetwork`, which is required before utilizing other SDK features.
 
 ## Usage
 
@@ -83,26 +83,18 @@ For more detailed usage examples and API references, please refer to the [Arbitr
 ## Running Integration Tests
 
 1. Set up a Nitro test node by following the instructions [here](https://docs.arbitrum.io/node-running/how-tos/local-dev-node).
-
-2. After node startup (which may take 20-30 minutes), run:
+2. Copy `.env.example` to `.env` and update relevant environment variables.
+3. Generate the network configuration against your active Nitro test node:
 
    ```sh
    yarn gen:network
    ```
 
-3. Execute the integration tests:
+4. Execute the integration tests:
 
    ```sh
    yarn test:integration
    ```
-
-Note:
-
-- Tests default to `Arbitrum Sepolia`.
-- For custom networks, use the `--network` flag.
-- `Arbitrum Sepolia` tests require:
-  - `ARB_KEY` environment variable set with an account prefunded with at least 0.02 ETH
-  - `INFURA_KEY` environment variable set
 
 ## Documentation
 
