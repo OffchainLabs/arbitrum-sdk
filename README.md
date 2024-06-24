@@ -1,43 +1,113 @@
 # Arbitrum SDK
 
-TypeScript library for client-side interactions with Arbitrum. Arbitrum SDK provides common helper functionality as well as access to the underlying smart contract interfaces.
+[![npm version](https://badge.fury.io/js/%40arbitrum%2Fsdk.svg)](https://badge.fury.io/js/@arbitrum%2Fsdk.svg)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-For usage examples and references, see [the Arbitrum SDK documentation](https://docs.arbitrum.io/sdk).
+A TypeScript library for client-side interactions with Arbitrum. The Arbitrum SDK provides essential helper functionality and direct access to underlying smart contract interfaces, enabling developers to build powerful applications on the Arbitrum network.
+
+## Table of Contents
+
+- [Arbitrum SDK](#arbitrum-sdk)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Installation](#installation)
+  - [Key Features](#key-features)
+    - [Bridging Assets](#bridging-assets)
+    - [Cross-Chain Messages](#cross-chain-messages)
+    - [Network Configuration](#network-configuration)
+  - [Usage](#usage)
+  - [Running Integration Tests](#running-integration-tests)
+  - [Documentation](#documentation)
+  - [License](#license)
 
 ## Overview
 
-### Bridging assets
+Arbitrum SDK simplifies the process of interacting with Arbitrum chains, offering a robust set of tools for asset bridging and cross-chain messaging.
 
-Arbitrum SDK can be used to bridge assets to/from the rollup chain. The following asset bridgers are currently available:
+## Installation
 
-- `EthBridger`
-- `Erc20Bridger`
+```bash
+npm install @arbitrum/sdk
 
-All asset bridgers have the following methods:
+# or
 
-- `deposit` - moves assets from the parent chain to the child chain
-- `depositEstimateGas` - estimates the gas required to do the deposit
-- `withdraw` - moves assets from the child chain to the parent chain
-- `withdrawEstimateGas` - estimates the gas required to do the withdrawal
-  Which accept different parameters depending on the asset bridger type
+yarn add @arbitrum/sdk
+```
 
-### Cross chain messages
+## Key Features
 
-To move assets between chains, messages are sent from chain to chain. The lifecycles of these messages are encapsulated in the classes `ParentToChildMessage` and `ChildToParentMessage`. These objects are commonly created from the receipts of transactions that send cross chain messages. A cross chain message will eventually result in a transaction being executed on the destination chain, and these message classes provide the ability to wait for that finalizing transaction to occur.
+### Bridging Assets
 
-### Networks
+Arbitrum SDK facilitates the bridging of assets between the parent chain (Ethereum) and Arbitrum chains. Currently supported asset bridgers:
 
-Arbitrum SDK comes pre-configured for Mainnet and Sepolia, and their Arbitrum counterparts. However, the networks functionality can be used to register networks for custom Arbitrum instances. Most of the classes in Arbitrum SDK depend on network objects so this must be configured before using other Arbitrum SDK functionality.
+- `EthBridger`: For bridging ETH
+- `Erc20Bridger`: For bridging ERC20 tokens
 
-## Run Integration tests
+Common methods for all asset bridgers:
 
-1. First, make sure you have a Nitro test node running. Follow the instructions [here](https://docs.arbitrum.io/node-running/how-tos/local-dev-node).
+- `deposit`: Move assets from the parent chain to the child chain
+- `withdraw`: Move assets from the child chain to the parent chain
 
-2. After the node has started up (that could take up to 20-30 mins), run `yarn gen:network`.
+### Cross-Chain Messages
 
-3. Once done, finally run `yarn test:integration` to run the integration tests.
+Cross-chain communication is handled through `ParentToChildMessage` and `ChildToParentMessage` classes. These encapsulate the lifecycle of messages sent between chains, typically created from transaction receipts that initiate cross-chain messages.
 
-Defaults to `Arbitrum Sepolia`, for custom network use `--network` flag.
+### Network Configuration
 
-`Arbitrum Sepolia` expects env var `ARB_KEY` to be prefunded with at least 0.02 ETH, and env var `INFURA_KEY` to be set.
-(see `integration_test/config.ts`)
+The SDK comes pre-configured for Arbitrum Mainnet and Sepolia testnet, along with their Ethereum counterparts. Custom Arbitrum instances can be registered using the networks functionality, which is crucial for utilizing other SDK features.
+
+## Usage
+
+Here's a basic example of using the SDK to bridge ETH:
+
+```ts
+import { ethers } from 'ethers'
+import { EthBridger, getArbitrumNetwork } from '@arbitrum/sdk'
+
+async function bridgeEth(parentSigner: ethers.Signer, childChainId: number) {
+  const childNetwork = await getArbitrumNetwork(childChainId)
+  const ethBridger = new EthBridger(childNetwork)
+
+  const deposit = await ethBridger.deposit({
+    amount: ethers.utils.parseEther('0.1'),
+    parentSigner,
+  })
+
+  const txReceipt = await deposit.wait()
+  console.log(`Deposit initiated: ${txReceipt.transactionHash}`)
+}
+```
+
+For more detailed usage examples and API references, please refer to the [Arbitrum SDK documentation](https://docs.arbitrum.io/sdk).
+
+## Running Integration Tests
+
+1. Set up a Nitro test node by following the instructions [here](https://docs.arbitrum.io/node-running/how-tos/local-dev-node).
+
+2. After node startup (which may take 20-30 minutes), run:
+
+   ```sh
+   yarn gen:network
+   ```
+
+3. Execute the integration tests:
+
+   ```sh
+   yarn test:integration
+   ```
+
+Note:
+
+- Tests default to `Arbitrum Sepolia`.
+- For custom networks, use the `--network` flag.
+- `Arbitrum Sepolia` tests require:
+  - `ARB_KEY` environment variable set with an account prefunded with at least 0.02 ETH
+  - `INFURA_KEY` environment variable set
+
+## Documentation
+
+For comprehensive guides and API documentation, visit the [Arbitrum SDK Documentation](https://docs.arbitrum.io/sdk).
+
+## License
+
+Arbitrum SDK is released under the [Apache 2.0 License](LICENSE).
