@@ -802,16 +802,22 @@ export class Erc20Bridger extends AssetBridger<
       params.parentSigner
     )
 
-    if (
-      !this.isRegistered({
-        erc20ParentAddress: isParentToChildTransactionRequest(params)
-          ? this.getErc20ParentAddressFromParentToChildTxRequest(params)
-          : params.erc20ParentAddress,
-        parentProvider,
-        childProvider: params.childProvider,
-      })
-    ) {
-      throw new Error('Token not registered on the gateway')
+    const erc20ParentAddress = isParentToChildTransactionRequest(params)
+      ? this.getErc20ParentAddressFromParentToChildTxRequest(params)
+      : params.erc20ParentAddress
+
+    const isRegistered = await this.isRegistered({
+      erc20ParentAddress,
+      parentProvider,
+      childProvider: params.childProvider,
+    })
+
+    if (!isRegistered) {
+      const parentChainId = (await parentProvider.getNetwork()).chainId
+
+      throw new Error(
+        `Token ${erc20ParentAddress} on chain ${parentChainId} is not registered on the gateways`
+      )
     }
 
     const tokenDeposit = isParentToChildTransactionRequest(params)
