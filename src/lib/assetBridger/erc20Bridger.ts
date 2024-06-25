@@ -78,6 +78,7 @@ import { EventArgs } from '../dataEntities/event'
 import { ParentToChildMessageGasParams } from '../message/ParentToChildMessageCreator'
 import { isArbitrumChain } from '../utils/lib'
 import { L2ERC20Gateway__factory } from '../abi/factories/L2ERC20Gateway__factory'
+import { getErc20ParentAddressFromParentToChildTxRequest } from '../utils/calldata'
 
 export interface TokenApproveParams {
   /**
@@ -139,6 +140,7 @@ export interface Erc20WithdrawParams extends EthWithdrawParams {
 export type ParentToChildTxReqAndSignerProvider =
   ParentToChildTransactionRequest & {
     parentSigner: Signer
+    childProvider: Provider
     overrides?: Overrides
   }
 
@@ -767,6 +769,24 @@ export class Erc20Bridger extends AssetBridger<
       params.parentSigner
     )
 
+    const erc20ParentAddress = isParentToChildTransactionRequest(params)
+      ? getErc20ParentAddressFromParentToChildTxRequest(params)
+      : params.erc20ParentAddress
+
+    const isRegistered = await this.isRegistered({
+      erc20ParentAddress,
+      parentProvider,
+      childProvider: params.childProvider,
+    })
+
+    if (!isRegistered) {
+      const parentChainId = (await parentProvider.getNetwork()).chainId
+
+      throw new Error(
+        `Token ${erc20ParentAddress} on chain ${parentChainId} is not registered on the gateways`
+      )
+    }
+
     const tokenDeposit = isParentToChildTransactionRequest(params)
       ? params
       : await this.getDepositRequest({
@@ -879,52 +899,49 @@ export class Erc20Bridger extends AssetBridger<
 
   /**
    * Checks if the token has been properly registered on both gateways. Mostly useful for tokens that use a custom gateway.
-   * @param erc20L1Address
-   * @param l1Provider
-   * @param l2Provider
+   * @param erc20ParentAddress
+   * @param parentProvider
+   * @param childProvider
    * @returns
    */
   public async isRegistered({
-    erc20L1Address,
-    l1Provider,
-    l2Provider,
+    erc20ParentAddress,
+    parentProvider,
+    childProvider,
   }: {
-    erc20L1Address: string
-    l1Provider: Provider
-    l2Provider: Provider
+    erc20ParentAddress: string
+    parentProvider: Provider
+    childProvider: Provider
   }) {
-    const l1StandardGatewayAddressFromChainConfig =
+    const parentStandardGatewayAddressFromChainConfig =
       this.childChain.tokenBridge.parentErc20Gateway
 
-    const l1GatewayAddressFromL1GatewayRouter =
-      await this.getParentGatewayAddress(erc20L1Address, l1Provider)
+    const parentGatewayAddressFromParentGatewayRouter =
+      await this.getParentGatewayAddress(erc20ParentAddress, parentProvider)
 
     // token uses standard gateway; no need to check further
     if (
-      l1StandardGatewayAddressFromChainConfig.toLowerCase() ===
-      l1GatewayAddressFromL1GatewayRouter.toLowerCase()
+      parentStandardGatewayAddressFromChainConfig.toLowerCase() ===
+      parentGatewayAddressFromParentGatewayRouter.toLowerCase()
     ) {
       return true
     }
 
-    const tokenL2AddressFromL1GatewayRouter = await this.getChildErc20Address(
-      erc20L1Address,
-      l1Provider
-    )
+    const childTokenAddressFromParentGatewayRouter =
+      await this.getChildErc20Address(erc20ParentAddress, parentProvider)
 
-    const l2GatewayAddressFromL2Router = await this.getChildGatewayAddress(
-      erc20L1Address,
-      l2Provider
-    )
+    const childGatewayAddressFromChildRouter =
+      await this.getChildGatewayAddress(erc20ParentAddress, childProvider)
 
-    const l2AddressFromL2Gateway = await L2ERC20Gateway__factory.connect(
-      l2GatewayAddressFromL2Router,
-      l2Provider
-    ).calculateL2TokenAddress(erc20L1Address)
+    const childTokenAddressFromChildGateway =
+      await L2ERC20Gateway__factory.connect(
+        childGatewayAddressFromChildRouter,
+        childProvider
+      ).calculateL2TokenAddress(erc20ParentAddress)
 
     return (
-      tokenL2AddressFromL1GatewayRouter.toLowerCase() ===
-      l2AddressFromL2Gateway.toLowerCase()
+      childTokenAddressFromParentGatewayRouter.toLowerCase() ===
+      childTokenAddressFromChildGateway.toLowerCase()
     )
   }
 }
