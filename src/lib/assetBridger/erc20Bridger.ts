@@ -54,11 +54,7 @@ import {
 import { ArbSdkError, MissingProviderArbSdkError } from '../dataEntities/errors'
 import { DISABLED_GATEWAY } from '../dataEntities/constants'
 import { EventFetcher } from '../utils/eventFetcher'
-import {
-  EthDepositParams,
-  EthWithdrawParams,
-  ParentToChildTxReqAndSigner,
-} from './ethBridger'
+import { EthDepositParams, EthWithdrawParams } from './ethBridger'
 import { AssetBridger } from './assetBridger'
 import {
   ParentContractCallTransaction,
@@ -82,6 +78,7 @@ import { EventArgs } from '../dataEntities/event'
 import { ParentToChildMessageGasParams } from '../message/ParentToChildMessageCreator'
 import { isArbitrumChain } from '../utils/lib'
 import { L2ERC20Gateway__factory } from '../abi/factories/L2ERC20Gateway__factory'
+import { getErc20ParentAddressFromParentToChildTxRequest } from '../utils/calldata'
 
 export interface TokenApproveParams {
   /**
@@ -584,36 +581,6 @@ export class Erc20Bridger extends AssetBridger<
     }
   }
 
-  private getErc20ParentAddressFromParentToChildTxRequest(
-    txReq: ParentToChildTxReqAndSigner
-  ): string {
-    const {
-      txRequest: { data },
-    } = txReq
-
-    const iGatewayRouter = L1GatewayRouter__factory.createInterface()
-
-    try {
-      const decodedData = iGatewayRouter.decodeFunctionData(
-        'outboundTransfer',
-        data
-      )
-
-      return decodedData['_token']
-    } catch {
-      try {
-        const decodedData = iGatewayRouter.decodeFunctionData(
-          'outboundTransferCustomRefund',
-          data
-        )
-
-        return decodedData['_token']
-      } catch {
-        throw new Error('data signature not matching deposits methods')
-      }
-    }
-  }
-
   /**
    * Get the call value for the deposit transaction request
    * @param depositParams
@@ -803,7 +770,7 @@ export class Erc20Bridger extends AssetBridger<
     )
 
     const erc20ParentAddress = isParentToChildTransactionRequest(params)
-      ? this.getErc20ParentAddressFromParentToChildTxRequest(params)
+      ? getErc20ParentAddressFromParentToChildTxRequest(params)
       : params.erc20ParentAddress
 
     const isRegistered = await this.isRegistered({
