@@ -307,7 +307,7 @@ describe('Networks', async () => {
       const l2NetworksEntries = Object.entries(l2Networks)
       const l2NetworksKeys = l2NetworksEntries.map(([key]) => key)
 
-      const expected = [42161, 42170, 421614, 23011913, 13331371]
+      const expected = [42161, 42170, 421614, 13331371]
         //
         .map(id => id.toString())
 
