@@ -72,6 +72,12 @@ export interface L2Network extends Network {
    * In case of a chain that uses an ERC-20 token from the parent chain as its native/gas token, this is the address of said token on the parent chain
    */
   nativeToken?: string
+  /**
+   * Has the network been upgraded to bold. True if yes, otherwise undefined
+   * This is a temporary property and will be removed in future if Bold is widely adopted and
+   * the legacy challenge protocol is deprecated
+   */
+  isBold?: boolean
 }
 
 export interface TokenBridge {
