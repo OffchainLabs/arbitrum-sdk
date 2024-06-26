@@ -1,20 +1,35 @@
-# Migrating from v3 to v4
+# Migrating from @arbitrum/sdk v3 to v4
 
-`@arbitrum/sdk` v4 introduces a number of breaking changes. This document outlines the changes and provides guidance on how to migrate your existing v3 code to v4.
+## Introduction
 
-## Breaking Changes
+`@arbitrum/sdk` v4 introduces significant changes to improve support Orbit chains from Offchain Labs. This guide outlines the breaking changes to know before migrating your existing v3 code to v4.
 
-With the launch of Orbit chains from Offchain Labs, the Arbitrum SDK has been updated to support the new chains. This has resulted in a number of breaking changes to the SDK. The following is a list of the most significant changes:
+## Major Changes Overview
 
-### L1 Network Removed
+1. Removal of L1 Network requirement
+2. Terminology shift from L1/L2 to Parent/Child
+3. Renaming of classes, methods, and parameters
+4. Updates to `AssetBridger` and `Erc20Bridger` classes
+5. Changes to Message classes
 
-The Arbitrum SDK no longer requires the L1 network to be registered. Only Arbitrum networks need to be registered.
+## Detailed Changes
 
-Arbitrum networks are any networks that are built with Arbitrum technology. This includes Arbitrum One, Arbitrum testnets, and any Orbit chain.
+### 1. L1 Network Removed
 
-### Renaming L1/L2 to Parent/Child
+- The SDK no longer requires the L1 network to be registered.
+- Only Arbitrum networks need to be registered.
+- Arbitrum networks include Arbitrum One, Arbitrum testnets, and any Orbit chain.
 
-Throughout the codebase, most instances of the terms "L1" and "L2" have been replaced with "parent" and "child." Any time that the code is referring explicitly to an "L1", "L2", or "L3" that term is used. Though in most circumstances, when the code is referring to a parent-child relationship between chains, the terms "parent" and "child" is used.
+### 2. Terminology: L1/L2 to Parent/Child
+
+Most instances of "L1" and "L2" have been replaced with "parent" and "child" respectively. This change reflects the more general parent-child relationship between chains in the Arbitrum ecosystem.
+
+- In most circumstances, when referring to a parent-child relationship between chains, the terms "parent" and "child" are used.
+- Though, when referring explicitly to "L1", "L2", or "L3", those specific terms are still used.
+
+### 3. Renaming Classes, Methods, and Parameters
+
+#### General Renaming
 
 | v3 Name                       | v4 Name                                   |
 | ----------------------------- | ----------------------------------------- |
@@ -39,6 +54,8 @@ Throughout the codebase, most instances of the terms "L1" and "L2" have been rep
 | `EthDepositMessageWaitResult` | `EthDepositMessageWaitForStatusResult`    |
 | `L1ToL2MessageWaitResult`     | `ParentToChildMessageWaitForStatusResult` |
 
+### 4. AssetBridger Classes
+
 #### AssetBridger Class Methods
 
 The `AssetBridger` class methods have been renamed to reflect the new Parent/Child terminology.
@@ -48,9 +65,9 @@ The `AssetBridger` class methods have been renamed to reflect the new Parent/Chi
 | `checkL1Network` | `checkParentChain` |
 | `checkL2Network` | `checkChildChain`  |
 
-##### AssetBridger Class Method Parameter Names
+#### AssetBridger Class Method Parameters
 
-The objects passed to the class methods of classes that inherit from `AssetBridger` have all been updated to reflect the new Parent/Child terminology.
+The objects passed to the class methods of classes that inherit from `AssetBridger` (`EthBridger` and `Erc20Bridger`) have all been updated to reflect the new Parent/Child terminology.
 
 | v3 Name          | v4 Name              |
 | ---------------- | -------------------- |
@@ -61,8 +78,6 @@ The objects passed to the class methods of classes that inherit from `AssetBridg
 | `l2Signer`       | `childSigner`        |
 
 #### Erc20Bridger Class Methods
-
-The `Erc20Bridger` class methods have been renamed to reflect the new Parent/Child terminology.
 
 | v3 Name                 | v4 Name                     |
 | ----------------------- | --------------------------- |
@@ -78,49 +93,49 @@ The `Erc20Bridger` class methods have been renamed to reflect the new Parent/Chi
 | `getL1GatewaySetEvents` | `getParentGatewaySetEvents` |
 | `getL2GatewaySetEvents` | `getChildGatewaySetEvents`  |
 
-#### Message Classes
+### 5. Message Classes
 
-The message classes have been renamed to reflect the new Parent/Child terminology. Also, we've taken the opportunity to improve some of the method names.
+Message classes have been renamed and their methods updated:
 
-##### `ChildToParentMessageClassic`
-
-| v3 Name           | v4 Name                  |
-| ----------------- | ------------------------ |
-| `getL2ToL1Events` | `getChildToParentEvents` |
-
-##### `ChildToParentChainMessageNitro`
+#### `ChildToParentMessageClassic`
 
 | v3 Name           | v4 Name                  |
 | ----------------- | ------------------------ |
 | `getL2ToL1Events` | `getChildToParentEvents` |
 
-##### `ChildTransactionReceipt`
+#### `ChildToParentChainMessageNitro`
+
+| v3 Name           | v4 Name                  |
+| ----------------- | ------------------------ |
+| `getL2ToL1Events` | `getChildToParentEvents` |
+
+#### `ChildTransactionReceipt`
 
 | v3 Name             | v4 Name                    |
 | ------------------- | -------------------------- |
 | `getL2ToL1Events`   | `getChildToParentEvents`   |
 | `getL2ToL1Messages` | `getChildToParentMessages` |
 
-##### `ParentToChildMessage`
+#### `ParentToChildMessage`
 
 | v3 Name            | v4 Name                   |
 | ------------------ | ------------------------- |
 | `EthDepositStatus` | `EthDepositMessageStatus` |
 
-##### `ParentTransactionReceipt`
+#### `ParentTransactionReceipt`
 
 | v3 Name                    | v4 Name                           |
 | -------------------------- | --------------------------------- |
 | `getL1ToL2MessagesClassic` | `getParentToChildMessagesClassic` |
 | `getL1ToL2Messages`        | `getParentToChildMessages`        |
 
-##### `ParentEthDepositTransactionReceipt`
+#### `ParentEthDepositTransactionReceipt`
 
 | v3 Name     | v4 Name                          |
 | ----------- | -------------------------------- |
 | `waitForL2` | `waitForChildTransactionReceipt` |
 
-##### `ParentContractCallTransactionReceipt`
+#### `ParentContractCallTransactionReceipt`
 
 | v3 Name     | v4 Name                          |
 | ----------- | -------------------------------- |
