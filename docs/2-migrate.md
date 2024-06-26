@@ -16,27 +16,30 @@ Arbitrum networks are any networks that are built with Arbitrum technology. This
 
 Throughout the codebase, most instances of the terms "L1" and "L2" have been replaced with "parent" and "child." Any time that the code is referring explicitly to an "L1", "L2", or "L3" that term is used. Though in most circumstances, when the code is referring to a parent-child relationship between chains, the terms "parent" and "child" is used.
 
-| v3 Name                      | v4 Name                             |
-| ---------------------------- | ----------------------------------- |
-| `L1TransactionReceipt`       | `ParentTransactionReceipt`          |
-| `L1ContractTransaction`      | `ParentContractTransaction`         |
-| `L1ToL2Message`              | `ParentToChildMessage`              |
-| `L1ToL2MessageWriter`        | `ParentToChildMessageWriter`        |
-| `L1ToL2MessageReader`        | `ParentToChildMessageReader`        |
-| `L1ToL2MessageReaderClassic` | `ParentToChildMessageReaderClassic` |
-| `L1ToL2MessageStatus`        | `ParentToChildMessageStatus`        |
-| `L1ToL2MessageGasEstimator`  | `ParentToChildMessageGasEstimator`  |
-| `L2TransactionReceipt`       | `ChildTransactionReceipt`           |
-| `L2ContractTransaction`      | `ChildContractTransaction`          |
-| `L2ToL1Message`              | `ChildToParentMessage`              |
-| `L2ToL1MessageWriter`        | `ChildToParentMessageWriter`        |
-| `L2ToL1MessageReader`        | `ChildToParentMessageReader`        |
-| `L2ToL1MessageStatus`        | `ChildToParentMessageStatus`        |
-| `L2Network`                  | `ArbitrumNetwork`                   |
-| `getL2Network`               | `getArbitrumNetwork`                |
-| `addCustomNetwork`           | `registerCustomArbitrumNetwork`     |
+| v3 Name                       | v4 Name                                   |
+| ----------------------------- | ----------------------------------------- |
+| `L1TransactionReceipt`        | `ParentTransactionReceipt`                |
+| `L1ContractTransaction`       | `ParentContractTransaction`               |
+| `L1ToL2Message`               | `ParentToChildMessage`                    |
+| `L1ToL2MessageWriter`         | `ParentToChildMessageWriter`              |
+| `L1ToL2MessageReader`         | `ParentToChildMessageReader`              |
+| `L1ToL2MessageReaderClassic`  | `ParentToChildMessageReaderClassic`       |
+| `L1ToL2MessageStatus`         | `ParentToChildMessageStatus`              |
+| `L1ToL2MessageGasEstimator`   | `ParentToChildMessageGasEstimator`        |
+| `L2TransactionReceipt`        | `ChildTransactionReceipt`                 |
+| `L2ContractTransaction`       | `ChildContractTransaction`                |
+| `L2ToL1Message`               | `ChildToParentMessage`                    |
+| `L2ToL1MessageWriter`         | `ChildToParentMessageWriter`              |
+| `L2ToL1MessageReader`         | `ChildToParentMessageReader`              |
+| `L2ToL1MessageStatus`         | `ChildToParentMessageStatus`              |
+| `L2Network`                   | `ArbitrumNetwork`                         |
+| `getL2Network`                | `getArbitrumNetwork`                      |
+| `addCustomNetwork`            | `registerCustomArbitrumNetwork`           |
+| `EthDepositStatus`            | `EthDepositMessageStatus`                 |
+| `EthDepositMessageWaitResult` | `EthDepositMessageWaitForStatusResult`    |
+| `L1ToL2MessageWaitResult`     | `ParentToChildMessageWaitForStatusResult` |
 
-#### Asset Bridger Class Methods
+#### AssetBridger Class Methods
 
 The `AssetBridger` class methods have been renamed to reflect the new Parent/Child terminology.
 
@@ -44,6 +47,18 @@ The `AssetBridger` class methods have been renamed to reflect the new Parent/Chi
 | ---------------- | ------------------ |
 | `checkL1Network` | `checkParentChain` |
 | `checkL2Network` | `checkChildChain`  |
+
+##### AssetBridger Class Method Parameter Names
+
+The objects passed to the class methods of classes that inherit from `AssetBridger` have all been updated to reflect the new Parent/Child terminology.
+
+| v3 Name          | v4 Name              |
+| ---------------- | -------------------- |
+| `erc20L1Address` | `erc20ParentAddress` |
+| `l1Provider`     | `parentProvider`     |
+| `l2Provider`     | `childProvider`      |
+| `l1Signer`       | `parentSigner`       |
+| `l2Signer`       | `childSigner`        |
 
 #### Erc20Bridger Class Methods
 
@@ -54,8 +69,10 @@ The `Erc20Bridger` class methods have been renamed to reflect the new Parent/Chi
 | `getL1GatewayAddress`   | `getParentGatewayAddress`   |
 | `getL2GatewayAddress`   | `getChildGatewayAddress`    |
 | `getL2WithdrawalEvents` | `getWithdrawalEvents`       |
-| `getL1ERC20Address`     | `getParentERC20Address`     |
-| `getL2ERC20Address`     | `getChildERC20Address`      |
+| `getL1TokenContract`    | `getParentTokenContract`    |
+| `getL1ERC20Address`     | `getParentErc20Address`     |
+| `getL2TokenContract`    | `getChildTokenContract`     |
+| `getL2ERC20Address`     | `getChildErc20Address`      |
 | `l1TokenIsDisabled`     | `isDepositDisabled`         |
 | `l1Provider`            | `parentProvider`            |
 | `getL1GatewaySetEvents` | `getParentGatewaySetEvents` |
