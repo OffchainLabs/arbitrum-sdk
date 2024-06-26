@@ -171,9 +171,9 @@ const registerCustomToken = async (
 
   adminErc20Bridger
     .isRegistered({
-      erc20L1Address: parentCustomToken.address,
-      l1Provider: parentSigner.provider!,
-      l2Provider: childSigner.provider!,
+      erc20ParentAddress: parentCustomToken.address,
+      parentProvider: parentSigner.provider!,
+      childProvider: childSigner.provider!,
     })
     .then(isRegistered => {
       expect(isRegistered, 'expected token not to be registered').to.be.false
@@ -311,9 +311,9 @@ const registerCustomToken = async (
 
   adminErc20Bridger
     .isRegistered({
-      erc20L1Address: parentCustomToken.address,
-      l1Provider: parentSigner.provider!,
-      l2Provider: childSigner.provider!,
+      erc20ParentAddress: parentCustomToken.address,
+      parentProvider: parentSigner.provider!,
+      childProvider: childSigner.provider!,
     })
     .then(isRegistered => {
       expect(isRegistered, 'expected token to be registered').to.be.true

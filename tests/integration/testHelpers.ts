@@ -332,7 +332,7 @@ export const depositToken = async ({
     parentTokenBalanceBefore.sub(depositAmount).toString()
   )
 
-  const waitRes = await depositRec.waitForChildTx(childSigner)
+  const waitRes = await depositRec.waitForChildTransactionReceipt(childSigner)
 
   const childEthBalanceAfter = await childSigner.provider!.getBalance(
     destinationAddress || senderAddress

@@ -123,7 +123,9 @@ describe('Ether', async () => {
       'balance failed to update after eth deposit'
     )
 
-    const waitResult = await rec.waitForChildTx(childSigner.provider!)
+    const waitResult = await rec.waitForChildTransactionReceipt(
+      childSigner.provider!
+    )
 
     const parentToChildMessages = await rec.getEthDeposits(
       childSigner.provider!
