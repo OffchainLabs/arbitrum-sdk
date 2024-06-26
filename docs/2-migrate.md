@@ -54,9 +54,9 @@ Most instances of "L1" and "L2" have been replaced with "parent" and "child" res
 | `EthDepositMessageWaitResult` | `EthDepositMessageWaitForStatusResult`    |
 | `L1ToL2MessageWaitResult`     | `ParentToChildMessageWaitForStatusResult` |
 
-### 4. AssetBridger Classes
+### 4. `AssetBridger` Classes
 
-#### AssetBridger Class Methods
+#### `AssetBridger` Class Methods
 
 The `AssetBridger` class methods have been renamed to reflect the new Parent/Child terminology.
 
@@ -65,7 +65,7 @@ The `AssetBridger` class methods have been renamed to reflect the new Parent/Chi
 | `checkL1Network` | `checkParentChain` |
 | `checkL2Network` | `checkChildChain`  |
 
-#### AssetBridger Class Method Parameters
+#### `AssetBridger` Class Method Parameters
 
 The objects passed to the class methods of classes that inherit from `AssetBridger` (`EthBridger` and `Erc20Bridger`) have all been updated to reflect the new Parent/Child terminology.
 
@@ -77,7 +77,7 @@ The objects passed to the class methods of classes that inherit from `AssetBridg
 | `l1Signer`       | `parentSigner`       |
 | `l2Signer`       | `childSigner`        |
 
-#### Erc20Bridger Class Methods
+#### `Erc20Bridger` Class Methods
 
 | v3 Name                 | v4 Name                     |
 | ----------------------- | --------------------------- |
