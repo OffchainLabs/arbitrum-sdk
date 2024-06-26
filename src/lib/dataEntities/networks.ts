@@ -66,6 +66,12 @@ export interface ArbitrumNetwork {
    * Whether or not the chain was registered by the user.
    */
   isCustom: boolean
+  /**
+   * Has the network been upgraded to bold. True if yes, otherwise undefined
+   * This is a temporary property and will be removed in future if Bold is widely adopted and
+   * the legacy challenge protocol is deprecated
+   */
+  isBold?: boolean
 }
 
 /**
