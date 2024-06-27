@@ -42,11 +42,7 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { getBlockRangesForL1Block, isArbitrumChain, wait } from '../utils/lib'
-import {
-  ArbitrumNetwork,
-  getArbitrumNetwork,
-  L2Network,
-} from '../dataEntities/networks'
+import { ArbitrumNetwork, getArbitrumNetwork } from '../dataEntities/networks'
 import { NodeCreatedEvent, RollupUserLogic } from '../abi/RollupUserLogic'
 import {
   AssertionCreatedEvent,
