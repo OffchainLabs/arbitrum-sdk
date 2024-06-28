@@ -3,29 +3,30 @@ import {
   Address,
   Erc20Bridger,
   Erc20L1L3Bridger,
-  L1ToL2MessageStatus,
-  L1ToL2MessageWriter,
-  L2Network,
+  ParentToChildMessageStatus,
+  ParentToChildMessageWriter,
+  ArbitrumNetwork,
 } from '../../src'
 import { L2ForwarderContractsDeployer__factory } from '../../src/lib/abi/factories/L2ForwarderContractsDeployer__factory'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import { TestERC20 } from '../../src/lib/abi/TestERC20'
 import { AeWETH__factory } from '../../src/lib/abi/factories/AeWETH__factory'
 import { L1Teleporter__factory } from '../../src/lib/abi/factories/L1Teleporter__factory'
-import { fundL1, fundL2, skipIfMainnet } from './testHelpers'
+import { fundParentSigner, fundChildSigner, skipIfMainnet } from './testHelpers'
 import { BigNumber, Signer, Wallet, ethers, providers, utils } from 'ethers'
 import {
   Erc20DepositRequestParams,
   EthL1L3Bridger,
 } from '../../src/lib/assetBridger/l1l3Bridger'
 import { assert, expect } from 'chai'
-import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
+import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { Deferrable } from 'ethers/lib/utils'
 import {
   itOnlyWhenCustomGasToken,
   itOnlyWhenEth,
 } from './custom-fee-token/mochaExtensions'
+import { assertArbitrumNetworkHasTokenBridge } from '../../src/lib/dataEntities/networks'
 
 async function expectPromiseToReject(
   promise: Promise<any>,
@@ -120,10 +121,10 @@ async function deployTeleportContracts(l1Signer: Signer, l2Signer: Signer) {
 async function fundActualL1CustomFeeToken(
   l1Signer: Signer,
   l2FeeToken: string,
-  l2Network: L2Network,
+  l2Network: ArbitrumNetwork,
   l2Provider: providers.Provider
 ) {
-  const l1FeeToken = await new Erc20Bridger(l2Network).getL1ERC20Address(
+  const l1FeeToken = await new Erc20Bridger(l2Network).getParentErc20Address(
     l2FeeToken,
     l2Provider
   )
@@ -147,8 +148,8 @@ describe('L1 to L3 Bridging', () => {
   if (process.env.ORBIT_TEST !== '1') return
 
   // let setup: Unwrap<ReturnType<typeof testSetup>>
-  let l2Network: L2Network
-  let l3Network: L2Network
+  let l2Network: ArbitrumNetwork
+  let l3Network: ArbitrumNetwork
 
   let l1Signer: ethers.Signer
   let l2Signer: ethers.Signer
@@ -200,8 +201,8 @@ describe('L1 to L3 Bridging', () => {
 
     const setup = await testSetup()
 
-    l2Network = setup.l1Network as L2Network
-    l3Network = setup.l2Network
+    l2Network = setup.parentChain
+    l3Network = setup.childChain
 
     l1Signer = getSigner(
       new ethers.providers.JsonRpcProvider(process.env['ETH_URL']),
@@ -218,11 +219,11 @@ describe('L1 to L3 Bridging', () => {
     )
 
     // fund signers on L1 and L2
-    await fundL1(l1Signer, ethers.utils.parseEther('10'))
-    await fundL2(l2Signer, ethers.utils.parseEther('10'))
-    await fundL2(l3Signer, ethers.utils.parseEther('10'))
+    await fundParentSigner(l1Signer, ethers.utils.parseEther('10'))
+    await fundChildSigner(l2Signer, ethers.utils.parseEther('10'))
+    await fundChildSigner(l3Signer, ethers.utils.parseEther('10'))
 
-    if (isL2NetworkWithCustomFeeToken()) {
+    if (isArbitrumNetworkWithCustomFeeToken()) {
       await fundActualL1CustomFeeToken(
         l1Signer,
         l3Network.nativeToken!,
@@ -364,7 +365,7 @@ describe('L1 to L3 Bridging', () => {
         expect(l1l3Bridger.l2FeeTokenAddress).to.eq(l3Network.nativeToken)
         // make sure l1 token maps to l2 token
         expect(
-          await new Erc20Bridger(l2Network).getL2ERC20Address(
+          await new Erc20Bridger(l2Network).getChildErc20Address(
             (await l1l3Bridger.getGasTokenOnL1(
               l1Signer.provider!,
               l2Signer.provider!
@@ -378,7 +379,9 @@ describe('L1 to L3 Bridging', () => {
     itOnlyWhenCustomGasToken(
       'should throw getting l1 gas token address when it is unavailable',
       async () => {
-        const networkCopy = JSON.parse(JSON.stringify(l3Network)) as L2Network
+        const networkCopy = JSON.parse(
+          JSON.stringify(l3Network)
+        ) as ArbitrumNetwork
         networkCopy.nativeToken = ethers.utils.hexlify(
           ethers.utils.randomBytes(20)
         )
@@ -456,30 +459,32 @@ describe('L1 to L3 Bridging', () => {
     })
 
     it('getL2ERC20Address', async () => {
+      assertArbitrumNetworkHasTokenBridge(l2Network)
       // use weth to test, since we already know its addresses
-      const l1Weth = l2Network.tokenBridge.l1Weth
-      const l2Weth = l2Network.tokenBridge.l2Weth
+      const parentWeth = l2Network.tokenBridge.parentWeth
+      const childWeth = l2Network.tokenBridge.childWeth
       const ans = await l1l3Bridger.getL2ERC20Address(
-        l1Weth,
+        parentWeth,
         l1Signer.provider!
       )
-      expect(ans).to.eq(l2Weth)
+      expect(ans).to.eq(childWeth)
     })
 
     it('getL1L2GatewayAddress', async () => {
+      assertArbitrumNetworkHasTokenBridge(l2Network)
       // test weth and default gateway
-      const l1Weth = l2Network.tokenBridge.l1Weth
-      const l1l2WethGateway = l2Network.tokenBridge.l1WethGateway
+      const parentWeth = l2Network.tokenBridge.parentWeth
+      const l1l2WethGateway = l2Network.tokenBridge.parentWethGateway
 
       const wethAns = await l1l3Bridger.getL1L2GatewayAddress(
-        l1Weth,
+        parentWeth,
         l1Signer.provider!
       )
 
       expect(wethAns).to.eq(l1l2WethGateway)
 
       // test default gateway
-      const l1l2Gateway = l2Network.tokenBridge.l1ERC20Gateway
+      const l1l2Gateway = l2Network.tokenBridge.parentErc20Gateway
       const defaultAns = await l1l3Bridger.getL1L2GatewayAddress(
         l1Token.address,
         l1Signer.provider!
@@ -488,11 +493,13 @@ describe('L1 to L3 Bridging', () => {
     })
 
     itOnlyWhenEth('getL3ERC20Address', async () => {
+      assertArbitrumNetworkHasTokenBridge(l2Network)
+      assertArbitrumNetworkHasTokenBridge(l3Network)
       // use weth to test, since we already know its addresses
-      const l1Weth = l2Network.tokenBridge.l1Weth
-      const l3Weth = l3Network.tokenBridge.l2Weth
+      const parentWeth = l2Network.tokenBridge.parentWeth
+      const l3Weth = l3Network.tokenBridge.childWeth
       const ans = await l1l3Bridger.getL3ERC20Address(
-        l1Weth,
+        parentWeth,
         l1Signer.provider!,
         l2Signer.provider!
       )
@@ -500,12 +507,14 @@ describe('L1 to L3 Bridging', () => {
     })
 
     itOnlyWhenEth('getL2L3GatewayAddress', async () => {
+      assertArbitrumNetworkHasTokenBridge(l2Network)
+      assertArbitrumNetworkHasTokenBridge(l3Network)
       // test weth and default gateway
-      const l1Weth = l2Network.tokenBridge.l1Weth
-      const l2l3WethGateway = l3Network.tokenBridge.l1WethGateway
+      const parentWeth = l2Network.tokenBridge.parentWeth
+      const l2l3WethGateway = l3Network.tokenBridge.parentWethGateway
 
       const wethAns = await l1l3Bridger.getL2L3GatewayAddress(
-        l1Weth,
+        parentWeth,
         l1Signer.provider!,
         l2Signer.provider!
       )
@@ -513,7 +522,7 @@ describe('L1 to L3 Bridging', () => {
       expect(wethAns).to.eq(l2l3WethGateway)
 
       // test default gateway
-      const l2l3Gateway = l3Network.tokenBridge.l1ERC20Gateway
+      const l2l3Gateway = l3Network.tokenBridge.parentErc20Gateway
       const defaultAns = await l1l3Bridger.getL2L3GatewayAddress(
         l1Token.address,
         l1Signer.provider!,
@@ -543,7 +552,7 @@ describe('L1 to L3 Bridging', () => {
 
     it('functions should be guarded by check*Network', async () => {
       // l1FeeTokenAddress
-      if (isL2NetworkWithCustomFeeToken()) {
+      if (isArbitrumNetworkWithCustomFeeToken()) {
         await checkNetworkGuards(
           true,
           true,
@@ -655,7 +664,7 @@ describe('L1 to L3 Bridging', () => {
       )
 
       // getApproveFeeTokenRequest
-      if (isL2NetworkWithCustomFeeToken()) {
+      if (isArbitrumNetworkWithCustomFeeToken()) {
         await checkNetworkGuards(
           true,
           true,
@@ -775,7 +784,7 @@ describe('L1 to L3 Bridging', () => {
 
         return (
           (await status.l2l3TokenBridgeRetryable?.status()) ===
-          L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+          ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
         )
       }, 1000)
 
@@ -788,12 +797,12 @@ describe('L1 to L3 Bridging', () => {
       })
 
       const ticket = status.l2l3TokenBridgeRetryable!
-      const messageWriter = new L1ToL2MessageWriter(
+      const messageWriter = new ParentToChildMessageWriter(
         l3Signer,
-        l3Network.chainID,
+        l3Network.chainId,
         ticket.sender,
         ticket.messageNumber,
-        ticket.l1BaseFee,
+        ticket.parentBaseFee,
         ticket.messageData
       )
       await (await messageWriter.redeem({ gasLimit: 20_000_000 })).wait()
@@ -819,7 +828,7 @@ describe('L1 to L3 Bridging', () => {
         l1Signer,
       })
 
-      if (isL2NetworkWithCustomFeeToken()) {
+      if (isArbitrumNetworkWithCustomFeeToken()) {
         assert(depositTxRequest.feeTokenAmount.gt('0'))
         // approve fee token
         await (
@@ -889,9 +898,10 @@ describe('L1 to L3 Bridging', () => {
     })
 
     it('happy path weth', async () => {
+      assertArbitrumNetworkHasTokenBridge(l2Network)
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
       const weth = AeWETH__factory.connect(
-        l2Network.tokenBridge.l1Weth,
+        l2Network.tokenBridge.parentWeth,
         l1Signer
       )
 
@@ -908,7 +918,7 @@ describe('L1 to L3 Bridging', () => {
       ).wait()
 
       const depositParams: Erc20DepositRequestParams = {
-        erc20L1Address: l2Network.tokenBridge.l1Weth,
+        erc20L1Address: l2Network.tokenBridge.parentWeth,
         destinationAddress: l3Recipient,
         amount,
         l2Provider: l2Signer.provider!,

@@ -187,6 +187,15 @@ const mainnetETHBridge: EthBridge = {
  * Storage for all networks, either L1, L2 or L3.
  */
 export const networks: Networks = {
+  1337: {
+    chainId: 1337,
+    name: 'Mainnet Sepolia',
+    parentChainId: 1,
+    tokenBridge: mainnetTokenBridge,
+    ethBridge: mainnetETHBridge,
+    confirmPeriodBlocks: 45818,
+    isCustom: false,
+  },
   42161: {
     chainId: 42161,
     name: 'Arbitrum One',
