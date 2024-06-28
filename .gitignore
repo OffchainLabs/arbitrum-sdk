@@ -244,9 +244,6 @@ instance/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
-docs/_build/
-
 # PyBuilder
 target/
 
@@ -312,6 +309,5 @@ packages/arb-bridge-eth/password.txt
 packages/issues
 packages/**/issues
 
-docs
 json_data
 abi
