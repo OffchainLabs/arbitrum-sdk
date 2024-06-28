@@ -20,16 +20,16 @@ import { assert, expect } from 'chai'
 import { BigNumber } from '@ethersproject/bignumber'
 import { hexlify } from '@ethersproject/bytes'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
-import { fundL1, skipIfMainnet } from './testHelpers'
+import { fundParentSigner, skipIfMainnet } from './testHelpers'
 import { RetryableDataTools } from '../../src'
 import { Wallet } from 'ethers'
 import { testSetup } from '../../scripts/testSetup'
 import { parseEther, randomBytes } from 'ethers/lib/utils'
 import { Inbox__factory } from '../../src/lib/abi/factories/Inbox__factory'
-import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
+import { GasOverrides } from '../../src/lib/message/ParentToChildMessageGasEstimator'
 const depositAmount = BigNumber.from(100)
 import { ERC20Inbox__factory } from '../../src/lib/abi/factories/ERC20Inbox__factory'
-import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
+import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 
 describe('RevertData', () => {
   beforeEach('skipIfMainnet', async function () {
@@ -58,8 +58,8 @@ describe('RevertData', () => {
   const testRetryableDataParsing = async (
     func: 'estimateGas' | 'callStatic'
   ) => {
-    const { l1Signer, l2Network } = await testSetup()
-    await fundL1(l1Signer)
+    const { parentSigner, childChain } = await testSetup()
+    await fundParentSigner(parentSigner)
 
     const {
       to,
@@ -74,10 +74,10 @@ describe('RevertData', () => {
     } = createRevertParams()
 
     try {
-      if (isL2NetworkWithCustomFeeToken()) {
+      if (isArbitrumNetworkWithCustomFeeToken()) {
         const inbox = ERC20Inbox__factory.connect(
-          l2Network.ethBridge.inbox,
-          l1Signer
+          childChain.ethBridge.inbox,
+          parentSigner
         )
         await inbox[func].createRetryableTicket(
           to,
@@ -92,8 +92,8 @@ describe('RevertData', () => {
         )
       } else {
         const inbox = Inbox__factory.connect(
-          l2Network.ethBridge.inbox,
-          l1Signer
+          childChain.ethBridge.inbox,
+          parentSigner
         )
         await inbox[func].createRetryableTicket(
           to,
@@ -121,7 +121,7 @@ describe('RevertData', () => {
       expect(parsed.excessFeeRefundAddress, 'excessFeeRefundAddress').to.eq(
         excessFeeRefundAddress
       )
-      expect(parsed.from, 'from').to.eq(await l1Signer.getAddress())
+      expect(parsed.from, 'from').to.eq(await parentSigner.getAddress())
       expect(parsed.gasLimit.toString(), 'gasLimit').to.eq(gasLimit.toString())
       expect(parsed.l2CallValue.toString(), 'l2CallValue').to.eq(
         l2CallValue.toString()
@@ -145,29 +145,29 @@ describe('RevertData', () => {
   })
 
   it('is the same as what we estimate in erc20Bridger', async () => {
-    const { erc20Bridger, l1Signer, l2Signer } = await testSetup()
-    await fundL1(l1Signer, parseEther('2'))
+    const { erc20Bridger, parentSigner, childSigner } = await testSetup()
+    await fundParentSigner(parentSigner, parseEther('2'))
 
-    const deployErc20 = new TestERC20__factory().connect(l1Signer)
+    const deployErc20 = new TestERC20__factory().connect(parentSigner)
     const testToken = await deployErc20.deploy()
     await testToken.deployed()
 
     await (await testToken.mint()).wait()
-    const l1TokenAddress = testToken.address
+    const parentTokenAddress = testToken.address
 
     await (
       await erc20Bridger.approveToken({
-        erc20L1Address: l1TokenAddress,
-        l1Signer: l1Signer,
+        erc20ParentAddress: parentTokenAddress,
+        parentSigner,
       })
     ).wait()
 
-    if (isL2NetworkWithCustomFeeToken()) {
+    if (isArbitrumNetworkWithCustomFeeToken()) {
       // approve the custom fee token
       await (
         await erc20Bridger.approveGasToken({
-          erc20L1Address: l1TokenAddress,
-          l1Signer: l1Signer,
+          erc20ParentAddress: parentTokenAddress,
+          parentSigner,
         })
       ).wait()
     }
@@ -185,25 +185,25 @@ describe('RevertData', () => {
     }
 
     const erc20Params = {
-      l1Signer: l1Signer,
-      l2SignerOrProvider: l2Signer.provider!,
-      from: await l1Signer.getAddress(),
-      erc20L1Address: l1TokenAddress,
+      parentSigner,
+      childSignerOrProvider: childSigner.provider!,
+      from: await parentSigner.getAddress(),
+      erc20ParentAddress: parentTokenAddress,
       amount: depositAmount,
       retryableGasOverrides: retryableOverrides,
     }
 
     const depositParams = await erc20Bridger.getDepositRequest({
       ...erc20Params,
-      l1Provider: l1Signer.provider!,
-      l2Provider: l2Signer.provider!,
+      parentProvider: parentSigner.provider!,
+      childProvider: childSigner.provider!,
     })
 
     try {
       await erc20Bridger.deposit({
         ...erc20Params,
-        l1Signer: l1Signer,
-        l2Provider: l2Signer.provider!,
+        parentSigner,
+        childProvider: childSigner.provider!,
       })
       assert.fail('Expected estimateGas to fail')
     } catch (err) {
@@ -216,7 +216,7 @@ describe('RevertData', () => {
       )
       expect(parsed.data, 'data').to.eq(depositParams.retryableData.data)
       expect(parsed.deposit.toString(), 'deposit').to.eq(
-        isL2NetworkWithCustomFeeToken()
+        isArbitrumNetworkWithCustomFeeToken()
           ? depositParams.retryableData.deposit.toString()
           : depositParams.txRequest.value.toString()
       )

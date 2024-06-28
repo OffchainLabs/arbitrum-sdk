@@ -26,40 +26,44 @@ import { getAddress } from '@ethersproject/address'
 import { keccak256 } from '@ethersproject/keccak256'
 
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
-import { ARB_RETRYABLE_TX_ADDRESS } from '../dataEntities/constants'
+import {
+  ARB_RETRYABLE_TX_ADDRESS,
+  DEFAULT_DEPOSIT_TIMEOUT,
+  SEVEN_DAYS_IN_SECONDS,
+} from '../dataEntities/constants'
 import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
 import { ethers, Overrides } from 'ethers'
-import { L2TransactionReceipt, RedeemTransaction } from './L2Transaction'
-import { getL2Network } from '../../lib/dataEntities/networks'
+import { ChildTransactionReceipt, RedeemTransaction } from './ChildTransaction'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt, isDefined } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
 import { ErrorCode, Logger } from '@ethersproject/logger'
+import { getArbitrumNetwork } from '../dataEntities/networks'
 
-export enum L1ToL2MessageStatus {
+export enum ParentToChildMessageStatus {
   /**
    * The retryable ticket has yet to be created
    */
   NOT_YET_CREATED = 1,
   /**
    * An attempt was made to create the retryable ticket, but it failed.
-   * This could be due to not enough submission cost being paid by the L1 transaction
+   * This could be due to not enough submission cost being paid by the Parent transaction
    */
   CREATION_FAILED = 2,
   /**
    * The retryable ticket has been created but has not been redeemed. This could be due to the
-   * auto redeem failing, or if the params (max l2 gas price) * (max l2 gas) = 0 then no auto
+   * auto redeem failing, or if the params (max chain gas price) * (max chain gas) = 0 then no auto
    * redeem tx is ever issued. An auto redeem is also never issued for ETH deposits.
    * A manual redeem is now required.
    */
-  FUNDS_DEPOSITED_ON_L2 = 3,
+  FUNDS_DEPOSITED_ON_CHAIN = 3,
   /**
    * The retryable ticket has been redeemed (either by auto, or manually) and the
-   * l2 transaction has been executed
+   * chain transaction has been executed
    */
   REDEEMED = 4,
   /**
@@ -68,13 +72,13 @@ export enum L1ToL2MessageStatus {
   EXPIRED = 5,
 }
 
-export enum EthDepositStatus {
+export enum EthDepositMessageStatus {
   /**
-   * ETH is not deposited on L2 yet
+   * ETH is not deposited on Chain yet
    */
   PENDING = 1,
   /**
-   * ETH is deposited successfully on L2
+   * ETH is deposited successfully on Chain
    */
   DEPOSITED = 2,
 }
@@ -87,16 +91,16 @@ interface RetryableExistsError extends Error {
 
 /**
  * Conditional type for Signer or Provider. If T is of type Provider
- * then L1ToL2MessageReaderOrWriter<T> will be of type L1ToL2MessageReader.
- * If T is of type Signer then L1ToL2MessageReaderOrWriter<T> will be of
- * type L1ToL2MessageWriter.
+ * then ParentToChildMessageReaderOrWriter<T> will be of type ParentToChildMessageReader.
+ * If T is of type Signer then ParentToChildMessageReaderOrWriter<T> will be of
+ * type ParentToChildMessageWriter.
  */
-export type L1ToL2MessageReaderOrWriter<T extends SignerOrProvider> =
-  T extends Provider ? L1ToL2MessageReader : L1ToL2MessageWriter
+export type ParentToChildMessageReaderOrWriter<T extends SignerOrProvider> =
+  T extends Provider ? ParentToChildMessageReader : ParentToChildMessageWriter
 
-export abstract class L1ToL2Message {
+export abstract class ParentToChildMessage {
   /**
-   * When messages are sent from L1 to L2 a retryable ticket is created on L2.
+   * When messages are sent from Parent to Child a retryable ticket is created on the child chain.
    * The retryableCreationId can be used to retrieve information about the success or failure of the
    * creation of the retryable ticket.
    */
@@ -105,29 +109,29 @@ export abstract class L1ToL2Message {
   /**
    * The submit retryable transactions use the typed transaction envelope 2718.
    * The id of these transactions is the hash of the RLP encoded transaction.
-   * @param l2ChainId
-   * @param fromAddress the aliased address that called the L1 inbox as emitted in the bridge event.
+   * @param childChainId
+   * @param fromAddress the aliased address that called the Parent inbox as emitted in the bridge event.
    * @param messageNumber
-   * @param l1BaseFee
+   * @param parentBaseFee
    * @param destAddress
-   * @param l2CallValue
-   * @param l1Value
+   * @param childCallValue
+   * @param parentCallValue
    * @param maxSubmissionFee
-   * @param excessFeeRefundAddress refund address specified in the retryable creation. Note the L1 inbox aliases this address if it is a L1 smart contract. The user is expected to provide this value already aliased when needed.
-   * @param callValueRefundAddress refund address specified in the retryable creation. Note the L1 inbox aliases this address if it is a L1 smart contract. The user is expected to provide this value already aliased when needed.
+   * @param excessFeeRefundAddress refund address specified in the retryable creation. Note the Parent inbox aliases this address if it is a Parent smart contract. The user is expected to provide this value already aliased when needed.
+   * @param callValueRefundAddress refund address specified in the retryable creation. Note the Parent inbox aliases this address if it is a Parent smart contract. The user is expected to provide this value already aliased when needed.
    * @param gasLimit
    * @param maxFeePerGas
    * @param data
    * @returns
    */
   public static calculateSubmitRetryableId(
-    l2ChainId: number,
+    childChainId: number,
     fromAddress: string,
     messageNumber: BigNumber,
-    l1BaseFee: BigNumber,
+    parentBaseFee: BigNumber,
     destAddress: string,
-    l2CallValue: BigNumber,
-    l1Value: BigNumber,
+    childCallValue: BigNumber,
+    parentCallValue: BigNumber,
     maxSubmissionFee: BigNumber,
     excessFeeRefundAddress: string,
     callValueRefundAddress: string,
@@ -139,21 +143,21 @@ export abstract class L1ToL2Message {
       return ethers.utils.stripZeros(value.toHexString())
     }
 
-    const chainId = BigNumber.from(l2ChainId)
+    const chainId = BigNumber.from(childChainId)
     const msgNum = BigNumber.from(messageNumber)
 
     const fields: any[] = [
       formatNumber(chainId),
       zeroPad(formatNumber(msgNum), 32),
       fromAddress,
-      formatNumber(l1BaseFee),
+      formatNumber(parentBaseFee),
 
-      formatNumber(l1Value),
+      formatNumber(parentCallValue),
       formatNumber(maxFeePerGas),
       formatNumber(gasLimit),
       // when destAddress is 0x0, arbos treat that as nil
       destAddress === ethers.constants.AddressZero ? '0x' : destAddress,
-      formatNumber(l2CallValue),
+      formatNumber(childCallValue),
       callValueRefundAddress,
       formatNumber(maxSubmissionFee),
       excessFeeRefundAddress,
@@ -170,36 +174,36 @@ export abstract class L1ToL2Message {
   }
 
   public static fromEventComponents<T extends SignerOrProvider>(
-    l2SignerOrProvider: T,
+    chainSignerOrProvider: T,
     chainId: number,
     sender: string,
     messageNumber: BigNumber,
-    l1BaseFee: BigNumber,
+    parentBaseFee: BigNumber,
     messageData: RetryableMessageParams
-  ): L1ToL2MessageReaderOrWriter<T>
+  ): ParentToChildMessageReaderOrWriter<T>
   public static fromEventComponents<T extends SignerOrProvider>(
-    l2SignerOrProvider: T,
+    chainSignerOrProvider: T,
     chainId: number,
     sender: string,
     messageNumber: BigNumber,
-    l1BaseFee: BigNumber,
+    parentBaseFee: BigNumber,
     messageData: RetryableMessageParams
-  ): L1ToL2MessageReader | L1ToL2MessageWriter {
-    return SignerProviderUtils.isSigner(l2SignerOrProvider)
-      ? new L1ToL2MessageWriter(
-          l2SignerOrProvider,
+  ): ParentToChildMessageReader | ParentToChildMessageWriter {
+    return SignerProviderUtils.isSigner(chainSignerOrProvider)
+      ? new ParentToChildMessageWriter(
+          chainSignerOrProvider,
           chainId,
           sender,
           messageNumber,
-          l1BaseFee,
+          parentBaseFee,
           messageData
         )
-      : new L1ToL2MessageReader(
-          l2SignerOrProvider,
+      : new ParentToChildMessageReader(
+          chainSignerOrProvider,
           chainId,
           sender,
           messageNumber,
-          l1BaseFee,
+          parentBaseFee,
           messageData
         )
   }
@@ -208,14 +212,14 @@ export abstract class L1ToL2Message {
     public readonly chainId: number,
     public readonly sender: string,
     public readonly messageNumber: BigNumber,
-    public readonly l1BaseFee: BigNumber,
+    public readonly parentBaseFee: BigNumber,
     public readonly messageData: RetryableMessageParams
   ) {
-    this.retryableCreationId = L1ToL2Message.calculateSubmitRetryableId(
+    this.retryableCreationId = ParentToChildMessage.calculateSubmitRetryableId(
       chainId,
       sender,
       messageNumber,
-      l1BaseFee,
+      parentBaseFee,
       messageData.destAddress,
       messageData.l2CallValue,
       messageData.l1Value,
@@ -230,33 +234,41 @@ export abstract class L1ToL2Message {
 }
 
 /**
- * If the status is redeemed an l2TxReceipt is populated.
- * For all other statuses l2TxReceipt is not populated
+ * If the status is redeemed an chainTxReceipt is populated.
+ * For all other statuses chainTxReceipt is not populated
  */
-export type L1ToL2MessageWaitResult =
-  | { status: L1ToL2MessageStatus.REDEEMED; l2TxReceipt: TransactionReceipt }
-  | { status: Exclude<L1ToL2MessageStatus, L1ToL2MessageStatus.REDEEMED> }
+export type ParentToChildMessageWaitForStatusResult =
+  | {
+      status: ParentToChildMessageStatus.REDEEMED
+      txReceipt: TransactionReceipt
+    }
+  | {
+      status: Exclude<
+        ParentToChildMessageStatus,
+        ParentToChildMessageStatus.REDEEMED
+      >
+    }
 
-export type EthDepositMessageWaitResult = {
-  l2TxReceipt: TransactionReceipt | null
+export type EthDepositMessageWaitForStatusResult = {
+  txReceipt: TransactionReceipt | null
 }
 
-export class L1ToL2MessageReader extends L1ToL2Message {
+export class ParentToChildMessageReader extends ParentToChildMessage {
   private retryableCreationReceipt: TransactionReceipt | undefined | null
   public constructor(
-    public readonly l2Provider: Provider,
+    public readonly childProvider: Provider,
     chainId: number,
     sender: string,
     messageNumber: BigNumber,
-    l1BaseFee: BigNumber,
+    parentBaseFee: BigNumber,
     messageData: RetryableMessageParams
   ) {
-    super(chainId, sender, messageNumber, l1BaseFee, messageData)
+    super(chainId, sender, messageNumber, parentBaseFee, messageData)
   }
 
   /**
    * Try to get the receipt for the retryable ticket creation.
-   * This is the L2 transaction that creates the retryable ticket.
+   * This is the Chain transaction that creates the retryable ticket.
    * If confirmations or timeout is provided, this will wait for the ticket to be created
    * @returns Null if retryable has not been created
    */
@@ -266,7 +278,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   ): Promise<TransactionReceipt | null> {
     if (!this.retryableCreationReceipt) {
       this.retryableCreationReceipt = await getTransactionReceipt(
-        this.l2Provider,
+        this.childProvider,
         this.retryableCreationId,
         confirmations,
         timeout
@@ -285,11 +297,11 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     const creationReceipt = await this.getRetryableCreationReceipt()
 
     if (creationReceipt) {
-      const l2Receipt = new L2TransactionReceipt(creationReceipt)
-      const redeemEvents = l2Receipt.getRedeemScheduledEvents()
+      const chainReceipt = new ChildTransactionReceipt(creationReceipt)
+      const redeemEvents = chainReceipt.getRedeemScheduledEvents()
 
       if (redeemEvents.length === 1) {
-        return await this.l2Provider.getTransactionReceipt(
+        return await this.childProvider.getTransactionReceipt(
           redeemEvents[0].retryTxHash
         )
       } else if (redeemEvents.length > 1) {
@@ -303,34 +315,39 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   }
 
   /**
-   * Receipt for the successful l2 transaction created by this message.
+   * Receipt for the successful chain transaction created by this message.
    * @returns TransactionReceipt of the first successful redeem if exists, otherwise the current status of the message.
    */
-  public async getSuccessfulRedeem(): Promise<L1ToL2MessageWaitResult> {
-    const l2Network = await getL2Network(this.l2Provider)
-    const eventFetcher = new EventFetcher(this.l2Provider)
+  public async getSuccessfulRedeem(): Promise<ParentToChildMessageWaitForStatusResult> {
+    const chainNetwork = await getArbitrumNetwork(this.childProvider)
+    const eventFetcher = new EventFetcher(this.childProvider)
     const creationReceipt = await this.getRetryableCreationReceipt()
 
     if (!isDefined(creationReceipt)) {
       // retryable was never created, or not created yet
       // therefore it cant have been redeemed or be expired
-      return { status: L1ToL2MessageStatus.NOT_YET_CREATED }
+      return { status: ParentToChildMessageStatus.NOT_YET_CREATED }
     }
 
     if (creationReceipt.status === 0) {
-      return { status: L1ToL2MessageStatus.CREATION_FAILED }
+      return { status: ParentToChildMessageStatus.CREATION_FAILED }
     }
 
     // check the auto redeem first to avoid doing costly log queries in the happy case
     const autoRedeem = await this.getAutoRedeemAttempt()
     if (autoRedeem && autoRedeem.status === 1) {
-      return { l2TxReceipt: autoRedeem, status: L1ToL2MessageStatus.REDEEMED }
+      return {
+        txReceipt: autoRedeem,
+        status: ParentToChildMessageStatus.REDEEMED,
+      }
     }
 
     if (await this.retryableExists()) {
       // the retryable was created and still exists
       // therefore it cant have been redeemed or be expired
-      return { status: L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2 }
+      return {
+        status: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
+      }
     }
 
     // from this point on we know that the retryable was created but does not exist,
@@ -340,10 +357,14 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     // to do this we need to filter through the whole lifetime of the ticket looking
     // for relevant redeem scheduled events
     let increment = 1000
-    let fromBlock = await this.l2Provider.getBlock(creationReceipt.blockNumber)
-    let timeout = fromBlock.timestamp + l2Network.retryableLifetimeSeconds
+    let fromBlock = await this.childProvider.getBlock(
+      creationReceipt.blockNumber
+    )
+    let timeout =
+      fromBlock.timestamp +
+      (chainNetwork.retryableLifetimeSeconds ?? SEVEN_DAYS_IN_SECONDS)
     const queriedRange: { from: number; to: number }[] = []
-    const maxBlock = await this.l2Provider.getBlockNumber()
+    const maxBlock = await this.childProvider.getBlockNumber()
     while (fromBlock.number < maxBlock) {
       const toBlockNumber = Math.min(fromBlock.number + increment, maxBlock)
 
@@ -363,7 +384,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
       const successfulRedeem = (
         await Promise.all(
           redeemEvents.map(e =>
-            this.l2Provider.getTransactionReceipt(e.event.retryTxHash)
+            this.childProvider.getTransactionReceipt(e.event.retryTxHash)
           )
         )
       ).filter(r => isDefined(r) && r.status === 1)
@@ -374,11 +395,11 @@ export class L1ToL2MessageReader extends L1ToL2Message {
         )
       if (successfulRedeem.length == 1)
         return {
-          l2TxReceipt: successfulRedeem[0],
-          status: L1ToL2MessageStatus.REDEEMED,
+          txReceipt: successfulRedeem[0],
+          status: ParentToChildMessageStatus.REDEEMED,
         }
 
-      const toBlock = await this.l2Provider.getBlock(toBlockNumber)
+      const toBlock = await this.childProvider.getBlock(toBlockNumber)
       if (toBlock.timestamp > timeout) {
         // Check for LifetimeExtended event
         while (queriedRange.length > 0) {
@@ -418,7 +439,7 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
     // we know from earlier that the retryable no longer exists, so if we havent found the redemption
     // we know that it must have expired
-    return { status: L1ToL2MessageStatus.EXPIRED }
+    return { status: ParentToChildMessageStatus.EXPIRED }
   }
 
   /**
@@ -432,12 +453,12 @@ export class L1ToL2MessageReader extends L1ToL2Message {
 
   private async retryableExists(): Promise<boolean> {
     const currentTimestamp = BigNumber.from(
-      (await this.l2Provider.getBlock('latest')).timestamp
+      (await this.childProvider.getBlock('latest')).timestamp
     )
     try {
       const timeoutTimestamp = await this.getTimeout()
       // timeoutTimestamp returns the timestamp at which the retryable ticket expires
-      // it can also return revert if the ticket l2Tx does not exist
+      // it can also return revert if the ticket chainTx does not exist
       return currentTimestamp.lte(timeoutTimestamp)
     } catch (err) {
       if (
@@ -452,31 +473,27 @@ export class L1ToL2MessageReader extends L1ToL2Message {
     }
   }
 
-  public async status(): Promise<L1ToL2MessageStatus> {
+  public async status(): Promise<ParentToChildMessageStatus> {
     return (await this.getSuccessfulRedeem()).status
   }
 
   /**
-   * Wait for the retryable ticket to be created, for it to be redeemed, and for the l2Tx to be executed.
-   * Note: The terminal status of a transaction that only does an eth deposit is FUNDS_DEPOSITED_ON_L2 as
-   * no L2 transaction needs to be executed, however the terminal state of any other transaction is REDEEMED
-   * which represents that the retryable ticket has been redeemed and the L2 tx has been executed.
+   * Wait for the retryable ticket to be created, for it to be redeemed, and for the chainTx to be executed.
+   * Note: The terminal status of a transaction that only does an eth deposit is FUNDS_DEPOSITED_ON_CHAIN as
+   * no Chain transaction needs to be executed, however the terminal state of any other transaction is REDEEMED
+   * which represents that the retryable ticket has been redeemed and the Chain tx has been executed.
    * @param confirmations Amount of confirmations the retryable ticket and the auto redeem receipt should have
    * @param timeout Amount of time to wait for the retryable ticket to be created
-   * Defaults to 15 minutes, as by this time all transactions are expected to be included on L2. Throws on timeout.
-   * @returns The wait result contains a status, and optionally the l2TxReceipt.
-   * If the status is "REDEEMED" then a l2TxReceipt is also available on the result.
-   * If the status has any other value then l2TxReceipt is not populated.
+   * Defaults to 15 minutes, as by this time all transactions are expected to be included on Chain. Throws on timeout.
+   * @returns The wait result contains a status, and optionally the chainTxReceipt.
+   * If the status is "REDEEMED" then a chainTxReceipt is also available on the result.
+   * If the status has any other value then chainTxReceipt is not populated.
    */
   public async waitForStatus(
     confirmations?: number,
     timeout?: number
-  ): Promise<L1ToL2MessageWaitResult> {
-    const l2Network = await getL2Network(this.chainId)
-
-    const chosenTimeout = isDefined(timeout)
-      ? timeout
-      : l2Network.depositTimeout
+  ): Promise<ParentToChildMessageWaitForStatusResult> {
+    const chosenTimeout = isDefined(timeout) ? timeout : DEFAULT_DEPOSIT_TIMEOUT
 
     // try to wait for the retryable ticket to be created
     const _retryableCreationReceipt = await this.getRetryableCreationReceipt(
@@ -501,10 +518,10 @@ export class L1ToL2MessageReader extends L1ToL2Message {
    * The minimium lifetime of a retryable tx
    * @returns
    */
-  public static async getLifetime(l2Provider: Provider): Promise<BigNumber> {
+  public static async getLifetime(childProvider: Provider): Promise<BigNumber> {
     const arbRetryableTx = ArbRetryableTx__factory.connect(
       ARB_RETRYABLE_TX_ADDRESS,
-      l2Provider
+      childProvider
     )
     return await arbRetryableTx.getLifetime()
   }
@@ -516,37 +533,41 @@ export class L1ToL2MessageReader extends L1ToL2Message {
   public async getTimeout(): Promise<BigNumber> {
     const arbRetryableTx = ArbRetryableTx__factory.connect(
       ARB_RETRYABLE_TX_ADDRESS,
-      this.l2Provider
+      this.childProvider
     )
     return await arbRetryableTx.getTimeout(this.retryableCreationId)
   }
 
   /**
-   * Address to which CallValue will be credited to on L2 if the retryable ticket times out or is cancelled.
+   * Address to which CallValue will be credited to on Chain if the retryable ticket times out or is cancelled.
    * The Beneficiary is also the address with the right to cancel a Retryable Ticket (if the ticket hasn’t been redeemed yet).
    * @returns
    */
   public getBeneficiary(): Promise<string> {
     const arbRetryableTx = ArbRetryableTx__factory.connect(
       ARB_RETRYABLE_TX_ADDRESS,
-      this.l2Provider
+      this.childProvider
     )
     return arbRetryableTx.getBeneficiary(this.retryableCreationId)
   }
 }
 
-export class L1ToL2MessageReaderClassic {
+export class ParentToChildMessageReaderClassic {
   private retryableCreationReceipt: TransactionReceipt | undefined | null
   public readonly messageNumber: BigNumber
   public readonly retryableCreationId: string
   public readonly autoRedeemId: string
-  public readonly l2TxHash: string
-  public readonly l2Provider: Provider
+  public readonly childTxHash: string
+  public readonly childProvider: Provider
 
-  constructor(l2Provider: Provider, chainId: number, messageNumber: BigNumber) {
+  constructor(
+    childProvider: Provider,
+    chainId: number,
+    messageNumber: BigNumber
+  ) {
     const bitFlip = (num: BigNumber) => num.or(BigNumber.from(1).shl(255))
     this.messageNumber = messageNumber
-    this.l2Provider = l2Provider
+    this.childProvider = childProvider
 
     this.retryableCreationId = keccak256(
       concat([
@@ -562,7 +583,7 @@ export class L1ToL2MessageReaderClassic {
       ])
     )
 
-    this.l2TxHash = keccak256(
+    this.childTxHash = keccak256(
       concat([
         zeroPad(this.retryableCreationId, 32),
         zeroPad(BigNumber.from(0).toHexString(), 32),
@@ -570,11 +591,11 @@ export class L1ToL2MessageReaderClassic {
     )
   }
 
-  private calculateL2DerivedHash(retryableCreationId: string): string {
+  private calculateChainDerivedHash(retryableCreationId: string): string {
     return keccak256(
       concat([
         zeroPad(retryableCreationId, 32),
-        // BN 0 meaning L2 TX
+        // BN 0 meaning Chain TX
         zeroPad(BigNumber.from(0).toHexString(), 32),
       ])
     )
@@ -582,7 +603,7 @@ export class L1ToL2MessageReaderClassic {
 
   /**
    * Try to get the receipt for the retryable ticket creation.
-   * This is the L2 transaction that creates the retryable ticket.
+   * This is the Chain transaction that creates the retryable ticket.
    * If confirmations or timeout is provided, this will wait for the ticket to be created
    * @returns Null if retryable has not been created
    */
@@ -592,7 +613,7 @@ export class L1ToL2MessageReaderClassic {
   ): Promise<TransactionReceipt | null> {
     if (!this.retryableCreationReceipt) {
       this.retryableCreationReceipt = await getTransactionReceipt(
-        this.l2Provider,
+        this.childProvider,
         this.retryableCreationId,
         confirmations,
         timeout
@@ -602,77 +623,81 @@ export class L1ToL2MessageReaderClassic {
     return this.retryableCreationReceipt || null
   }
 
-  public async status(): Promise<L1ToL2MessageStatus> {
+  public async status(): Promise<ParentToChildMessageStatus> {
     const creationReceipt = await this.getRetryableCreationReceipt()
 
     if (!isDefined(creationReceipt)) {
-      return L1ToL2MessageStatus.NOT_YET_CREATED
+      return ParentToChildMessageStatus.NOT_YET_CREATED
     }
 
     if (creationReceipt.status === 0) {
-      return L1ToL2MessageStatus.CREATION_FAILED
+      return ParentToChildMessageStatus.CREATION_FAILED
     }
 
-    const l2DerivedHash = this.calculateL2DerivedHash(this.retryableCreationId)
-    const l2TxReceipt = await this.l2Provider.getTransactionReceipt(
-      l2DerivedHash
+    const chainDerivedHash = this.calculateChainDerivedHash(
+      this.retryableCreationId
+    )
+    const chainTxReceipt = await this.childProvider.getTransactionReceipt(
+      chainDerivedHash
     )
 
-    if (l2TxReceipt && l2TxReceipt.status === 1) {
-      return L1ToL2MessageStatus.REDEEMED
+    if (chainTxReceipt && chainTxReceipt.status === 1) {
+      return ParentToChildMessageStatus.REDEEMED
     }
 
-    return L1ToL2MessageStatus.EXPIRED
+    return ParentToChildMessageStatus.EXPIRED
   }
 }
 
-export class L1ToL2MessageWriter extends L1ToL2MessageReader {
+export class ParentToChildMessageWriter extends ParentToChildMessageReader {
   public constructor(
-    public readonly l2Signer: Signer,
+    public readonly chainSigner: Signer,
     chainId: number,
     sender: string,
     messageNumber: BigNumber,
-    l1BaseFee: BigNumber,
+    parentBaseFee: BigNumber,
     messageData: RetryableMessageParams
   ) {
     super(
-      l2Signer.provider!,
+      chainSigner.provider!,
       chainId,
       sender,
       messageNumber,
-      l1BaseFee,
+      parentBaseFee,
       messageData
     )
-    if (!l2Signer.provider)
+    if (!chainSigner.provider)
       throw new ArbSdkError('Signer not connected to provider.')
   }
 
   /**
    * Manually redeem the retryable ticket.
-   * Throws if message status is not L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+   * Throws if message status is not ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
    */
   public async redeem(overrides?: Overrides): Promise<RedeemTransaction> {
     const status = await this.status()
-    if (status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
+    if (status === ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN) {
       const arbRetryableTx = ArbRetryableTx__factory.connect(
         ARB_RETRYABLE_TX_ADDRESS,
-        this.l2Signer
+        this.chainSigner
       )
 
       const redeemTx = await arbRetryableTx.redeem(this.retryableCreationId, {
         ...overrides,
       })
 
-      return L2TransactionReceipt.toRedeemTransaction(
-        L2TransactionReceipt.monkeyPatchWait(redeemTx),
-        this.l2Provider
+      return ChildTransactionReceipt.toRedeemTransaction(
+        ChildTransactionReceipt.monkeyPatchWait(redeemTx),
+        this.childProvider
       )
     } else {
       throw new ArbSdkError(
         `Cannot redeem as retryable does not exist. Message status: ${
-          L1ToL2MessageStatus[status]
+          ParentToChildMessageStatus[status]
         } must be: ${
-          L1ToL2MessageStatus[L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2]
+          ParentToChildMessageStatus[
+            ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+          ]
         }.`
       )
     }
@@ -680,22 +705,24 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
 
   /**
    * Cancel the retryable ticket.
-   * Throws if message status is not L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+   * Throws if message status is not ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
    */
   public async cancel(overrides?: Overrides): Promise<ContractTransaction> {
     const status = await this.status()
-    if (status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
+    if (status === ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN) {
       const arbRetryableTx = ArbRetryableTx__factory.connect(
         ARB_RETRYABLE_TX_ADDRESS,
-        this.l2Signer
+        this.chainSigner
       )
       return await arbRetryableTx.cancel(this.retryableCreationId, overrides)
     } else {
       throw new ArbSdkError(
         `Cannot cancel as retryable does not exist. Message status: ${
-          L1ToL2MessageStatus[status]
+          ParentToChildMessageStatus[status]
         } must be: ${
-          L1ToL2MessageStatus[L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2]
+          ParentToChildMessageStatus[
+            ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+          ]
         }.`
       )
     }
@@ -703,22 +730,24 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
 
   /**
    * Increase the timeout of a retryable ticket.
-   * Throws if message status is not L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+   * Throws if message status is not ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
    */
   public async keepAlive(overrides?: Overrides): Promise<ContractTransaction> {
     const status = await this.status()
-    if (status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
+    if (status === ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN) {
       const arbRetryableTx = ArbRetryableTx__factory.connect(
         ARB_RETRYABLE_TX_ADDRESS,
-        this.l2Signer
+        this.chainSigner
       )
       return await arbRetryableTx.keepalive(this.retryableCreationId, overrides)
     } else {
       throw new ArbSdkError(
         `Cannot keep alive as retryable does not exist. Message status: ${
-          L1ToL2MessageStatus[status]
+          ParentToChildMessageStatus[status]
         } must be: ${
-          L1ToL2MessageStatus[L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2]
+          ParentToChildMessageStatus[
+            ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+          ]
         }.`
       )
     }
@@ -726,14 +755,14 @@ export class L1ToL2MessageWriter extends L1ToL2MessageReader {
 }
 
 /**
- * A message for Eth deposits from L1 to L2
+ * A message for Eth deposits from Parent to Child
  */
 export class EthDepositMessage {
-  public readonly l2DepositTxHash: string
-  private l2DepositTxReceipt: TransactionReceipt | undefined | null
+  public readonly childDepositTxHash: string
+  private childDepositTxReceipt: TransactionReceipt | undefined | null
 
   public static calculateDepositTxId(
-    l2ChainId: number,
+    childChainId: number,
     messageNumber: BigNumber,
     fromAddress: string,
     toAddress: string,
@@ -743,7 +772,7 @@ export class EthDepositMessage {
       return ethers.utils.stripZeros(numberVal.toHexString())
     }
 
-    const chainId = BigNumber.from(l2ChainId)
+    const chainId = BigNumber.from(childChainId)
     const msgNum = BigNumber.from(messageNumber)
 
     // https://github.com/OffchainLabs/go-ethereum/blob/07e017aa73e32be92aadb52fa327c552e1b7b118/core/types/arb_types.go#L302-L308
@@ -774,7 +803,7 @@ export class EthDepositMessage {
     to: string
     value: BigNumber
   } {
-    // https://github.com/OffchainLabs/nitro/blob/aa84e899cbc902bf6da753b1d66668a1def2c106/contracts/src/bridge/Inbox.sol#L242
+    // https://github.com/OffchainLabs/nitro/blob/aa84e899cbc902bf6da753b1d66668a1def2c106/contracts/src/bridge/Inbox.sol#Chain42
     // ethers.defaultAbiCoder doesnt decode packed args, so we do a hardcoded parsing
     const addressEnd = 2 + 20 * 2
     const to = getAddress('0x' + eventData.substring(2, addressEnd))
@@ -785,25 +814,25 @@ export class EthDepositMessage {
 
   /**
    * Create an EthDepositMessage from data emitted in event when calling ethDeposit on Inbox.sol
-   * @param l2Provider
+   * @param childProvider
    * @param messageNumber The message number in the Inbox.InboxMessageDelivered event
    * @param senderAddr The sender address from Bridge.MessageDelivered event
    * @param inboxMessageEventData The data field from the Inbox.InboxMessageDelivered event
    * @returns
    */
   public static async fromEventComponents(
-    l2Provider: Provider,
+    childProvider: Provider,
     messageNumber: BigNumber,
     senderAddr: string,
     inboxMessageEventData: string
   ) {
-    const chainId = (await l2Provider.getNetwork()).chainId
+    const chainId = (await childProvider.getNetwork()).chainId
     const { to, value } = EthDepositMessage.parseEthDepositData(
       inboxMessageEventData
     )
 
     return new EthDepositMessage(
-      l2Provider,
+      childProvider,
       chainId,
       messageNumber,
       senderAddr,
@@ -814,22 +843,22 @@ export class EthDepositMessage {
 
   /**
    *
-   * @param l2Provider
-   * @param l2ChainId
+   * @param childProvider
+   * @param childChainId
    * @param messageNumber
-   * @param to Recipient address of the ETH on L2
+   * @param to Recipient address of the ETH on Chain
    * @param value
    */
   constructor(
-    private readonly l2Provider: Provider,
-    public readonly l2ChainId: number,
+    private readonly childProvider: Provider,
+    public readonly childChainId: number,
     public readonly messageNumber: BigNumber,
     public readonly from: string,
     public readonly to: string,
     public readonly value: BigNumber
   ) {
-    this.l2DepositTxHash = EthDepositMessage.calculateDepositTxId(
-      l2ChainId,
+    this.childDepositTxHash = EthDepositMessage.calculateDepositTxId(
+      childChainId,
       messageNumber,
       from,
       to,
@@ -837,30 +866,26 @@ export class EthDepositMessage {
     )
   }
 
-  public async status(): Promise<EthDepositStatus> {
-    const receipt = await this.l2Provider.getTransactionReceipt(
-      this.l2DepositTxHash
+  public async status(): Promise<EthDepositMessageStatus> {
+    const receipt = await this.childProvider.getTransactionReceipt(
+      this.childDepositTxHash
     )
-    if (receipt === null) return EthDepositStatus.PENDING
-    else return EthDepositStatus.DEPOSITED
+    if (receipt === null) return EthDepositMessageStatus.PENDING
+    else return EthDepositMessageStatus.DEPOSITED
   }
 
   public async wait(confirmations?: number, timeout?: number) {
-    const l2Network = await getL2Network(this.l2ChainId)
+    const chosenTimeout = isDefined(timeout) ? timeout : DEFAULT_DEPOSIT_TIMEOUT
 
-    const chosenTimeout = isDefined(timeout)
-      ? timeout
-      : l2Network.depositTimeout
-
-    if (!this.l2DepositTxReceipt) {
-      this.l2DepositTxReceipt = await getTransactionReceipt(
-        this.l2Provider,
-        this.l2DepositTxHash,
+    if (!this.childDepositTxReceipt) {
+      this.childDepositTxReceipt = await getTransactionReceipt(
+        this.childProvider,
+        this.childDepositTxHash,
         confirmations,
         chosenTimeout
       )
     }
 
-    return this.l2DepositTxReceipt || null
+    return this.childDepositTxReceipt || null
   }
 }

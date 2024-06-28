@@ -28,11 +28,7 @@ import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factor
 import { IInbox__factory } from '../abi/factories/IInbox__factory'
 import { RequiredPick } from '../utils/types'
 import { MessageDeliveredEvent } from '../abi/Bridge'
-import {
-  L1Network,
-  L2Network,
-  getParentForNetwork,
-} from '../dataEntities/networks'
+import { ArbitrumNetwork } from '../dataEntities/networks'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { FetchedEvent, EventFetcher } from '../utils/eventFetcher'
 import { MultiCaller, CallInput } from '../utils/multicall'
@@ -51,12 +47,12 @@ type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
 }
 
-type GasComponentsWithL2Part = {
+type GasComponentsWithChildPart = {
   gasEstimate: BigNumber
   gasEstimateForL1: BigNumber
   baseFee: BigNumber
   l1BaseFeeEstimate: BigNumber
-  gasEstimateForL2: BigNumber
+  gasEstimateForChild: BigNumber
 }
 type RequiredTransactionRequestType = RequiredPick<
   TransactionRequest,
@@ -69,18 +65,15 @@ export class InboxTools {
   /**
    * Parent chain provider
    */
-  private readonly l1Provider: Provider
-  /**
-   * Parent chain for the given Arbitrum chain, can be an L1 or an L2
-   */
-  private readonly l1Network: L1Network | L2Network
+  private readonly parentProvider: Provider
 
   constructor(
-    private readonly l1Signer: Signer,
-    private readonly l2Network: L2Network
+    private readonly parentSigner: Signer,
+    private readonly childChain: ArbitrumNetwork
   ) {
-    this.l1Provider = SignerProviderUtils.getProviderOrThrow(this.l1Signer)
-    this.l1Network = getParentForNetwork(l2Network)
+    this.parentProvider = SignerProviderUtils.getProviderOrThrow(
+      this.parentSigner
+    )
   }
 
   /**
@@ -95,12 +88,12 @@ export class InboxTools {
     blockNumber: number,
     blockTimestamp: number
   ): Promise<Block> {
-    const isParentChainArbitrum = await isArbitrumChain(this.l1Provider)
+    const isParentChainArbitrum = await isArbitrumChain(this.parentProvider)
 
     if (isParentChainArbitrum) {
       const nodeInterface = NodeInterface__factory.connect(
         NODE_INTERFACE_ADDRESS,
-        this.l1Provider
+        this.parentProvider
       )
 
       try {
@@ -113,7 +106,7 @@ export class InboxTools {
         // alternatively we use binary search to get the nearest block
         const _blockNum = (
           await getBlockRangesForL1Block({
-            provider: this.l1Provider as JsonRpcProvider,
+            provider: this.parentProvider as JsonRpcProvider,
             forL1Block: blockNumber - 1,
             allowGreater: true,
           })
@@ -127,7 +120,7 @@ export class InboxTools {
       }
     }
 
-    const block = await this.l1Provider.getBlock(blockNumber)
+    const block = await this.parentProvider.getBlock(blockNumber)
     const diff = block.timestamp - blockTimestamp
     if (diff < 0) return block
 
@@ -141,14 +134,14 @@ export class InboxTools {
     )
   }
 
-  //Check if this request is contract creation or not.
+  // Check if this request is contract creation or not.
   private isContractCreation(
-    transactionl2Request: TransactionRequest
+    childTransactionRequest: TransactionRequest
   ): boolean {
     if (
-      transactionl2Request.to === '0x' ||
-      !isDefined(transactionl2Request.to) ||
-      transactionl2Request.to === ethers.constants.AddressZero
+      childTransactionRequest.to === '0x' ||
+      !isDefined(childTransactionRequest.to) ||
+      childTransactionRequest.to === ethers.constants.AddressZero
     ) {
       return true
     }
@@ -157,32 +150,32 @@ export class InboxTools {
 
   /**
    * We should use nodeInterface to get the gas estimate is because we
-   * are making a delayed inbox message which doesn't need l1 calldata
+   * are making a delayed inbox message which doesn't need parent calldata
    * gas fee part.
    */
   private async estimateArbitrumGas(
-    transactionl2Request: RequiredTransactionRequestType,
-    l2Provider: Provider
-  ): Promise<GasComponentsWithL2Part> {
+    childTransactionRequest: RequiredTransactionRequestType,
+    childProvider: Provider
+  ): Promise<GasComponentsWithChildPart> {
     const nodeInterface = NodeInterface__factory.connect(
       NODE_INTERFACE_ADDRESS,
-      l2Provider
+      childProvider
     )
 
-    const contractCreation = this.isContractCreation(transactionl2Request)
+    const contractCreation = this.isContractCreation(childTransactionRequest)
     const gasComponents = await nodeInterface.callStatic.gasEstimateComponents(
-      transactionl2Request.to || ethers.constants.AddressZero,
+      childTransactionRequest.to || ethers.constants.AddressZero,
       contractCreation,
-      transactionl2Request.data,
+      childTransactionRequest.data,
       {
-        from: transactionl2Request.from,
-        value: transactionl2Request.value,
+        from: childTransactionRequest.from,
+        value: childTransactionRequest.value,
       }
     )
-    const gasEstimateForL2: BigNumber = gasComponents.gasEstimate.sub(
+    const gasEstimateForChild: BigNumber = gasComponents.gasEstimate.sub(
       gasComponents.gasEstimateForL1
     )
-    return { ...gasComponents, gasEstimateForL2 }
+    return { ...gasComponents, gasEstimateForChild }
   }
 
   /**
@@ -194,21 +187,21 @@ export class InboxTools {
     let currentL1BlockNumber: number | undefined
 
     const sequencerInbox = SequencerInbox__factory.connect(
-      this.l2Network.ethBridge.sequencerInbox,
-      this.l1Provider
+      this.childChain.ethBridge.sequencerInbox,
+      this.parentProvider
     )
 
-    const isParentChainArbitrum = await isArbitrumChain(this.l1Provider)
+    const isParentChainArbitrum = await isArbitrumChain(this.parentProvider)
 
     if (isParentChainArbitrum) {
       const arbProvider = new ArbitrumProvider(
-        this.l1Provider as JsonRpcProvider
+        this.parentProvider as JsonRpcProvider
       )
       const currentArbBlock = await arbProvider.getBlock('latest')
       currentL1BlockNumber = currentArbBlock.l1BlockNumber
     }
 
-    const multicall = await MultiCaller.fromProvider(this.l1Provider)
+    const multicall = await MultiCaller.fromProvider(this.parentProvider)
     const multicallInput: [
       CallInput<Awaited<ReturnType<SequencerInbox['maxTimeVariation']>>>,
       ReturnType<MultiCaller['getBlockNumberInput']>,
@@ -266,7 +259,7 @@ export class InboxTools {
     maxSearchRangeBlocks: number,
     rangeMultiplier: number
   ): Promise<FetchedEvent<MessageDeliveredEvent>[]> {
-    const eFetcher = new EventFetcher(this.l1Provider)
+    const eFetcher = new EventFetcher(this.parentProvider)
 
     // events don't become eligible until they pass a delay
     // find a block range which will emit eligible events
@@ -304,7 +297,7 @@ export class InboxTools {
   /**
    * Find the event of the latest message that can be force include
    * @param maxSearchRangeBlocks The max range of blocks to search in.
-   * Defaults to 3 * 6545 ( = ~3 days) prior to the first eligble block
+   * Defaults to 3 * 6545 ( = ~3 days) prior to the first eligible block
    * @param startSearchRangeBlocks The start range of block to search in.
    * Moves incrementally up to the maxSearchRangeBlocks. Defaults to 100;
    * @param rangeMultiplier The multiplier to use when increasing the block range
@@ -314,11 +307,11 @@ export class InboxTools {
   public async getForceIncludableEvent(
     maxSearchRangeBlocks: number = 3 * 6545,
     startSearchRangeBlocks = 100,
-    rangeMultipler = 2
+    rangeMultiplier = 2
   ): Promise<ForceInclusionParams | null> {
     const bridge = Bridge__factory.connect(
-      this.l2Network.ethBridge.bridge,
-      this.l1Provider
+      this.childChain.ethBridge.bridge,
+      this.parentProvider
     )
 
     // events dont become eligible until they pass a delay
@@ -327,7 +320,7 @@ export class InboxTools {
       bridge,
       startSearchRangeBlocks,
       maxSearchRangeBlocks,
-      rangeMultipler
+      rangeMultiplier
     )
 
     // no events appeared within that time period
@@ -336,8 +329,8 @@ export class InboxTools {
     // take the last event - as including this one will include all previous events
     const eventInfo = events[events.length - 1]
     const sequencerInbox = SequencerInbox__factory.connect(
-      this.l2Network.ethBridge.sequencerInbox,
-      this.l1Provider
+      this.childChain.ethBridge.sequencerInbox,
+      this.parentProvider
     )
     // has the sequencer inbox already read this latest message
     const totalDelayedRead = await sequencerInbox.totalDelayedMessagesRead()
@@ -355,7 +348,7 @@ export class InboxTools {
 
   /**
    * Force includes all eligible messages in the delayed inbox.
-   * The inbox contract doesnt allow a message to be force-included
+   * The inbox contract doesn't allow a message to be force-included
    * until after a delay period has been completed.
    * @param messageDeliveredEvent Provide this to include all messages up to this one. Responsibility is on the caller to check the eligibility of this event.
    * @returns The force include transaction, or null if no eligible message were found for inclusion
@@ -376,14 +369,14 @@ export class InboxTools {
     overrides?: Overrides
   ): Promise<ContractTransaction | null> {
     const sequencerInbox = SequencerInbox__factory.connect(
-      this.l2Network.ethBridge.sequencerInbox,
-      this.l1Signer
+      this.childChain.ethBridge.sequencerInbox,
+      this.parentSigner
     )
     const eventInfo =
       messageDeliveredEvent || (await this.getForceIncludableEvent())
 
     if (!eventInfo) return null
-    const block = await this.l1Provider.getBlock(eventInfo.blockHash)
+    const block = await this.parentProvider.getBlock(eventInfo.blockHash)
 
     return await sequencerInbox.functions.forceInclusion(
       eventInfo.event.messageIndex.add(1),
@@ -398,19 +391,19 @@ export class InboxTools {
   }
 
   /**
-   * Send l2 signed tx using delayed inox, which won't alias the sender's adddress
-   * It will be automatically included by the sequencer on l2, if it isn't included
+   * Send Child Chain signed tx using delayed inbox, which won't alias the sender's address
+   * It will be automatically included by the sequencer on Chain, if it isn't included
    * within 24 hours, you can force include it
-   * @param signedTx A signed transaction which can be sent directly to network,
-   * you can call inboxTools.signL2Message to get.
-   * @returns The l1 delayed inbox's transaction itself.
+   * @param signedTx A signed transaction which can be sent directly to chain,
+   * you can call inboxTools.signChainMessage to get.
+   * @returns The parent delayed inbox's transaction itself.
    */
-  public async sendL2SignedTx(
+  public async sendChildSignedTx(
     signedTx: string
   ): Promise<ContractTransaction | null> {
     const delayedInbox = IInbox__factory.connect(
-      this.l2Network.ethBridge.inbox,
-      this.l1Signer
+      this.childChain.ethBridge.inbox,
+      this.parentSigner
     )
 
     const sendData = ethers.utils.solidityPack(
@@ -423,43 +416,43 @@ export class InboxTools {
 
   /**
    * Sign a transaction with msg.to, msg.value and msg.data.
-   * You can use this as a helper to call inboxTools.sendL2SignedMessage
+   * You can use this as a helper to call inboxTools.sendChainSignedMessage
    * above.
-   * @param message A signed transaction which can be sent directly to network,
+   * @param message A signed transaction which can be sent directly to chain,
    * tx.to, tx.data, tx.value must be provided when not contract creation, if
    * contractCreation is true, no need provide tx.to. tx.gasPrice and tx.nonce
    * can be overrided. (You can also send contract creation transaction by set tx.to
    * to zero address or null)
-   * @param l2Signer ethers Signer type, used to sign l2 transaction
-   * @returns The l1 delayed inbox's transaction signed data.
+   * @param childSigner ethers Signer type, used to sign Chain transaction
+   * @returns The parent delayed inbox's transaction signed data.
    */
-  public async signL2Tx(
+  public async signChildTx(
     txRequest: RequiredTransactionRequestType,
-    l2Signer: Signer
+    childSigner: Signer
   ): Promise<string> {
     const tx: RequiredTransactionRequestType = { ...txRequest }
     const contractCreation = this.isContractCreation(tx)
 
     if (!isDefined(tx.nonce)) {
-      tx.nonce = await l2Signer.getTransactionCount()
+      tx.nonce = await childSigner.getTransactionCount()
     }
 
     //check transaction type (if no transaction type or gasPrice provided, use eip1559 type)
     if (tx.type === 1 || tx.gasPrice) {
       if (tx.gasPrice) {
-        tx.gasPrice = await l2Signer.getGasPrice()
+        tx.gasPrice = await childSigner.getGasPrice()
       }
     } else {
       if (!isDefined(tx.maxFeePerGas)) {
-        const feeData = await l2Signer.getFeeData()
+        const feeData = await childSigner.getFeeData()
         tx.maxPriorityFeePerGas = feeData.maxPriorityFeePerGas!
         tx.maxFeePerGas = feeData.maxFeePerGas!
       }
       tx.type = 2
     }
 
-    tx.from = await l2Signer.getAddress()
-    tx.chainId = await l2Signer.getChainId()
+    tx.from = await childSigner.getAddress()
+    tx.chainId = await childSigner.getChainId()
 
     // if this is contract creation, user might not input the to address,
     // however, it is needed when we call to estimateArbitrumGas, so
@@ -468,17 +461,17 @@ export class InboxTools {
       tx.to = ethers.constants.AddressZero
     }
 
-    //estimate gas on l2
+    //estimate gas on child chain
     try {
       tx.gasLimit = (
-        await this.estimateArbitrumGas(tx, l2Signer.provider!)
-      ).gasEstimateForL2
+        await this.estimateArbitrumGas(tx, childSigner.provider!)
+      ).gasEstimateForChild
     } catch (error) {
       throw new ArbSdkError('execution failed (estimate gas failed)')
     }
     if (contractCreation) {
       delete tx.to
     }
-    return await l2Signer.signTransaction(tx)
+    return await childSigner.signTransaction(tx)
   }
 }

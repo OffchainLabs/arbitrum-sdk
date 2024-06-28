@@ -2,9 +2,9 @@ import { Provider } from '@ethersproject/abstract-provider'
 import { TransactionReceipt, JsonRpcProvider } from '@ethersproject/providers'
 import { ArbSdkError } from '../dataEntities/errors'
 import { ArbitrumProvider } from './arbProvider'
-import { l2Networks } from '../dataEntities/networks'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
+import { getNitroGenesisBlock } from '../dataEntities/networks'
 import { BigNumber } from 'ethers'
 
 export const wait = (ms: number): Promise<void> =>
@@ -82,7 +82,7 @@ type GetFirstBlockForL1BlockProps = {
  * @param {JsonRpcProvider} provider - The L2 provider to use for the search.
  * @param {number} forL1Block - The L1 block number to search for.
  * @param {boolean} [allowGreater=false] - Whether to allow the search to go past the specified `forL1Block`.
- * @param {number|string} minL2Block - The minimum L2 block number to start the search from. Cannot be below the network's `nitroGenesisBlock`.
+ * @param {number|string} minL2Block - The minimum L2 block number to start the search from. Cannot be below the network's Nitro genesis block.
  * @param {number|string} [maxL2Block='latest'] - The maximum L2 block number to end the search at. Can be a `number` or `'latest'`. `'latest'` is the current block.
  * @returns {Promise<number | undefined>} - A Promise that resolves to a number if a block is found, or undefined otherwise.
  */
@@ -101,7 +101,7 @@ export async function getFirstBlockForL1Block({
   const arbProvider = new ArbitrumProvider(provider)
   const currentArbBlock = await arbProvider.getBlockNumber()
   const arbitrumChainId = (await arbProvider.getNetwork()).chainId
-  const { nitroGenesisBlock } = l2Networks[arbitrumChainId]
+  const nitroGenesisBlock = getNitroGenesisBlock(arbitrumChainId)
 
   async function getL1Block(forL2Block: number) {
     const { l1BlockNumber } = await arbProvider.getBlock(forL2Block)
@@ -124,7 +124,7 @@ export async function getFirstBlockForL1Block({
 
   if (minL2Block < nitroGenesisBlock) {
     throw new Error(
-      `'minL2Block' (${minL2Block}) cannot be below 'nitroGenesisBlock', which is ${nitroGenesisBlock} for the current network.`
+      `'minL2Block' (${minL2Block}) cannot be below the Nitro genesis block, which is ${nitroGenesisBlock} for the current network.`
     )
   }
 
