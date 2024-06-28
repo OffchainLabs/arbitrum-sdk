@@ -315,7 +315,7 @@ class BaseL1L3Bridger {
    * Check the signer/provider matches the l2Network, throws if not
    * @param sop
    */
-  protected async _checkArbitrumNetwork(sop: SignerOrProvider): Promise<void> {
+  protected async _checkL2Network(sop: SignerOrProvider): Promise<void> {
     await SignerProviderUtils.checkNetworkMatches(sop, this.l2Network.chainId)
   }
 
@@ -443,7 +443,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     if (this._l1FeeTokenAddress) return this._l1FeeTokenAddress
 
     await this._checkL1Network(l1Provider)
-    await this._checkArbitrumNetwork(l2Provider)
+    await this._checkL2Network(l2Provider)
 
     let l1FeeTokenAddress: string | undefined
 
@@ -749,7 +749,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       'l1Provider' in params ? params.l1Provider : params.l1Signer.provider!
 
     await this._checkL1Network(l1Provider)
-    await this._checkArbitrumNetwork(params.l2Provider)
+    await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
 
     const from =
@@ -845,7 +845,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     } & TxReference
   ) {
     await this._checkL1Network(params.l1Provider)
-    await this._checkArbitrumNetwork(params.l2Provider)
+    await this._checkL2Network(params.l2Provider)
 
     const tx = await this._getTxFromTxRef(params, params.l1Provider)
     const txReceipt = await tx.wait()
@@ -883,7 +883,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     params: GetDepositStatusParams
   ): Promise<Erc20DepositStatus> {
     await this._checkL1Network(params.l1Provider)
-    await this._checkArbitrumNetwork(params.l2Provider)
+    await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
 
     const l1TxReceipt = await this._getTxReceiptFromTxRef(
@@ -1474,7 +1474,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
     const l1Provider =
       'l1Provider' in params ? params.l1Provider : params.l1Signer.provider!
     await this._checkL1Network(l1Provider)
-    await this._checkArbitrumNetwork(params.l2Provider)
+    await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
 
     const from =
@@ -1579,7 +1579,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
     params: GetDepositStatusParams
   ): Promise<EthDepositStatus> {
     await this._checkL1Network(params.l1Provider)
-    await this._checkArbitrumNetwork(params.l2Provider)
+    await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
 
     const l1TxReceipt = await this._getTxReceiptFromTxRef(
