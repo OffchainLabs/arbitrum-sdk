@@ -17,7 +17,7 @@
 'use strict'
 
 import { expect } from 'chai'
-import { Signer, Wallet, constants, utils, ethers } from 'ethers'
+import { Signer, Wallet, constants, utils } from 'ethers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Logger, LogLevel } from '@ethersproject/logger'
 Logger.setLogLevel(LogLevel.ERROR)
@@ -160,15 +160,16 @@ const registerCustomToken = async (
     l2Network.tokenBridge.l1GatewayRouter
   )
   await l1CustomToken.deployed()
-  const amount = ethers.utils.parseEther('1')
 
-  if (isL2NetworkWithCustomFeeToken()) {
-    const approvalTx = await ERC20__factory.connect(
-      l2Network.nativeToken!,
-      l1Signer
-    ).approve(l1CustomToken.address, amount)
-    await approvalTx.wait()
-  }
+  adminErc20Bridger
+    .isRegistered({
+      erc20L1Address: l1CustomToken.address,
+      l1Provider: l1Signer.provider!,
+      l2Provider: l2Signer.provider!,
+    })
+    .then(isRegistered => {
+      expect(isRegistered, 'expected token not to be registered').to.be.false
+    })
 
   const l2CustomTokenFac = new TestArbCustomToken__factory(l2Signer)
   const l2CustomToken = await l2CustomTokenFac.deploy(
@@ -218,6 +219,29 @@ const registerCustomToken = async (
     startL2Erc20Address,
     'Start l2Erc20Address not equal empty address'
   ).to.eq(constants.AddressZero)
+
+  // it should fail without the approval
+  if (isL2NetworkWithCustomFeeToken()) {
+    try {
+      const regTx = await adminErc20Bridger.registerCustomToken(
+        l1CustomToken.address,
+        l2CustomToken.address,
+        l1Signer,
+        l2Signer.provider!
+      )
+      await regTx.wait()
+      throw new Error('L2 custom token is not approved but got deployed')
+    } catch (err) {
+      expect((err as Error).message).to.contain('Insufficient allowance')
+    }
+  }
+
+  if (isL2NetworkWithCustomFeeToken()) {
+    await adminErc20Bridger.approveGasTokenForCustomTokenRegistration({
+      l1Signer,
+      erc20L1Address: l1CustomToken.address,
+    })
+  }
 
   // send the messages
   const regTx = await adminErc20Bridger.registerCustomToken(
@@ -274,6 +298,16 @@ const registerCustomToken = async (
     endL2Erc20Address,
     'End l2Erc20Address not equal l2CustomToken address'
   ).to.eq(l2CustomToken.address)
+
+  adminErc20Bridger
+    .isRegistered({
+      erc20L1Address: l1CustomToken.address,
+      l1Provider: l1Signer.provider!,
+      l2Provider: l2Signer.provider!,
+    })
+    .then(isRegistered => {
+      expect(isRegistered, 'expected token to be registered').to.be.true
+    })
 
   return {
     l1CustomToken,

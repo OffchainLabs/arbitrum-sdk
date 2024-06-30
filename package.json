@@ -1,6 +1,6 @@
 {
   "name": "@arbitrum/sdk",
-  "version": "3.3.1",
+  "version": "3.6.0",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -26,6 +26,7 @@
     "gen:network": "ts-node ./scripts/genNetwork.ts",
     "prepublishOnly": "yarn build && yarn format",
     "preversion": "yarn lint",
+    "prebuild": "yarn gen:abi",
     "build": "./scripts/builder",
     "watch": "tsc --watch",
     "test": "mocha",
@@ -93,6 +94,8 @@
     "dist/**/*"
   ],
   "resolutions": {
-    "lodash.pick": "https://github.com/lodash/lodash/archive/refs/tags/4.17.21.tar.gz"
+    "lodash.pick": "https://github.com/lodash/lodash/archive/refs/tags/4.17.21.tar.gz",
+    "**/@ethersproject/providers/ws": "7.5.10",
+    "**/hardhat/ws": "7.5.10"
   }
 }

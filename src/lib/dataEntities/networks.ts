@@ -72,6 +72,12 @@ export interface L2Network extends Network {
    * In case of a chain that uses an ERC-20 token from the parent chain as its native/gas token, this is the address of said token on the parent chain
    */
   nativeToken?: string
+  /**
+   * Has the network been upgraded to bold. True if yes, otherwise undefined
+   * This is a temporary property and will be removed in future if Bold is widely adopted and
+   * the legacy challenge protocol is deprecated
+   */
+  isBold?: boolean
 }
 
 export interface TokenBridge {
@@ -174,6 +180,15 @@ export const networks: Networks = {
     isCustom: false,
     isArbitrum: false,
   },
+  17000: {
+    chainID: 17000,
+    name: 'Holesky',
+    explorerUrl: 'https://holesky.etherscan.io',
+    partnerChainIDs: [],
+    blockTime: 12,
+    isCustom: false,
+    isArbitrum: false,
+  },
   42161: {
     chainID: 42161,
     name: 'Arbitrum One',
@@ -254,7 +269,7 @@ export const networks: Networks = {
     isCustom: false,
     name: 'Arbitrum Rollup Sepolia Testnet',
     partnerChainID: 11155111,
-    partnerChainIDs: [23011913],
+    partnerChainIDs: [13331371],
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     tokenBridge: {
       l1CustomGateway: '0xba2F7B6eAe1F9d174199C5E4867b563E0eaC40F3',
@@ -277,38 +292,38 @@ export const networks: Networks = {
     depositTimeout: 1800000,
     blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
-  23011913: {
-    chainID: 23011913,
+  13331371: {
+    chainID: 13331371,
     confirmPeriodBlocks: 20,
     ethBridge: {
-      bridge: '0x35aa95ac4747D928E2Cd42FE4461F6D9d1826346',
-      inbox: '0xe1e3b1CBaCC870cb6e5F4Bdf246feB6eB5cD351B',
-      outbox: '0x98fcA8bFF38a987B988E54273Fa228A52b62E43b',
-      rollup: '0x94db9E36d9336cD6F9FfcAd399dDa6Cc05299898',
-      sequencerInbox: '0x00A0F15b79d1D3e5991929FaAbCF2AA65623530c',
+      bridge: '0x024a10506f8a27E4CfEDeB18fd30AA1529A2960E',
+      inbox: '0xcdCF1F59f5d4A65a3c67E1341f8b85Cba50E0a7C',
+      outbox: '0xf731Fc4F7B70A0a6F9915f452d88Dc405a59D8b1',
+      rollup: '0x01a8a2b32aa5328466Be47A1808a03aC6c35d94f',
+      sequencerInbox: '0x1Ea8B3853355604673e1301A501766EbB2987a09',
     },
-    explorerUrl: 'https://stylus-testnet-explorer.arbitrum.io',
+    explorerUrl: 'https://stylusv2-explorer.arbitrum.io',
     isArbitrum: true,
     isCustom: false,
-    name: 'Stylus Testnet',
+    name: 'Stylus Testnet v2',
     partnerChainID: 421614,
     partnerChainIDs: [],
     retryableLifetimeSeconds: SEVEN_DAYS_IN_SECONDS,
     tokenBridge: {
-      l1CustomGateway: '0xd624D491A5Bc32de52a2e1481846752213bF7415',
-      l1ERC20Gateway: '0x7348Fdf6F3e090C635b23D970945093455214F3B',
-      l1GatewayRouter: '0x0057892cb8bb5f1cE1B3C6f5adE899732249713f',
-      l1MultiCall: '0xBEbe3BfBF52FFEA965efdb3f14F2101c0264c940',
-      l1ProxyAdmin: '0xB9E77732f32831f09e2a50D6E71B2Cca227544bf',
+      l1CustomGateway: '0x093353B9f723047abf37Ebe01cE48d7dDA8320F4',
+      l1ERC20Gateway: '0xD2C4693Dd8d44703af5CF9484fa8faAD6e33E392',
+      l1GatewayRouter: '0xAC4F454320A253267C6Ae95e4784b9A4f9F78359',
+      l1MultiCall: '0xce1CAd780c529e66e3aa6D952a1ED9A6447791c1',
+      l1ProxyAdmin: '0xBD76fd3fB5F3CD7165fB6e0DB895FFE1d81463e3',
       l1Weth: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73',
-      l1WethGateway: '0x39845e4a230434D218b907459a305eBA61A790d4',
-      l2CustomGateway: '0xF6dbB0e312dF4652d59ce405F5E00CC3430f19c5',
-      l2ERC20Gateway: '0xe027f79CE40a1eF8e47B51d0D46Dc4ea658C5860',
-      l2GatewayRouter: '0x4c3a1f7011F02Fe4769fC704359c3696a6A60D89',
-      l2Multicall: '0xEb4A260FD16aaf18c04B1aeaDFE20E622e549bd3',
-      l2ProxyAdmin: '0xE914c0d417E8250d0237d2F4827ed3612e6A9C3B',
-      l2Weth: '0x61Dc4b961D2165623A25EB775260785fE78BD37C',
-      l2WethGateway: '0x7021B4Edd9f047772242fc948441d6e0b9121175',
+      l1WethGateway: '0x4FEbc93233aAc1523f36Abe297de9323f6C8ce79',
+      l2CustomGateway: '0xE102D94df0179082B39Ddcad58c9430dedc89aE3',
+      l2ERC20Gateway: '0xCf3a4aF3c48Ba19c5FccFB44FA3E3A0F2A6e60dA',
+      l2GatewayRouter: '0xD60FD4c5D335b00287202C93C5B4EE0478D92686',
+      l2Multicall: '0x39E068582873B2011F5a1e8E0F7D9D993c8111BC',
+      l2ProxyAdmin: '0x9DC4Da9a940AFEbBC8329aA6534aD767b60d968c',
+      l2Weth: '0xa3bD1fdeEb903142d16B3bd22f2aC9A82C714D62',
+      l2WethGateway: '0xec018E81eE818b04CFb1E013D91F1b779a2AC440',
     },
     nitroGenesisBlock: 0,
     nitroGenesisL1Block: 0,
