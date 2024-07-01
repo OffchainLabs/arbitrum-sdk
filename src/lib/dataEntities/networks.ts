@@ -53,7 +53,7 @@ export interface L1Network extends Network {
 export interface L2Network extends Network {
   tokenBridge: TokenBridge
   ethBridge: EthBridge
-  teleporterAddresses?: TeleporterAddresses
+  teleporter?: Teleporter
   /**
    * Chain id of the parent chain, i.e. the chain on which this chain settles to.
    */
@@ -81,7 +81,7 @@ export interface L2Network extends Network {
   isBold?: boolean
 }
 
-export interface TeleporterAddresses {
+export interface Teleporter {
   l1Teleporter: string
   l2ForwarderFactory: string
 }
@@ -204,7 +204,7 @@ export const networks: Networks = {
     isArbitrum: true,
     tokenBridge: mainnetTokenBridge,
     ethBridge: mainnetETHBridge,
-    teleporterAddresses: {
+    teleporter: {
       l1Teleporter: '0xCBd9c6e310D6AaDeF9F025f716284162F0158992',
       l2ForwarderFactory: '0x791d2AbC6c3A459E13B9AdF54Fb5e97B7Af38f87',
     },
@@ -254,7 +254,7 @@ export const networks: Networks = {
       l2Weth: '0x722E8BdD2ce80A4422E880164f2079488e115365',
       l2WethGateway: '0x7626841cB6113412F9c88D3ADC720C9FAC88D9eD',
     },
-    teleporterAddresses: {
+    teleporter: {
       l1Teleporter: '0xCBd9c6e310D6AaDeF9F025f716284162F0158992',
       l2ForwarderFactory: '0x791d2AbC6c3A459E13B9AdF54Fb5e97B7Af38f87',
     },
@@ -301,7 +301,7 @@ export const networks: Networks = {
       l2Weth: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73',
       l2WethGateway: '0xCFB1f08A4852699a979909e22c30263ca249556D',
     },
-    teleporterAddresses: {
+    teleporter: {
       l1Teleporter: '0x9E86BbF020594D7FFe05bF32EEDE5b973579A968',
       l2ForwarderFactory: '0x88feBaFBb4E36A4E7E8874E4c9Fd73A9D59C2E7c',
     },
