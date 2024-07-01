@@ -106,7 +106,7 @@ export class InboxTools {
         // alternatively we use binary search to get the nearest block
         const _blockNum = (
           await getBlockRangesForL1Block({
-            provider: this.parentProvider as JsonRpcProvider,
+            arbitrumProvider: this.parentProvider as JsonRpcProvider,
             forL1Block: blockNumber - 1,
             allowGreater: true,
           })
