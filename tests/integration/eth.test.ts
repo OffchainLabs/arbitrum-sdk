@@ -39,6 +39,10 @@ import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeToken
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { itOnlyWhenEth } from './custom-fee-token/mochaExtensions'
 import { L1TransactionReceipt } from '../../src'
+import {
+  getNativeTokenDecimals,
+  scaleToNativeDecimals,
+} from '../../src/lib/utils/lib'
 
 dotenv.config()
 
@@ -48,11 +52,15 @@ describe('Ether', async () => {
   })
 
   it('transfers ether on l2', async () => {
-    const { l2Signer } = await testSetup()
+    const { l1Provider, l2Network, l2Signer } = await testSetup()
+    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
 
     await fundL2(l2Signer)
     const randomAddress = Wallet.createRandom().address
-    const amountToSend = parseEther('0.000005')
+    const amountToSend = scaleToNativeDecimals({
+      amount: parseEther('0.000005'),
+      decimals,
+    })
 
     const balanceBefore = await l2Signer.provider!.getBalance(
       await l2Signer.getAddress()
@@ -99,7 +107,9 @@ describe('Ether', async () => {
   )
 
   it('deposits ether', async () => {
-    const { ethBridger, l1Signer, l2Signer } = await testSetup()
+    const { ethBridger, l1Signer, l1Provider, l2Network, l2Signer } =
+      await testSetup()
+    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
 
     await fundL1(l1Signer)
     const inboxAddress = ethBridger.l2Network.ethBridge.inbox
@@ -107,7 +117,10 @@ describe('Ether', async () => {
     const initialInboxBalance = await l1Signer.provider!.getBalance(
       inboxAddress
     )
-    const ethToDeposit = parseEther('0.0002')
+    const ethToDeposit = scaleToNativeDecimals({
+      amount: parseEther('0.0002'),
+      decimals,
+    })
     const res = await ethBridger.deposit({
       amount: ethToDeposit,
       l1Signer: l1Signer,
@@ -146,7 +159,9 @@ describe('Ether', async () => {
   })
 
   it('deposits ether to a specific L2 address', async () => {
-    const { ethBridger, l1Signer, l2Signer } = await testSetup()
+    const { ethBridger, l1Signer, l1Provider, l2Network, l2Signer } =
+      await testSetup()
+    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
 
     await fundL1(l1Signer)
     const inboxAddress = ethBridger.l2Network.ethBridge.inbox
@@ -155,7 +170,10 @@ describe('Ether', async () => {
     const initialInboxBalance = await l1Signer.provider!.getBalance(
       inboxAddress
     )
-    const ethToDeposit = parseEther('0.0002')
+    const ethToDeposit = scaleToNativeDecimals({
+      amount: parseEther('0.0002'),
+      decimals,
+    })
     const res = await ethBridger.depositTo({
       amount: ethToDeposit,
       l1Signer: l1Signer,
@@ -214,12 +232,17 @@ describe('Ether', async () => {
   })
 
   it('deposit ether to a specific L2 address with manual redeem', async () => {
-    const { ethBridger, l1Signer, l2Signer } = await testSetup()
+    const { ethBridger, l1Signer, l1Provider, l2Network, l2Signer } =
+      await testSetup()
+    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
 
     await fundL1(l1Signer)
     const destWallet = Wallet.createRandom()
 
-    const ethToDeposit = parseEther('0.0002')
+    const ethToDeposit = scaleToNativeDecimals({
+      amount: parseEther('0.0002'),
+      decimals,
+    })
     const res = await ethBridger.depositTo({
       amount: ethToDeposit,
       l1Signer: l1Signer,
@@ -273,7 +296,8 @@ describe('Ether', async () => {
   })
 
   it('withdraw Ether transaction succeeds', async () => {
-    const { l2Signer, l1Signer, ethBridger } = await testSetup()
+    const { l2Signer, l1Signer, l1Provider, l2Network, ethBridger } =
+      await testSetup()
     await fundL2(l2Signer)
     await fundL1(l1Signer)
 
@@ -368,6 +392,8 @@ describe('Ether', async () => {
       'executed status'
     ).to.eq(L2ToL1MessageStatus.EXECUTED)
 
+    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+
     const finalRandomBalance = isL2NetworkWithCustomFeeToken()
       ? await ERC20__factory.connect(
           ethBridger.nativeToken!,
@@ -375,7 +401,7 @@ describe('Ether', async () => {
         ).balanceOf(randomAddress)
       : await l1Signer.provider!.getBalance(randomAddress)
     expect(finalRandomBalance.toString(), 'L1 final balance').to.eq(
-      ethToWithdraw.toString()
+      scaleToNativeDecimals({ amount: ethToWithdraw, decimals }).toString()
     )
   })
 })
