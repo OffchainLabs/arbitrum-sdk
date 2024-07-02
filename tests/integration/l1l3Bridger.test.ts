@@ -341,7 +341,7 @@ describe('L1 to L3 Bridging', () => {
       const l2ForwarderFactory = await l2ContractsDeployer.factory()
 
       // set the teleporter on the l2Network
-      l2Network.teleporterAddresses = {
+      l2Network.teleporter = {
         l1Teleporter: l1Teleporter.address,
         l2ForwarderFactory,
       }
@@ -357,11 +357,11 @@ describe('L1 to L3 Bridging', () => {
     itOnlyWhenCustomGasToken(
       'should properly get l2 and l1 fee token addresses',
       async () => {
-        if (l1l3Bridger.l2FeeTokenAddress === undefined) {
+        if (l1l3Bridger.l2GasTokenAddress === undefined) {
           throw new Error('L2 fee token address is undefined')
         }
         // make sure l2 token equals l3 native token
-        expect(l1l3Bridger.l2FeeTokenAddress).to.eq(l3Network.nativeToken)
+        expect(l1l3Bridger.l2GasTokenAddress).to.eq(l3Network.nativeToken)
         // make sure l1 token maps to l2 token
         expect(
           await new Erc20Bridger(l2Network).getL2ERC20Address(
@@ -371,7 +371,7 @@ describe('L1 to L3 Bridging', () => {
             ))!,
             l1Signer.provider!
           )
-        ).to.eq(l1l3Bridger.l2FeeTokenAddress)
+        ).to.eq(l1l3Bridger.l2GasTokenAddress)
       }
     )
 
@@ -416,7 +416,7 @@ describe('L1 to L3 Bridging', () => {
         // incorrect L2 fee token decimals
         hackProvider(
           hackedL2Provider,
-          l1l3Bridger.l2FeeTokenAddress!,
+          l1l3Bridger.l2GasTokenAddress!,
           decimalSelector,
           encodeDecimals(10)
         )
@@ -448,7 +448,7 @@ describe('L1 to L3 Bridging', () => {
 
     itOnlyWhenEth('should not have l1 and l2 fee token addresses', async () => {
       // make sure l2 is undefined and l1 is also undefined
-      expect(l1l3Bridger.l2FeeTokenAddress).to.be.undefined
+      expect(l1l3Bridger.l2GasTokenAddress).to.be.undefined
       await expectPromiseToReject(
         l1l3Bridger.getGasTokenOnL1(l1Signer.provider!, l2Signer.provider!),
         'L3 uses ETH for gas'
@@ -535,7 +535,7 @@ describe('L1 to L3 Bridging', () => {
         (
           await l1Token.allowance(
             await l1Signer.getAddress(),
-            l1l3Bridger.teleporterAddresses.l1Teleporter
+            l1l3Bridger.teleporter.l1Teleporter
           )
         ).eq(ethers.constants.MaxUint256)
       )
@@ -661,7 +661,7 @@ describe('L1 to L3 Bridging', () => {
           true,
           false,
           async (l1Signer, l2Signer, _l3Signer) => {
-            return new Erc20L1L3Bridger(l3Network).getApproveFeeTokenRequest({
+            return new Erc20L1L3Bridger(l3Network).getApproveGasTokenRequest({
               l1Provider: l1Signer.provider!,
               l2Provider: l2Signer.provider!,
               amount: amount,
@@ -676,7 +676,7 @@ describe('L1 to L3 Bridging', () => {
         false,
         false,
         async (l1Signer, _l2Signer, _l3Signer) => {
-          return new Erc20L1L3Bridger(l3Network).approveFeeToken({
+          return new Erc20L1L3Bridger(l3Network).approveGasToken({
             txRequest: {
               to: l1Token.address,
               value: amount,
@@ -755,7 +755,7 @@ describe('L1 to L3 Bridging', () => {
         l1Signer,
       })
 
-      assert(depositTxRequest.feeTokenAmount.eq(0))
+      assert(depositTxRequest.gasTokenAmount.eq(0))
 
       const depositTx = await l1l3Bridger.deposit({
         l1Signer,
@@ -820,17 +820,17 @@ describe('L1 to L3 Bridging', () => {
       })
 
       if (isL2NetworkWithCustomFeeToken()) {
-        assert(depositTxRequest.feeTokenAmount.gt('0'))
+        assert(depositTxRequest.gasTokenAmount.gt('0'))
         // approve fee token
         await (
-          await l1l3Bridger.approveFeeToken({
+          await l1l3Bridger.approveGasToken({
             l1Signer,
             l2Provider: l2Signer.provider!,
-            amount: depositTxRequest.feeTokenAmount,
+            amount: depositTxRequest.gasTokenAmount,
           })
         ).wait()
       } else {
-        assert(depositTxRequest.feeTokenAmount.eq('0'))
+        assert(depositTxRequest.gasTokenAmount.eq('0'))
       }
 
       const depositTx = await l1l3Bridger.deposit({
@@ -904,7 +904,7 @@ describe('L1 to L3 Bridging', () => {
 
       // approve weth
       await (
-        await weth.approve(l1l3Bridger.teleporterAddresses.l1Teleporter, amount)
+        await weth.approve(l1l3Bridger.teleporter.l1Teleporter, amount)
       ).wait()
 
       const depositParams: Erc20DepositRequestParams = {
