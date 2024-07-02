@@ -484,16 +484,6 @@ export function registerCustomArbitrumNetwork(
  * @see {@link https://github.com/OffchainLabs/nitro}
  */
 export const addDefaultLocalNetwork = (): ArbitrumNetwork => {
-  registerCustomArbitrumNetwork({
-    chainId: 1337,
-    name: 'Mainnet Sepolia',
-    parentChainId: 1,
-    tokenBridge: mainnetTokenBridge,
-    ethBridge: mainnetETHBridge,
-    confirmPeriodBlocks: 45818,
-    isCustom: false,
-  })
-
   const defaultLocalL2Network: ArbitrumNetwork = {
     chainId: 412346,
     confirmPeriodBlocks: 20,

@@ -26,7 +26,10 @@ import {
   itOnlyWhenCustomGasToken,
   itOnlyWhenEth,
 } from './custom-fee-token/mochaExtensions'
-import { assertArbitrumNetworkHasTokenBridge } from '../../src/lib/dataEntities/networks'
+import {
+  assertArbitrumNetworkHasTokenBridge,
+  registerCustomArbitrumNetwork,
+} from '../../src/lib/dataEntities/networks'
 
 async function expectPromiseToReject(
   promise: Promise<any>,
@@ -551,6 +554,16 @@ describe('L1 to L3 Bridging', () => {
     })
 
     it('functions should be guarded by check*Network', async () => {
+      registerCustomArbitrumNetwork({
+        chainId: 1337,
+        name: 'Mainnet Sepolia',
+        parentChainId: 1,
+        tokenBridge: mainnetTokenBridge,
+        ethBridge: mainnetETHBridge,
+        confirmPeriodBlocks: 45818,
+        isCustom: false,
+      })
+
       // l1FeeTokenAddress
       if (isArbitrumNetworkWithCustomFeeToken()) {
         await checkNetworkGuards(
