@@ -25,7 +25,7 @@ import { parseEther } from 'ethers/lib/utils'
 
 import { config, getSigner, testSetup } from '../../scripts/testSetup'
 
-import { Signer, Wallet } from 'ethers'
+import { Signer, Wallet, constants } from 'ethers'
 import {
   Erc20Bridger,
   L1ToL2MessageStatus,
@@ -37,10 +37,7 @@ import { ArbSdkError } from '../../src/lib/dataEntities/errors'
 import { ERC20 } from '../../src/lib/abi/ERC20'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
-import {
-  getNativeTokenDecimals,
-  scaleToNativeDecimals,
-} from '../../src/lib/utils/lib'
+import { scaleToNativeDecimals } from '../../src/lib/utils/lib'
 
 const preFundAmount = parseEther('0.1')
 
@@ -483,13 +480,15 @@ export const skipIfMainnet = (() => {
   }
 })()
 
-export const skipIfNon18Decimals = (() => {
+export const skipIfCustomGasToken = (() => {
   return async (testContext: Mocha.Context) => {
-    const { l1Provider, l2Network } = await testSetup()
-    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+    const { l2Network } = await testSetup()
 
-    if (decimals && Number(decimals) !== 18) {
-      console.warn('Skip for non 18 decimals')
+    if (
+      l2Network.nativeToken &&
+      l2Network.nativeToken !== constants.AddressZero
+    ) {
+      console.warn('Skip for custom gas token chain')
       testContext.skip()
     }
   }

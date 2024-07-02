@@ -29,7 +29,7 @@ import {
   mineUntilStop,
   prettyLog,
   skipIfMainnet,
-  skipIfNon18Decimals,
+  skipIfCustomGasToken,
 } from './testHelpers'
 import { L2ToL1Message } from '../../src/lib/message/L2ToL1Message'
 import { L2ToL1MessageStatus } from '../../src/lib/dataEntities/message'
@@ -46,7 +46,7 @@ dotenv.config()
 describe('Ether', async () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
-    await skipIfNon18Decimals(this)
+    await skipIfCustomGasToken(this)
   })
 
   it('transfers ether on l2', async () => {
