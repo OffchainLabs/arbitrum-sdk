@@ -52,6 +52,10 @@ export interface ArbitrumNetwork {
    */
   tokenBridge?: TokenBridge
   /**
+   * The teleporter contracts.
+   */
+  teleporter?: Teleporter
+  /**
    * The time allowed for validators to dispute or challenge state assertions. Measured in L1 blocks.
    */
   confirmPeriodBlocks: number
@@ -75,6 +79,11 @@ export interface ArbitrumNetwork {
    * the legacy challenge protocol is deprecated
    */
   isBold?: boolean
+}
+
+export interface Teleporter {
+  l1Teleporter: string
+  l2ForwarderFactory: string
 }
 
 /**
@@ -186,6 +195,15 @@ const mainnetETHBridge: EthBridge = {
  * Storage for all networks, either L1, L2 or L3.
  */
 export const networks: Networks = {
+  1337: {
+    chainId: 1337,
+    name: 'Mainnet Sepolia',
+    parentChainId: 1,
+    tokenBridge: mainnetTokenBridge,
+    ethBridge: mainnetETHBridge,
+    confirmPeriodBlocks: 45818,
+    isCustom: false,
+  },
   42161: {
     chainId: 42161,
     name: 'Arbitrum One',
@@ -232,15 +250,6 @@ export const networks: Networks = {
       l1Teleporter: '0xCBd9c6e310D6AaDeF9F025f716284162F0158992',
       l2ForwarderFactory: '0x791d2AbC6c3A459E13B9AdF54Fb5e97B7Af38f87',
     },
-    nitroGenesisBlock: 0,
-    nitroGenesisL1Block: 0,
-    /**
-     * Finalisation on mainnet can be up to 2 epochs = 64 blocks on mainnet
-     * We add 10 minutes for the system to create and redeem the ticket, plus some extra buffer of time
-     * (Total timeout: 30 minutes)
-     */
-    depositTimeout: 1800000,
-    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   421614: {
     chainId: 421614,
@@ -305,10 +314,6 @@ export const networks: Networks = {
       l1Teleporter: '0x9E86BbF020594D7FFe05bF32EEDE5b973579A968',
       l2ForwarderFactory: '0x88feBaFBb4E36A4E7E8874E4c9Fd73A9D59C2E7c',
     },
-    nitroGenesisBlock: 0,
-    nitroGenesisL1Block: 0,
-    depositTimeout: 1800000,
-    blockTime: ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
   },
   13331371: {
     chainId: 13331371,
