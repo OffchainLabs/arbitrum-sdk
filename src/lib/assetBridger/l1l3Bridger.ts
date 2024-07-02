@@ -19,7 +19,7 @@ import { Address } from '../dataEntities/address'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
   ArbitrumNetwork,
-  TeleporterAddresses,
+  Teleporter,
   assertArbitrumNetworkHasTokenBridge,
   networks,
 } from '../dataEntities/networks'
@@ -375,7 +375,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   /**
    * Addresses of teleporter contracts on L2
    */
-  public readonly teleporterAddresses: TeleporterAddresses
+  public readonly teleporter: Teleporter
 
   /**
    * Default gas limit for L2ForwarderFactory.callForwarder of 1,000,000
@@ -412,7 +412,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   public constructor(l3Network: ArbitrumNetwork) {
     super(l3Network)
 
-    if (!this.l2Network.teleporterAddresses) {
+    if (!this.l2Network.teleporter) {
       throw new ArbSdkError(
         `L2 network ${this.l2Network.name} does not have teleporter contracts`
       )
@@ -425,7 +425,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       this.l2FeeTokenAddress = this.l3Network.nativeToken
     }
 
-    this.teleporterAddresses = this.l2Network.teleporterAddresses
+    this.teleporter = this.l2Network.teleporter
   }
 
   /**
@@ -624,9 +624,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
     let predictor
     if (chainId === this.l1Network.chainId) {
-      predictor = this.teleporterAddresses.l1Teleporter
+      predictor = this.teleporter.l1Teleporter
     } else if (chainId === this.l2Network.chainId) {
-      predictor = this.teleporterAddresses.l2ForwarderFactory
+      predictor = this.teleporter.l2ForwarderFactory
     } else {
       throw new ArbSdkError(`Unknown chain id: ${chainId}`)
     }
@@ -646,7 +646,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   ): Promise<PickedTransactionRequest> {
     const iface = IERC20__factory.createInterface()
     const data = iface.encodeFunctionData('approve', [
-      this.teleporterAddresses.l1Teleporter,
+      this.teleporter.l1Teleporter,
       params.amount || ethers.constants.MaxUint256,
     ])
     return {
@@ -801,7 +801,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
     return {
       txRequest: {
-        to: this.teleporterAddresses.l1Teleporter,
+        to: this.teleporter.l1Teleporter,
         data,
         value: costs.ethAmount,
       },
@@ -1044,7 +1044,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       parentGasPrice: params.l1GasPrice,
       parentErc20Address: params.l1Token,
       parentGatewayAddress,
-      from: this.teleporterAddresses.l1Teleporter,
+      from: this.teleporter.l1Teleporter,
       to: params.l2ForwarderAddress,
       amount: BigNumber.from(params.amount),
       isWeth:
@@ -1081,7 +1081,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       parentGasPrice: params.l1GasPrice,
       parentErc20Address: params.l3FeeTokenL1Addr,
       parentGatewayAddress,
-      from: this.teleporterAddresses.l1Teleporter,
+      from: this.teleporter.l1Teleporter,
       to: params.l2ForwarderAddress,
       amount: params.feeTokenAmount,
       isWeth:
@@ -1351,7 +1351,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     }
 
     const costs = await IL1Teleporter__factory.connect(
-      this.teleporterAddresses.l1Teleporter,
+      this.teleporter.l1Teleporter,
       l1Provider
     ).determineTypeAndFees(teleportParams)
 

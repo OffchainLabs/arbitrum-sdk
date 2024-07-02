@@ -342,7 +342,7 @@ describe('L1 to L3 Bridging', () => {
       const l2ForwarderFactory = await l2ContractsDeployer.factory()
 
       // set the teleporter on the l2Network
-      l2Network.teleporterAddresses = {
+      l2Network.teleporter = {
         l1Teleporter: l1Teleporter.address,
         l2ForwarderFactory,
       }
@@ -544,7 +544,7 @@ describe('L1 to L3 Bridging', () => {
         (
           await l1Token.allowance(
             await l1Signer.getAddress(),
-            l1l3Bridger.teleporterAddresses.l1Teleporter
+            l1l3Bridger.teleporter.l1Teleporter
           )
         ).eq(ethers.constants.MaxUint256)
       )
@@ -914,7 +914,7 @@ describe('L1 to L3 Bridging', () => {
 
       // approve weth
       await (
-        await weth.approve(l1l3Bridger.teleporterAddresses.l1Teleporter, amount)
+        await weth.approve(l1l3Bridger.teleporter.l1Teleporter, amount)
       ).wait()
 
       const depositParams: Erc20DepositRequestParams = {
