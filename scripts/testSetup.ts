@@ -72,6 +72,7 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
 }
 
 export const testSetup = async (): Promise<{
+  parentChain: ArbitrumNetwork
   childChain: ArbitrumNetwork & {
     tokenBridge: TokenBridge
   }
@@ -96,16 +97,20 @@ export const testSetup = async (): Promise<{
   const parentSigner = seed.connect(ethProvider)
   const childSigner = seed.connect(arbProvider)
 
+  let parentChain: ArbitrumNetwork
   let setChildChain: ArbitrumNetwork
 
   try {
+    const l1Network = await getArbitrumNetwork(parentDeployer)
     const l2Network = await getArbitrumNetwork(childDeployer)
+    parentChain = l1Network
     setChildChain = l2Network
   } catch (err) {
     // the networks havent been added yet
     // check if theres an existing network available
-    const { l2Network: childChain } = getLocalNetworksFromFile()
+    const { l1Network, l2Network: childChain } = getLocalNetworksFromFile()
     setChildChain = registerCustomArbitrumNetwork(childChain)
+    parentChain = registerCustomArbitrumNetwork(l1Network)
   }
 
   assertArbitrumNetworkHasTokenBridge(setChildChain)
@@ -122,6 +127,7 @@ export const testSetup = async (): Promise<{
   }
 
   return {
+    parentChain,
     parentSigner,
     childSigner,
     parentProvider: ethProvider,
@@ -138,13 +144,15 @@ export const testSetup = async (): Promise<{
 
 export function getLocalNetworksFromFile(): {
   l2Network: ArbitrumNetwork
+  l1Network: ArbitrumNetwork
 } {
   const pathToLocalNetworkFile = path.join(__dirname, '..', 'localNetwork.json')
   if (!fs.existsSync(pathToLocalNetworkFile)) {
     throw new ArbSdkError('localNetwork.json not found, must gen:network first')
   }
   const localNetworksFile = fs.readFileSync(pathToLocalNetworkFile, 'utf8')
+  const localL1: ArbitrumNetwork = JSON.parse(localNetworksFile).l1Network
   const localL2: ArbitrumNetwork = JSON.parse(localNetworksFile).l2Network
 
-  return { l2Network: localL2 }
+  return { l2Network: localL2, l1Network: localL1 }
 }
