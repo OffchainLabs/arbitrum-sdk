@@ -20,10 +20,7 @@ import { Provider } from '@ethersproject/abstract-provider'
 
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
-import {
-  ARB1_NITRO_GENESIS_L2_BLOCK,
-  ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
-} from './constants'
+import { ARB1_NITRO_GENESIS_L2_BLOCK } from './constants'
 import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__factory'
 import { Prettify } from '../utils/types'
 
@@ -79,11 +76,6 @@ export interface ArbitrumNetwork {
    * the legacy challenge protocol is deprecated
    */
   isBold?: boolean
-}
-
-export interface Teleporter {
-  l1Teleporter: string
-  l2ForwarderFactory: string
 }
 
 /**
