@@ -49,6 +49,10 @@ export interface ArbitrumNetwork {
    */
   tokenBridge?: TokenBridge
   /**
+   * The teleporter contracts.
+   */
+  teleporter?: Teleporter
+  /**
    * The time allowed for validators to dispute or challenge state assertions. Measured in L1 blocks.
    */
   confirmPeriodBlocks: number
@@ -88,6 +92,11 @@ export type L2Network = Prettify<
     tokenBridge: L2NetworkTokenBridge
   }
 >
+
+export interface Teleporter {
+  l1Teleporter: string
+  l2ForwarderFactory: string
+}
 
 export interface TokenBridge {
   parentGatewayRouter: string
@@ -184,6 +193,10 @@ export const networks: Networks = {
     parentChainId: 1,
     tokenBridge: mainnetTokenBridge,
     ethBridge: mainnetETHBridge,
+    teleporter: {
+      l1Teleporter: '0xCBd9c6e310D6AaDeF9F025f716284162F0158992',
+      l2ForwarderFactory: '0x791d2AbC6c3A459E13B9AdF54Fb5e97B7Af38f87',
+    },
     confirmPeriodBlocks: 45818,
     isCustom: false,
   },
@@ -215,6 +228,10 @@ export const networks: Networks = {
       childProxyAdmin: '0xada790b026097BfB36a5ed696859b97a96CEd92C',
       childWeth: '0x722E8BdD2ce80A4422E880164f2079488e115365',
       childWethGateway: '0x7626841cB6113412F9c88D3ADC720C9FAC88D9eD',
+    },
+    teleporter: {
+      l1Teleporter: '0xCBd9c6e310D6AaDeF9F025f716284162F0158992',
+      l2ForwarderFactory: '0x791d2AbC6c3A459E13B9AdF54Fb5e97B7Af38f87',
     },
   },
   421614: {
@@ -275,6 +292,10 @@ export const networks: Networks = {
       childProxyAdmin: '0xE914c0d417E8250d0237d2F4827ed3612e6A9C3B',
       childWeth: '0x61Dc4b961D2165623A25EB775260785fE78BD37C',
       childWethGateway: '0x7021B4Edd9f047772242fc948441d6e0b9121175',
+    },
+    teleporter: {
+      l1Teleporter: '0x9E86BbF020594D7FFe05bF32EEDE5b973579A968',
+      l2ForwarderFactory: '0x88feBaFBb4E36A4E7E8874E4c9Fd73A9D59C2E7c',
     },
   },
   13331371: {

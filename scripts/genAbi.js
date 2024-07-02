@@ -17,6 +17,9 @@ async function main() {
 
   const nitroPath = getPackagePath('@arbitrum/nitro-contracts')
   const tokenBridgePath = getPackagePath('@arbitrum/token-bridge-contracts')
+  const teleporterPath = getPackagePath(
+    '@offchainlabs/l1-l3-teleport-contracts'
+  )
 
   console.log('Compiling paths.')
 
@@ -38,11 +41,17 @@ async function main() {
   console.log('building @arbitrum/token-bridge-contracts')
   execSync(`${npmExec} run build`, { cwd: tokenBridgePath })
 
+  console.log('building @offchainlabs/l1-l3-teleport-contracts')
+  execSync(`${npmExec} run build`, {
+    cwd: teleporterPath,
+  })
+
   console.log('Done compiling')
 
   const nitroFiles = glob(cwd, [
     `${tokenBridgePath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
     `${nitroPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
+    `${teleporterPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
   ])
 
   // TODO: generate files into different subfolders (ie `/nitro/*`) to avoid overwrite of contracts with the same name
