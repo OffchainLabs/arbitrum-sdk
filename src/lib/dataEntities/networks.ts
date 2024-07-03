@@ -518,17 +518,6 @@ export const addDefaultLocalNetwork = (): ArbitrumNetwork => {
   return registerCustomArbitrumNetwork(defaultLocalL2Network)
 }
 
-export const registerMainnetNetwork = (): void => {
-  networks[1337] = {
-    chainId: 1337,
-    name: 'Mainnet Sepolia',
-    parentChainId: 1,
-    tokenBridge: mainnetTokenBridge,
-    ethBridge: mainnetETHBridge,
-    confirmPeriodBlocks: 45818,
-    isCustom: false,
-  }
-}
 /**
  * Creates a function that resets the networks index to default. Useful in development.
  */
