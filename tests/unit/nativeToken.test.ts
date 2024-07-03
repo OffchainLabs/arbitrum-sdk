@@ -13,7 +13,7 @@ describe('Native token', () => {
     return `incorrect scaling result for ${decimals} decimals`
   }
 
-  it('scales to native token decimals', async () => {
+  it('scales to native token decimals', () => {
     expect(
       scaleToNativeTokenDecimals({ amount: AMOUNT_TO_SCALE, decimals: 18 }).eq(
         BigNumber.from('1234567890000000000')
