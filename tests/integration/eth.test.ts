@@ -41,7 +41,7 @@ import { itOnlyWhenEth } from './custom-fee-token/mochaExtensions'
 import { L1TransactionReceipt } from '../../src'
 import {
   getNativeTokenDecimals,
-  scaleToNativeDecimals,
+  scaleToNativeTokenDecimals,
 } from '../../src/lib/utils/lib'
 
 dotenv.config()
@@ -57,7 +57,7 @@ describe('Ether', async () => {
 
     await fundL2(l2Signer)
     const randomAddress = Wallet.createRandom().address
-    const amountToSend = scaleToNativeDecimals({
+    const amountToSend = scaleToNativeTokenDecimals({
       amount: parseEther('0.000005'),
       decimals,
     })
@@ -117,7 +117,7 @@ describe('Ether', async () => {
     const initialInboxBalance = await l1Signer.provider!.getBalance(
       inboxAddress
     )
-    const ethToDeposit = scaleToNativeDecimals({
+    const ethToDeposit = scaleToNativeTokenDecimals({
       amount: parseEther('0.0002'),
       decimals,
     })
@@ -170,7 +170,7 @@ describe('Ether', async () => {
     const initialInboxBalance = await l1Signer.provider!.getBalance(
       inboxAddress
     )
-    const ethToDeposit = scaleToNativeDecimals({
+    const ethToDeposit = scaleToNativeTokenDecimals({
       amount: parseEther('0.0002'),
       decimals,
     })
@@ -239,7 +239,7 @@ describe('Ether', async () => {
     await fundL1(l1Signer)
     const destWallet = Wallet.createRandom()
 
-    const ethToDeposit = scaleToNativeDecimals({
+    const ethToDeposit = scaleToNativeTokenDecimals({
       amount: parseEther('0.0002'),
       decimals,
     })
@@ -401,7 +401,7 @@ describe('Ether', async () => {
         ).balanceOf(randomAddress)
       : await l1Signer.provider!.getBalance(randomAddress)
     expect(finalRandomBalance.toString(), 'L1 final balance').to.eq(
-      scaleToNativeDecimals({ amount: ethToWithdraw, decimals }).toString()
+      scaleToNativeTokenDecimals({ amount: ethToWithdraw, decimals }).toString()
     )
   })
 })

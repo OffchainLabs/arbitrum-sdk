@@ -15,7 +15,7 @@ import {
   getBaseFee,
   getNativeTokenDecimals,
   isDefined,
-  scaleToNativeDecimals,
+  scaleToNativeTokenDecimals,
 } from '../utils/lib'
 import { OmitTyped } from '../utils/types'
 import {
@@ -262,7 +262,7 @@ export class L1ToL2MessageGasEstimator {
 
     const deposit =
       options?.deposit?.base ||
-      scaleToNativeDecimals({
+      scaleToNativeTokenDecimals({
         amount: gasLimit
           .mul(maxFeePerGas)
           .add(maxSubmissionFee)

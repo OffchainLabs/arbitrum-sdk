@@ -10,7 +10,7 @@ import { Erc20Bridger, EthBridger } from '../../../src'
 import { ERC20__factory } from '../../../src/lib/abi/factories/ERC20__factory'
 import {
   getNativeTokenDecimals,
-  scaleToNativeDecimals,
+  scaleToNativeTokenDecimals,
 } from '../../../src/lib/utils/lib'
 
 // `config` isn't initialized yet, so we have to wrap these in functions
@@ -56,7 +56,7 @@ export async function fundL1CustomFeeToken(l1SignerOrAddress: Signer | string) {
 
   const tx = await tokenContract.transfer(
     address,
-    scaleToNativeDecimals({ amount: utils.parseEther('10'), decimals })
+    scaleToNativeTokenDecimals({ amount: utils.parseEther('10'), decimals })
   )
   await tx.wait()
 }

@@ -222,7 +222,7 @@ export async function getNativeTokenDecimals({
   }
 }
 
-export function scaleToNativeDecimals({
+export function scaleToNativeTokenDecimals({
   amount,
   decimals,
 }: {
