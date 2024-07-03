@@ -221,6 +221,10 @@ describe('L1 to L3 Bridging', () => {
       ethers.utils.hexlify(ethers.utils.randomBytes(32))
     )
 
+    const l1ChainId = await l1Signer.getChainId()
+    //@ts-expect-error - mock network for testing
+    networks[l1ChainId] = { chainId: l1ChainId, name: 'test' }
+
     // fund signers on L1 and L2
     await fundParentSigner(l1Signer, ethers.utils.parseEther('10'))
     await fundChildSigner(l2Signer, ethers.utils.parseEther('10'))
@@ -238,9 +242,6 @@ describe('L1 to L3 Bridging', () => {
 
   describe('EthL1L3Bridger', () => {
     itOnlyWhenEth('functions should be guarded by check*Network', async () => {
-      const l1ChainId = await l1Signer.getChainId()
-      //@ts-expect-error - mock network for testing
-      networks[l1ChainId] = { chainId: l1ChainId, name: 'test' }
       // getDepositRequest
       await checkNetworkGuards(
         true,
