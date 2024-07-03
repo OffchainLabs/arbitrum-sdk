@@ -263,6 +263,10 @@ export const networks: Networks = {
       childWeth: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73',
       childWethGateway: '0xCFB1f08A4852699a979909e22c30263ca249556D',
     },
+    teleporter: {
+      l1Teleporter: '0x9E86BbF020594D7FFe05bF32EEDE5b973579A968',
+      l2ForwarderFactory: '0x88feBaFBb4E36A4E7E8874E4c9Fd73A9D59C2E7c',
+    },
   },
   23011913: {
     chainId: 23011913,
