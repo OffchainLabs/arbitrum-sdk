@@ -26,7 +26,10 @@ import {
   itOnlyWhenCustomGasToken,
   itOnlyWhenEth,
 } from './custom-fee-token/mochaExtensions'
-import { assertArbitrumNetworkHasTokenBridge } from '../../src/lib/dataEntities/networks'
+import {
+  assertArbitrumNetworkHasTokenBridge,
+  networks,
+} from '../../src/lib/dataEntities/networks'
 
 async function expectPromiseToReject(
   promise: Promise<any>,
@@ -235,6 +238,9 @@ describe('L1 to L3 Bridging', () => {
 
   describe('EthL1L3Bridger', () => {
     itOnlyWhenEth('functions should be guarded by check*Network', async () => {
+      const l1ChainId = await l1Signer.getChainId()
+      //@ts-expect-error - mock network for testing
+      networks[l1ChainId] = { chainId: l1ChainId, name: 'test' }
       // getDepositRequest
       await checkNetworkGuards(
         true,
