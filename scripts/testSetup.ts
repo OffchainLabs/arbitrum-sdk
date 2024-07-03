@@ -28,6 +28,7 @@ import {
   registerCustomArbitrumNetwork,
   TokenBridge,
   assertArbitrumNetworkHasTokenBridge,
+  registerMainnetNetwork,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
@@ -87,6 +88,8 @@ export const testSetup = async (): Promise<{
   parentDeployer: Signer
   childDeployer: Signer
 }> => {
+  registerMainnetNetwork()
+
   const ethProvider = new JsonRpcProvider(config.ethUrl)
   const arbProvider = new JsonRpcProvider(config.arbUrl)
 

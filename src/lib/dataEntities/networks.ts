@@ -78,6 +78,11 @@ export interface ArbitrumNetwork {
   isBold?: boolean
 }
 
+export interface Teleporter {
+  l1Teleporter: string
+  l2ForwarderFactory: string
+}
+
 /**
  * This type is only here for when you want to achieve backwards compatibility between SDK v3 and v4.
  *
@@ -92,11 +97,6 @@ export type L2Network = Prettify<
     tokenBridge: L2NetworkTokenBridge
   }
 >
-
-export interface Teleporter {
-  l1Teleporter: string
-  l2ForwarderFactory: string
-}
 
 export interface TokenBridge {
   parentGatewayRouter: string
@@ -262,10 +262,6 @@ export const networks: Networks = {
       childProxyAdmin: '0x715D99480b77A8d9D603638e593a539E21345FdF',
       childWeth: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73',
       childWethGateway: '0xCFB1f08A4852699a979909e22c30263ca249556D',
-    },
-    teleporter: {
-      l1Teleporter: '0x9E86BbF020594D7FFe05bF32EEDE5b973579A968',
-      l2ForwarderFactory: '0x88feBaFBb4E36A4E7E8874E4c9Fd73A9D59C2E7c',
     },
   },
   23011913: {
@@ -522,6 +518,17 @@ export const addDefaultLocalNetwork = (): ArbitrumNetwork => {
   return registerCustomArbitrumNetwork(defaultLocalL2Network)
 }
 
+export const registerMainnetNetwork = (): void => {
+  networks[1337] = {
+    chainId: 1337,
+    name: 'Mainnet Sepolia',
+    parentChainId: 1,
+    tokenBridge: mainnetTokenBridge,
+    ethBridge: mainnetETHBridge,
+    confirmPeriodBlocks: 45818,
+    isCustom: false,
+  }
+}
 /**
  * Creates a function that resets the networks index to default. Useful in development.
  */
