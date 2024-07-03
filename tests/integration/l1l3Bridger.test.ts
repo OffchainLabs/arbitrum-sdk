@@ -26,10 +26,7 @@ import {
   itOnlyWhenCustomGasToken,
   itOnlyWhenEth,
 } from './custom-fee-token/mochaExtensions'
-import {
-  assertArbitrumNetworkHasTokenBridge,
-  registerCustomArbitrumNetwork,
-} from '../../src/lib/dataEntities/networks'
+import { assertArbitrumNetworkHasTokenBridge } from '../../src/lib/dataEntities/networks'
 
 async function expectPromiseToReject(
   promise: Promise<any>,
