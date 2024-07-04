@@ -70,7 +70,7 @@ export enum TeleportationType {
   /**
    * Teleporting a non-fee token to a custom fee L3
    */
-  NonFeeTokenToCustomFee,
+  NonGasTokenToCustomGas,
 }
 
 export type TxRequestParams = {
@@ -86,7 +86,7 @@ type RetryableGasValues = {
 
 export type DepositRequestResult = {
   txRequest: PickedTransactionRequest
-  feeTokenAmount: BigNumber
+  gasTokenAmount: BigNumber
 }
 
 export type TeleporterRetryableGasOverride = {
@@ -130,7 +130,7 @@ export type Erc20DepositRequestRetryableOverrides = {
   /**
    * L1 to L2 fee token bridge retryable gas override
    */
-  l1l2FeeTokenBridgeRetryableGas?: TeleporterRetryableGasOverride
+  l1l2GasTokenBridgeRetryableGas?: TeleporterRetryableGasOverride
   /**
    * L1 to L2 token bridge retryable gas override
    */
@@ -195,7 +195,7 @@ export type Erc20DepositStatus = {
   /**
    * L1 to L2 fee token bridge message
    */
-  l1l2FeeTokenBridgeRetryable: ParentToChildMessageReader | undefined
+  l1l2GasTokenBridgeRetryable: ParentToChildMessageReader | undefined
   /**
    * L2ForwarderFactory message
    */
@@ -382,13 +382,13 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    *
    * Measured Standard: 361746
    *
-   * Measured OnlyCustomFee: 220416
+   * Measured OnlyGasToken: 220416
    *
-   * Measured NonFeeTokenToCustomFee: 373449
+   * Measured NonGasTokenToCustomGas: 373449
    */
   public readonly l2ForwarderFactoryDefaultGasLimit = BigNumber.from(1_000_000)
 
-  public readonly skipL1FeeTokenMagic = ethers.utils.getAddress(
+  public readonly skipL1GasTokenMagic = ethers.utils.getAddress(
     ethers.utils.hexDataSlice(
       ethers.utils.keccak256(ethers.utils.toUtf8Bytes('SKIP_FEE_TOKEN')),
       0,
@@ -399,7 +399,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   /**
    * If the L3 network uses a custom (non-eth) fee token, this is the address of that token on L2
    */
-  public readonly l2FeeTokenAddress: string | undefined
+  public readonly l2GasTokenAddress: string | undefined
 
   protected readonly l2Erc20Bridger = new Erc20Bridger(this.l2Network)
   protected readonly l3Erc20Bridger = new Erc20Bridger(this.l3Network)
@@ -422,7 +422,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       this.l3Network.nativeToken &&
       this.l3Network.nativeToken !== ethers.constants.AddressZero
     ) {
-      this.l2FeeTokenAddress = this.l3Network.nativeToken
+      this.l2GasTokenAddress = this.l3Network.nativeToken
     }
 
     this.teleporter = this.l2Network.teleporter
@@ -437,7 +437,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l2Provider: Provider
   ): Promise<string> {
     // if the L3 network uses ETH for fees, early return zero
-    if (!this.l2FeeTokenAddress) throw new ArbSdkError('L3 uses ETH for gas')
+    if (!this.l2GasTokenAddress) throw new ArbSdkError('L3 uses ETH for gas')
 
     // if we've already fetched the L1 fee token address, early return it
     if (this._l1FeeTokenAddress) return this._l1FeeTokenAddress
@@ -449,7 +449,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
     try {
       l1FeeTokenAddress = await this.l2Erc20Bridger.getParentErc20Address(
-        this.l2FeeTokenAddress,
+        this.l2GasTokenAddress,
         l2Provider
       )
     } catch (e: any) {
@@ -482,7 +482,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     }
     if (
       (await ERC20__factory.connect(
-        this.l2FeeTokenAddress,
+        this.l2GasTokenAddress,
         l2Provider
       ).decimals()) !== 18
     ) {
@@ -497,7 +497,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       )
     }
 
-    if (await this.l2TokenIsDisabled(this.l2FeeTokenAddress, l2Provider)) {
+    if (await this.l2TokenIsDisabled(this.l2GasTokenAddress, l2Provider)) {
       throw new ArbSdkError(
         'L2 gas token is disabled on the L2 to L3 token bridge. Use skipGasToken when depositing'
       )
@@ -683,7 +683,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    * The tokens will be approved for L1Teleporter.
    * Will throw if the L3 network uses ETH for fees or the fee token doesn't exist on L1.
    */
-  public async getApproveFeeTokenRequest(params: {
+  public async getApproveGasTokenRequest(params: {
     l1Provider: Provider
     l2Provider: Provider
     amount?: BigNumber
@@ -702,7 +702,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    * The tokens will be approved for L1Teleporter.
    * Will throw if the L3 network uses ETH for fees or the fee token doesn't exist on L1.
    */
-  public async approveFeeToken(
+  public async approveGasToken(
     params:
       | {
           l1Signer: Signer
@@ -717,7 +717,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     const approveRequest =
       'txRequest' in params
         ? params.txRequest
-        : await this.getApproveFeeTokenRequest({
+        : await this.getApproveGasTokenRequest({
             l1Provider: params.l1Signer.provider!,
             l2Provider: params.l2Provider,
             amount: params.amount,
@@ -757,12 +757,12 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
     let l1FeeToken
     // if the l3 uses eth for fees, set to zero
-    if (!this.l2FeeTokenAddress) {
+    if (!this.l2GasTokenAddress) {
       l1FeeToken = ethers.constants.AddressZero
     }
     // if the l3 uses custom fee but the user opts to skip payment, set to magic address
     else if (params.skipGasToken) {
-      l1FeeToken = this.skipL1FeeTokenMagic
+      l1FeeToken = this.skipL1GasTokenMagic
     }
     // if the l3 uses custom fee and the user opts to not skip, try to get the token
     // will throw if the token doesn't exist on L1 or is unsupported
@@ -805,7 +805,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         data,
         value: costs.ethAmount,
       },
-      feeTokenAmount: costs.feeTokenAmount,
+      gasTokenAmount: costs.feeTokenAmount,
     }
   }
 
@@ -970,7 +970,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     ) {
       return TeleportationType.OnlyGasToken
     } else {
-      return TeleportationType.NonFeeTokenToCustomFee
+      return TeleportationType.NonGasTokenToCustomGas
     }
   }
 
@@ -1034,6 +1034,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l2Provider: Provider
   }): Promise<RetryableGasValues> {
     assertArbitrumNetworkHasTokenBridge(this.l2Network)
+
     const parentGatewayAddress = await this.getL1L2GatewayAddress(
       params.l1Token,
       params.l1Provider
@@ -1065,7 +1066,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l2Provider: Provider
   }): Promise<RetryableGasValues> {
     assertArbitrumNetworkHasTokenBridge(this.l2Network)
-    if (params.l3FeeTokenL1Addr === this.skipL1FeeTokenMagic) {
+
+    if (params.l3FeeTokenL1Addr === this.skipL1GasTokenMagic) {
       return {
         gasLimit: BigNumber.from(0),
         maxSubmissionFee: BigNumber.from(0),
@@ -1128,12 +1130,13 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l2ForwarderAddress: string
   }): Promise<RetryableGasValues> {
     assertArbitrumNetworkHasTokenBridge(this.l3Network)
+
     const teleportationType = this.teleportationType(
       params.partialTeleportParams
     )
     if (
-      teleportationType === TeleportationType.NonFeeTokenToCustomFee &&
-      params.partialTeleportParams.l3FeeTokenL1Addr === this.skipL1FeeTokenMagic
+      teleportationType === TeleportationType.NonGasTokenToCustomGas &&
+      params.partialTeleportParams.l3FeeTokenL1Addr === this.skipL1GasTokenMagic
     ) {
       // we aren't paying for the retryable to L3
       return {
@@ -1259,7 +1262,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       () => l2Provider.getGasPrice()
     )
     const l3GasPrice =
-      partialTeleportParams.l3FeeTokenL1Addr === this.skipL1FeeTokenMagic
+      partialTeleportParams.l3FeeTokenL1Addr === this.skipL1GasTokenMagic
         ? BigNumber.from(0)
         : await applyGasPercentIncrease(retryableOverrides.l3GasPrice, () =>
             l3Provider.getGasPrice()
@@ -1304,10 +1307,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     let l1l2FeeTokenBridgeGasValues: RetryableGasValues
     if (
       this.teleportationType(partialTeleportParams) ===
-      TeleportationType.NonFeeTokenToCustomFee
+      TeleportationType.NonGasTokenToCustomGas
     ) {
       l1l2FeeTokenBridgeGasValues = await getRetryableGasValuesWithOverrides(
-        retryableOverrides.l1l2FeeTokenBridgeRetryableGas,
+        retryableOverrides.l1l2GasTokenBridgeRetryableGas,
         () =>
           this._getL1L2FeeTokenBridgeGasEstimates({
             l1GasPrice,
@@ -1419,7 +1422,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
 
     let partialResult: {
       l1l2TokenBridgeRetryable: ParentToChildMessageReader
-      l1l2FeeTokenBridgeRetryable: ParentToChildMessageReader | undefined
+      l1l2GasTokenBridgeRetryable: ParentToChildMessageReader | undefined
       l2ForwarderFactoryRetryable: ParentToChildMessageReader
     }
 
@@ -1427,11 +1430,11 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       partialResult = {
         l1l2TokenBridgeRetryable: l1l2Messages[0],
         l2ForwarderFactoryRetryable: l1l2Messages[1],
-        l1l2FeeTokenBridgeRetryable: undefined,
+        l1l2GasTokenBridgeRetryable: undefined,
       }
     } else {
       partialResult = {
-        l1l2FeeTokenBridgeRetryable: l1l2Messages[0],
+        l1l2GasTokenBridgeRetryable: l1l2Messages[0],
         l1l2TokenBridgeRetryable: l1l2Messages[1],
         l2ForwarderFactoryRetryable: l1l2Messages[2],
       }
