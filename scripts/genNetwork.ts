@@ -74,7 +74,7 @@ async function main() {
   let output = getLocalNetworksFromContainer('l1l2')
 
   if (isTestingOrbitChains) {
-    const { l2Network: l3Network } = getLocalNetworksFromContainer('l2l3')
+    const { l3Network } = getLocalNetworksFromContainer('l2l3')
     const { patchedL2Network, patchedL3Network } = await patchNetworks(
       output.l2Network,
       l3Network,
@@ -82,8 +82,8 @@ async function main() {
     )
 
     output = {
-      l1Network: patchedL2Network,
-      l2Network: patchedL3Network,
+      l2Network: patchedL2Network,
+      l3Network: patchedL3Network,
     }
   } else {
     const { patchedL2Network } = await patchNetworks(

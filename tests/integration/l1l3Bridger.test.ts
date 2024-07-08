@@ -1,4 +1,8 @@
-import { getSigner, testSetup } from '../../scripts/testSetup'
+import {
+  getLocalNetworksFromFile,
+  getSigner,
+  testSetup,
+} from '../../scripts/testSetup'
 import {
   Address,
   Erc20Bridger,
@@ -28,7 +32,9 @@ import {
 } from './custom-fee-token/mochaExtensions'
 import {
   assertArbitrumNetworkHasTokenBridge,
+  getArbitrumNetwork,
   networks,
+  registerCustomArbitrumNetwork,
 } from '../../src/lib/dataEntities/networks'
 
 async function expectPromiseToReject(
@@ -204,7 +210,13 @@ describe('L1 to L3 Bridging', () => {
 
     const setup = await testSetup()
 
-    l2Network = setup.parentChain
+    try {
+      l2Network = await getArbitrumNetwork(setup.parentDeployer)
+    } catch (err) {
+      const { l2Network: childChain } = getLocalNetworksFromFile()
+      l2Network = registerCustomArbitrumNetwork(childChain)
+    }
+
     l3Network = setup.childChain
 
     l1Signer = getSigner(
