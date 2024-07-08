@@ -196,6 +196,7 @@ jobs:
         uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
           # nitro-testnode-ref: ${{ (matrix.decimals-6 || matrix.decimals-24) && 'non18-decimal-token' }}
+          nitro-testnode-ref: non18-decimal-token
           nitro-contracts-branch: e2e-decimals
           token-bridge-branch: non-18-decimals
           l3-node: ${{ matrix.decimals-6 == '1' || matrix.decimals-24 == '1' || matrix.orbit-test == '1' }}
