@@ -35,7 +35,7 @@ export async function testSetup() {
 export async function fundParentCustomFeeToken(
   parentSignerOrAddress: Signer | string
 ) {
-  const nativeToken = localNetworks().l2Network.nativeToken
+  const nativeToken = localNetworks().l3Network?.nativeToken
   const address =
     typeof parentSignerOrAddress === 'string'
       ? parentSignerOrAddress
@@ -69,7 +69,7 @@ export async function getParentCustomFeeTokenAllowance(
   owner: string,
   spender: string
 ) {
-  const nativeToken = localNetworks().l2Network.nativeToken
+  const nativeToken = localNetworks().l3Network?.nativeToken
   const nativeTokenContract = ERC20__factory.connect(
     nativeToken!,
     ethProvider()
