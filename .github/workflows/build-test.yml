@@ -160,6 +160,12 @@ jobs:
           - orbit-test: '1'
             decimals: 24
             node-version: 20
+          - orbit-test: '0'
+            node-version: 16
+          - orbit-test: '0'
+            node-version: 18
+          - orbit-test: '0'
+            node-version: 20
 
     needs: install
     env:
