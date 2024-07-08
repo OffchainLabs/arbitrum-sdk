@@ -74,6 +74,7 @@ async function main() {
   let output = getLocalNetworksFromContainer('l1l2')
 
   if (isTestingOrbitChains) {
+    // When running with L3 active, the container calls the L3 network L2 so we rename it here
     const { l2Network: l3Network } = getLocalNetworksFromContainer('l2l3')
     const { patchedL2Network, patchedL3Network } = await patchNetworks(
       output.l2Network,

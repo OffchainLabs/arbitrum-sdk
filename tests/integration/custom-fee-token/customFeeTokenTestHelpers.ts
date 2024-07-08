@@ -15,7 +15,7 @@ const arbProvider = () => new StaticJsonRpcProvider(config.arbUrl)
 const localNetworks = () => getLocalNetworksFromFile()
 
 export function isArbitrumNetworkWithCustomFeeToken(): boolean {
-  const nt = localNetworks().l2Network.nativeToken
+  const nt = localNetworks().l3Network?.nativeToken
   return typeof nt !== 'undefined' && nt !== ethers.constants.AddressZero
 }
 
