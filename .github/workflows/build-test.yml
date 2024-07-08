@@ -133,38 +133,53 @@ jobs:
         orbit-test: [0, 1]
         decimals: [6, 18, 24]
         include:
-          - orbit-test: '1'
-            decimals: 6
-            node-version: 16
-          - orbit-test: '1'
-            decimals: 18
-            node-version: 16
-          - orbit-test: '1'
-            decimals: 24
-            node-version: 16
-          - orbit-test: '1'
-            decimals: 6
-            node-version: 18
-          - orbit-test: '1'
-            decimals: 18
-            node-version: 18
-          - orbit-test: '1'
-            decimals: 24
-            node-version: 18
-          - orbit-test: '1'
-            decimals: 6
-            node-version: 20
-          - orbit-test: '1'
-            decimals: 18
-            node-version: 20
-          - orbit-test: '1'
-            decimals: 24
-            node-version: 20
+          # Tests to run when orbit-test is 0 for all node versions
           - orbit-test: '0'
             node-version: 16
           - orbit-test: '0'
             node-version: 18
           - orbit-test: '0'
+            node-version: 20
+
+          # Tests to run for L3 without custom gas fee token for all node versions
+          - orbit-test: '1'
+            node-version: 16
+          - orbit-test: '1'
+            node-version: 18
+          - orbit-test: '1'
+            node-version: 20
+
+          # Tests to run for L3 with decimals 6 for all node versions
+          - orbit-test: '1'
+            decimals: 6
+            node-version: 16
+          - orbit-test: '1'
+            decimals: 6
+            node-version: 18
+          - orbit-test: '1'
+            decimals: 6
+            node-version: 20
+
+          # Tests to run for L3 with decimals 18 for all node versions
+          - orbit-test: '1'
+            decimals: 18
+            node-version: 16
+          - orbit-test: '1'
+            decimals: 18
+            node-version: 18
+          - orbit-test: '1'
+            decimals: 18
+            node-version: 20
+
+          # Tests to run for L3 with decimals 24 for all node versions
+          - orbit-test: '1'
+            decimals: 24
+            node-version: 16
+          - orbit-test: '1'
+            decimals: 24
+            node-version: 18
+          - orbit-test: '1'
+            decimals: 24
             node-version: 20
 
     needs: install
