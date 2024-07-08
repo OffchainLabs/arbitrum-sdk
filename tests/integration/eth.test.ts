@@ -52,15 +52,11 @@ describe('Ether', async () => {
   })
 
   it('transfers ether on l2', async () => {
-    const { l1Provider, l2Network, l2Signer } = await testSetup()
-    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+    const { l2Signer } = await testSetup()
 
     await fundL2(l2Signer)
     const randomAddress = Wallet.createRandom().address
-    const amountToSend = scaleToNativeTokenDecimals({
-      amount: parseEther('0.000005'),
-      decimals,
-    })
+    const amountToSend = parseEther('0.000005')
 
     const balanceBefore = await l2Signer.provider!.getBalance(
       await l2Signer.getAddress()
