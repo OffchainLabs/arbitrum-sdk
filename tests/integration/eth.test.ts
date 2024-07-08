@@ -155,10 +155,14 @@ describe('Ether', async () => {
     )
   })
 
-  it('deposits ether to a specific L2 address', async () => {
+  it('deposits ether to a specific L2 address', async function () {
     const { ethBridger, l1Signer, l1Provider, l2Network, l2Signer } =
       await testSetup()
     const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+
+    if (decimals !== 18) {
+      this.skip()
+    }
 
     await fundL1(l1Signer)
     const inboxAddress = ethBridger.l2Network.ethBridge.inbox
@@ -229,10 +233,14 @@ describe('Ether', async () => {
     )
   })
 
-  it('deposit ether to a specific L2 address with manual redeem', async () => {
+  it('deposit ether to a specific L2 address with manual redeem', async function () {
     const { ethBridger, l1Signer, l1Provider, l2Network, l2Signer } =
       await testSetup()
     const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+
+    if (decimals !== 18) {
+      this.skip()
+    }
 
     await fundL1(l1Signer)
     const destWallet = Wallet.createRandom()
