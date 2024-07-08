@@ -198,7 +198,7 @@ describe('Ether', async () => {
     expect(
       l1ToL2Message.messageData.l2CallValue.toString(),
       'message inputs value error'
-    ).to.eq(parseEther(amount).toString())
+    ).to.eq(ethToDeposit.toString())
 
     const retryableTicketResult = await l1ToL2Message.waitForStatus()
     expect(retryableTicketResult.status).to.eq(
