@@ -472,12 +472,12 @@ describe('L1 to L3 Bridging', () => {
       )
     })
 
-    it('getL2ERC20Address', async () => {
+    it('getL2Erc20Address', async () => {
       assertArbitrumNetworkHasTokenBridge(l2Network)
       // use weth to test, since we already know its addresses
       const parentWeth = l2Network.tokenBridge.parentWeth
       const childWeth = l2Network.tokenBridge.childWeth
-      const ans = await l1l3Bridger.getL2ERC20Address(
+      const ans = await l1l3Bridger.getL2Erc20Address(
         parentWeth,
         l1Signer.provider!
       )
@@ -506,14 +506,14 @@ describe('L1 to L3 Bridging', () => {
       expect(defaultAns).to.eq(l1l2Gateway)
     })
 
-    itOnlyWhenEth('getL3ERC20Address', async () => {
+    itOnlyWhenEth('getL3Erc20Address', async () => {
       assertArbitrumNetworkHasTokenBridge(l2Network)
       assertArbitrumNetworkHasTokenBridge(l3Network)
 
       // use weth to test, since we already know its addresses
       const parentWeth = l2Network.tokenBridge.parentWeth
       const l3Weth = l3Network.tokenBridge.childWeth
-      const ans = await l1l3Bridger.getL3ERC20Address(
+      const ans = await l1l3Bridger.getL3Erc20Address(
         parentWeth,
         l1Signer.provider!,
         l2Signer.provider!
@@ -582,26 +582,26 @@ describe('L1 to L3 Bridging', () => {
         )
       }
 
-      // getL2ERC20Address
+      // getL2Erc20Address
       await checkNetworkGuards(
         true,
         false,
         false,
         async (l1Signer, _l2Signer, _l3Signer) => {
-          return new Erc20L1L3Bridger(l3Network).getL2ERC20Address(
+          return new Erc20L1L3Bridger(l3Network).getL2Erc20Address(
             l1Token.address,
             l1Signer.provider!
           )
         }
       )
 
-      // getL3ERC20Address
+      // getL3Erc20Address
       await checkNetworkGuards(
         true,
         true,
         false,
         async (l1Signer, l2Signer, _l3Signer) => {
-          return new Erc20L1L3Bridger(l3Network).getL3ERC20Address(
+          return new Erc20L1L3Bridger(l3Network).getL3Erc20Address(
             l1Token.address,
             l1Signer.provider!,
             l2Signer.provider!
@@ -800,7 +800,7 @@ describe('L1 to L3 Bridging', () => {
 
         return (
           (await status.l2l3TokenBridgeRetryable?.status()) ===
-          ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+          ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
         )
       }, 1000)
 
@@ -824,7 +824,7 @@ describe('L1 to L3 Bridging', () => {
       await (await messageWriter.redeem({ gasLimit: 20_000_000 })).wait()
 
       // make sure the tokens have landed in the right place
-      const l3TokenAddr = await l1l3Bridger.getL3ERC20Address(
+      const l3TokenAddr = await l1l3Bridger.getL3Erc20Address(
         l1Token.address,
         l1Signer.provider!,
         l2Signer.provider!
@@ -877,7 +877,7 @@ describe('L1 to L3 Bridging', () => {
       }, 1000)
 
       // make sure the tokens have landed in the right place
-      const l3TokenAddr = await l1l3Bridger.getL3ERC20Address(
+      const l3TokenAddr = await l1l3Bridger.getL3Erc20Address(
         depositParams.erc20L1Address,
         l1Signer.provider!,
         l2Signer.provider!

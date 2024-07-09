@@ -150,7 +150,7 @@ describe('standard ERC20', () => {
     expect(retryRec.status, 'tx didnt fail').to.eq(expectedStatus)
     expect(await message.status(), 'message status').to.eq(
       expectedStatus === 0
-        ? ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+        ? ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
         : ParentToChildMessageStatus.REDEEMED
     )
   }
@@ -162,7 +162,7 @@ describe('standard ERC20', () => {
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
-      expectedStatus: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
+      expectedStatus: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
         gasLimit: { base: BigNumber.from(0) },
@@ -180,7 +180,7 @@ describe('standard ERC20', () => {
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
-      expectedStatus: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
+      expectedStatus: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
         gasLimit: { base: BigNumber.from(5) },
@@ -200,7 +200,7 @@ describe('standard ERC20', () => {
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
-      expectedStatus: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
+      expectedStatus: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
         gasLimit: { base: BigNumber.from(21000) },
@@ -232,7 +232,7 @@ describe('standard ERC20', () => {
       erc20Bridger: testState.erc20Bridger,
       parentSigner: testState.parentSigner,
       childSigner: testState.childSigner,
-      expectedStatus: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
+      expectedStatus: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD,
       expectedGatewayType: GatewayType.STANDARD,
       retryableOverrides: {
         gasLimit: { base: BigNumber.from(5) },

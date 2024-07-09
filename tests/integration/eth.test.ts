@@ -270,7 +270,7 @@ describe('Ether', async () => {
       await parentToChildMessageReader.waitForStatus()
 
     expect(retryableTicketResult.status).to.eq(
-      ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
+      ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD,
       'unexpected status, expected auto-redeem to fail'
     )
 
