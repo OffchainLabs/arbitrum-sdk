@@ -2,8 +2,8 @@ import { BigNumber } from 'ethers'
 import { expect } from 'chai'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import {
-  getBlockRangesForL1Block as getBlockRangesForParentBlock,
-  getFirstBlockForL1Block as getFirstBlockForParentBlock,
+  getBlockRangesForL1Block,
+  getFirstBlockForL1Block,
 } from '../../src/lib/utils/lib'
 import { ArbitrumProvider } from '../../src/lib/utils/arbProvider'
 import { ArbBlock } from '../../src/lib/dataEntities/rpc'
@@ -74,22 +74,22 @@ describe('Child blocks lookup for a Parent block', () => {
   }
 
   it('successfully searches for an Child block range', async function () {
-    const childBlocks = await getBlockRangesForParentBlock({
-      provider: arbProvider,
+    const childBlocks = await getBlockRangesForL1Block({
+      arbitrumProvider: arbProvider,
       forL1Block: 17926532,
       // Expected result: 121907680. Narrows down the range to speed up the search.
-      minL2Block: 121800000,
-      maxL2Block: 122000000,
+      minArbitrumBlock: 121800000,
+      maxArbitrumBlock: 122000000,
     })
     await validateChildBlocks({ childBlocks, childBlocksCount: 2 })
   })
 
   it('fails to search for an Child block range', async function () {
-    const childBlocks = await getBlockRangesForParentBlock({
-      provider: arbProvider,
+    const childBlocks = await getBlockRangesForL1Block({
+      arbitrumProvider: arbProvider,
       forL1Block: 17926533,
-      minL2Block: 121800000,
-      maxL2Block: 122000000,
+      minArbitrumBlock: 121800000,
+      maxArbitrumBlock: 122000000,
     })
     await validateChildBlocks({
       childBlocks,
@@ -100,12 +100,12 @@ describe('Child blocks lookup for a Parent block', () => {
 
   it('successfully searches for the first Child block', async function () {
     const childBlocks = [
-      await getFirstBlockForParentBlock({
-        provider: arbProvider,
+      await getFirstBlockForL1Block({
+        arbitrumProvider: arbProvider,
         forL1Block: 17926532,
         // Expected result: 121907680. Narrows down the range to speed up the search.
-        minL2Block: 121800000,
-        maxL2Block: 122000000,
+        minArbitrumBlock: 121800000,
+        maxArbitrumBlock: 122000000,
       }),
     ]
     await validateChildBlocks({ childBlocks, childBlocksCount: 1 })
@@ -113,12 +113,12 @@ describe('Child blocks lookup for a Parent block', () => {
 
   it('fails to search for the first Child block, while not using `allowGreater` flag', async function () {
     const childBlocks = [
-      await getFirstBlockForParentBlock({
-        provider: arbProvider,
+      await getFirstBlockForL1Block({
+        arbitrumProvider: arbProvider,
         forL1Block: 17926533,
         allowGreater: false,
-        minL2Block: 121800000,
-        maxL2Block: 122000000,
+        minArbitrumBlock: 121800000,
+        maxArbitrumBlock: 122000000,
       }),
     ]
     await validateChildBlocks({
@@ -130,13 +130,13 @@ describe('Child blocks lookup for a Parent block', () => {
 
   it('successfully searches for the first Child block, while using `allowGreater` flag', async function () {
     const childBlocks = [
-      await getFirstBlockForParentBlock({
-        provider: arbProvider,
+      await getFirstBlockForL1Block({
+        arbitrumProvider: arbProvider,
         forL1Block: 17926533,
         allowGreater: true,
         // Expected result: 121907740. Narrows down the range to speed up the search.
-        minL2Block: 121800000,
-        maxL2Block: 122000000,
+        minArbitrumBlock: 121800000,
+        maxArbitrumBlock: 122000000,
       }),
     ]
     await validateChildBlocks({ childBlocks, childBlocksCount: 1 })
