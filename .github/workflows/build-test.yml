@@ -193,9 +193,9 @@ jobs:
       - name: Set up the local node
         uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
-          nitro-testnode-ref: non18-decimal-token-node-18
+          nitro-testnode-ref: develop
           nitro-contracts-branch: develop
-          token-bridge-branch: non-18-decimals
+          token-bridge-branch: develop
           l3-node: ${{ matrix.orbit-test == '1' }}
           args: ${{ matrix.decimals == 6 && '--l3-fee-token --l3-fee-token-decimals 6' || matrix.decimals == 24 && '--l3-fee-token --l3-fee-token-decimals 24' || matrix.decimals == 18 && '--l3-fee-token' || '' }}
 
