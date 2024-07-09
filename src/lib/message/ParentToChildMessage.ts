@@ -60,7 +60,7 @@ export enum ParentToChildMessageStatus {
    * redeem tx is ever issued. An auto redeem is also never issued for ETH deposits.
    * A manual redeem is now required.
    */
-  FUNDS_DEPOSITED_ON_CHAIN = 3,
+  FUNDS_DEPOSITED_ON_CHILD = 3,
   /**
    * The retryable ticket has been redeemed (either by auto, or manually) and the
    * chain transaction has been executed
@@ -346,7 +346,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
       // the retryable was created and still exists
       // therefore it cant have been redeemed or be expired
       return {
-        status: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN,
+        status: ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD,
       }
     }
 
@@ -479,7 +479,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
 
   /**
    * Wait for the retryable ticket to be created, for it to be redeemed, and for the chainTx to be executed.
-   * Note: The terminal status of a transaction that only does an eth deposit is FUNDS_DEPOSITED_ON_CHAIN as
+   * Note: The terminal status of a transaction that only does an eth deposit is FUNDS_DEPOSITED_ON_CHILD as
    * no Chain transaction needs to be executed, however the terminal state of any other transaction is REDEEMED
    * which represents that the retryable ticket has been redeemed and the Chain tx has been executed.
    * @param confirmations Amount of confirmations the retryable ticket and the auto redeem receipt should have
@@ -672,11 +672,11 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
 
   /**
    * Manually redeem the retryable ticket.
-   * Throws if message status is not ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+   * Throws if message status is not ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
    */
   public async redeem(overrides?: Overrides): Promise<RedeemTransaction> {
     const status = await this.status()
-    if (status === ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN) {
+    if (status === ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD) {
       const arbRetryableTx = ArbRetryableTx__factory.connect(
         ARB_RETRYABLE_TX_ADDRESS,
         this.chainSigner
@@ -696,7 +696,7 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
           ParentToChildMessageStatus[status]
         } must be: ${
           ParentToChildMessageStatus[
-            ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+            ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
           ]
         }.`
       )
@@ -705,11 +705,11 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
 
   /**
    * Cancel the retryable ticket.
-   * Throws if message status is not ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+   * Throws if message status is not ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
    */
   public async cancel(overrides?: Overrides): Promise<ContractTransaction> {
     const status = await this.status()
-    if (status === ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN) {
+    if (status === ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD) {
       const arbRetryableTx = ArbRetryableTx__factory.connect(
         ARB_RETRYABLE_TX_ADDRESS,
         this.chainSigner
@@ -721,7 +721,7 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
           ParentToChildMessageStatus[status]
         } must be: ${
           ParentToChildMessageStatus[
-            ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+            ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
           ]
         }.`
       )
@@ -730,11 +730,11 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
 
   /**
    * Increase the timeout of a retryable ticket.
-   * Throws if message status is not ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+   * Throws if message status is not ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
    */
   public async keepAlive(overrides?: Overrides): Promise<ContractTransaction> {
     const status = await this.status()
-    if (status === ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN) {
+    if (status === ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD) {
       const arbRetryableTx = ArbRetryableTx__factory.connect(
         ARB_RETRYABLE_TX_ADDRESS,
         this.chainSigner
@@ -746,7 +746,7 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
           ParentToChildMessageStatus[status]
         } must be: ${
           ParentToChildMessageStatus[
-            ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+            ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
           ]
         }.`
       )

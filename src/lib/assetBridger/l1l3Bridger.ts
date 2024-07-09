@@ -209,7 +209,7 @@ export type Erc20DepositStatus = {
    *
    * This is true if:
    * - l1l2TokenBridgeRetryable status is REDEEMED; AND
-   * - l2ForwarderFactoryRetryable status is FUNDS_DEPOSITED_ON_CHAIN; AND
+   * - l2ForwarderFactoryRetryable status is FUNDS_DEPOSITED_ON_CHILD; AND
    * - L2Forwarder token balance is 0
    *
    * The first teleportation with l2ForwarderFactoryRetryable redemption *after* this teleportation's l1l2TokenBridgeRetryable redemption
@@ -911,7 +911,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     if (
       l1l2TokenBridgeRetryableStatus === ParentToChildMessageStatus.REDEEMED &&
       factoryRedeem.status ===
-        ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+        ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
     ) {
       // decoding the factory call is the most reliable way to get the owner and other parameters
       const decodedFactoryCall = this._decodeCallForwarderCalldata(

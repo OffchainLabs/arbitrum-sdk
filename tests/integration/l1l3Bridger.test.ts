@@ -800,7 +800,7 @@ describe('L1 to L3 Bridging', () => {
 
         return (
           (await status.l2l3TokenBridgeRetryable?.status()) ===
-          ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHAIN
+          ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
         )
       }, 1000)
 
