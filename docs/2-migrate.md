@@ -1,4 +1,4 @@
-# Migrating from @arbitrum/sdk v3 to v4
+# Migrating from v3 to v4
 
 ## Introduction
 
@@ -33,10 +33,10 @@ Most instances of "L1" and "L2" have been replaced with "parent" and "child" res
 | `getL2Network`        | `getArbitrumNetwork`            |
 | `l2Networks`          | `getArbitrumNetworks`           |
 | `addCustomNetwork`    | `registerCustomArbitrumNetwork` |
-| `Network`             | deprecated                      |
-| `L1Network`           | deprecated                      |
-| `getL1Network`        | deprecated                      |
-| `getParentForNetwork` | deprecated                      |
+| `Network`             | *deprecated*                    |
+| `L1Network`           | *deprecated*                    |
+| `getL1Network`        | *deprecated*                    |
+| `getParentForNetwork` | *deprecated*                    |
 
 #### `ArbitrumNetwork` type
 
@@ -46,14 +46,14 @@ Most instances of "L1" and "L2" have been replaced with "parent" and "child" res
 | --------------------- | --------------- |
 | `chainID`             | `chainId`       |
 | `partnerChainID`      | `parentChainId` |
-| `explorerUrl`         | deprecated      |
-| `isArbitrum`          | deprecated      |
-| `partnerChainIDs`     | deprecated      |
-| `nitroGenesisBlock`   | deprecated      |
-| `nitroGenesisL1Block` | deprecated      |
-| `depositTimeout`      | deprecated      |
-| `blockTime`           | deprecated      |
-| `isBold`              | deprecated      |
+| `explorerUrl`         | *deprecated*    |
+| `isArbitrum`          | *deprecated*    |
+| `partnerChainIDs`     | *deprecated*    |
+| `nitroGenesisBlock`   | *deprecated*    |
+| `nitroGenesisL1Block` | *deprecated*    |
+| `depositTimeout`      | *deprecated*    |
+| `blockTime`           | *deprecated*    |
+| `isBold`              | *deprecated*    |
 
 #### `TokenBridge` type
 
