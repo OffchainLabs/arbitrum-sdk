@@ -25,8 +25,8 @@ Most instances of "L1" and "L2" have been replaced with "parent" and "child" res
 - The `L1Network` is no longer required to be registered before bridging.
 - Only Arbitrum networks need to be registered.
 - Arbitrum networks are defined as Arbitrum One, Arbitrum testnets, and any Orbit chain.
-- If you need a full list of Arbitrum networks, you can use the new `getArbitrumNetworks` function.
-- To get a list of the children of a network, use the new `getChildrenForNetwork` function.
+- If you need a full list of Arbitrum networks, you can use the new [`getArbitrumNetworks`](./reference/dataEntities/networks#getArbitrumNetworks) function.
+- To list all of the children of a network, use the new [`getChildrenForNetwork`](./reference/dataEntities/networks#getChildrenForNetwork) function.
 
 | v3 Name               | v4 Name                                                                                            |
 | --------------------- | -------------------------------------------------------------------------------------------------- |
@@ -38,7 +38,6 @@ Most instances of "L1" and "L2" have been replaced with "parent" and "child" res
 | `L1Network`           | *removed*                                                                                          |
 | `getL1Network`        | *removed*                                                                                          |
 | `getParentForNetwork` | *removed*                                                                                          |
-|                       | `getChildrenForNetwork`                                                                            |
 
 #### `ArbitrumNetwork` type
 
@@ -79,7 +78,7 @@ The `TokenBridge` type within the[`ArbitrumNetwork`](./reference/dataEntities/ne
 
 ### 3. Updates to `AssetBridger` and `Erc20Bridger` classes
 
-#### `AssetBridger` Class Methods
+#### [`AssetBridger`](./reference/assetBridger/assetBridger.md)  Class Methods
 
 The [`AssetBridger`](./reference/assetBridger/assetBridger.md) class methods have been renamed to reflect the new parent-child terminology.
 
@@ -88,7 +87,7 @@ The [`AssetBridger`](./reference/assetBridger/assetBridger.md) class methods hav
 | `checkL1Network` | `checkParentChain` |
 | `checkL2Network` | `checkChildChain`  |
 
-#### `AssetBridger` Class Method Parameters
+#### [`AssetBridger`](./reference/assetBridger/assetBridger.md)  Class Method Parameters
 
 The objects passed to the class methods of classes that inherit from [`AssetBridger`](./reference/assetBridger/assetBridger.md) ([`EthBridger`](./reference/assetBridger/ethBridger.md) and [`Erc20Bridger`](./reference/assetBridger/erc20Bridger.md)) have been renamed.
 
@@ -100,7 +99,7 @@ The objects passed to the class methods of classes that inherit from [`AssetBrid
 | `l1Signer`       | `parentSigner`       |
 | `l2Signer`       | `childSigner`        |
 
-#### `Erc20Bridger` Class Methods
+#### [`Erc20Bridger`](./reference/assetBridger/erc20Bridger.md) Class Methods
 
 | v3 Name                 | v4 Name                     |
 | ----------------------- | --------------------------- |
@@ -116,12 +115,12 @@ The objects passed to the class methods of classes that inherit from [`AssetBrid
 | `getL1GatewaySetEvents` | `getParentGatewaySetEvents` |
 | `getL2GatewaySetEvents` | `getChildGatewaySetEvents`  |
 
-#### `Erc20L1L3Bridger` Class Methods
+#### [`Erc20L1L3Bridger`](./reference/assetBridger/L1L3Bridger.md) Class Methods
 
-| v3 Name                 | v4 Name                     |
-| ----------------------- | --------------------------- |
-| `getL2ERC20Address`     | `getL2Erc20Address`         |
-| `getL3ERC20Address`   | `getL3Erc20Address`         |
+| v3 Name             | v4 Name             |
+| ------------------- | ------------------- |
+| `getL2ERC20Address` | `getL2Erc20Address` |
+| `getL3ERC20Address` | `getL3Erc20Address` |
 
 ### 4. Changes to Message classes
 
@@ -171,6 +170,12 @@ Message classes have been renamed and their methods updated:
 | v3 Name            | v4 Name                   |
 | ------------------ | ------------------------- |
 | `EthDepositStatus` | `EthDepositMessageStatus` |
+
+#### `ParentToChildMessageStatus`
+
+| v3 Name                 | v4 Name                    |
+| ----------------------- | -------------------------- |
+| `FUNDS_DEPOSITED_ON_L2` | `FUNDS_DEPOSITED_ON_CHILD` |
 
 #### `ParentTransactionReceipt`
 
