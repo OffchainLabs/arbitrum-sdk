@@ -364,27 +364,38 @@ export const getChildrenForNetwork = (
  *
  * @note Throws if the chain is not an Arbitrum chain.
  */
-export const getArbitrumNetwork = async (
+export function getArbitrumNetwork(chainId: number): ArbitrumNetwork
+export function getArbitrumNetwork(
+  signerOrProvider: SignerOrProvider
+): Promise<ArbitrumNetwork>
+export function getArbitrumNetwork(
   signerOrProviderOrChainId: SignerOrProvider | number
-): Promise<ArbitrumNetwork> => {
-  const chainId = await (async () => {
-    if (typeof signerOrProviderOrChainId === 'number') {
-      return signerOrProviderOrChainId
+): ArbitrumNetwork | Promise<ArbitrumNetwork> {
+  if (typeof signerOrProviderOrChainId === 'number') {
+    const network = getArbitrumNetworks().find(
+      n => n.chainId === signerOrProviderOrChainId
+    )
+    if (!network) {
+      throw new ArbSdkError(
+        `Unrecognized network ${signerOrProviderOrChainId}.`
+      )
     }
+    return network
+  }
+
+  const getNetworkAsync = async () => {
     const provider = SignerProviderUtils.getProviderOrThrow(
       signerOrProviderOrChainId
     )
-
-    return (await provider.getNetwork()).chainId
-  })()
-
-  const network = getArbitrumNetworks().find(n => n.chainId === chainId)
-
-  if (!network) {
-    throw new ArbSdkError(`Unrecognized network ${chainId}.`)
+    const { chainId } = await provider.getNetwork()
+    const network = getArbitrumNetworks().find(n => n.chainId === chainId)
+    if (!network) {
+      throw new ArbSdkError(`Unrecognized network ${chainId}.`)
+    }
+    return network
   }
 
-  return network
+  return getNetworkAsync()
 }
 
 /**
