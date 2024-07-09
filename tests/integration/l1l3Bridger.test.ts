@@ -33,7 +33,6 @@ import {
 import {
   assertArbitrumNetworkHasTokenBridge,
   getArbitrumNetwork,
-  networks,
   registerCustomArbitrumNetwork,
 } from '../../src/lib/dataEntities/networks'
 
@@ -232,10 +231,6 @@ describe('L1 to L3 Bridging', () => {
       l3Provider,
       ethers.utils.hexlify(ethers.utils.randomBytes(32))
     )
-
-    const l1ChainId = await l1Signer.getChainId()
-    //@ts-expect-error - mock network for testing
-    networks[l1ChainId] = { chainId: l1ChainId, name: 'test' }
 
     // fund signers on L1 and L2
     await fundParentSigner(l1Signer, ethers.utils.parseEther('10'))

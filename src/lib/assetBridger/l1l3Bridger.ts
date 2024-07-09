@@ -291,14 +291,7 @@ class BaseL1L3Bridger {
       )
     }
 
-    const l1Network = networks[l2Network.parentChainId]
-    if (!l1Network) {
-      throw new ArbSdkError(
-        `Unknown l1 network chain id: ${l2Network.parentChainId}`
-      )
-    }
-
-    this.l1Network = l1Network
+    this.l1Network = { chainId: l2Network.parentChainId }
     this.l2Network = l2Network
     this.l3Network = l3Network
   }
