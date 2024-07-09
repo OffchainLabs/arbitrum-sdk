@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [16, 18, 20]
+        node-version: [18, 20]
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [16, 18, 20]
+        node-version: [18, 20]
     needs: install
     permissions:
       checks: write # https://github.com/mikepenz/action-junit-report/issues/23#issuecomment-1412597753
@@ -80,7 +80,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [16, 18, 20]
+        node-version: [18, 20]
     needs: install
     steps:
       - name: Checkout
@@ -101,7 +101,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [16, 18, 20]
+        node-version: [18, 20]
     needs: install
     steps:
       - name: Checkout
@@ -129,13 +129,10 @@ jobs:
     strategy:
       fail-fast: false # runs all tests to completion even if one fails
       matrix:
-        node-version: [16, 18, 20]
+        node-version: [18, 20]
         orbit-test: ['0', '1']
         custom-fee: ['0']
         include:
-          - orbit-test: '1'
-            custom-fee: '1'
-            node-version: 16
           - orbit-test: '1'
             custom-fee: '1'
             node-version: 18
