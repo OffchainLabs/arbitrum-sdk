@@ -636,13 +636,13 @@ describe('L1 to L3 Bridging', () => {
         }
       )
 
-      // l1TokenIsDisabled
+      // isDepositDisabled
       await checkNetworkGuards(
         true,
         false,
         false,
         async (l1Signer, _l2Signer, _l3Signer) => {
-          return new Erc20L1L3Bridger(l3Network).l1TokenIsDisabled(
+          return new Erc20L1L3Bridger(l3Network).isDepositDisabled(
             l1Token.address,
             l1Signer.provider!
           )

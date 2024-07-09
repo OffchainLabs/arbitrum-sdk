@@ -487,7 +487,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       )
     }
 
-    if (await this.l1TokenIsDisabled(l1FeeTokenAddress, l1Provider)) {
+    if (await this.isDepositDisabled(l1FeeTokenAddress, l1Provider)) {
       throw new ArbSdkError(
         'L1 gas token is disabled on the L1 to L2 token bridge. Use skipGasToken when depositing'
       )
@@ -590,7 +590,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   /**
    * Whether the L1 token has been disabled on the L1 <-> L2 router given an L1 token address
    */
-  public async l1TokenIsDisabled(
+  public async isDepositDisabled(
     l1TokenAddress: string,
     l1Provider: Provider
   ): Promise<boolean> {
