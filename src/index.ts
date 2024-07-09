@@ -16,6 +16,10 @@
 /* eslint-env node */
 'use strict'
 
+export {
+  Erc20L1L3Bridger,
+  EthL1L3Bridger,
+} from './lib/assetBridger/l1l3Bridger'
 export { EthBridger } from './lib/assetBridger/ethBridger'
 export { Erc20Bridger } from './lib/assetBridger/erc20Bridger'
 export {
@@ -28,6 +32,10 @@ export {
   ChildToParentMessageReader,
 } from './lib/message/ChildToParentMessage'
 export {
+  ParentEthDepositTransaction,
+  ParentEthDepositTransactionReceipt,
+  ParentContractCallTransaction,
+  ParentContractCallTransactionReceipt,
   ParentContractTransaction,
   ParentTransactionReceipt,
 } from './lib/message/ParentTransaction'
@@ -58,10 +66,19 @@ export { InboxTools } from './lib/inbox/inbox'
 export { EventFetcher } from './lib/utils/eventFetcher'
 export { ArbitrumProvider } from './lib/utils/arbProvider'
 export * as constants from './lib/dataEntities/constants'
-export { ChildToParentMessageStatus } from './lib/dataEntities/message'
+export {
+  ChildToParentMessageStatus,
+  RetryableMessageParams,
+} from './lib/dataEntities/message'
 export {
   RetryableData,
   RetryableDataTools,
 } from './lib/dataEntities/retryableData'
-
+export { EventArgs } from './lib/dataEntities/event'
 export { Address } from './lib/dataEntities/address'
+export {
+  ParentToChildTransactionRequest,
+  isParentToChildTransactionRequest,
+  ChildToParentTransactionRequest,
+  isChildToParentTransactionRequest,
+} from './lib/dataEntities/transactionRequest'

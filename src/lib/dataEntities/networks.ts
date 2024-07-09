@@ -49,6 +49,10 @@ export interface ArbitrumNetwork {
    */
   tokenBridge?: TokenBridge
   /**
+   * The teleporter contracts.
+   */
+  teleporter?: Teleporter
+  /**
    * The time allowed for validators to dispute or challenge state assertions. Measured in L1 blocks.
    */
   confirmPeriodBlocks: number
@@ -66,6 +70,12 @@ export interface ArbitrumNetwork {
    * Whether or not the chain was registered by the user.
    */
   isCustom: boolean
+  /**
+   * Has the network been upgraded to bold. True if yes, otherwise undefined
+   * This is a temporary property and will be removed in future if Bold is widely adopted and
+   * the legacy challenge protocol is deprecated
+   */
+  isBold?: boolean
 }
 
 /**
@@ -83,6 +93,11 @@ export type L2Network = Prettify<
   }
 >
 
+export interface Teleporter {
+  l1Teleporter: string
+  l2ForwarderFactory: string
+}
+
 export interface TokenBridge {
   parentGatewayRouter: string
   childGatewayRouter: string
@@ -97,7 +112,7 @@ export interface TokenBridge {
   parentProxyAdmin: string
   childProxyAdmin: string
   parentMultiCall: string
-  childMulticall: string
+  childMultiCall: string
 }
 
 /**
@@ -153,7 +168,7 @@ const mainnetTokenBridge: TokenBridge = {
   parentProxyAdmin: '0x9aD46fac0Cf7f790E5be05A0F15223935A0c0aDa',
   childProxyAdmin: '0xd570aCE65C43af47101fC6250FD6fC63D1c22a86',
   parentMultiCall: '0x5ba1e12693dc8f9c48aad8770482f4739beed696',
-  childMulticall: '0x842eC2c7D803033Edf55E478F461FC547Bc54EB2',
+  childMultiCall: '0x842eC2c7D803033Edf55E478F461FC547Bc54EB2',
 }
 
 const mainnetETHBridge: EthBridge = {
@@ -178,6 +193,10 @@ export const networks: Networks = {
     parentChainId: 1,
     tokenBridge: mainnetTokenBridge,
     ethBridge: mainnetETHBridge,
+    teleporter: {
+      l1Teleporter: '0xCBd9c6e310D6AaDeF9F025f716284162F0158992',
+      l2ForwarderFactory: '0x791d2AbC6c3A459E13B9AdF54Fb5e97B7Af38f87',
+    },
     confirmPeriodBlocks: 45818,
     isCustom: false,
   },
@@ -205,10 +224,14 @@ export const networks: Networks = {
       childCustomGateway: '0xbf544970E6BD77b21C6492C281AB60d0770451F4',
       childErc20Gateway: '0xcF9bAb7e53DDe48A6DC4f286CB14e05298799257',
       childGatewayRouter: '0x21903d3F8176b1a0c17E953Cd896610Be9fFDFa8',
-      childMulticall: '0x5e1eE626420A354BbC9a95FeA1BAd4492e3bcB86',
+      childMultiCall: '0x5e1eE626420A354BbC9a95FeA1BAd4492e3bcB86',
       childProxyAdmin: '0xada790b026097BfB36a5ed696859b97a96CEd92C',
       childWeth: '0x722E8BdD2ce80A4422E880164f2079488e115365',
       childWethGateway: '0x7626841cB6113412F9c88D3ADC720C9FAC88D9eD',
+    },
+    teleporter: {
+      l1Teleporter: '0xCBd9c6e310D6AaDeF9F025f716284162F0158992',
+      l2ForwarderFactory: '0x791d2AbC6c3A459E13B9AdF54Fb5e97B7Af38f87',
     },
   },
   421614: {
@@ -235,10 +258,14 @@ export const networks: Networks = {
       childCustomGateway: '0x8Ca1e1AC0f260BC4dA7Dd60aCA6CA66208E642C5',
       childErc20Gateway: '0x6e244cD02BBB8a6dbd7F626f05B2ef82151Ab502',
       childGatewayRouter: '0x9fDD1C4E4AA24EEc1d913FABea925594a20d43C7',
-      childMulticall: '0xA115146782b7143fAdB3065D86eACB54c169d092',
+      childMultiCall: '0xA115146782b7143fAdB3065D86eACB54c169d092',
       childProxyAdmin: '0x715D99480b77A8d9D603638e593a539E21345FdF',
       childWeth: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73',
       childWethGateway: '0xCFB1f08A4852699a979909e22c30263ca249556D',
+    },
+    teleporter: {
+      l1Teleporter: '0x9E86BbF020594D7FFe05bF32EEDE5b973579A968',
+      l2ForwarderFactory: '0x88feBaFBb4E36A4E7E8874E4c9Fd73A9D59C2E7c',
     },
   },
   23011913: {
@@ -265,7 +292,7 @@ export const networks: Networks = {
       childCustomGateway: '0xF6dbB0e312dF4652d59ce405F5E00CC3430f19c5',
       childErc20Gateway: '0xe027f79CE40a1eF8e47B51d0D46Dc4ea658C5860',
       childGatewayRouter: '0x4c3a1f7011F02Fe4769fC704359c3696a6A60D89',
-      childMulticall: '0xEb4A260FD16aaf18c04B1aeaDFE20E622e549bd3',
+      childMultiCall: '0xEb4A260FD16aaf18c04B1aeaDFE20E622e549bd3',
       childProxyAdmin: '0xE914c0d417E8250d0237d2F4827ed3612e6A9C3B',
       childWeth: '0x61Dc4b961D2165623A25EB775260785fE78BD37C',
       childWethGateway: '0x7021B4Edd9f047772242fc948441d6e0b9121175',
@@ -295,7 +322,7 @@ export const networks: Networks = {
       childCustomGateway: '0xE102D94df0179082B39Ddcad58c9430dedc89aE3',
       childErc20Gateway: '0xCf3a4aF3c48Ba19c5FccFB44FA3E3A0F2A6e60dA',
       childGatewayRouter: '0xD60FD4c5D335b00287202C93C5B4EE0478D92686',
-      childMulticall: '0x39E068582873B2011F5a1e8E0F7D9D993c8111BC',
+      childMultiCall: '0x39E068582873B2011F5a1e8E0F7D9D993c8111BC',
       childProxyAdmin: '0x9DC4Da9a940AFEbBC8329aA6534aD767b60d968c',
       childWeth: '0xa3bD1fdeEb903142d16B3bd22f2aC9A82C714D62',
       childWethGateway: '0xec018E81eE818b04CFb1E013D91F1b779a2AC440',
@@ -481,7 +508,7 @@ export const addDefaultLocalNetwork = (): ArbitrumNetwork => {
       childCustomGateway: '0x525c2aBA45F66987217323E8a05EA400C65D06DC',
       childErc20Gateway: '0xe1080224B632A93951A7CFA33EeEa9Fd81558b5e',
       childGatewayRouter: '0x1294b86822ff4976BfE136cB06CF43eC7FCF2574',
-      childMulticall: '0xDB2D15a3EB70C347E0D2C2c7861cAFb946baAb48',
+      childMultiCall: '0xDB2D15a3EB70C347E0D2C2c7861cAFb946baAb48',
       childProxyAdmin: '0xda52b25ddB0e3B9CC393b0690Ac62245Ac772527',
       childWeth: '0x408Da76E87511429485C32E4Ad647DD14823Fdc4',
       childWethGateway: '0x4A2bA922052bA54e29c5417bC979Daaf7D5Fe4f4',
@@ -537,7 +564,7 @@ export async function getMulticallAddress(
   if (typeof chain !== 'undefined') {
     assertArbitrumNetworkHasTokenBridge(chain)
     // Return the address of Multicall on the chain
-    return chain.tokenBridge.childMulticall
+    return chain.tokenBridge.childMultiCall
   }
 
   // The provided chain is not found in the list
@@ -576,7 +603,7 @@ export function mapL2NetworkTokenBridgeToTokenBridge(
     parentProxyAdmin: input.l1ProxyAdmin,
     childProxyAdmin: input.l2ProxyAdmin,
     parentMultiCall: input.l1MultiCall,
-    childMulticall: input.l2Multicall,
+    childMultiCall: input.l2Multicall,
   }
 }
 
