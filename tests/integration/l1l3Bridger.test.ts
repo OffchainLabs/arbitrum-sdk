@@ -12,7 +12,12 @@ import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__facto
 import { TestERC20 } from '../../src/lib/abi/TestERC20'
 import { AeWETH__factory } from '../../src/lib/abi/factories/AeWETH__factory'
 import { L1Teleporter__factory } from '../../src/lib/abi/factories/L1Teleporter__factory'
-import { fundL1, fundL2, skipIfCustomGasToken, skipIfMainnet } from './testHelpers'
+import {
+  fundL1,
+  fundL2,
+  skipIfCustomGasToken,
+  skipIfMainnet,
+} from './testHelpers'
 import { BigNumber, Signer, Wallet, ethers, providers, utils } from 'ethers'
 import {
   Erc20DepositRequestParams,

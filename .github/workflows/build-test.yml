@@ -131,22 +131,15 @@ jobs:
       matrix:
         include:
           - orbit-test: '0'
-            node-version: 16
-          - orbit-test: '0'
             node-version: 18
           - orbit-test: '0'
             node-version: 20
 
           - orbit-test: '1'
-            node-version: 16
-          - orbit-test: '1'
             node-version: 18
           - orbit-test: '1'
             node-version: 20
 
-          - orbit-test: '1'
-            decimals: 16
-            node-version: 16
           - orbit-test: '1'
             decimals: 16
             node-version: 18
@@ -156,17 +149,11 @@ jobs:
 
           - orbit-test: '1'
             decimals: 18
-            node-version: 16
-          - orbit-test: '1'
-            decimals: 18
             node-version: 18
           - orbit-test: '1'
             decimals: 18
             node-version: 20
 
-          - orbit-test: '1'
-            decimals: 20
-            node-version: 16
           - orbit-test: '1'
             decimals: 20
             node-version: 18
