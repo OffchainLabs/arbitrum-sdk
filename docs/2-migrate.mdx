@@ -29,10 +29,10 @@ Most instances of "L1" and "L2" have been replaced with "parent" and "child" res
 
 | v3 Name               | v4 Name                         |
 | --------------------- | ------------------------------- |
-| `L2Network`           | `ArbitrumNetwork`               |
-| `getL2Network`        | `getArbitrumNetwork`            |
-| `l2Networks`          | `getArbitrumNetworks`           |
-| `addCustomNetwork`    | `registerCustomArbitrumNetwork` |
+| `L2Network`           | [`ArbitrumNetwork`](./reference/dataEntities/networks#arbitrumnetwork)               |
+| `getL2Network`        | [`getArbitrumNetwork`](./reference/dataEntities/networks#getArbitrumNetwork)            |
+| `l2Networks`          | [`getArbitrumNetworks`](./reference/dataEntities/networks#getArbitrumNetworks)           |
+| `addCustomNetwork`    | [`registerCustomArbitrumNetwork`](./reference/dataEntities/networks#registerCustomArbitrumNetwork) |
 | `Network`             | *deprecated*                    |
 | `L1Network`           | *deprecated*                    |
 | `getL1Network`        | *deprecated*                    |
@@ -40,7 +40,7 @@ Most instances of "L1" and "L2" have been replaced with "parent" and "child" res
 
 #### `ArbitrumNetwork` type
 
-`Network` type has been replaced with the `ArbitrumNetwork` type and some properties have been deprecated or renamed.
+`Network` type has been replaced with the [`ArbitrumNetwork`](./reference/dataEntities/networks#arbitrumnetwork) type and some properties have been deprecated or renamed.
 
 | v3 Name               | v4 Name         |
 | --------------------- | --------------- |
@@ -57,7 +57,7 @@ Most instances of "L1" and "L2" have been replaced with "parent" and "child" res
 
 #### `TokenBridge` type
 
-The `TokenBridge` type within the `ArbitrumNetwork` object has been updated.
+The `TokenBridge` type within the[`ArbitrumNetwork`](./reference/dataEntities/networks#arbitrumnetwork) object has been updated.
 
 | v3 Name           | v4 Name               |
 | ----------------- | --------------------- |
@@ -80,7 +80,7 @@ The `TokenBridge` type within the `ArbitrumNetwork` object has been updated.
 
 #### `AssetBridger` Class Methods
 
-The `AssetBridger` class methods have been renamed to reflect the new parent-child terminology.
+The [`AssetBridger`](./reference/assetBridger/assetBridger.md) class methods have been renamed to reflect the new parent-child terminology.
 
 | v3 Name          | v4 Name            |
 | ---------------- | ------------------ |
@@ -89,7 +89,7 @@ The `AssetBridger` class methods have been renamed to reflect the new parent-chi
 
 #### `AssetBridger` Class Method Parameters
 
-The objects passed to the class methods of classes that inherit from `AssetBridger` (`EthBridger` and `Erc20Bridger`) have been renamed.
+The objects passed to the class methods of classes that inherit from [`AssetBridger`](./reference/assetBridger/assetBridger.md) ([`EthBridger`](./reference/assetBridger/ethBridger.md) and [`Erc20Bridger`](./reference/assetBridger/erc20Bridger.md)) have been renamed.
 
 | v3 Name          | v4 Name              |
 | ---------------- | -------------------- |
