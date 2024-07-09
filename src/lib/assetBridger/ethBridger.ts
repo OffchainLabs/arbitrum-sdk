@@ -328,9 +328,8 @@ export class EthBridger extends AssetBridger<
 
     const requestParams = {
       ...params,
-      amount: amountToBeMintedOnChildChain,
       to: params.destinationAddress,
-      l2CallValue: params.amount,
+      l2CallValue: amountToBeMintedOnChildChain,
       callValueRefundAddress: params.destinationAddress,
       data: '0x',
     }
