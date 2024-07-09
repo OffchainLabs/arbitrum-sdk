@@ -502,7 +502,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   /**
    * Get the corresponding L2 token address for the provided L1 token
    */
-  public getL2ERC20Address(
+  public getL2Erc20Address(
     erc20L1Address: string,
     l1Provider: Provider
   ): Promise<string> {
@@ -512,13 +512,13 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   /**
    * Get the corresponding L3 token address for the provided L1 token
    */
-  public async getL3ERC20Address(
+  public async getL3Erc20Address(
     erc20L1Address: string,
     l1Provider: Provider,
     l2Provider: Provider
   ): Promise<string> {
     return this.l3Erc20Bridger.getChildErc20Address(
-      await this.getL2ERC20Address(erc20L1Address, l1Provider),
+      await this.getL2Erc20Address(erc20L1Address, l1Provider),
       l2Provider
     )
   }
@@ -544,7 +544,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l1Provider: Provider,
     l2Provider: Provider
   ): Promise<string> {
-    const l2Token = await this.getL2ERC20Address(erc20L1Address, l1Provider)
+    const l2Token = await this.getL2Erc20Address(erc20L1Address, l1Provider)
     return this.l3Erc20Bridger.getParentGatewayAddress(l2Token, l2Provider)
   }
 
@@ -1169,7 +1169,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         parentProvider: params.l2Provider,
         childProvider: params.l3Provider,
         parentGasPrice: params.l2GasPrice,
-        parentErc20Address: await this.getL2ERC20Address(
+        parentErc20Address: await this.getL2Erc20Address(
           params.partialTeleportParams.l1Token,
           params.l1Provider
         ),
