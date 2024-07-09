@@ -6,30 +6,32 @@
 
 ## Major Changes Overview
 
-1. Terminology shift from L1/L2 to parent-child
-2. Network types and methods updated
+1. Terminology change from L1/L2 to parent/child
+2. Network types and functions updated
 3. Updates to `AssetBridger` and `Erc20Bridger` classes
 4. Changes to Message classes
 
 ## Detailed Changes
 
-### 1. Terminology: L1/L2 to parent/child
+### 1. Terminology change from L1/L2 to parent/child
 
 Most instances of "L1" and "L2" have been replaced with "parent" and "child" respectively. This change reflects the more general parent-child relationship between chains in the Arbitrum ecosystem.
 
 - In most circumstances, when referring to a parent-child relationship between chains, the terms "parent" and "child" are used.
 - Though, when referring explicitly to "L1", "L2", or "L3", those specific terms are still used.
 
-### 2. Network changes
+### 2. Network types and functions updated
 
 - The `L1Network` is no longer required to be registered before bridging.
 - Only Arbitrum networks need to be registered.
 - Arbitrum networks are defined as Arbitrum One, Arbitrum testnets, and any Orbit chain.
+- If you need a full list of Arbitrum networks, you can use the new `getArbitrumNetworks` function.
 
 | v3 Name               | v4 Name                         |
 | --------------------- | ------------------------------- |
 | `L2Network`           | `ArbitrumNetwork`               |
 | `getL2Network`        | `getArbitrumNetwork`            |
+| `l2Networks`          | `getArbitrumNetworks`           |
 | `addCustomNetwork`    | `registerCustomArbitrumNetwork` |
 | `Network`             | deprecated                      |
 | `L1Network`           | deprecated                      |
@@ -74,7 +76,7 @@ The `TokenBridge` type within the `ArbitrumNetwork` object has been updated.
 | `l2Weth`          | `childWeth`           |
 | `l2WethGateway`   | `childWethGateway`    |
 
-### 3. `AssetBridger` Classes
+### 3. Updates to `AssetBridger` and `Erc20Bridger` classes
 
 #### `AssetBridger` Class Methods
 
@@ -113,7 +115,7 @@ The objects passed to the class methods of classes that inherit from `AssetBridg
 | `getL1GatewaySetEvents` | `getParentGatewaySetEvents` |
 | `getL2GatewaySetEvents` | `getChildGatewaySetEvents`  |
 
-### 4. Message Classes
+### 4. Changes to Message classes
 
 Message classes have been renamed and their methods updated:
 
