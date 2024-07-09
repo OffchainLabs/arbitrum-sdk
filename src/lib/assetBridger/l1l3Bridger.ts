@@ -21,7 +21,7 @@ import {
   ArbitrumNetwork,
   Teleporter,
   assertArbitrumNetworkHasTokenBridge,
-  networks,
+  getArbitrumNetworks,
 } from '../dataEntities/networks'
 import {
   SignerOrProvider,
@@ -284,7 +284,10 @@ class BaseL1L3Bridger {
     BigNumber.from(100)
 
   constructor(l3Network: ArbitrumNetwork) {
-    const l2Network = networks[l3Network.parentChainId]
+    const l2Network = getArbitrumNetworks().find(
+      network => network.chainId === l3Network.parentChainId
+    )
+
     if (!l2Network) {
       throw new ArbSdkError(
         `Unknown arbitrum network chain id: ${l3Network.parentChainId}`

@@ -56,6 +56,7 @@ export { CallInput, MultiCaller } from './lib/utils/multicall'
 export {
   ArbitrumNetwork,
   getArbitrumNetwork,
+  getArbitrumNetworks,
   ArbitrumNetworkInformationFromRollup,
   getArbitrumNetworkInformationFromRollup,
   getChildrenForNetwork,
