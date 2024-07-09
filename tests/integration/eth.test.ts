@@ -165,8 +165,7 @@ describe('Ether', async () => {
     const initialInboxBalance = await l1Signer.provider!.getBalance(
       inboxAddress
     )
-    const amount = '0.0002'
-    const ethToDeposit = parseUnits(amount, decimals)
+    const ethToDeposit = parseEther('0.0002')
     const res = await ethBridger.depositTo({
       amount: ethToDeposit,
       l1Signer: l1Signer,
@@ -220,7 +219,7 @@ describe('Ether', async () => {
       destWallet.address
     )
     expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(
-      parseEther(amount).toString()
+      ethToDeposit.toString()
     )
   })
 
@@ -232,8 +231,7 @@ describe('Ether', async () => {
     await fundL1(l1Signer)
     const destWallet = Wallet.createRandom()
 
-    const amount = '0.0002'
-    const ethToDeposit = parseUnits(amount, decimals)
+    const ethToDeposit = parseEther('0.0002')
     const res = await ethBridger.depositTo({
       amount: ethToDeposit,
       l1Signer: l1Signer,
@@ -283,7 +281,7 @@ describe('Ether', async () => {
     expect(
       testWalletL2EthBalance.toString(),
       'balance after manual redeem'
-    ).to.eq(parseEther(amount).toString())
+    ).to.eq(ethToDeposit.toString())
   })
 
   it('withdraw Ether transaction succeeds', async () => {
