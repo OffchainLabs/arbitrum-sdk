@@ -102,9 +102,12 @@ export const testSetup = async (): Promise<{
     const l2Network = await getArbitrumNetwork(childDeployer)
     setChildChain = l2Network
   } catch (err) {
+    const localNetworks = getLocalNetworksFromFile()
     // the networks havent been added yet
     // check if theres an existing network available
-    const { l2Network: childChain } = getLocalNetworksFromFile()
+    const childChain = (
+      isTestingOrbitChains ? localNetworks.l3Network : localNetworks.l2Network
+    ) as ArbitrumNetwork
     setChildChain = registerCustomArbitrumNetwork(childChain)
   }
 
@@ -138,6 +141,7 @@ export const testSetup = async (): Promise<{
 
 export function getLocalNetworksFromFile(): {
   l2Network: ArbitrumNetwork
+  l3Network?: ArbitrumNetwork
 } {
   const pathToLocalNetworkFile = path.join(__dirname, '..', 'localNetwork.json')
   if (!fs.existsSync(pathToLocalNetworkFile)) {
@@ -145,6 +149,7 @@ export function getLocalNetworksFromFile(): {
   }
   const localNetworksFile = fs.readFileSync(pathToLocalNetworkFile, 'utf8')
   const localL2: ArbitrumNetwork = JSON.parse(localNetworksFile).l2Network
+  const localL3: ArbitrumNetwork = JSON.parse(localNetworksFile).l3Network
 
-  return { l2Network: localL2 }
+  return { l2Network: localL2, l3Network: localL3 }
 }
