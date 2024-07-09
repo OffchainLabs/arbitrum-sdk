@@ -150,10 +150,6 @@ export interface EthBridge {
   }
 }
 
-export interface Networks {
-  [id: string]: ArbitrumNetwork
-}
-
 const mainnetTokenBridge: TokenBridge = {
   parentGatewayRouter: '0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef',
   childGatewayRouter: '0x5288c571Fd7aD117beA99bF60FE0846C4E84F933',
@@ -184,9 +180,11 @@ const mainnetETHBridge: EthBridge = {
 }
 
 /**
- * Storage for all networks, either L1, L2 or L3.
+ * Storage for all Arbitrum networks, either L2 or L3.
  */
-export const networks: Networks = {
+const networks: {
+  [id: string]: ArbitrumNetwork
+} = {
   42161: {
     chainId: 42161,
     name: 'Arbitrum One',
@@ -342,12 +340,8 @@ export const isParentNetwork = (
       : parentChainOrChainId.chainId
 
   // Check if there are any chains that have this chain as its parent chain
-  return [...Object.values(l2Networks)].some(
-    c => c.parentChainId === parentChainId
-  )
+  return getArbitrumNetworks().some(c => c.parentChainId === parentChainId)
 }
-
-const getArbitrumChains = () => networks
 
 /**
  * Returns a list of children chains for the given chain or chain id.
@@ -360,15 +354,10 @@ export const getChildrenForNetwork = (
       ? parentChainOrChainId
       : parentChainOrChainId.chainId
 
-  return Object.values(getArbitrumChains()).filter(
+  return getArbitrumNetworks().filter(
     arbitrumChain => arbitrumChain.parentChainId === parentChainId
   )
 }
-
-/**
- * Index of all Arbitrum chains that have been added.
- */
-export let l2Networks = getArbitrumChains()
 
 /**
  * Returns the Arbitrum chain associated with the given signer, provider or chain id.
@@ -389,13 +378,20 @@ export const getArbitrumNetwork = async (
     return (await provider.getNetwork()).chainId
   })()
 
-  const network: ArbitrumNetwork | undefined = getArbitrumChains()[chainId]
+  const network = getArbitrumNetworks().find(n => n.chainId === chainId)
 
   if (!network) {
     throw new ArbSdkError(`Unrecognized network ${chainId}.`)
   }
 
   return network
+}
+
+/**
+ * Returns all Arbitrum networks registered in the SDK, both default and custom.
+ */
+export function getArbitrumNetworks(): ArbitrumNetwork[] {
+  return Object.values(networks)
 }
 
 export type ArbitrumNetworkInformationFromRollup = Pick<
@@ -473,7 +469,6 @@ export function registerCustomArbitrumNetwork(
 
   // store the network with the rest of the networks
   networks[network.chainId] = network
-  l2Networks = getArbitrumChains()
 
   return network
 }
@@ -528,7 +523,6 @@ const createNetworkStateHandler = () => {
     resetNetworksToDefault: () => {
       Object.keys(networks).forEach(key => delete networks[key])
       Object.assign(networks, JSON.parse(JSON.stringify(initialState)))
-      l2Networks = getArbitrumChains()
     },
   }
 }
@@ -552,7 +546,7 @@ export function getNitroGenesisBlock(
 export async function getMulticallAddress(
   providerOrChainId: Provider | number
 ): Promise<string> {
-  const chains = [...Object.values(l2Networks)]
+  const chains = getArbitrumNetworks()
 
   const chainId =
     typeof providerOrChainId === 'number'
