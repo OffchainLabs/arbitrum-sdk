@@ -48,7 +48,11 @@ import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getL2Network } from '../dataEntities/networks'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
-import { isArbitrumChain } from '../utils/lib'
+import {
+  getNativeTokenDecimals,
+  isArbitrumChain,
+  nativeTokenDecimalsTo18Decimals,
+} from '../utils/lib'
 
 export type ApproveGasTokenParams = {
   /**
@@ -312,8 +316,19 @@ export class EthBridger extends AssetBridger<
   public async getDepositToRequest(
     params: EthDepositToRequestParams
   ): Promise<L1ToL2TransactionRequest> {
+    const decimals = await getNativeTokenDecimals({
+      l1Provider: params.l1Provider,
+      l2Network: this.l2Network,
+    })
+
+    const amountToBeMintedOnChildChain = nativeTokenDecimalsTo18Decimals({
+      amount: params.amount,
+      decimals,
+    })
+
     const requestParams = {
       ...params,
+      amount: amountToBeMintedOnChildChain,
       to: params.destinationAddress,
       l2CallValue: params.amount,
       callValueRefundAddress: params.destinationAddress,

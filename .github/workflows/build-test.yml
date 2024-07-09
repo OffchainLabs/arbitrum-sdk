@@ -124,7 +124,7 @@ jobs:
         run: CI=true yarn test:unit
 
   test-integration:
-    name: Test (Integration) on Node.js v${{ matrix.node-version }}${{ matrix.orbit-test == '1' && ' with L3' || '' }}${{ matrix.decimals == '6' && ' with custom gas token (6 decimals)' || matrix.decimals == '24' && ' with custom gas token (24 decimals)' || matrix.decimals == '18' && ' with custom gas token (18 decimals)' || '' }}
+    name: Test (Integration) on Node.js v${{ matrix.node-version }}${{ matrix.orbit-test == '1' && ' with L3' || '' }}${{ matrix.decimals == '16' && ' with custom gas token (16 decimals)' || matrix.decimals == '20' && ' with custom gas token (20 decimals)' || matrix.decimals == '18' && ' with custom gas token (18 decimals)' || '' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false # runs all tests to completion even if one fails
@@ -145,13 +145,13 @@ jobs:
             node-version: 20
 
           - orbit-test: '1'
-            decimals: 6
+            decimals: 16
             node-version: 16
           - orbit-test: '1'
-            decimals: 6
+            decimals: 16
             node-version: 18
           - orbit-test: '1'
-            decimals: 6
+            decimals: 16
             node-version: 20
 
           - orbit-test: '1'
@@ -165,13 +165,13 @@ jobs:
             node-version: 20
 
           - orbit-test: '1'
-            decimals: 24
+            decimals: 20
             node-version: 16
           - orbit-test: '1'
-            decimals: 24
+            decimals: 20
             node-version: 18
           - orbit-test: '1'
-            decimals: 24
+            decimals: 20
             node-version: 20
 
     needs: install
@@ -197,7 +197,7 @@ jobs:
           nitro-contracts-branch: develop
           token-bridge-branch: develop
           l3-node: ${{ matrix.orbit-test == '1' }}
-          args: ${{ matrix.decimals == 6 && '--l3-fee-token --l3-fee-token-decimals 6' || matrix.decimals == 24 && '--l3-fee-token --l3-fee-token-decimals 24' || matrix.decimals == 18 && '--l3-fee-token' || '' }}
+          args: ${{ matrix.decimals == 16 && '--l3-fee-token --l3-fee-token-decimals 16' || matrix.decimals == 20 && '--l3-fee-token --l3-fee-token-decimals 20' || matrix.decimals == 18 && '--l3-fee-token' || '' }}
 
       - name: Copy .env
         run: cp ./.env-sample ./.env

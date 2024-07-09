@@ -252,3 +252,19 @@ export function scaleToNativeTokenDecimals({
   // decimals > 18
   return amount.mul(BigNumber.from(10).pow(BigNumber.from(decimals - 18)))
 }
+
+export function nativeTokenDecimalsTo18Decimals({
+  amount,
+  decimals,
+}: {
+  amount: BigNumber
+  decimals: number
+}) {
+  if (decimals < 18) {
+    return amount.mul(BigNumber.from(10).pow(18 - decimals))
+  } else if (decimals > 18) {
+    return amount.div(BigNumber.from(10).pow(decimals - 18))
+  }
+
+  return amount
+}
