@@ -3,7 +3,7 @@ import {
   resetNetworksToDefault,
   registerCustomArbitrumNetwork,
   getArbitrumNetwork,
-  l2Networks as arbitrumNetworks,
+  getArbitrumNetworks,
   getChildrenForNetwork,
   isParentNetwork,
   getMulticallAddress,
@@ -118,15 +118,11 @@ describe('Networks', async () => {
   describe('returns correct networks', () => {
     // todo: this could be a snapshot test
     it('returns correct Arbitrum networks', () => {
-      const arbitrumNetworksEntries = Object.entries(arbitrumNetworks)
-      const arbitrumNetworksKeys = arbitrumNetworksEntries.map(([key]) => key)
-
+      const arbitrumNetworksIds = getArbitrumNetworks().map(n => n.chainId)
       const expected = [42161, 42170, 421614, 23011913, 13331371]
-        //
-        .map(id => id.toString())
 
-      expect(arbitrumNetworksKeys).to.have.length(expected.length)
-      expect(arbitrumNetworksKeys).to.have.members(expected)
+      expect(arbitrumNetworksIds).to.have.length(expected.length)
+      expect(arbitrumNetworksIds).to.have.members(expected)
     })
   })
 
