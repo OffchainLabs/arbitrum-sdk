@@ -69,7 +69,7 @@ The `TokenBridge` type within the `ArbitrumNetwork` object has been updated.
 | `l2CustomGateway` | `childCustomGateway`  |
 | `l2ERC20Gateway`  | `childErc20Gateway`   |
 | `l2GatewayRouter` | `childGatewayRouter`  |
-| `l2Multicall`     | `childMulticall`      |
+| `l2Multicall`     | `childMultiCall`      |
 | `l2ProxyAdmin`    | `childProxyAdmin`     |
 | `l2Weth`          | `childWeth`           |
 | `l2WethGateway`   | `childWethGateway`    |
