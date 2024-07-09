@@ -43,6 +43,7 @@ import {
   getNativeTokenDecimals,
   scaleToNativeTokenDecimals,
 } from '../../src/lib/utils/lib'
+import { parseUnits } from 'ethers/lib/utils'
 
 dotenv.config()
 
@@ -114,10 +115,7 @@ describe('Ether', async () => {
       inboxAddress
     )
     const amount = '0.0002'
-    const ethToDeposit = scaleToNativeTokenDecimals({
-      amount: parseEther(amount),
-      decimals,
-    })
+    const ethToDeposit = parseUnits(amount, decimals)
     const res = await ethBridger.deposit({
       amount: ethToDeposit,
       l1Signer: l1Signer,
@@ -160,10 +158,6 @@ describe('Ether', async () => {
       await testSetup()
     const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
 
-    if (decimals !== 18) {
-      this.skip()
-    }
-
     await fundL1(l1Signer)
     const inboxAddress = ethBridger.l2Network.ethBridge.inbox
     const destWallet = Wallet.createRandom()
@@ -172,10 +166,7 @@ describe('Ether', async () => {
       inboxAddress
     )
     const amount = '0.0002'
-    const ethToDeposit = scaleToNativeTokenDecimals({
-      amount: parseEther(amount),
-      decimals,
-    })
+    const ethToDeposit = parseUnits(amount, decimals)
     const res = await ethBridger.depositTo({
       amount: ethToDeposit,
       l1Signer: l1Signer,
@@ -238,18 +229,11 @@ describe('Ether', async () => {
       await testSetup()
     const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
 
-    if (decimals !== 18) {
-      this.skip()
-    }
-
     await fundL1(l1Signer)
     const destWallet = Wallet.createRandom()
 
     const amount = '0.0002'
-    const ethToDeposit = scaleToNativeTokenDecimals({
-      amount: parseEther(amount),
-      decimals,
-    })
+    const ethToDeposit = parseUnits(amount, decimals)
     const res = await ethBridger.depositTo({
       amount: ethToDeposit,
       l1Signer: l1Signer,
