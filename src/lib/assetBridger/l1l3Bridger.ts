@@ -899,7 +899,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       factoryRedeem.status === ParentToChildMessageStatus.REDEEMED
         ? (
             await new ParentTransactionReceipt(
-              factoryRedeem.txReceipt
+              factoryRedeem.childTxReceipt
             ).getParentToChildMessages(params.l3Provider)
           )[0]
         : undefined
@@ -1601,7 +1601,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
 
     const l2l3Message = (
       await new ParentEthDepositTransactionReceipt(
-        l1l2Redeem.txReceipt
+        l1l2Redeem.childTxReceipt
       ).getParentToChildMessages(params.l3Provider)
     )[0]
 

@@ -234,13 +234,13 @@ export abstract class ParentToChildMessage {
 }
 
 /**
- * If the status is redeemed an chainTxReceipt is populated.
- * For all other statuses chainTxReceipt is not populated
+ * If the status is redeemed, childTxReceipt is populated.
+ * For all other statuses childTxReceipt is not populated
  */
 export type ParentToChildMessageWaitForStatusResult =
   | {
       status: ParentToChildMessageStatus.REDEEMED
-      txReceipt: TransactionReceipt
+      childTxReceipt: TransactionReceipt
     }
   | {
       status: Exclude<
@@ -250,7 +250,7 @@ export type ParentToChildMessageWaitForStatusResult =
     }
 
 export type EthDepositMessageWaitForStatusResult = {
-  txReceipt: TransactionReceipt | null
+  childTxReceipt: TransactionReceipt | null
 }
 
 export class ParentToChildMessageReader extends ParentToChildMessage {
@@ -337,7 +337,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
     const autoRedeem = await this.getAutoRedeemAttempt()
     if (autoRedeem && autoRedeem.status === 1) {
       return {
-        txReceipt: autoRedeem,
+        childTxReceipt: autoRedeem,
         status: ParentToChildMessageStatus.REDEEMED,
       }
     }
@@ -395,7 +395,7 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
         )
       if (successfulRedeem.length == 1)
         return {
-          txReceipt: successfulRedeem[0],
+          childTxReceipt: successfulRedeem[0],
           status: ParentToChildMessageStatus.REDEEMED,
         }
 
@@ -758,8 +758,8 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
  * A message for Eth deposits from Parent to Child
  */
 export class EthDepositMessage {
-  public readonly childDepositTxHash: string
-  private childDepositTxReceipt: TransactionReceipt | undefined | null
+  public readonly childTxHash: string
+  private childTxReceipt: TransactionReceipt | undefined | null
 
   public static calculateDepositTxId(
     childChainId: number,
@@ -857,7 +857,7 @@ export class EthDepositMessage {
     public readonly to: string,
     public readonly value: BigNumber
   ) {
-    this.childDepositTxHash = EthDepositMessage.calculateDepositTxId(
+    this.childTxHash = EthDepositMessage.calculateDepositTxId(
       childChainId,
       messageNumber,
       from,
@@ -868,7 +868,7 @@ export class EthDepositMessage {
 
   public async status(): Promise<EthDepositMessageStatus> {
     const receipt = await this.childProvider.getTransactionReceipt(
-      this.childDepositTxHash
+      this.childTxHash
     )
     if (receipt === null) return EthDepositMessageStatus.PENDING
     else return EthDepositMessageStatus.DEPOSITED
@@ -877,15 +877,15 @@ export class EthDepositMessage {
   public async wait(confirmations?: number, timeout?: number) {
     const chosenTimeout = isDefined(timeout) ? timeout : DEFAULT_DEPOSIT_TIMEOUT
 
-    if (!this.childDepositTxReceipt) {
-      this.childDepositTxReceipt = await getTransactionReceipt(
+    if (!this.childTxReceipt) {
+      this.childTxReceipt = await getTransactionReceipt(
         this.childProvider,
-        this.childDepositTxHash,
+        this.childTxHash,
         confirmations,
         chosenTimeout
       )
     }
 
-    return this.childDepositTxReceipt || null
+    return this.childTxReceipt || null
   }
 }

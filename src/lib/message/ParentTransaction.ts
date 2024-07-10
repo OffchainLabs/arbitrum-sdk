@@ -383,7 +383,7 @@ export class ParentEthDepositTransactionReceipt extends ParentTransactionReceipt
 
     return {
       complete: isDefined(res),
-      txReceipt: res,
+      childTxReceipt: res,
       message,
     }
   }
