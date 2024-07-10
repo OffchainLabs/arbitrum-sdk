@@ -287,7 +287,7 @@ export class EthBridger extends AssetBridger<
   public async deposit(
     params: EthDepositParams | ParentToChildTxReqAndSigner
   ): Promise<ParentEthDepositTransaction> {
-    await this.checkParentChain(params.parentSigner)
+    await this.checkParentNetwork(params.parentSigner)
 
     const ethDeposit = isParentToChildTransactionRequest(params)
       ? params
@@ -341,8 +341,8 @@ export class EthBridger extends AssetBridger<
       | EthDepositToParams
       | (ParentToChildTxReqAndSigner & { childProvider: Provider })
   ): Promise<ParentContractCallTransaction> {
-    await this.checkParentChain(params.parentSigner)
-    await this.checkChildChain(params.childProvider)
+    await this.checkParentNetwork(params.parentSigner)
+    await this.checkChildNetwork(params.childProvider)
 
     const retryableTicketRequest = isParentToChildTransactionRequest(params)
       ? params
@@ -413,7 +413,7 @@ export class EthBridger extends AssetBridger<
     if (!SignerProviderUtils.signerHasProvider(params.childSigner)) {
       throw new MissingProviderArbSdkError('childSigner')
     }
-    await this.checkChildChain(params.childSigner)
+    await this.checkChildNetwork(params.childSigner)
 
     const request = isChildToParentTransactionRequest<
       EthWithdrawParams & { childSigner: Signer }

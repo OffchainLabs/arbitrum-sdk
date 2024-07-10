@@ -43,10 +43,10 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   }
 
   /**
-   * Check the signer/provider matches the parentChain, throws if not
+   * Check the signer/provider matches the parent network, throws if not
    * @param sop
    */
-  protected async checkParentChain(sop: SignerOrProvider): Promise<void> {
+  protected async checkParentNetwork(sop: SignerOrProvider): Promise<void> {
     await SignerProviderUtils.checkNetworkMatches(
       sop,
       this.childNetwork.parentChainId
@@ -54,10 +54,10 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   }
 
   /**
-   * Check the signer/provider matches the childNetwork, throws if not
+   * Check the signer/provider matches the child network, throws if not
    * @param sop
    */
-  protected async checkChildChain(sop: SignerOrProvider): Promise<void> {
+  protected async checkChildNetwork(sop: SignerOrProvider): Promise<void> {
     await SignerProviderUtils.checkNetworkMatches(
       sop,
       this.childNetwork.chainId

@@ -223,7 +223,7 @@ export class Erc20Bridger extends AssetBridger<
     erc20ParentAddress: string,
     parentProvider: Provider
   ): Promise<string> {
-    await this.checkParentChain(parentProvider)
+    await this.checkParentNetwork(parentProvider)
 
     return await L1GatewayRouter__factory.connect(
       this.childNetwork.tokenBridge.parentGatewayRouter,
@@ -241,7 +241,7 @@ export class Erc20Bridger extends AssetBridger<
     erc20ParentAddress: string,
     childProvider: Provider
   ): Promise<string> {
-    await this.checkChildChain(childProvider)
+    await this.checkChildNetwork(childProvider)
 
     return await L2GatewayRouter__factory.connect(
       this.childNetwork.tokenBridge.childGatewayRouter,
@@ -276,7 +276,7 @@ export class Erc20Bridger extends AssetBridger<
       throw new Error('chain uses ETH as its native/gas token')
     }
 
-    await this.checkParentChain(params.parentSigner)
+    await this.checkParentNetwork(params.parentSigner)
 
     const approveGasTokenRequest = this.isApproveParams(params)
       ? await this.getApproveGasTokenRequest({
@@ -335,7 +335,7 @@ export class Erc20Bridger extends AssetBridger<
   public async approveToken(
     params: ApproveParamsOrTxRequest
   ): Promise<ethers.ContractTransaction> {
-    await this.checkParentChain(params.parentSigner)
+    await this.checkParentNetwork(params.parentSigner)
 
     const approveRequest = this.isApproveParams(params)
       ? await this.getApproveTokenRequest({
@@ -368,7 +368,7 @@ export class Erc20Bridger extends AssetBridger<
     fromAddress?: string,
     toAddress?: string
   ): Promise<(EventArgs<WithdrawalInitiatedEvent> & { txHash: string })[]> {
-    await this.checkChildChain(childProvider)
+    await this.checkChildNetwork(childProvider)
 
     const eventFetcher = new EventFetcher(childProvider)
     const events = (
@@ -488,7 +488,7 @@ export class Erc20Bridger extends AssetBridger<
     erc20ParentAddress: string,
     parentProvider: Provider
   ): Promise<string> {
-    await this.checkParentChain(parentProvider)
+    await this.checkParentNetwork(parentProvider)
 
     const parentGatewayRouter = L1GatewayRouter__factory.connect(
       this.childNetwork.tokenBridge.parentGatewayRouter,
@@ -511,7 +511,7 @@ export class Erc20Bridger extends AssetBridger<
     erc20ChildChainAddress: string,
     childProvider: Provider
   ): Promise<string> {
-    await this.checkChildChain(childProvider)
+    await this.checkChildNetwork(childProvider)
 
     // child network WETH contract doesn't have the parentAddress method on it
     if (
@@ -557,7 +557,7 @@ export class Erc20Bridger extends AssetBridger<
     parentTokenAddress: string,
     parentProvider: Provider
   ): Promise<boolean> {
-    await this.checkParentChain(parentProvider)
+    await this.checkParentNetwork(parentProvider)
 
     const parentGatewayRouter = L1GatewayRouter__factory.connect(
       this.childNetwork.tokenBridge.parentGatewayRouter,
@@ -647,8 +647,8 @@ export class Erc20Bridger extends AssetBridger<
   public async getDepositRequest(
     params: DepositRequest
   ): Promise<ParentToChildTransactionRequest> {
-    await this.checkParentChain(params.parentProvider)
-    await this.checkChildChain(params.childProvider)
+    await this.checkParentNetwork(params.parentProvider)
+    await this.checkChildNetwork(params.childProvider)
     const defaultedParams = this.applyDefaults(params)
     const {
       amount,
@@ -754,7 +754,7 @@ export class Erc20Bridger extends AssetBridger<
   public async deposit(
     params: Erc20DepositParams | ParentToChildTxReqAndSignerProvider
   ): Promise<ParentContractCallTransaction> {
-    await this.checkParentChain(params.parentSigner)
+    await this.checkParentNetwork(params.parentSigner)
 
     // Although the types prevent should alert callers that value is not
     // a valid override, it is possible that they pass it in anyway as it's a common override
@@ -879,7 +879,7 @@ export class Erc20Bridger extends AssetBridger<
     if (!SignerProviderUtils.signerHasProvider(params.childSigner)) {
       throw new MissingProviderArbSdkError('childSigner')
     }
-    await this.checkChildChain(params.childSigner)
+    await this.checkChildNetwork(params.childSigner)
 
     const withdrawalRequest = isChildToParentTransactionRequest<
       OmitTyped<Erc20WithdrawParams, 'from'> & { childSigner: Signer }
@@ -989,7 +989,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
       throw new Error('chain uses ETH as its native/gas token')
     }
 
-    await this.checkParentChain(params.parentSigner)
+    await this.checkParentNetwork(params.parentSigner)
 
     const approveGasTokenRequest = this.isApproveParams(params)
       ? this.getApproveGasTokenForCustomTokenRegistrationRequest({
@@ -1024,8 +1024,8 @@ export class AdminErc20Bridger extends Erc20Bridger {
     if (!SignerProviderUtils.signerHasProvider(parentSigner)) {
       throw new MissingProviderArbSdkError('parentSigner')
     }
-    await this.checkParentChain(parentSigner)
-    await this.checkChildChain(childProvider)
+    await this.checkParentNetwork(parentSigner)
+    await this.checkChildNetwork(childProvider)
 
     const parentProvider = parentSigner.provider!
     const parentSenderAddress = await parentSigner.getAddress()
@@ -1178,7 +1178,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
     parentProvider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag }
   ): Promise<EventArgs<GatewaySetEvent>[]> {
-    await this.checkParentChain(parentProvider)
+    await this.checkParentNetwork(parentProvider)
 
     const parentGatewayRouterAddress =
       this.childNetwork.tokenBridge.parentGatewayRouter
@@ -1208,7 +1208,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
         'Must supply customNetworkL2GatewayRouter for custom network '
       )
     }
-    await this.checkChildChain(childProvider)
+    await this.checkChildNetwork(childProvider)
 
     const childGatewayRouterAddress =
       customNetworkL2GatewayRouter ||
@@ -1240,8 +1240,8 @@ export class AdminErc20Bridger extends Erc20Bridger {
     if (!SignerProviderUtils.signerHasProvider(parentSigner)) {
       throw new MissingProviderArbSdkError('parentSigner')
     }
-    await this.checkParentChain(parentSigner)
-    await this.checkChildChain(childProvider)
+    await this.checkParentNetwork(parentSigner)
+    await this.checkChildNetwork(childProvider)
 
     const from = await parentSigner.getAddress()
 
