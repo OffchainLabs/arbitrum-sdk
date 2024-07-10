@@ -172,7 +172,7 @@ describe('Networks', async () => {
     })
 
     it('returns correct value for arbitrum sepolia', () => {
-      expect(isParentNetwork(421614)).to.equal(true)
+      expect(isParentNetwork(421614)).to.equal(false)
     })
   })
 
