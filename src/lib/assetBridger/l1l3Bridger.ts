@@ -255,7 +255,7 @@ export type EthL1L3DepositRequestParams = {
   l3TicketGasOverrides?: Omit<GasOverrides, 'deposit'>
 }
 
-export type EthDepositStatus = {
+export type EthL1L3DepositStatus = {
   /**
    * L1 to L2 message
    */
@@ -1572,11 +1572,11 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
    * Get the status of a deposit given an L1 tx receipt. Does not check if the tx is actually a deposit tx.
    *
    * @return Information regarding each step of the deposit
-   * and `EthDepositStatus.completed` which indicates whether the deposit has fully completed.
+   * and `EthL1L3DepositStatus.completed` which indicates whether the deposit has fully completed.
    */
   public async getDepositStatus(
     params: GetDepositStatusParams
-  ): Promise<EthDepositStatus> {
+  ): Promise<EthL1L3DepositStatus> {
     await this._checkL1Network(params.l1Provider)
     await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
