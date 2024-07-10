@@ -187,7 +187,7 @@ export type GetDepositStatusParams = {
   l3Provider: Provider
 } & TxReference
 
-export type Erc20DepositStatus = {
+export type Erc20L1L3DepositStatus = {
   /**
    * L1 to L2 token bridge message
    */
@@ -877,7 +877,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    */
   public async getDepositStatus(
     params: GetDepositStatusParams
-  ): Promise<Erc20DepositStatus> {
+  ): Promise<Erc20L1L3DepositStatus> {
     await this._checkL1Network(params.l1Provider)
     await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
