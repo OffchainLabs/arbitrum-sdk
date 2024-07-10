@@ -224,7 +224,7 @@ export type Erc20DepositStatus = {
   completed: boolean
 }
 
-export type EthDepositRequestParams = {
+export type EthL1L3DepositRequestParams = {
   /**
    * Amount of ETH to send to L3
    */
@@ -1461,7 +1461,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
    * Get a tx request to deposit ETH to L3 via a double retryable ticket
    */
   public async getDepositRequest(
-    params: EthDepositRequestParams &
+    params: EthL1L3DepositRequestParams &
       (
         | {
             from: string
@@ -1520,7 +1520,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
    */
   public async deposit(
     params:
-      | (EthDepositRequestParams & {
+      | (EthL1L3DepositRequestParams & {
           l1Signer: Signer
           overrides?: PayableOverrides
         })
