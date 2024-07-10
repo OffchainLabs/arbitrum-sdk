@@ -146,11 +146,11 @@ describe('Ether', async () => {
       'message inputs value error'
     ).to.eq(ethToDeposit.toString())
 
-    prettyLog('childDepositTxHash: ' + waitResult.message.childDepositTxHash)
+    prettyLog('childDepositTxHash: ' + waitResult.message.childTxHash)
     prettyLog('chain transaction found!')
     expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
-    expect(waitResult.txReceipt).to.exist
-    expect(waitResult.txReceipt).to.not.be.null
+    expect(waitResult.childTxReceipt).to.exist
+    expect(waitResult.childTxReceipt).to.not.be.null
 
     const testWalletChildEthBalance = await childSigner.getBalance()
     expect(testWalletChildEthBalance.toString(), 'final balance').to.eq(
