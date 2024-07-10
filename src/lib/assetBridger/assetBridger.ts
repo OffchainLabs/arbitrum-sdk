@@ -34,12 +34,12 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   /**
    * In case of a chain that uses ETH as its native/gas token, this is either `undefined` or the zero address
    *
-   * In case of a chain that uses an ERC-20 token from the parent chain as its native/gas token, this is the address of said token on the parent chain
+   * In case of a chain that uses an ERC-20 token from the parent network as its native/gas token, this is the address of said token on the parent network
    */
   public readonly nativeToken?: string
 
-  public constructor(public readonly childChain: ArbitrumNetwork) {
-    this.nativeToken = childChain.nativeToken
+  public constructor(public readonly childNetwork: ArbitrumNetwork) {
+    this.nativeToken = childNetwork.nativeToken
   }
 
   /**
@@ -49,16 +49,19 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
   protected async checkParentChain(sop: SignerOrProvider): Promise<void> {
     await SignerProviderUtils.checkNetworkMatches(
       sop,
-      this.childChain.parentChainId
+      this.childNetwork.parentChainId
     )
   }
 
   /**
-   * Check the signer/provider matches the childChain, throws if not
+   * Check the signer/provider matches the childNetwork, throws if not
    * @param sop
    */
   protected async checkChildChain(sop: SignerOrProvider): Promise<void> {
-    await SignerProviderUtils.checkNetworkMatches(sop, this.childChain.chainId)
+    await SignerProviderUtils.checkNetworkMatches(
+      sop,
+      this.childNetwork.chainId
+    )
   }
 
   /**

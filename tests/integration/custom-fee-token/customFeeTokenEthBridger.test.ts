@@ -65,7 +65,7 @@ describeOnlyWhenCustomGasToken(
 
       const allowance = await nativeTokenContract.allowance(
         await parentSigner.getAddress(),
-        ethBridger.childChain.ethBridge.inbox
+        ethBridger.childNetwork.ethBridge.inbox
       )
 
       expect(allowance.toString()).to.equal(
@@ -89,7 +89,7 @@ describeOnlyWhenCustomGasToken(
 
       const allowance = await nativeTokenContract.allowance(
         await parentSigner.getAddress(),
-        ethBridger.childChain.ethBridge.inbox
+        ethBridger.childNetwork.ethBridge.inbox
       )
 
       expect(allowance.toString()).to.equal(
@@ -106,7 +106,7 @@ describeOnlyWhenCustomGasToken(
         childSigner,
         childProvider,
       } = await testSetup()
-      const bridge = ethBridger.childChain.ethBridge.bridge
+      const bridge = ethBridger.childNetwork.ethBridge.bridge
       const amount = parseEther('2')
 
       await fundParentSignerEther(parentSigner)
@@ -167,7 +167,7 @@ describeOnlyWhenCustomGasToken(
         ethBridger,
         nativeTokenContract,
       } = await testSetup()
-      const bridge = ethBridger.childChain.ethBridge.bridge
+      const bridge = ethBridger.childNetwork.ethBridge.bridge
       const amount = parseEther('0.2')
 
       await fundParentSignerEther(parentSigner)
