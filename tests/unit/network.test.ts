@@ -120,7 +120,7 @@ describe('Networks', async () => {
     // todo: this could be a snapshot test
     it('returns correct Arbitrum networks', () => {
       const arbitrumNetworksIds = getArbitrumNetworks().map(n => n.chainId)
-      const expected = [42161, 42170, 421614, 23011913, 13331371]
+      const expected = [42161, 42170, 421614]
 
       expect(arbitrumNetworksIds).to.have.length(expected.length)
       expect(arbitrumNetworksIds).to.have.members(expected)
@@ -150,7 +150,7 @@ describe('Networks', async () => {
 
     it('returns correct children for arbitrum sepolia', () => {
       const children = getChildrenForNetwork(421614).map(c => c.chainId)
-      expect(children).to.have.members([13331371, 23011913])
+      expect(children).to.have.members([])
     })
   })
 
