@@ -8,6 +8,7 @@ import {
   isParentNetwork,
   getMulticallAddress,
 } from '../../src/lib/dataEntities/networks'
+import { SignerOrProvider } from '../../src/lib/dataEntities/signerOrProvider'
 
 const ethereumMainnetChainId = 1
 const arbitrumOneChainId = 42161
@@ -119,7 +120,7 @@ describe('Networks', async () => {
     // todo: this could be a snapshot test
     it('returns correct Arbitrum networks', () => {
       const arbitrumNetworksIds = getArbitrumNetworks().map(n => n.chainId)
-      const expected = [42161, 42170, 421614, 23011913, 13331371]
+      const expected = [42161, 42170, 421614]
 
       expect(arbitrumNetworksIds).to.have.length(expected.length)
       expect(arbitrumNetworksIds).to.have.members(expected)
@@ -149,7 +150,7 @@ describe('Networks', async () => {
 
     it('returns correct children for arbitrum sepolia', () => {
       const children = getChildrenForNetwork(421614).map(c => c.chainId)
-      expect(children).to.have.members([13331371, 23011913])
+      expect(children).to.have.members([])
     })
   })
 
@@ -171,7 +172,7 @@ describe('Networks', async () => {
     })
 
     it('returns correct value for arbitrum sepolia', () => {
-      expect(isParentNetwork(421614)).to.equal(true)
+      expect(isParentNetwork(421614)).to.equal(false)
     })
   })
 
@@ -199,6 +200,24 @@ describe('Networks', async () => {
     it('returns correct value for arbitrum sepolia', async () => {
       const multicall = await getMulticallAddress(421614)
       expect(multicall).to.equal('0xA115146782b7143fAdB3065D86eACB54c169d092')
+    })
+  })
+
+  describe('async/sync usage of the getArbitrumNetwork function', () => {
+    it('returns ArbitrumNetwork for chain ID', () => {
+      const network = getArbitrumNetwork(arbitrumOneChainId)
+      // TypeScript should infer this as ArbitrumNetwork, not Promise<ArbitrumNetwork>
+      expect(network.chainId).to.equal(arbitrumOneChainId)
+    })
+
+    it('returns Promise<ArbitrumNetwork> for SignerOrProvider input', async () => {
+      const networkPromise = getArbitrumNetwork({
+        getNetwork: async () => ({ chainId: arbitrumOneChainId }),
+      } as unknown as SignerOrProvider)
+      // TypeScript should infer this as Promise<ArbitrumNetwork>
+      expect(networkPromise).to.be.an.instanceOf(Promise)
+      const network = await networkPromise
+      expect(network.chainId).to.equal(arbitrumOneChainId)
     })
   })
 })

@@ -86,7 +86,7 @@ export interface EthWithdrawParams {
    */
   amount: BigNumber
   /**
-   * The parent chain address to receive the value.
+   * The parent network address to receive the value.
    */
   destinationAddress: string
   /**
@@ -101,7 +101,7 @@ export interface EthWithdrawParams {
 
 export type EthDepositParams = {
   /**
-   * Parent chain provider or signer
+   * Parent network provider or signer
    */
   parentSigner: Signer
   /**
@@ -116,11 +116,11 @@ export type EthDepositParams = {
 
 export type EthDepositToParams = EthDepositParams & {
   /**
-   * Child chain provider
+   * Child network provider
    */
   childProvider: Provider
   /**
-   * Child chain address of the entity receiving the funds
+   * Child network address of the entity receiving the funds
    */
   destinationAddress: string
   /**
@@ -149,7 +149,7 @@ type EthDepositToRequestParams = OmitTyped<
   'overrides' | 'parentSigner'
 > & {
   /**
-   * Parent chain provider
+   * Parent network provider
    */
   parentProvider: Provider
   /**
@@ -159,14 +159,14 @@ type EthDepositToRequestParams = OmitTyped<
 }
 
 /**
- * Bridger for moving either ETH or custom gas tokens back and forth between parent and child chains
+ * Bridger for moving either ETH or custom gas tokens back and forth between parent and child networks
  */
 export class EthBridger extends AssetBridger<
   EthDepositParams | EthDepositToParams | ParentToChildTxReqAndSigner,
   EthWithdrawParams | ChildToParentTxReqAndSigner
 > {
   /**
-   * Instantiates a new EthBridger from a child chain Provider
+   * Instantiates a new EthBridger from a child network Provider
    * @param childProvider
    * @returns
    */
@@ -185,7 +185,7 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Creates a transaction request for approving the custom gas token to be spent by the inbox on the parent chain
+   * Creates a transaction request for approving the custom gas token to be spent by the inbox on the parent network
    * @param params
    */
   public getApproveGasTokenRequest(
@@ -199,7 +199,7 @@ export class EthBridger extends AssetBridger<
       'approve',
       [
         // spender
-        this.childChain.ethBridge.inbox,
+        this.childNetwork.ethBridge.inbox,
         // value
         params?.amount ?? constants.MaxUint256,
       ]
@@ -213,7 +213,7 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Approves the custom gas token to be spent by the Inbox on the parent chain.
+   * Approves the custom gas token to be spent by the Inbox on the parent network.
    * @param params
    */
   public async approveGasToken(
@@ -270,7 +270,7 @@ export class EthBridger extends AssetBridger<
   ): Promise<OmitTyped<ParentToChildTransactionRequest, 'retryableData'>> {
     return {
       txRequest: {
-        to: this.childChain.ethBridge.inbox,
+        to: this.childNetwork.ethBridge.inbox,
         value: this.nativeTokenIsEth ? params.amount : 0,
         data: this.getDepositRequestData(params),
         from: params.from,
@@ -280,14 +280,14 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Deposit ETH from Parent onto Child chain
+   * Deposit ETH from Parent onto Child network
    * @param params
    * @returns
    */
   public async deposit(
     params: EthDepositParams | ParentToChildTxReqAndSigner
   ): Promise<ParentEthDepositTransaction> {
-    await this.checkParentChain(params.parentSigner)
+    await this.checkParentNetwork(params.parentSigner)
 
     const ethDeposit = isParentToChildTransactionRequest(params)
       ? params
@@ -305,7 +305,7 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Get a transaction request for an ETH deposit to a different child chain address using Retryables
+   * Get a transaction request for an ETH deposit to a different child network address using Retryables
    * @param params
    * @returns
    */
@@ -332,7 +332,7 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Deposit ETH from parent chain onto a different child chain address
+   * Deposit ETH from parent network onto a different child network address
    * @param params
    * @returns
    */
@@ -341,8 +341,8 @@ export class EthBridger extends AssetBridger<
       | EthDepositToParams
       | (ParentToChildTxReqAndSigner & { childProvider: Provider })
   ): Promise<ParentContractCallTransaction> {
-    await this.checkParentChain(params.parentSigner)
-    await this.checkChildChain(params.childProvider)
+    await this.checkParentNetwork(params.parentSigner)
+    await this.checkChildNetwork(params.childProvider)
 
     const retryableTicketRequest = isParentToChildTransactionRequest(params)
       ? params
@@ -401,7 +401,7 @@ export class EthBridger extends AssetBridger<
   }
 
   /**
-   * Withdraw ETH from child chain onto parent chain
+   * Withdraw ETH from child network onto parent network
    * @param params
    * @returns
    */
@@ -413,7 +413,7 @@ export class EthBridger extends AssetBridger<
     if (!SignerProviderUtils.signerHasProvider(params.childSigner)) {
       throw new MissingProviderArbSdkError('childSigner')
     }
-    await this.checkChildChain(params.childSigner)
+    await this.checkChildNetwork(params.childSigner)
 
     const request = isChildToParentTransactionRequest<
       EthWithdrawParams & { childSigner: Signer }

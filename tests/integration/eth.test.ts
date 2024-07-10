@@ -102,7 +102,7 @@ describe('Ether', async () => {
     const { ethBridger, parentSigner, childSigner } = await testSetup()
 
     await fundParentSigner(parentSigner)
-    const inboxAddress = ethBridger.childChain.ethBridge.inbox
+    const inboxAddress = ethBridger.childNetwork.ethBridge.inbox
 
     const initialInboxBalance = await parentSigner.provider!.getBalance(
       inboxAddress
@@ -146,11 +146,11 @@ describe('Ether', async () => {
       'message inputs value error'
     ).to.eq(ethToDeposit.toString())
 
-    prettyLog('childDepositTxHash: ' + waitResult.message.childDepositTxHash)
+    prettyLog('childDepositTxHash: ' + waitResult.message.childTxHash)
     prettyLog('chain transaction found!')
     expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
-    expect(waitResult.txReceipt).to.exist
-    expect(waitResult.txReceipt).to.not.be.null
+    expect(waitResult.childTxReceipt).to.exist
+    expect(waitResult.childTxReceipt).to.not.be.null
 
     const testWalletChildEthBalance = await childSigner.getBalance()
     expect(testWalletChildEthBalance.toString(), 'final balance').to.eq(
@@ -162,7 +162,7 @@ describe('Ether', async () => {
     const { ethBridger, parentSigner, childSigner } = await testSetup()
 
     await fundParentSigner(parentSigner)
-    const inboxAddress = ethBridger.childChain.ethBridge.inbox
+    const inboxAddress = ethBridger.childNetwork.ethBridge.inbox
     const destWallet = Wallet.createRandom()
 
     const initialInboxBalance = await parentSigner.provider!.getBalance(

@@ -266,66 +266,6 @@ const networks: {
       l2ForwarderFactory: '0x88feBaFBb4E36A4E7E8874E4c9Fd73A9D59C2E7c',
     },
   },
-  23011913: {
-    chainId: 23011913,
-    confirmPeriodBlocks: 20,
-    ethBridge: {
-      bridge: '0x35aa95ac4747D928E2Cd42FE4461F6D9d1826346',
-      inbox: '0xe1e3b1CBaCC870cb6e5F4Bdf246feB6eB5cD351B',
-      outbox: '0x98fcA8bFF38a987B988E54273Fa228A52b62E43b',
-      rollup: '0x94db9E36d9336cD6F9FfcAd399dDa6Cc05299898',
-      sequencerInbox: '0x00A0F15b79d1D3e5991929FaAbCF2AA65623530c',
-    },
-    isCustom: false,
-    name: 'Stylus Testnet v1',
-    parentChainId: 421614,
-    tokenBridge: {
-      parentCustomGateway: '0xd624D491A5Bc32de52a2e1481846752213bF7415',
-      parentErc20Gateway: '0x7348Fdf6F3e090C635b23D970945093455214F3B',
-      parentGatewayRouter: '0x0057892cb8bb5f1cE1B3C6f5adE899732249713f',
-      parentMultiCall: '0xBEbe3BfBF52FFEA965efdb3f14F2101c0264c940',
-      parentProxyAdmin: '0xB9E77732f32831f09e2a50D6E71B2Cca227544bf',
-      parentWeth: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73',
-      parentWethGateway: '0x39845e4a230434D218b907459a305eBA61A790d4',
-      childCustomGateway: '0xF6dbB0e312dF4652d59ce405F5E00CC3430f19c5',
-      childErc20Gateway: '0xe027f79CE40a1eF8e47B51d0D46Dc4ea658C5860',
-      childGatewayRouter: '0x4c3a1f7011F02Fe4769fC704359c3696a6A60D89',
-      childMultiCall: '0xEb4A260FD16aaf18c04B1aeaDFE20E622e549bd3',
-      childProxyAdmin: '0xE914c0d417E8250d0237d2F4827ed3612e6A9C3B',
-      childWeth: '0x61Dc4b961D2165623A25EB775260785fE78BD37C',
-      childWethGateway: '0x7021B4Edd9f047772242fc948441d6e0b9121175',
-    },
-  },
-  13331371: {
-    chainId: 13331371,
-    confirmPeriodBlocks: 20,
-    ethBridge: {
-      bridge: '0x024a10506f8a27E4CfEDeB18fd30AA1529A2960E',
-      inbox: '0xcdCF1F59f5d4A65a3c67E1341f8b85Cba50E0a7C',
-      outbox: '0xf731Fc4F7B70A0a6F9915f452d88Dc405a59D8b1',
-      rollup: '0x01a8a2b32aa5328466Be47A1808a03aC6c35d94f',
-      sequencerInbox: '0x1Ea8B3853355604673e1301A501766EbB2987a09',
-    },
-    isCustom: false,
-    name: 'Stylus Testnet v2',
-    parentChainId: 421614,
-    tokenBridge: {
-      parentCustomGateway: '0x093353B9f723047abf37Ebe01cE48d7dDA8320F4',
-      parentErc20Gateway: '0xD2C4693Dd8d44703af5CF9484fa8faAD6e33E392',
-      parentGatewayRouter: '0xAC4F454320A253267C6Ae95e4784b9A4f9F78359',
-      parentMultiCall: '0xce1CAd780c529e66e3aa6D952a1ED9A6447791c1',
-      parentProxyAdmin: '0xBD76fd3fB5F3CD7165fB6e0DB895FFE1d81463e3',
-      parentWeth: '0x980B62Da83eFf3D4576C647993b0c1D7faf17c73',
-      parentWethGateway: '0x4FEbc93233aAc1523f36Abe297de9323f6C8ce79',
-      childCustomGateway: '0xE102D94df0179082B39Ddcad58c9430dedc89aE3',
-      childErc20Gateway: '0xCf3a4aF3c48Ba19c5FccFB44FA3E3A0F2A6e60dA',
-      childGatewayRouter: '0xD60FD4c5D335b00287202C93C5B4EE0478D92686',
-      childMultiCall: '0x39E068582873B2011F5a1e8E0F7D9D993c8111BC',
-      childProxyAdmin: '0x9DC4Da9a940AFEbBC8329aA6534aD767b60d968c',
-      childWeth: '0xa3bD1fdeEb903142d16B3bd22f2aC9A82C714D62',
-      childWethGateway: '0xec018E81eE818b04CFb1E013D91F1b779a2AC440',
-    },
-  },
 }
 
 /**
@@ -364,27 +304,33 @@ export const getChildrenForNetwork = (
  *
  * @note Throws if the chain is not an Arbitrum chain.
  */
-export const getArbitrumNetwork = async (
+export function getArbitrumNetwork(chainId: number): ArbitrumNetwork
+export function getArbitrumNetwork(
+  signerOrProvider: SignerOrProvider
+): Promise<ArbitrumNetwork>
+export function getArbitrumNetwork(
   signerOrProviderOrChainId: SignerOrProvider | number
-): Promise<ArbitrumNetwork> => {
-  const chainId = await (async () => {
-    if (typeof signerOrProviderOrChainId === 'number') {
-      return signerOrProviderOrChainId
-    }
-    const provider = SignerProviderUtils.getProviderOrThrow(
-      signerOrProviderOrChainId
-    )
+): ArbitrumNetwork | Promise<ArbitrumNetwork> {
+  if (typeof signerOrProviderOrChainId === 'number') {
+    return getArbitrumNetworkByChainId(signerOrProviderOrChainId)
+  }
+  return getArbitrumNetworkBySignerOrProvider(signerOrProviderOrChainId)
+}
 
-    return (await provider.getNetwork()).chainId
-  })()
-
+function getArbitrumNetworkByChainId(chainId: number): ArbitrumNetwork {
   const network = getArbitrumNetworks().find(n => n.chainId === chainId)
-
   if (!network) {
     throw new ArbSdkError(`Unrecognized network ${chainId}.`)
   }
-
   return network
+}
+
+async function getArbitrumNetworkBySignerOrProvider(
+  signerOrProvider: SignerOrProvider
+): Promise<ArbitrumNetwork> {
+  const provider = SignerProviderUtils.getProviderOrThrow(signerOrProvider)
+  const { chainId } = await provider.getNetwork()
+  return getArbitrumNetworkByChainId(chainId)
 }
 
 /**
@@ -471,46 +417,6 @@ export function registerCustomArbitrumNetwork(
   networks[network.chainId] = network
 
   return network
-}
-
-/**
- * Registers a custom network that matches the one created by a Nitro local node. Useful in development.
- *
- * @see {@link https://github.com/OffchainLabs/nitro}
- */
-export const addDefaultLocalNetwork = (): ArbitrumNetwork => {
-  const defaultLocalL2Network: ArbitrumNetwork = {
-    chainId: 412346,
-    confirmPeriodBlocks: 20,
-    ethBridge: {
-      bridge: '0x2b360A9881F21c3d7aa0Ea6cA0De2a3341d4eF3C',
-      inbox: '0xfF4a24b22F94979E9ba5f3eb35838AA814bAD6F1',
-      outbox: '0x49940929c7cA9b50Ff57a01d3a92817A414E6B9B',
-      rollup: '0x65a59D67Da8e710Ef9A01eCa37f83f84AEdeC416',
-      sequencerInbox: '0xE7362D0787b51d8C72D504803E5B1d6DcdA89540',
-    },
-    isCustom: true,
-    name: 'ArbLocal',
-    parentChainId: 1337,
-    tokenBridge: {
-      parentCustomGateway: '0x3DF948c956e14175f43670407d5796b95Bb219D8',
-      parentErc20Gateway: '0x4A2bA922052bA54e29c5417bC979Daaf7D5Fe4f4',
-      parentGatewayRouter: '0x525c2aBA45F66987217323E8a05EA400C65D06DC',
-      parentMultiCall: '0xDB2D15a3EB70C347E0D2C2c7861cAFb946baAb48',
-      parentProxyAdmin: '0xe1080224B632A93951A7CFA33EeEa9Fd81558b5e',
-      parentWeth: '0x408Da76E87511429485C32E4Ad647DD14823Fdc4',
-      parentWethGateway: '0xF5FfD11A55AFD39377411Ab9856474D2a7Cb697e',
-      childCustomGateway: '0x525c2aBA45F66987217323E8a05EA400C65D06DC',
-      childErc20Gateway: '0xe1080224B632A93951A7CFA33EeEa9Fd81558b5e',
-      childGatewayRouter: '0x1294b86822ff4976BfE136cB06CF43eC7FCF2574',
-      childMultiCall: '0xDB2D15a3EB70C347E0D2C2c7861cAFb946baAb48',
-      childProxyAdmin: '0xda52b25ddB0e3B9CC393b0690Ac62245Ac772527',
-      childWeth: '0x408Da76E87511429485C32E4Ad647DD14823Fdc4',
-      childWethGateway: '0x4A2bA922052bA54e29c5417bC979Daaf7D5Fe4f4',
-    },
-  }
-
-  return registerCustomArbitrumNetwork(defaultLocalL2Network)
 }
 
 /**

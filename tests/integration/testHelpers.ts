@@ -139,7 +139,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
 
   const { expectedL2Gateway } = getGateways(
     params.gatewayType,
-    params.erc20Bridger.childChain
+    params.erc20Bridger.childNetwork
   )
   expect(gatewayAddress, 'Gateway is not custom gateway').to.eq(
     expectedL2Gateway
@@ -348,7 +348,7 @@ export const depositToken = async ({
 
   const { expectedL1Gateway, expectedL2Gateway } = getGateways(
     expectedGatewayType,
-    erc20Bridger.childChain
+    erc20Bridger.childNetwork
   )
 
   const parentGateway = await erc20Bridger.getParentGatewayAddress(

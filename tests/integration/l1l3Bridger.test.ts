@@ -19,8 +19,8 @@ import { L1Teleporter__factory } from '../../src/lib/abi/factories/L1Teleporter_
 import { fundParentSigner, fundChildSigner, skipIfMainnet } from './testHelpers'
 import { BigNumber, Signer, Wallet, ethers, providers, utils } from 'ethers'
 import {
-  Erc20DepositRequestParams,
   EthL1L3Bridger,
+  Erc20L1L3DepositRequestParams,
 } from '../../src/lib/assetBridger/l1l3Bridger'
 import { assert, expect } from 'chai'
 import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
@@ -766,7 +766,7 @@ describe('L1 to L3 Bridging', () => {
     itOnlyWhenCustomGasToken('happy path skip fee token', async () => {
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
 
-      const depositParams: Erc20DepositRequestParams = {
+      const depositParams: Erc20L1L3DepositRequestParams = {
         erc20L1Address: l1Token.address,
         destinationAddress: l3Recipient,
         amount,
@@ -837,7 +837,7 @@ describe('L1 to L3 Bridging', () => {
     })
 
     async function testHappyPathNonFeeOrStandard(
-      depositParams: Erc20DepositRequestParams
+      depositParams: Erc20L1L3DepositRequestParams
     ) {
       const depositTxRequest = await l1l3Bridger.getDepositRequest({
         ...depositParams,
@@ -902,7 +902,7 @@ describe('L1 to L3 Bridging', () => {
     it('happy path non fee token or standard', async () => {
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
 
-      const depositParams: Erc20DepositRequestParams = {
+      const depositParams: Erc20L1L3DepositRequestParams = {
         erc20L1Address: l1Token.address,
         destinationAddress: l3Recipient,
         amount,
@@ -933,7 +933,7 @@ describe('L1 to L3 Bridging', () => {
         await weth.approve(l1l3Bridger.teleporter.l1Teleporter, amount)
       ).wait()
 
-      const depositParams: Erc20DepositRequestParams = {
+      const depositParams: Erc20L1L3DepositRequestParams = {
         erc20L1Address: l2Network.tokenBridge.parentWeth,
         destinationAddress: l3Recipient,
         amount,
@@ -951,7 +951,7 @@ describe('L1 to L3 Bridging', () => {
         l2Signer.provider!
       ))!
 
-      const depositParams: Erc20DepositRequestParams = {
+      const depositParams: Erc20L1L3DepositRequestParams = {
         erc20L1Address: l1FeeToken,
         destinationAddress: l3Recipient,
         amount: ethers.utils.parseEther('0.1'),

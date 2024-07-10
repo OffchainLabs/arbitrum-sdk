@@ -110,7 +110,7 @@ export type TokenApproveParams = {
   amount?: BigNumber
 }
 
-export type Erc20DepositRequestRetryableOverrides = {
+export type Erc20L1L3DepositRequestRetryableOverrides = {
   /**
    * Optional L1 gas price override. Used to estimate submission fees.
    */
@@ -141,7 +141,7 @@ export type Erc20DepositRequestRetryableOverrides = {
   l2l3TokenBridgeRetryableGas?: TeleporterRetryableGasOverride
 }
 
-export type Erc20DepositRequestParams = {
+export type Erc20L1L3DepositRequestParams = {
   /**
    * Address of L1 token
    */
@@ -173,7 +173,7 @@ export type Erc20DepositRequestParams = {
   /**
    * Optional overrides for retryable gas parameters
    */
-  retryableOverrides?: Erc20DepositRequestRetryableOverrides
+  retryableOverrides?: Erc20L1L3DepositRequestRetryableOverrides
 }
 
 export type TxReference =
@@ -181,13 +181,13 @@ export type TxReference =
   | { tx: ParentContractCallTransaction }
   | { txReceipt: ParentContractCallTransactionReceipt }
 
-export type GetDepositStatusParams = {
+export type GetL1L3DepositStatusParams = {
   l1Provider: Provider
   l2Provider: Provider
   l3Provider: Provider
 } & TxReference
 
-export type Erc20DepositStatus = {
+export type Erc20L1L3DepositStatus = {
   /**
    * L1 to L2 token bridge message
    */
@@ -224,7 +224,7 @@ export type Erc20DepositStatus = {
   completed: boolean
 }
 
-export type EthDepositRequestParams = {
+export type EthL1L3DepositRequestParams = {
   /**
    * Amount of ETH to send to L3
    */
@@ -255,7 +255,7 @@ export type EthDepositRequestParams = {
   l3TicketGasOverrides?: Omit<GasOverrides, 'deposit'>
 }
 
-export type EthDepositStatus = {
+export type EthL1L3DepositStatus = {
   /**
    * L1 to L2 message
    */
@@ -730,7 +730,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    * Also returns the amount of fee tokens required for teleportation.
    */
   public async getDepositRequest(
-    params: Erc20DepositRequestParams &
+    params: Erc20L1L3DepositRequestParams &
       (
         | {
             from: string
@@ -810,7 +810,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    */
   public async deposit(
     params:
-      | (Erc20DepositRequestParams & {
+      | (Erc20L1L3DepositRequestParams & {
           l1Signer: Signer
           overrides?: PayableOverrides
         })
@@ -876,8 +876,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    * Can provide either the txHash, the tx, or the txReceipt
    */
   public async getDepositStatus(
-    params: GetDepositStatusParams
-  ): Promise<Erc20DepositStatus> {
+    params: GetL1L3DepositStatusParams
+  ): Promise<Erc20L1L3DepositStatus> {
     await this._checkL1Network(params.l1Provider)
     await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
@@ -899,7 +899,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       factoryRedeem.status === ParentToChildMessageStatus.REDEEMED
         ? (
             await new ParentTransactionReceipt(
-              factoryRedeem.txReceipt
+              factoryRedeem.childTxReceipt
             ).getParentToChildMessages(params.l3Provider)
           )[0]
         : undefined
@@ -1196,7 +1196,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       IL1Teleporter.TeleportParamsStruct,
       'gasParams'
     >,
-    retryableOverrides: Erc20DepositRequestRetryableOverrides,
+    retryableOverrides: Erc20L1L3DepositRequestRetryableOverrides,
     l1Provider: Provider,
     l2Provider: Provider,
     l3Provider: Provider
@@ -1461,7 +1461,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
    * Get a tx request to deposit ETH to L3 via a double retryable ticket
    */
   public async getDepositRequest(
-    params: EthDepositRequestParams &
+    params: EthL1L3DepositRequestParams &
       (
         | {
             from: string
@@ -1520,7 +1520,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
    */
   public async deposit(
     params:
-      | (EthDepositRequestParams & {
+      | (EthL1L3DepositRequestParams & {
           l1Signer: Signer
           overrides?: PayableOverrides
         })
@@ -1572,11 +1572,11 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
    * Get the status of a deposit given an L1 tx receipt. Does not check if the tx is actually a deposit tx.
    *
    * @return Information regarding each step of the deposit
-   * and `EthDepositStatus.completed` which indicates whether the deposit has fully completed.
+   * and `EthL1L3DepositStatus.completed` which indicates whether the deposit has fully completed.
    */
   public async getDepositStatus(
-    params: GetDepositStatusParams
-  ): Promise<EthDepositStatus> {
+    params: GetL1L3DepositStatusParams
+  ): Promise<EthL1L3DepositStatus> {
     await this._checkL1Network(params.l1Provider)
     await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
@@ -1601,7 +1601,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
 
     const l2l3Message = (
       await new ParentEthDepositTransactionReceipt(
-        l1l2Redeem.txReceipt
+        l1l2Redeem.childTxReceipt
       ).getParentToChildMessages(params.l3Provider)
     )[0]
 
