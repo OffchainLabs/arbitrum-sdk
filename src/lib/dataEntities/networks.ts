@@ -364,27 +364,33 @@ export const getChildrenForNetwork = (
  *
  * @note Throws if the chain is not an Arbitrum chain.
  */
-export const getArbitrumNetwork = async (
+export function getArbitrumNetwork(chainId: number): ArbitrumNetwork
+export function getArbitrumNetwork(
+  signerOrProvider: SignerOrProvider
+): Promise<ArbitrumNetwork>
+export function getArbitrumNetwork(
   signerOrProviderOrChainId: SignerOrProvider | number
-): Promise<ArbitrumNetwork> => {
-  const chainId = await (async () => {
-    if (typeof signerOrProviderOrChainId === 'number') {
-      return signerOrProviderOrChainId
-    }
-    const provider = SignerProviderUtils.getProviderOrThrow(
-      signerOrProviderOrChainId
-    )
+): ArbitrumNetwork | Promise<ArbitrumNetwork> {
+  if (typeof signerOrProviderOrChainId === 'number') {
+    return getArbitrumNetworkByChainId(signerOrProviderOrChainId)
+  }
+  return getArbitrumNetworkBySignerOrProvider(signerOrProviderOrChainId)
+}
 
-    return (await provider.getNetwork()).chainId
-  })()
-
+function getArbitrumNetworkByChainId(chainId: number): ArbitrumNetwork {
   const network = getArbitrumNetworks().find(n => n.chainId === chainId)
-
   if (!network) {
     throw new ArbSdkError(`Unrecognized network ${chainId}.`)
   }
-
   return network
+}
+
+async function getArbitrumNetworkBySignerOrProvider(
+  signerOrProvider: SignerOrProvider
+): Promise<ArbitrumNetwork> {
+  const provider = SignerProviderUtils.getProviderOrThrow(signerOrProvider)
+  const { chainId } = await provider.getNetwork()
+  return getArbitrumNetworkByChainId(chainId)
 }
 
 /**
