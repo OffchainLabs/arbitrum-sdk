@@ -420,46 +420,6 @@ export function registerCustomArbitrumNetwork(
 }
 
 /**
- * Registers a custom network that matches the one created by a Nitro local node. Useful in development.
- *
- * @see {@link https://github.com/OffchainLabs/nitro}
- */
-export const addDefaultLocalNetwork = (): ArbitrumNetwork => {
-  const defaultLocalL2Network: ArbitrumNetwork = {
-    chainId: 412346,
-    confirmPeriodBlocks: 20,
-    ethBridge: {
-      bridge: '0x2b360A9881F21c3d7aa0Ea6cA0De2a3341d4eF3C',
-      inbox: '0xfF4a24b22F94979E9ba5f3eb35838AA814bAD6F1',
-      outbox: '0x49940929c7cA9b50Ff57a01d3a92817A414E6B9B',
-      rollup: '0x65a59D67Da8e710Ef9A01eCa37f83f84AEdeC416',
-      sequencerInbox: '0xE7362D0787b51d8C72D504803E5B1d6DcdA89540',
-    },
-    isCustom: true,
-    name: 'ArbLocal',
-    parentChainId: 1337,
-    tokenBridge: {
-      parentCustomGateway: '0x3DF948c956e14175f43670407d5796b95Bb219D8',
-      parentErc20Gateway: '0x4A2bA922052bA54e29c5417bC979Daaf7D5Fe4f4',
-      parentGatewayRouter: '0x525c2aBA45F66987217323E8a05EA400C65D06DC',
-      parentMultiCall: '0xDB2D15a3EB70C347E0D2C2c7861cAFb946baAb48',
-      parentProxyAdmin: '0xe1080224B632A93951A7CFA33EeEa9Fd81558b5e',
-      parentWeth: '0x408Da76E87511429485C32E4Ad647DD14823Fdc4',
-      parentWethGateway: '0xF5FfD11A55AFD39377411Ab9856474D2a7Cb697e',
-      childCustomGateway: '0x525c2aBA45F66987217323E8a05EA400C65D06DC',
-      childErc20Gateway: '0xe1080224B632A93951A7CFA33EeEa9Fd81558b5e',
-      childGatewayRouter: '0x1294b86822ff4976BfE136cB06CF43eC7FCF2574',
-      childMultiCall: '0xDB2D15a3EB70C347E0D2C2c7861cAFb946baAb48',
-      childProxyAdmin: '0xda52b25ddB0e3B9CC393b0690Ac62245Ac772527',
-      childWeth: '0x408Da76E87511429485C32E4Ad647DD14823Fdc4',
-      childWethGateway: '0x4A2bA922052bA54e29c5417bC979Daaf7D5Fe4f4',
-    },
-  }
-
-  return registerCustomArbitrumNetwork(defaultLocalL2Network)
-}
-
-/**
  * Creates a function that resets the networks index to default. Useful in development.
  */
 const createNetworkStateHandler = () => {
