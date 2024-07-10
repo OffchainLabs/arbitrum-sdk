@@ -24,6 +24,7 @@ export {
   Erc20L1L3DepositStatus,
   Erc20L1L3DepositRequestParams,
   Erc20L1L3DepositRequestRetryableOverrides,
+  GetL1L3DepositStatusParams,
 } from './lib/assetBridger/l1l3Bridger'
 export { EthBridger } from './lib/assetBridger/ethBridger'
 export { Erc20Bridger } from './lib/assetBridger/erc20Bridger'

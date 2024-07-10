@@ -181,7 +181,7 @@ export type TxReference =
   | { tx: ParentContractCallTransaction }
   | { txReceipt: ParentContractCallTransactionReceipt }
 
-export type GetDepositStatusParams = {
+export type GetL1L3DepositStatusParams = {
   l1Provider: Provider
   l2Provider: Provider
   l3Provider: Provider
@@ -876,7 +876,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    * Can provide either the txHash, the tx, or the txReceipt
    */
   public async getDepositStatus(
-    params: GetDepositStatusParams
+    params: GetL1L3DepositStatusParams
   ): Promise<Erc20L1L3DepositStatus> {
     await this._checkL1Network(params.l1Provider)
     await this._checkL2Network(params.l2Provider)
@@ -1575,7 +1575,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
    * and `EthL1L3DepositStatus.completed` which indicates whether the deposit has fully completed.
    */
   public async getDepositStatus(
-    params: GetDepositStatusParams
+    params: GetL1L3DepositStatusParams
   ): Promise<EthL1L3DepositStatus> {
     await this._checkL1Network(params.l1Provider)
     await this._checkL2Network(params.l2Provider)
