@@ -110,7 +110,7 @@ export type TokenApproveParams = {
   amount?: BigNumber
 }
 
-export type Erc20DepositRequestRetryableOverrides = {
+export type Erc20L1L3DepositRequestRetryableOverrides = {
   /**
    * Optional L1 gas price override. Used to estimate submission fees.
    */
@@ -173,7 +173,7 @@ export type Erc20L1L3DepositRequestParams = {
   /**
    * Optional overrides for retryable gas parameters
    */
-  retryableOverrides?: Erc20DepositRequestRetryableOverrides
+  retryableOverrides?: Erc20L1L3DepositRequestRetryableOverrides
 }
 
 export type TxReference =
@@ -1196,7 +1196,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       IL1Teleporter.TeleportParamsStruct,
       'gasParams'
     >,
-    retryableOverrides: Erc20DepositRequestRetryableOverrides,
+    retryableOverrides: Erc20L1L3DepositRequestRetryableOverrides,
     l1Provider: Provider,
     l2Provider: Provider,
     l3Provider: Provider
