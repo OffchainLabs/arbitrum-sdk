@@ -17,8 +17,14 @@
 'use strict'
 
 export {
-  Erc20L1L3Bridger,
   EthL1L3Bridger,
+  EthL1L3DepositStatus,
+  EthL1L3DepositRequestParams,
+  Erc20L1L3Bridger,
+  Erc20L1L3DepositStatus,
+  Erc20L1L3DepositRequestParams,
+  Erc20L1L3DepositRequestRetryableOverrides,
+  GetL1L3DepositStatusParams,
 } from './lib/assetBridger/l1l3Bridger'
 export { EthBridger } from './lib/assetBridger/ethBridger'
 export { Erc20Bridger } from './lib/assetBridger/erc20Bridger'
@@ -30,6 +36,8 @@ export {
   ChildToParentMessage,
   ChildToParentMessageWriter,
   ChildToParentMessageReader,
+  ChildToParentMessageReaderOrWriter,
+  ChildToParentTransactionEvent,
 } from './lib/message/ChildToParentMessage'
 export {
   ParentEthDepositTransaction,
