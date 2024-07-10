@@ -30,6 +30,8 @@ export {
   ChildToParentMessage,
   ChildToParentMessageWriter,
   ChildToParentMessageReader,
+  ChildToParentMessageReaderOrWriter,
+  ChildToParentTransactionEvent,
 } from './lib/message/ChildToParentMessage'
 export {
   ParentEthDepositTransaction,
