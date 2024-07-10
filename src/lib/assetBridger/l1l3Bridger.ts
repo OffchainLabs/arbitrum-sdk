@@ -141,7 +141,7 @@ export type Erc20DepositRequestRetryableOverrides = {
   l2l3TokenBridgeRetryableGas?: TeleporterRetryableGasOverride
 }
 
-export type Erc20DepositRequestParams = {
+export type Erc20L1L3DepositRequestParams = {
   /**
    * Address of L1 token
    */
@@ -730,7 +730,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    * Also returns the amount of fee tokens required for teleportation.
    */
   public async getDepositRequest(
-    params: Erc20DepositRequestParams &
+    params: Erc20L1L3DepositRequestParams &
       (
         | {
             from: string
@@ -810,7 +810,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    */
   public async deposit(
     params:
-      | (Erc20DepositRequestParams & {
+      | (Erc20L1L3DepositRequestParams & {
           l1Signer: Signer
           overrides?: PayableOverrides
         })
