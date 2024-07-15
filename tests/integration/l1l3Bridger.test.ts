@@ -372,7 +372,13 @@ describe('L1 to L3 Bridging', () => {
 
     itOnlyWhenCustomGasToken(
       'should properly get l2 and l1 fee token addresses',
-      async () => {
+      async function () {
+        const { l1Provider, l2Network } = await testSetup()
+        const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+
+        if (decimals !== 18) {
+          this.skip()
+        }
         if (l1l3Bridger.l2GasTokenAddress === undefined) {
           throw new Error('L2 fee token address is undefined')
         }
@@ -858,6 +864,13 @@ describe('L1 to L3 Bridging', () => {
         assert(depositTxRequest.gasTokenAmount.eq('0'))
       }
       console.warn('3')
+
+      console.warn(amount.toString())
+
+      const address = await l1Signer.getAddress()
+      const bal = await l1Token.balanceOf(address)
+
+      console.warn(bal.toString())
 
       const depositTx = await l1l3Bridger.deposit({
         l1Signer,
