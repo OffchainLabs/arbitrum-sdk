@@ -133,7 +133,7 @@ async function fundActualL1CustomFeeToken(
   )
 
   const deployerWallet = new Wallet(
-    utils.sha256(utils.toUtf8Bytes('user_token_bridge_deployer')),
+    utils.sha256(utils.toUtf8Bytes('user_fee_token_deployer')),
     l1Signer.provider!
   )
 
@@ -239,15 +239,15 @@ describe('L1 to L3 Bridging', () => {
     await fundL2(l3Signer, ethers.utils.parseUnits('10', decimals))
     console.warn('fund 3')
 
-    // if (isL2NetworkWithCustomFeeToken()) {
-    //   await fundActualL1CustomFeeToken(
-    //     l1Signer,
-    //     l1Signer.provider!,
-    //     l3Network.nativeToken!,
-    //     l2Network,
-    //     l2Signer.provider!
-    //   )
-    // }
+    if (isL2NetworkWithCustomFeeToken()) {
+      await fundActualL1CustomFeeToken(
+        l1Signer,
+        l1Signer.provider!,
+        l3Network.nativeToken!,
+        l2Network,
+        l2Signer.provider!
+      )
+    }
 
     console.warn('fund 4')
   })
