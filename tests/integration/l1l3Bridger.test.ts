@@ -120,10 +120,13 @@ async function deployTeleportContracts(l1Signer: Signer, l2Signer: Signer) {
 
 async function fundActualL1CustomFeeToken(
   l1Signer: Signer,
+  l1Provider: providers.Provider,
   l2FeeToken: string,
   l2Network: L2Network,
   l2Provider: providers.Provider
 ) {
+  const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+
   const l1FeeToken = await new Erc20Bridger(l2Network).getL1ERC20Address(
     l2FeeToken,
     l2Provider
@@ -138,7 +141,7 @@ async function fundActualL1CustomFeeToken(
 
   const tx = await tokenContract.transfer(
     await l1Signer.getAddress(),
-    utils.parseEther('10')
+    utils.parseUnits('10', decimals)
   )
   await tx.wait()
 }
@@ -225,21 +228,24 @@ describe('L1 to L3 Bridging', () => {
 
     // fund signers on L1 and L2
     console.warn('fund start')
-    await fundL1(l1Signer, ethers.utils.parseUnits('0.1', decimals))
+    await fundL1(l1Signer, ethers.utils.parseUnits('10', decimals))
     console.warn('fund 1')
-    await fundL2(l2Signer, ethers.utils.parseUnits('0.1', decimals))
+    await fundL2(l2Signer, ethers.utils.parseUnits('10', decimals))
     console.warn('fund 2')
-    await fundL2(l3Signer, ethers.utils.parseUnits('0.1', decimals))
+    await fundL2(l3Signer, ethers.utils.parseUnits('10', decimals))
     console.warn('fund 3')
 
     if (isL2NetworkWithCustomFeeToken()) {
       await fundActualL1CustomFeeToken(
         l1Signer,
+        l1Signer.provider!,
         l3Network.nativeToken!,
         l2Network,
         l2Signer.provider!
       )
     }
+
+    console.warn('fund 4')
   })
 
   describe('EthL1L3Bridger', () => {
