@@ -139,6 +139,10 @@ async function fundActualL1CustomFeeToken(
 
   const tokenContract = ERC20__factory.connect(l1FeeToken, deployerWallet)
 
+  const bal = await tokenContract.balanceOf(deployerWallet.address)
+
+  console.warn('BAL: ', bal.toString())
+
   const tx = await tokenContract.transfer(
     await l1Signer.getAddress(),
     utils.parseUnits('10', decimals)
