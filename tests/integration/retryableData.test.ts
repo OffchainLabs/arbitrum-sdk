@@ -20,7 +20,7 @@ import { assert, expect } from 'chai'
 import { BigNumber } from '@ethersproject/bignumber'
 import { hexlify } from '@ethersproject/bytes'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
-import { fundL1, skipIfCustomGasToken, skipIfMainnet } from './testHelpers'
+import { fundL1, skipIfMainnet } from './testHelpers'
 import { RetryableDataTools } from '../../src'
 import { Wallet } from 'ethers'
 import { testSetup } from '../../scripts/testSetup'
@@ -38,30 +38,22 @@ import {
 describe('RevertData', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
-    // // TODO: fix this test
-    // await skipIfCustomGasToken(this)
   })
 
   const createRevertParams = async () => {
-    const { l1Provider, l2Network } = await testSetup()
-    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
-
     const l2CallValue = BigNumber.from(137)
     const maxSubmissionCost = BigNumber.from(1618)
+
+    const { l1Provider, l2Network } = await testSetup()
+    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
 
     return {
       to: Wallet.createRandom().address,
       excessFeeRefundAddress: Wallet.createRandom().address,
       callValueRefundAddress: Wallet.createRandom().address,
-      l2CallValue: scaleToNativeTokenDecimals({
-        amount: l2CallValue,
-        decimals,
-      }),
+      l2CallValue,
       data: hexlify(randomBytes(32)),
-      maxSubmissionCost: scaleToNativeTokenDecimals({
-        amount: maxSubmissionCost,
-        decimals,
-      }),
+      maxSubmissionCost: maxSubmissionCost,
       value: scaleToNativeTokenDecimals({
         amount: l2CallValue
           .add(maxSubmissionCost)
@@ -69,14 +61,8 @@ describe('RevertData', () => {
           .add(RetryableDataTools.ErrorTriggeringParams.maxFeePerGas),
         decimals,
       }),
-      gasLimit: scaleToNativeTokenDecimals({
-        amount: RetryableDataTools.ErrorTriggeringParams.gasLimit,
-        decimals,
-      }),
-      maxFeePerGas: scaleToNativeTokenDecimals({
-        amount: RetryableDataTools.ErrorTriggeringParams.maxFeePerGas,
-        decimals,
-      }),
+      gasLimit: RetryableDataTools.ErrorTriggeringParams.gasLimit,
+      maxFeePerGas: RetryableDataTools.ErrorTriggeringParams.maxFeePerGas,
     }
   }
 
