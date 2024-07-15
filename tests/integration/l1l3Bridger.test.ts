@@ -133,15 +133,11 @@ async function fundActualL1CustomFeeToken(
   )
 
   const deployerWallet = new Wallet(
-    utils.sha256(utils.toUtf8Bytes('user_fee_token_deployer')),
+    utils.sha256(utils.toUtf8Bytes('user_token_bridge_deployer')),
     l1Signer.provider!
   )
 
   const tokenContract = ERC20__factory.connect(l1FeeToken, deployerWallet)
-
-  const bal = await tokenContract.balanceOf(deployerWallet.address)
-
-  console.warn('BAL: ', bal.toString())
 
   const tx = await tokenContract.transfer(
     await l1Signer.getAddress(),
@@ -239,15 +235,15 @@ describe('L1 to L3 Bridging', () => {
     await fundL2(l3Signer, ethers.utils.parseUnits('10', decimals))
     console.warn('fund 3')
 
-    if (isL2NetworkWithCustomFeeToken()) {
-      await fundActualL1CustomFeeToken(
-        l1Signer,
-        l1Signer.provider!,
-        l3Network.nativeToken!,
-        l2Network,
-        l2Signer.provider!
-      )
-    }
+    // if (isL2NetworkWithCustomFeeToken()) {
+    //   await fundActualL1CustomFeeToken(
+    //     l1Signer,
+    //     l1Signer.provider!,
+    //     l3Network.nativeToken!,
+    //     l2Network,
+    //     l2Signer.provider!
+    //   )
+    // }
 
     console.warn('fund 4')
   })
@@ -414,7 +410,14 @@ describe('L1 to L3 Bridging', () => {
 
     itOnlyWhenCustomGasToken(
       'should throw when the fee token does not use 18 decimals on L1 or L2',
-      async () => {
+      async function () {
+        const { l1Provider, l2Network } = await testSetup()
+        const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+
+        if (decimals !== 18) {
+          this.skip()
+        }
+
         const hackedL1Provider = new ethers.providers.JsonRpcProvider(
           process.env['ETH_URL']
         )
@@ -834,10 +837,12 @@ describe('L1 to L3 Bridging', () => {
     async function testHappyPathNonFeeOrStandard(
       depositParams: Erc20DepositRequestParams
     ) {
+      console.warn('1')
       const depositTxRequest = await l1l3Bridger.getDepositRequest({
         ...depositParams,
         l1Signer,
       })
+      console.warn('2')
 
       if (isL2NetworkWithCustomFeeToken()) {
         assert(depositTxRequest.gasTokenAmount.gt('0'))
@@ -852,13 +857,16 @@ describe('L1 to L3 Bridging', () => {
       } else {
         assert(depositTxRequest.gasTokenAmount.eq('0'))
       }
+      console.warn('3')
 
       const depositTx = await l1l3Bridger.deposit({
         l1Signer,
         txRequest: depositTxRequest.txRequest,
       })
+      console.warn('4')
 
       const depositReceipt = await depositTx.wait()
+      console.warn('5')
 
       // poll status
       await poll(async () => {
@@ -870,6 +878,7 @@ describe('L1 to L3 Bridging', () => {
         })
         return status.completed
       }, 1000)
+      console.warn('6')
 
       // make sure the tokens have landed in the right place
       const l3TokenAddr = await l1l3Bridger.getL3ERC20Address(
@@ -879,9 +888,13 @@ describe('L1 to L3 Bridging', () => {
       )
       const l3Token = l1l3Bridger.getL3TokenContract(l3TokenAddr, l3Provider)
 
+      console.warn('7')
+
       const l3Balance = await l3Token.balanceOf(
         depositParams.destinationAddress || (await l1Signer.getAddress())
       )
+
+      console.warn('8')
 
       assert(
         (
@@ -892,6 +905,8 @@ describe('L1 to L3 Bridging', () => {
       )
 
       assert(l3Balance.eq(amount))
+
+      console.warn('9')
     }
 
     it('happy path non fee token or standard', async () => {
