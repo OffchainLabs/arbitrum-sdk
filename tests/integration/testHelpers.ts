@@ -25,7 +25,7 @@ import { parseEther } from 'ethers/lib/utils'
 
 import { config, getSigner, testSetup } from '../../scripts/testSetup'
 
-import { Signer, Wallet, constants } from 'ethers'
+import { Signer, Wallet } from 'ethers'
 import {
   Erc20Bridger,
   L1ToL2MessageStatus,
