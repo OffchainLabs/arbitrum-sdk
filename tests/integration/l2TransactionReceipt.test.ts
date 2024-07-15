@@ -63,8 +63,8 @@ async function waitForL1BatchConfirmations(
 describe('ArbProvider', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
-    // TODO: fix this test
-    await skipIfCustomGasToken(this)
+    // // TODO: fix this test
+    // await skipIfCustomGasToken(this)
   })
 
   it('does find l1 batch info', async () => {
