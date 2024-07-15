@@ -26,6 +26,7 @@ import {
   itOnlyWhenCustomGasToken,
   itOnlyWhenEth,
 } from './custom-fee-token/mochaExtensions'
+import { getNativeTokenDecimals } from '../../src/lib/utils/lib'
 
 async function expectPromiseToReject(
   promise: Promise<any>,
@@ -217,10 +218,19 @@ describe('L1 to L3 Bridging', () => {
       ethers.utils.hexlify(ethers.utils.randomBytes(32))
     )
 
+    const decimals = await getNativeTokenDecimals({
+      l1Provider: setup.l1Provider,
+      l2Network,
+    })
+
     // fund signers on L1 and L2
-    await fundL1(l1Signer, ethers.utils.parseEther('10'))
-    await fundL2(l2Signer, ethers.utils.parseEther('10'))
-    await fundL2(l3Signer, ethers.utils.parseEther('10'))
+    console.warn('fund start')
+    await fundL1(l1Signer, ethers.utils.parseUnits('0.1', decimals))
+    console.warn('fund 1')
+    await fundL2(l2Signer, ethers.utils.parseUnits('0.1', decimals))
+    console.warn('fund 2')
+    await fundL2(l3Signer, ethers.utils.parseUnits('0.1', decimals))
+    console.warn('fund 3')
 
     if (isL2NetworkWithCustomFeeToken()) {
       await fundActualL1CustomFeeToken(
