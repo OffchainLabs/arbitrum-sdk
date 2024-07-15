@@ -34,8 +34,8 @@ import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeToken
 describe('RevertData', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
-    // TODO: fix this test
-    await skipIfCustomGasToken(this)
+    // // TODO: fix this test
+    // await skipIfCustomGasToken(this)
   })
 
   const createRevertParams = () => {
