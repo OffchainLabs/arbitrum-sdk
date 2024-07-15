@@ -479,17 +479,3 @@ export const skipIfMainnet = (() => {
     }
   }
 })()
-
-export const skipIfCustomGasToken = (() => {
-  return async (testContext: Mocha.Context) => {
-    const { l2Network } = await testSetup()
-
-    if (
-      l2Network.nativeToken &&
-      l2Network.nativeToken !== constants.AddressZero
-    ) {
-      console.warn('Skip for custom gas token chain')
-      testContext.skip()
-    }
-  }
-})()

@@ -22,7 +22,6 @@ import {
   fundL1,
   fundL2,
   mineUntilStop,
-  skipIfCustomGasToken,
   skipIfMainnet,
   wait,
 } from './testHelpers'
@@ -40,11 +39,9 @@ async function waitForL1BatchConfirmations(
   let polls = 0
   let l1BatchConfirmations = 0
 
-  const MAX_POLLS = 50
+  const MAX_POLLS = 10
 
   while (polls < MAX_POLLS) {
-    console.warn('polls: ', polls)
-    console.warn('l1BatchConfirmations: ', l1BatchConfirmations)
     l1BatchConfirmations = (
       await arbTxReceipt.getBatchConfirmations(l2Provider)
     ).toNumber()
@@ -65,8 +62,6 @@ async function waitForL1BatchConfirmations(
 describe('ArbProvider', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
-    // // TODO: fix this test
-    // await skipIfCustomGasToken(this)
   })
 
   it('does find l1 batch info', async () => {
@@ -111,7 +106,7 @@ describe('ArbProvider', () => {
           arbTxReceipt,
           l2Provider,
           // for L3s, we also have to wait for the batch to land on L1, so we poll for max 60s until that happens
-          300_000
+          60_000
         )
 
         expect(l1BatchConfirmations, 'missing confirmations').to.be.gt(0)

@@ -1084,7 +1084,9 @@ export class AdminErc20Bridger extends Erc20Bridger {
 
       return {
         data,
-        value: setTokenDeposit.add(setGatewayDeposit),
+        value: this.nativeTokenIsEth
+          ? setTokenDeposit.add(setGatewayDeposit)
+          : BigNumber.from(0),
         to: l1Token.address,
         from,
       }
