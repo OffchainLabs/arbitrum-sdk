@@ -220,7 +220,7 @@ export class L1ToL2MessageGasEstimator {
     const { data } = retryableEstimateData
     const gasLimitDefaults = this.applyGasLimitDefaults(options?.gasLimit)
 
-    // estimate the l1 gas price
+    // estimate the l2 gas price
     const maxFeePerGasPromise = this.estimateMaxFeePerGas(options?.maxFeePerGas)
 
     // estimate the submission fee
