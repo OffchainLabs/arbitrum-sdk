@@ -129,7 +129,7 @@ async function fundActualL1CustomFeeToken(
   )
 
   const deployerWallet = new Wallet(
-    utils.sha256(utils.toUtf8Bytes('user_token_bridge_deployer')),
+    utils.sha256(utils.toUtf8Bytes('user_fee_token_deployer')),
     l1Signer.provider!
   )
 
