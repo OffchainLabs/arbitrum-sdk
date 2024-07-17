@@ -129,16 +129,37 @@ jobs:
     strategy:
       fail-fast: false # runs all tests to completion even if one fails
       matrix:
-        node-version: [18, 20]
-        orbit-test: [0, 1]
-        decimals: [null, 16, 18, 20]
-      exclude:
-        - orbit-test: 0
-          decimals: 16
-        - orbit-test: 0
-          decimals: 18
-        - orbit-test: 0
-          decimals: 20
+        include:
+          - orbit-test: '0'
+            node-version: 18
+          - orbit-test: '0'
+            node-version: 20
+
+          - orbit-test: '1'
+            node-version: 18
+          - orbit-test: '1'
+            node-version: 20
+
+          - orbit-test: '1'
+            decimals: 16
+            node-version: 18
+          - orbit-test: '1'
+            decimals: 16
+            node-version: 20
+
+          - orbit-test: '1'
+            decimals: 18
+            node-version: 18
+          - orbit-test: '1'
+            decimals: 18
+            node-version: 20
+
+          - orbit-test: '1'
+            decimals: 20
+            node-version: 18
+          - orbit-test: '1'
+            decimals: 20
+            node-version: 20
 
     needs: install
     env:
@@ -159,7 +180,6 @@ jobs:
       - name: Set up the local node
         uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
-          nitro-testnode-ref: adapt-bridge-amount
           l3-node: ${{ matrix.orbit-test == '1' }}
           args: ${{ matrix.decimals == 16 && '--l3-fee-token --l3-fee-token-decimals 16' || matrix.decimals == 20 && '--l3-fee-token --l3-fee-token-decimals 20' || matrix.decimals == 18 && '--l3-fee-token' || '' }}
 
