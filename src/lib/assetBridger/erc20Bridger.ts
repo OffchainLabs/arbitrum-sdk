@@ -899,9 +899,11 @@ export class Erc20Bridger extends AssetBridger<
 
   /**
    * Checks if the token has been properly registered on both gateways. Mostly useful for tokens that use a custom gateway.
-   * @param erc20ParentAddress
-   * @param parentProvider
-   * @param childProvider
+   *
+   * @param {Object} params
+   * @param {string} params.erc20ParentAddress
+   * @param {Provider} params.parentProvider
+   * @param {Provider} params.childProvider
    * @returns
    */
   public async isRegistered({
@@ -1193,9 +1195,9 @@ export class AdminErc20Bridger extends Erc20Bridger {
   }
 
   /**
-   * Get all the gateway set events on the L2 gateway router
-   * @param parentProvider
-   * @param customNetworkParentGatewayRouter
+   * Get all the gateway set events on the child gateway router
+   * @param childProvider
+   * @param customNetworkL2GatewayRouter
    * @returns
    */
   public async getChildGatewaySetEvents(
