@@ -383,8 +383,10 @@ describe('L1 to L3 Bridging', () => {
     itOnlyWhenCustomGasToken(
       'should properly get l2 and l1 fee token addresses',
       async function () {
-        const { l1Provider, l2Network } = await testSetup()
-        const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+        const decimals = await getNativeTokenDecimals({
+          l1Provider: l1Signer.provider!,
+          l2Network: l3Network,
+        })
 
         if (decimals !== 18) {
           this.skip()
@@ -411,8 +413,10 @@ describe('L1 to L3 Bridging', () => {
     itOnlyWhenCustomGasToken(
       'should throw getting l1 gas token address when it is unavailable',
       async function () {
-        const { l1Provider, l2Network } = await testSetup()
-        const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+        const decimals = await getNativeTokenDecimals({
+          l1Provider: l1Signer.provider!,
+          l2Network: l3Network,
+        })
 
         if (decimals !== 18) {
           this.skip()
@@ -434,7 +438,16 @@ describe('L1 to L3 Bridging', () => {
 
     itOnlyWhenCustomGasToken(
       'should throw when the fee token does not use 18 decimals on L1 or L2',
-      async () => {
+      async function () {
+        const decimals = await getNativeTokenDecimals({
+          l1Provider: l1Signer.provider!,
+          l2Network: l3Network,
+        })
+
+        if (decimals !== 18) {
+          this.skip()
+        }
+
         const hackedL1Provider = new ethers.providers.JsonRpcProvider(
           process.env['ETH_URL']
         )
