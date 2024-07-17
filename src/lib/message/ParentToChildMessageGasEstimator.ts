@@ -185,7 +185,7 @@ export class ParentToChildMessageGasEstimator {
   ): Promise<ParentToChildMessageGasParams['maxFeePerGas']> {
     const maxFeePerGasDefaults = this.applyMaxFeePerGasDefaults(options)
 
-    // estimate the l2 gas price
+    // estimate the child gas price
     return this.percentIncrease(
       maxFeePerGasDefaults.base || (await this.childProvider.getGasPrice()),
       maxFeePerGasDefaults.percentIncrease
@@ -226,7 +226,7 @@ export class ParentToChildMessageGasEstimator {
     const { data } = retryableEstimateData
     const gasLimitDefaults = this.applyGasLimitDefaults(options?.gasLimit)
 
-    // estimate the parent chain gas price
+    // estimate the child gas price
     const maxFeePerGasPromise = this.estimateMaxFeePerGas(options?.maxFeePerGas)
 
     // estimate the submission fee
