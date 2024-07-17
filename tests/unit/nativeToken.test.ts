@@ -4,7 +4,10 @@ import { expect } from 'chai'
 
 import { BigNumber } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
-import { scaleToNativeTokenDecimals } from '../../src/lib/utils/lib'
+import {
+  nativeTokenDecimalsTo18Decimals,
+  scaleToNativeTokenDecimals,
+} from '../../src/lib/utils/lib'
 
 const AMOUNT_TO_SCALE = parseEther('1.23456789')
 
@@ -77,6 +80,32 @@ describe('Native token', () => {
         decimals: 24,
       }).eq(BigNumber.from('1234567890000000000000000')),
       decimalsToError(24)
+    ).to.be.true
+  })
+
+  it('scales native token decimals to 18 decimals', () => {
+    expect(
+      nativeTokenDecimalsTo18Decimals({
+        amount: BigNumber.from('1.2345'),
+        decimals: 16,
+      }).eq(BigNumber.from('123.45')),
+      decimalsToError(16)
+    ).to.be.true
+
+    expect(
+      nativeTokenDecimalsTo18Decimals({
+        amount: BigNumber.from('1.2345'),
+        decimals: 18,
+      }).eq(BigNumber.from('1.2345')),
+      decimalsToError(18)
+    ).to.be.true
+
+    expect(
+      nativeTokenDecimalsTo18Decimals({
+        amount: BigNumber.from('1.2345'),
+        decimals: 20,
+      }).eq(BigNumber.from('0.012345')),
+      decimalsToError(20)
     ).to.be.true
   })
 })

@@ -973,7 +973,16 @@ describe('L1 to L3 Bridging', () => {
       await testHappyPathNonFeeOrStandard(depositParams)
     })
 
-    itOnlyWhenCustomGasToken('happy path OnlyCustomFee', async () => {
+    itOnlyWhenCustomGasToken('happy path OnlyCustomFee', async function () {
+      const decimals = await getNativeTokenDecimals({
+        l1Provider: l1Signer.provider!,
+        l2Network: l3Network,
+      })
+
+      if (decimals !== 18) {
+        this.skip()
+      }
+
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
       const l1FeeToken = (await l1l3Bridger.getGasTokenOnL1(
         l1Signer.provider!,
