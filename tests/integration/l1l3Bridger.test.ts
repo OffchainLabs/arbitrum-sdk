@@ -120,13 +120,10 @@ async function deployTeleportContracts(l1Signer: Signer, l2Signer: Signer) {
 
 async function fundActualL1CustomFeeToken(
   l1Signer: Signer,
-  l1Provider: providers.Provider,
   l2FeeToken: string,
   l2Network: L2Network,
   l2Provider: providers.Provider
 ) {
-  // const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
-
   const l1FeeToken = await new Erc20Bridger(l2Network).getL1ERC20Address(
     l2FeeToken,
     l2Provider
@@ -139,7 +136,6 @@ async function fundActualL1CustomFeeToken(
 
   const tokenContract = ERC20__factory.connect(l1FeeToken, deployerWallet)
 
-  console.log('transfering')
   const tx = await tokenContract.transfer(
     await l1Signer.getAddress(),
     utils.parseEther('10')
@@ -201,7 +197,6 @@ describe('L1 to L3 Bridging', () => {
     if (isL2NetworkWithCustomFeeToken()) {
       await fundActualL1CustomFeeToken(
         l1Signer,
-        l1Signer.provider!,
         l3Network.nativeToken!,
         l2Network,
         l2Signer.provider!
@@ -232,25 +227,14 @@ describe('L1 to L3 Bridging', () => {
       ethers.utils.hexlify(ethers.utils.randomBytes(32))
     )
 
-    const decimals = await getNativeTokenDecimals({
-      l1Provider: setup.l1Provider,
-      l2Network: l3Network,
-    })
-
-    console.warn({ decimals })
-
     // fund signers on L1 and L2
-    console.warn('fund 1')
     await fundL1(l1Signer, ethers.utils.parseEther('10'))
-    console.warn('fund 2')
     await fundL2(l2Signer, ethers.utils.parseEther('10'))
-    console.warn('fund 3')
     await fundL2(l3Signer, ethers.utils.parseEther('10'))
 
     if (isL2NetworkWithCustomFeeToken()) {
       await fundActualL1CustomFeeToken(
         l1Signer,
-        l1Signer.provider!,
         l3Network.nativeToken!,
         l2Network,
         l2Signer.provider!
@@ -927,7 +911,16 @@ describe('L1 to L3 Bridging', () => {
       assert(l3Balance.eq(amount))
     }
 
-    it('happy path non fee token or standard', async () => {
+    it('happy path non fee token or standard', async function () {
+      const decimals = await getNativeTokenDecimals({
+        l1Provider: l1Signer.provider!,
+        l2Network: l3Network,
+      })
+
+      if (decimals !== 18) {
+        this.skip()
+      }
+
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
 
       const depositParams: Erc20DepositRequestParams = {
