@@ -69,6 +69,11 @@ export {
   getArbitrumNetworkInformationFromRollup,
   getChildrenForNetwork,
   registerCustomArbitrumNetwork,
+  // deprecated, but here for backwards compatibility
+  L2Network,
+  L2NetworkTokenBridge,
+  mapL2NetworkToArbitrumNetwork,
+  mapL2NetworkTokenBridgeToTokenBridge,
 } from './lib/dataEntities/networks'
 export { InboxTools } from './lib/inbox/inbox'
 export { EventFetcher } from './lib/utils/eventFetcher'
