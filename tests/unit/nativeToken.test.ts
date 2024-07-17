@@ -86,25 +86,25 @@ describe('Native token', () => {
   it('scales native token decimals to 18 decimals', () => {
     expect(
       nativeTokenDecimalsTo18Decimals({
-        amount: BigNumber.from('1.2345'),
+        amount: AMOUNT_TO_SCALE,
         decimals: 16,
-      }).eq(BigNumber.from('123.45')),
+      }).eq(BigNumber.from('123456789000000000000')),
       decimalsToError(16)
     ).to.be.true
 
     expect(
       nativeTokenDecimalsTo18Decimals({
-        amount: BigNumber.from('1.2345'),
+        amount: AMOUNT_TO_SCALE,
         decimals: 18,
-      }).eq(BigNumber.from('1.2345')),
+      }).eq(BigNumber.from('1234567890000000000')),
       decimalsToError(18)
     ).to.be.true
 
     expect(
       nativeTokenDecimalsTo18Decimals({
-        amount: BigNumber.from('1.2345'),
+        amount: AMOUNT_TO_SCALE,
         decimals: 20,
-      }).eq(BigNumber.from('0.012345')),
+      }).eq(BigNumber.from('12345678900000000')),
       decimalsToError(20)
     ).to.be.true
   })
