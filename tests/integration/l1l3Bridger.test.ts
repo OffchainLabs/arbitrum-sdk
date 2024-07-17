@@ -125,7 +125,7 @@ async function fundActualL1CustomFeeToken(
   l2Network: L2Network,
   l2Provider: providers.Provider
 ) {
-  const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+  // const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
 
   const l1FeeToken = await new Erc20Bridger(l2Network).getL1ERC20Address(
     l2FeeToken,
@@ -133,15 +133,16 @@ async function fundActualL1CustomFeeToken(
   )
 
   const deployerWallet = new Wallet(
-    utils.sha256(utils.toUtf8Bytes('user_token_bridge_deployer')),
+    utils.sha256(utils.toUtf8Bytes('user_fee_token_deployer')),
     l1Signer.provider!
   )
 
   const tokenContract = ERC20__factory.connect(l1FeeToken, deployerWallet)
 
+  console.log('transfering')
   const tx = await tokenContract.transfer(
     await l1Signer.getAddress(),
-    utils.parseUnits('10', decimals)
+    utils.parseEther('10')
   )
   await tx.wait()
 }
@@ -233,13 +234,18 @@ describe('L1 to L3 Bridging', () => {
 
     const decimals = await getNativeTokenDecimals({
       l1Provider: setup.l1Provider,
-      l2Network,
+      l2Network: l3Network,
     })
 
+    console.warn({ decimals })
+
     // fund signers on L1 and L2
-    await fundL1(l1Signer, ethers.utils.parseUnits('10', decimals))
-    await fundL2(l2Signer, ethers.utils.parseUnits('10', decimals))
-    await fundL2(l3Signer, ethers.utils.parseUnits('10', decimals))
+    console.warn('fund 1')
+    await fundL1(l1Signer, ethers.utils.parseEther('10'))
+    console.warn('fund 2')
+    await fundL2(l2Signer, ethers.utils.parseEther('10'))
+    console.warn('fund 3')
+    await fundL2(l3Signer, ethers.utils.parseEther('10'))
 
     if (isL2NetworkWithCustomFeeToken()) {
       await fundActualL1CustomFeeToken(
