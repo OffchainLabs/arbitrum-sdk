@@ -46,15 +46,12 @@ yarn add @arbitrum/sdk
 
 ### Bridging Assets
 
-Arbitrum SDK facilitates the bridging of assets between the parent chain (Ethereum) and Arbitrum chains. Currently supported asset bridgers:
+Arbitrum SDK facilitates the bridging of assets between an Arbitrum chain and its parent chain. Currently supported asset bridgers:
 
-- `EthBridger`: For bridging ETH
-- `Erc20Bridger`: For bridging ERC20 tokens
-
-Common methods for all asset bridgers:
-
-- `deposit`: Move assets from the parent chain to the child chain
-- `withdraw`: Move assets from the child chain to the parent chain
+- `EthBridger`: For bridging ETH to and from an Arbitrum chain (L2 or L3)
+- `Erc20Bridger`: For bridging ERC-20 tokens to and from an Arbitrum chain (L2 or L3)
+- `EthL1L3Bridger`: For bridging ETH to an L3 directly from L1
+- `Erc20L1L3Bridger`: For bridging ERC-20 tokens to an L3 directly from L1
 
 ### Cross-Chain Messages
 
@@ -62,7 +59,7 @@ Cross-chain communication is handled through `ParentToChildMessage` and `ChildTo
 
 ### Network Configuration
 
-The SDK comes pre-configured for Arbitrum Mainnet and Sepolia testnet, along with their Arbitrum counterparts. Custom Arbitrum instances can be registered using `registerCustomArbitrumNetwork`, which is required before utilizing other SDK features.
+The SDK comes preconfigured for Arbitrum One, Arbitrum Nova and Arbitrum Sepolia. Custom Arbitrum networks can be registered using `registerCustomArbitrumNetwork`, which is required before utilizing other SDK features.
 
 ## Usage
 
