@@ -1,137 +1,110 @@
 # Arbitrum SDK
 
-TypeScript library for client-side interactions with Arbitrum. Arbitrum SDK provides common helper functionality as well as access to the underlying smart contract interfaces.
+[![npm version](https://badge.fury.io/js/%40arbitrum%2Fsdk.svg)](https://badge.fury.io/js/@arbitrum%2Fsdk.svg)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Below is an overview of the Arbitrum SDK functionality. See the [tutorials](https://github.com/OffchainLabs/arbitrum-tutorials) for further examples of how to use these classes.
+A TypeScript library for client-side interactions with Arbitrum. The Arbitrum SDK provides essential helper functionality and direct access to underlying smart contract interfaces, enabling developers to build powerful applications on the Arbitrum network.
 
-### Quickstart Recipes
+> [!IMPORTANT]
+>
+> This is the code and documentation for `@arbitrum/sdk` v4.
+>
+> If you're looking for v3, check out [this branch](https://github.com/OffchainLabs/arbitrum-sdk/tree/v3).
+>
+> If you're looking to migrate from v3 to v4, check out [this guide](./docs/2-migrate.mdx).
 
-- ##### Deposit Ether Into Arbitrum
+## Table of Contents
 
-```ts
-import { getArbitrumNetwork, EthBridger } from '@arbitrum/sdk'
+- [Arbitrum SDK](#arbitrum-sdk)
+  - [Table of Contents](#table-of-contents)
+  - [Overview](#overview)
+  - [Installation](#installation)
+  - [Key Features](#key-features)
+    - [Bridging Assets](#bridging-assets)
+    - [Cross-Chain Messages](#cross-chain-messages)
+    - [Network Configuration](#network-configuration)
+  - [Usage](#usage)
+  - [Running Integration Tests](#running-integration-tests)
+  - [Documentation](#documentation)
+  - [License](#license)
 
-const l2Network = await getArbitrumNetwork(
-  l2ChainID /** <-- chain id of target Arbitrum chain */
-)
-const ethBridger = new EthBridger(l2Network)
+## Overview
 
-const ethDepositTxResponse = await ethBridger.deposit({
-  amount: utils.parseEther('23'),
-  l1Signer: l1Signer /** <-- connected ethers-js Wallet */,
-  l2Provider: l2Provider /** <--- ethers-js Provider */,
-})
+Arbitrum SDK simplifies the process of interacting with Arbitrum chains, offering a robust set of tools for asset bridging and cross-chain messaging.
 
-const ethDepositTxReceipt = await ethDepositTxResponse.wait()
+## Installation
 
-/** check ethDepositTxReceipt.status  */
+```bash
+npm install @arbitrum/sdk
+
+# or
+
+yarn add @arbitrum/sdk
 ```
 
-- ##### Redeem an L1 to L2 Message
+## Key Features
+
+### Bridging Assets
+
+Arbitrum SDK facilitates the bridging of assets between an Arbitrum chain and its parent chain. Currently supported asset bridgers:
+
+- `EthBridger`: For bridging ETH to and from an Arbitrum chain (L2 or L3)
+- `Erc20Bridger`: For bridging ERC-20 tokens to and from an Arbitrum chain (L2 or L3)
+- `EthL1L3Bridger`: For bridging ETH to an L3 directly from L1
+- `Erc20L1L3Bridger`: For bridging ERC-20 tokens to an L3 directly from L1
+
+### Cross-Chain Messages
+
+Cross-chain communication is handled through `ParentToChildMessage` and `ChildToParentMessage` classes. These encapsulate the lifecycle of messages sent between chains, typically created from transaction receipts that initiate cross-chain messages.
+
+### Network Configuration
+
+The SDK comes preconfigured for Arbitrum One, Arbitrum Nova and Arbitrum Sepolia. Custom Arbitrum networks can be registered using `registerCustomArbitrumNetwork`, which is required before utilizing other SDK features.
+
+## Usage
+
+Here's a basic example of using the SDK to bridge ETH:
 
 ```ts
-import { L1TransactionReceipt, L1ToL2MessageStatus } from '@arbitrum/sdk'
+import { ethers } from 'ethers'
+import { EthBridger, getArbitrumNetwork } from '@arbitrum/sdk'
 
-const l1TxnReceipt = new L1TransactionReceipt(
-  txnReceipt /** <-- ethers-js TransactionReceipt of an ethereum tx that triggered an L1 to L2 message (say depositting a token via a bridge)  */
-)
+async function bridgeEth(parentSigner: ethers.Signer, childChainId: number) {
+  const childNetwork = await getArbitrumNetwork(childChainId)
+  const ethBridger = new EthBridger(childNetwork)
 
-const l1ToL2Message = (
-  await l1TxnReceipt.getL1ToL2Messages(
-    l2Signer /** <-- connected ethers-js Wallet */
-  )
-)[0]
+  const deposit = await ethBridger.deposit({
+    amount: ethers.utils.parseEther('0.1'),
+    parentSigner,
+  })
 
-const res = await l1ToL2Message.waitForStatus()
-
-if (res.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2) {
-  /** Message wasn't auto-redeemed; redeem it now: */
-  const response = await l1ToL2Message.redeem()
-  const receipt = await response.wait()
-} else if (res.status === L1ToL2MessageStatus.REDEEMED) {
-  /** Message succesfully redeeemed */
+  const txReceipt = await deposit.wait()
+  console.log(`Deposit initiated: ${txReceipt.transactionHash}`)
 }
 ```
 
-- ##### Check if sequencer has included a transaction in L1 data
+For more detailed usage examples and API references, please refer to the [Arbitrum SDK documentation](https://docs.arbitrum.io/sdk).
 
-```ts
-import { L2TransactionReceipt } from '@arbitrum/sdk'
+## Running Integration Tests
 
-const l2TxnReceipt = new L2TransactionReceipt(
-  txnReceipt /** <-- ethers-js TransactionReceipt of an arbitrum tx */
-)
+1. Set up a Nitro test node by following the instructions [here](https://docs.arbitrum.io/node-running/how-tos/local-dev-node).
+2. Copy `.env.example` to `.env` and update relevant environment variables.
+3. Generate the network configuration against your active Nitro test node:
 
-/** Wait 3 minutes: */
-await new Promise(resolve => setTimeout(resolve, 1000 * 60 * 3000))
+   ```sh
+   yarn gen:network
+   ```
 
-// if dataIsOnL1, sequencer has posted it and it inherits full rollup/L1 security
-const dataIsOnL1 = await l2TxnReceipt.isDataAvailable(l2Provider, l1Provider)
-```
+4. Execute the integration tests:
 
-### Bridging assets
+   ```sh
+   yarn test:integration
+   ```
 
-Arbitrum SDK can be used to bridge assets to/from the rollup chain. The following asset bridgers are currently available:
+## Documentation
 
-- EthBridger
-- Erc20Bridger
+For comprehensive guides and API documentation, visit the [Arbitrum SDK Documentation](https://docs.arbitrum.io/sdk).
 
-All asset bridgers have the following methods:
+## License
 
-- **deposit** - moves assets from the L1 to the L2
-- **depositEstimateGas** - estimates the gas required to do the deposit
-- **withdraw** - moves assets from the L2 to the L1
-- **withdrawEstimateGas** - estimates the gas required to do the withdrawal
-  Which accept different parameters depending on the asset bridger type
-
-### Cross chain messages
-
-When assets are moved by the L1 and L2 cross chain messages are sent. The lifecycles of these messages are encapsulated in the classes `L1ToL2Message` and `L2ToL1Message`. These objects are commonly created from the receipts of transactions that send cross chain messages. A cross chain message will eventually result in a transaction being executed on the destination chain, and these message classes provide the ability to wait for that finalizing transaction to occur.
-
-### Networks
-
-Arbitrum SDK comes pre-configured for Mainnet and Sepolia, and their Arbitrum counterparts. However, the networks functionality can be used to register networks for custom Arbitrum instances. Most of the classes in Arbitrum SDK depend on network objects so this must be configured before using other Arbitrum SDK functionality.
-
-### Inbox tools
-
-As part of normal operation the Arbitrum sequencer will send messages into the rollup chain. However, if the sequencer is unavailable and not posting batches, the inbox tools can be used to force the inclusion of transactions into the rollup chain.
-
-### Utils
-
-- **EventFetcher** - A utility to provide typing for the fetching of events
-- **MultiCaller** - A utility for executing multiple calls as part of a single RPC request. This can be useful for reducing round trips.
-- **constants** - A list of useful Arbitrum related constants
-
-### Run Integration tests
-
-1. First, make sure you have a Nitro test node running. Follow the instructions [here](https://docs.arbitrum.io/node-running/how-tos/local-dev-node).
-
-2. After the node has started up (that could take up to 20-30 mins), run `yarn gen:network`.
-
-3. Once done, finally run `yarn test:integration` to run the integration tests.
-
-Defaults to `Arbitrum Sepolia`, for custom network use `--network` flag.
-
-`Arbitrum Sepolia` expects env var `ARB_KEY` to be prefunded with at least 0.02 ETH, and env var `INFURA_KEY` to be set.
-(see `integration_test/config.ts`)
-
-### Bridge A Standard Token
-
-Bridging a new token to L2 (i.e., deploying a new token contract) through the standard gateway is done by simply depositing a token that hasn't yet been bridged. This repo includes a script to trigger this initial deposit/deployment:
-
-1. Clone `arbitrum-sdk`
-
-2. `yarn install` (from root)
-
-3. Set `PRIVKEY` environment variable (you can use .env) to the key of the account from which you'll be deploying (account should have some balance of the token you're bridging).
-
-4. Set MAINNET_RPC environment variable to L1 RPC endpoint (i.e., https://mainnet.infura.io/v3/my-infura-key)
-
-5. `yarn bridgeStandardToken`
-
-Required CL params:
-`networkID`:number — Chain ID of L2 network
-`l1TokenAddress`:string — address of L1 token to be bridged
-
-Ex:
-`yarn bridgeStandardToken --networkID 421614 --l1TokenAddress 0xdf032bc4b9dc2782bb09352007d4c57b75160b15 --amount 3`
+Arbitrum SDK is released under the [Apache 2.0 License](LICENSE).
