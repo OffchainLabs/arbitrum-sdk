@@ -5,13 +5,13 @@
 
 A TypeScript library for client-side interactions with Arbitrum. The Arbitrum SDK provides essential helper functionality and direct access to underlying smart contract interfaces, enabling developers to build powerful applications on the Arbitrum network.
 
-> [!WARNING]
+> [!IMPORTANT]
 >
 > This is the code and documentation for `@arbitrum/sdk` v4.
 >
 > If you're looking for v3, check out [this branch](https://github.com/OffchainLabs/arbitrum-sdk/tree/v3).
 >
-> If you're looking to migrate from v3 to v4, check out [this guide](./docs/2-migrate.md).
+> If you're looking to migrate from v3 to v4, check out [this guide](./docs/2-migrate.mdx).
 
 ## Table of Contents
 
