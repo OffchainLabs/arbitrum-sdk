@@ -934,7 +934,16 @@ describe('L1 to L3 Bridging', () => {
       await testHappyPathNonFeeOrStandard(depositParams)
     })
 
-    it('happy path weth', async () => {
+    it('happy path weth', async function () {
+      const decimals = await getNativeTokenDecimals({
+        l1Provider: l1Signer.provider!,
+        l2Network: l3Network,
+      })
+
+      if (decimals !== 18) {
+        this.skip()
+      }
+
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
       const weth = AeWETH__factory.connect(
         l2Network.tokenBridge.l1Weth,
