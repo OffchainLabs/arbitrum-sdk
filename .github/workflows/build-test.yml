@@ -130,15 +130,15 @@ jobs:
       fail-fast: false # runs all tests to completion even if one fails
       matrix:
         node-version: [18, 20]
-        include:
-          - orbit-test: '0'
-          - orbit-test: '1'
-          - orbit-test: '1'
-            decimals: 16
-          - orbit-test: '1'
-            decimals: 18
-          - orbit-test: '1'
-            decimals: 20
+        orbit-test: [0, 1]
+        decimals: [null, 16, 18, 20]
+      exclude:
+        - orbit-test: 0
+          decimals: 16
+        - orbit-test: 0
+          decimals: 18
+        - orbit-test: 0
+          decimals: 20
 
     needs: install
     env:
