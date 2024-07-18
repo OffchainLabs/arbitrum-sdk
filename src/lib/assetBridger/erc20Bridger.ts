@@ -1203,17 +1203,17 @@ export class AdminErc20Bridger extends Erc20Bridger {
   public async getChildGatewaySetEvents(
     childProvider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
-    customNetworkL2GatewayRouter?: string
+    customNetworkChildGatewayRouter?: string
   ): Promise<EventArgs<GatewaySetEvent>[]> {
-    if (this.childNetwork.isCustom && !customNetworkL2GatewayRouter) {
+    if (this.childNetwork.isCustom && !customNetworkChildGatewayRouter) {
       throw new ArbSdkError(
-        'Must supply customNetworkL2GatewayRouter for custom network '
+        'Must supply customNetworkChildGatewayRouter for custom network '
       )
     }
     await this.checkChildNetwork(childProvider)
 
     const childGatewayRouterAddress =
-      customNetworkL2GatewayRouter ||
+      customNetworkChildGatewayRouter ||
       this.childNetwork.tokenBridge.childGatewayRouter
 
     const eventFetcher = new EventFetcher(childProvider)
