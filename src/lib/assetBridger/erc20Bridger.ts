@@ -71,7 +71,11 @@ import { OmitTyped, RequiredPick } from '../utils/types'
 import { RetryableDataTools } from '../dataEntities/retryableData'
 import { EventArgs } from '../dataEntities/event'
 import { L1ToL2MessageGasParams } from '../message/L1ToL2MessageCreator'
-import { isArbitrumChain } from '../utils/lib'
+import {
+  getNativeTokenDecimals,
+  isArbitrumChain,
+  scaleToNativeTokenDecimals,
+} from '../utils/lib'
 import { L2ERC20Gateway__factory } from '../abi/factories/L2ERC20Gateway__factory'
 
 export interface TokenApproveParams {
@@ -580,7 +584,8 @@ export class Erc20Bridger extends AssetBridger<
    * @returns
    */
   private getDepositRequestOutboundTransferInnerData(
-    depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
+    depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>,
+    decimals: number
   ) {
     if (!this.nativeTokenIsEth) {
       return defaultAbiCoder.encode(
@@ -591,9 +596,12 @@ export class Erc20Bridger extends AssetBridger<
           // callHookData
           '0x',
           // nativeTokenTotalFee
-          depositParams.gasLimit
-            .mul(depositParams.maxFeePerGas)
-            .add(depositParams.maxSubmissionCost), // will be zero
+          scaleToNativeTokenDecimals({
+            amount: depositParams.gasLimit
+              .mul(depositParams.maxFeePerGas)
+              .add(depositParams.maxSubmissionCost), // will be zero
+            decimals,
+          }),
         ]
       )
     }
@@ -645,6 +653,11 @@ export class Erc20Bridger extends AssetBridger<
       }
     }
 
+    const decimals = await getNativeTokenDecimals({
+      l1Provider,
+      l2Network: this.l2Network,
+    })
+
     const depositFunc = (
       depositParams: OmitTyped<L1ToL2MessageGasParams, 'deposit'>
     ) => {
@@ -652,8 +665,10 @@ export class Erc20Bridger extends AssetBridger<
         params.maxSubmissionCost || depositParams.maxSubmissionCost
 
       const iGatewayRouter = L1GatewayRouter__factory.createInterface()
-      const innerData =
-        this.getDepositRequestOutboundTransferInnerData(depositParams)
+      const innerData = this.getDepositRequestOutboundTransferInnerData(
+        depositParams,
+        decimals
+      )
 
       const functionData =
         defaultedParams.excessFeeRefundAddress !== defaultedParams.from
@@ -1019,6 +1034,11 @@ export class AdminErc20Bridger extends Erc20Bridger {
       )
     }
 
+    const nativeTokenDecimals = await getNativeTokenDecimals({
+      l1Provider,
+      l2Network: this.l2Network,
+    })
+
     type GasParams = {
       maxSubmissionCost: BigNumber
       gasLimit: BigNumber
@@ -1051,14 +1071,22 @@ export class AdminErc20Bridger extends Erc20Bridger {
         setTokenGas.gasLimit,
         setGatewayGas.gasLimit,
         doubleFeePerGas,
-        setTokenDeposit,
-        setGatewayDeposit,
+        scaleToNativeTokenDecimals({
+          amount: setTokenDeposit,
+          decimals: nativeTokenDecimals,
+        }),
+        scaleToNativeTokenDecimals({
+          amount: setGatewayDeposit,
+          decimals: nativeTokenDecimals,
+        }),
         l1SenderAddress,
       ])
 
       return {
         data,
-        value: setTokenDeposit.add(setGatewayDeposit),
+        value: this.nativeTokenIsEth
+          ? setTokenDeposit.add(setGatewayDeposit)
+          : BigNumber.from(0),
         to: l1Token.address,
         from,
       }

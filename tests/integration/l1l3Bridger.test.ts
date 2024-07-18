@@ -26,6 +26,7 @@ import {
   itOnlyWhenCustomGasToken,
   itOnlyWhenEth,
 } from './custom-fee-token/mochaExtensions'
+import { getNativeTokenDecimals } from '../../src/lib/utils/lib'
 
 async function expectPromiseToReject(
   promise: Promise<any>,
@@ -129,7 +130,7 @@ async function fundActualL1CustomFeeToken(
   )
 
   const deployerWallet = new Wallet(
-    utils.sha256(utils.toUtf8Bytes('user_token_bridge_deployer')),
+    utils.sha256(utils.toUtf8Bytes('user_fee_token_deployer')),
     l1Signer.provider!
   )
 
@@ -190,6 +191,15 @@ describe('L1 to L3 Bridging', () => {
       await expectPromiseToReject(
         checkFunction(l1Signer, l2Signer, l1Signer),
         `Signer/provider chain id: ${l1ChainId} doesn't match provided chain id: ${l3ChainId}.`
+      )
+    }
+
+    if (isL2NetworkWithCustomFeeToken()) {
+      await fundActualL1CustomFeeToken(
+        l1Signer,
+        l3Network.nativeToken!,
+        l2Network,
+        l2Signer.provider!
       )
     }
   }
@@ -356,7 +366,16 @@ describe('L1 to L3 Bridging', () => {
 
     itOnlyWhenCustomGasToken(
       'should properly get l2 and l1 fee token addresses',
-      async () => {
+      async function () {
+        const decimals = await getNativeTokenDecimals({
+          l1Provider: l1Signer.provider!,
+          l2Network: l3Network,
+        })
+
+        if (decimals !== 18) {
+          this.skip()
+        }
+
         if (l1l3Bridger.l2GasTokenAddress === undefined) {
           throw new Error('L2 fee token address is undefined')
         }
@@ -377,7 +396,16 @@ describe('L1 to L3 Bridging', () => {
 
     itOnlyWhenCustomGasToken(
       'should throw getting l1 gas token address when it is unavailable',
-      async () => {
+      async function () {
+        const decimals = await getNativeTokenDecimals({
+          l1Provider: l1Signer.provider!,
+          l2Network: l3Network,
+        })
+
+        if (decimals !== 18) {
+          this.skip()
+        }
+
         const networkCopy = JSON.parse(JSON.stringify(l3Network)) as L2Network
         networkCopy.nativeToken = ethers.utils.hexlify(
           ethers.utils.randomBytes(20)
@@ -394,7 +422,16 @@ describe('L1 to L3 Bridging', () => {
 
     itOnlyWhenCustomGasToken(
       'should throw when the fee token does not use 18 decimals on L1 or L2',
-      async () => {
+      async function () {
+        const decimals = await getNativeTokenDecimals({
+          l1Provider: l1Signer.provider!,
+          l2Network: l3Network,
+        })
+
+        if (decimals !== 18) {
+          this.skip()
+        }
+
         const hackedL1Provider = new ethers.providers.JsonRpcProvider(
           process.env['ETH_URL']
         )
@@ -874,7 +911,16 @@ describe('L1 to L3 Bridging', () => {
       assert(l3Balance.eq(amount))
     }
 
-    it('happy path non fee token or standard', async () => {
+    it('happy path non fee token or standard', async function () {
+      const decimals = await getNativeTokenDecimals({
+        l1Provider: l1Signer.provider!,
+        l2Network: l3Network,
+      })
+
+      if (decimals !== 18) {
+        this.skip()
+      }
+
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
 
       const depositParams: Erc20DepositRequestParams = {
@@ -888,7 +934,16 @@ describe('L1 to L3 Bridging', () => {
       await testHappyPathNonFeeOrStandard(depositParams)
     })
 
-    it('happy path weth', async () => {
+    it('happy path weth', async function () {
+      const decimals = await getNativeTokenDecimals({
+        l1Provider: l1Signer.provider!,
+        l2Network: l3Network,
+      })
+
+      if (decimals !== 18) {
+        this.skip()
+      }
+
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
       const weth = AeWETH__factory.connect(
         l2Network.tokenBridge.l1Weth,
@@ -918,7 +973,16 @@ describe('L1 to L3 Bridging', () => {
       await testHappyPathNonFeeOrStandard(depositParams)
     })
 
-    itOnlyWhenCustomGasToken('happy path OnlyCustomFee', async () => {
+    itOnlyWhenCustomGasToken('happy path OnlyCustomFee', async function () {
+      const decimals = await getNativeTokenDecimals({
+        l1Provider: l1Signer.provider!,
+        l2Network: l3Network,
+      })
+
+      if (decimals !== 18) {
+        this.skip()
+      }
+
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
       const l1FeeToken = (await l1l3Bridger.getGasTokenOnL1(
         l1Signer.provider!,
