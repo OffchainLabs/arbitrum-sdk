@@ -1172,9 +1172,9 @@ export class AdminErc20Bridger extends Erc20Bridger {
 
   /**
    * Get all the gateway set events on the Parent gateway router
-   * @param parentProvider
-   * @param customNetworkParentGatewayRouter
-   * @returns
+   * @param parentProvider The provider for the parent network
+   * @param filter An object containing fromBlock and toBlock to filter events
+   * @returns An array of GatewaySetEvent event arguments
    */
   public async getParentGatewaySetEvents(
     parentProvider: Provider,
@@ -1196,9 +1196,11 @@ export class AdminErc20Bridger extends Erc20Bridger {
 
   /**
    * Get all the gateway set events on the child gateway router
-   * @param childProvider
-   * @param customNetworkL2GatewayRouter
-   * @returns
+   * @param childProvider The provider for the child network
+   * @param filter An object containing fromBlock and toBlock to filter events
+   * @param customNetworkChildGatewayRouter Optional address of the custom network child gateway router
+   * @returns An array of GatewaySetEvent event arguments
+   * @throws {ArbSdkError} If the network is custom and customNetworkChildGatewayRouter is not provided
    */
   public async getChildGatewaySetEvents(
     childProvider: Provider,
