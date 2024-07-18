@@ -15,7 +15,7 @@ export class SubmitRetryableMessageDataParser {
     const parsed = defaultAbiCoder.decode(
       [
         'uint256', // dest
-        'uint256', // l2 call balue
+        'uint256', // l2 call value
         'uint256', // msg val
         'uint256', // max submission
         'uint256', // excess fee refund addr
