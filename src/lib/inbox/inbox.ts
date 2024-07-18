@@ -418,7 +418,7 @@ export class InboxTools {
    * Sign a transaction with msg.to, msg.value and msg.data.
    * You can use this as a helper to call inboxTools.sendChainSignedMessage
    * above.
-   * @param message A signed transaction which can be sent directly to chain,
+   * @param txRequest A signed transaction which can be sent directly to chain,
    * tx.to, tx.data, tx.value must be provided when not contract creation, if
    * contractCreation is true, no need provide tx.to. tx.gasPrice and tx.nonce
    * can be overrided. (You can also send contract creation transaction by set tx.to
