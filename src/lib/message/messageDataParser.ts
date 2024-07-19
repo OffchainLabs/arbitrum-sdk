@@ -23,7 +23,7 @@ export class SubmitRetryableMessageDataParser {
         'uint256', // Beneficiary
         'uint256', // Gas
         'uint256', // GasFeeCap
-        'uint256', // data length
+        'uint256', // DataLength
       ],
       eventData
     ) as BigNumber[]
@@ -33,7 +33,7 @@ export class SubmitRetryableMessageDataParser {
 
     const retryTo = addressFromBigNumber(parsed[0])
     const retryValue = parsed[1]
-    const l1Value = parsed[2]
+    const depositValue = parsed[2]
     const maxSubmissionFee = parsed[3]
     const feeRefundAddr = addressFromBigNumber(parsed[4])
     const beneficiary = addressFromBigNumber(parsed[5])
@@ -47,7 +47,7 @@ export class SubmitRetryableMessageDataParser {
     return {
       retryTo,
       retryValue,
-      l1Value,
+      depositValue,
       maxSubmissionFee: maxSubmissionFee,
       feeRefundAddr,
       beneficiary,
