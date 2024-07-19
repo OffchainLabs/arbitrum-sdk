@@ -12,16 +12,17 @@ export class SubmitRetryableMessageDataParser {
    */
   public parse(eventData: string) {
     // decode the data field - is been packed so we cant decode the bytes field this way
+    // refer to ArbitrumSubmitRetryableTx here: https://github.com/OffchainLabs/go-ethereum/blob/18256c2dfcce8fd567aa05e03fbc11a4c17aa550/core/types/arb_types.go#L283
     const parsed = defaultAbiCoder.decode(
       [
-        'uint256', // dest
-        'uint256', // l2 call value
-        'uint256', // msg val
-        'uint256', // max submission
-        'uint256', // excess fee refund addr
-        'uint256', // call value refund addr
-        'uint256', // max gas
-        'uint256', // gas price bid
+        'uint256', // RetryTo
+        'uint256', // RetryValue
+        'uint256', // DepositValue
+        'uint256', // MaxSubmissionFee
+        'uint256', // FeeRefundAddr
+        'uint256', // Beneficiary
+        'uint256', // Gas
+        'uint256', // GasFeeCap
         'uint256', // data length
       ],
       eventData
@@ -30,12 +31,12 @@ export class SubmitRetryableMessageDataParser {
     const addressFromBigNumber = (bn: BigNumber) =>
       getAddress(hexZeroPad(bn.toHexString(), 20))
 
-    const destAddress = addressFromBigNumber(parsed[0])
-    const l2CallValue = parsed[1]
+    const retryTo = addressFromBigNumber(parsed[0])
+    const retryValue = parsed[1]
     const l1Value = parsed[2]
     const maxSubmissionFee = parsed[3]
-    const excessFeeRefundAddress = addressFromBigNumber(parsed[4])
-    const callValueRefundAddress = addressFromBigNumber(parsed[5])
+    const feeRefundAddr = addressFromBigNumber(parsed[4])
+    const beneficiary = addressFromBigNumber(parsed[5])
     const gasLimit = parsed[6]
     const maxFeePerGas = parsed[7]
     const callDataLength = parsed[8]
@@ -44,12 +45,12 @@ export class SubmitRetryableMessageDataParser {
       eventData.substring(eventData.length - callDataLength.mul(2).toNumber())
 
     return {
-      destAddress,
-      l2CallValue,
+      retryTo,
+      retryValue,
       l1Value,
       maxSubmissionFee: maxSubmissionFee,
-      excessFeeRefundAddress,
-      callValueRefundAddress,
+      feeRefundAddr,
+      beneficiary,
       gasLimit,
       maxFeePerGas,
       data,
