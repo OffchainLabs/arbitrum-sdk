@@ -333,7 +333,7 @@ export class ChildToParentMessageReaderClassic extends ChildToParentMessageClass
   /**
    * Get the status of this message
    * In order to check if the message has been executed proof info must be provided.
-   * @param proofInfo
+   * @param childProvider
    * @returns
    */
   public async status(

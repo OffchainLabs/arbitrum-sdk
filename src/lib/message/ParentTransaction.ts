@@ -186,7 +186,7 @@ export class ParentTransactionReceipt implements TransactionReceipt {
 
   /**
    * Get any eth deposit messages created by this transaction
-   * @param childSignerOrProvider
+   * @param childProvider
    */
   public async getEthDeposits(
     childProvider: Provider

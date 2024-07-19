@@ -899,9 +899,11 @@ export class Erc20Bridger extends AssetBridger<
 
   /**
    * Checks if the token has been properly registered on both gateways. Mostly useful for tokens that use a custom gateway.
-   * @param erc20ParentAddress
-   * @param parentProvider
-   * @param childProvider
+   *
+   * @param {Object} params
+   * @param {string} params.erc20ParentAddress
+   * @param {Provider} params.parentProvider
+   * @param {Provider} params.childProvider
    * @returns
    */
   public async isRegistered({
@@ -1170,9 +1172,9 @@ export class AdminErc20Bridger extends Erc20Bridger {
 
   /**
    * Get all the gateway set events on the Parent gateway router
-   * @param parentProvider
-   * @param customNetworkParentGatewayRouter
-   * @returns
+   * @param parentProvider The provider for the parent network
+   * @param filter An object containing fromBlock and toBlock to filter events
+   * @returns An array of GatewaySetEvent event arguments
    */
   public async getParentGatewaySetEvents(
     parentProvider: Provider,
@@ -1193,25 +1195,27 @@ export class AdminErc20Bridger extends Erc20Bridger {
   }
 
   /**
-   * Get all the gateway set events on the L2 gateway router
-   * @param parentProvider
-   * @param customNetworkParentGatewayRouter
-   * @returns
+   * Get all the gateway set events on the child gateway router
+   * @param childProvider The provider for the child network
+   * @param filter An object containing fromBlock and toBlock to filter events
+   * @param customNetworkChildGatewayRouter Optional address of the custom network child gateway router
+   * @returns An array of GatewaySetEvent event arguments
+   * @throws {ArbSdkError} If the network is custom and customNetworkChildGatewayRouter is not provided
    */
   public async getChildGatewaySetEvents(
     childProvider: Provider,
     filter: { fromBlock: BlockTag; toBlock: BlockTag },
-    customNetworkL2GatewayRouter?: string
+    customNetworkChildGatewayRouter?: string
   ): Promise<EventArgs<GatewaySetEvent>[]> {
-    if (this.childNetwork.isCustom && !customNetworkL2GatewayRouter) {
+    if (this.childNetwork.isCustom && !customNetworkChildGatewayRouter) {
       throw new ArbSdkError(
-        'Must supply customNetworkL2GatewayRouter for custom network '
+        'Must supply customNetworkChildGatewayRouter for custom network '
       )
     }
     await this.checkChildNetwork(childProvider)
 
     const childGatewayRouterAddress =
-      customNetworkL2GatewayRouter ||
+      customNetworkChildGatewayRouter ||
       this.childNetwork.tokenBridge.childGatewayRouter
 
     const eventFetcher = new EventFetcher(childProvider)

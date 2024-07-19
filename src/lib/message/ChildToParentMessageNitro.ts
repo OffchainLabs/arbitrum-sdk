@@ -524,8 +524,8 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
 
   /**
    * Check whether the provided network has a BoLD rollup
-   * @param l2Network
-   * @param l1Provider
+   * @param arbitrumNetwork
+   * @param parentProvider
    * @returns
    */
   private async isBold(

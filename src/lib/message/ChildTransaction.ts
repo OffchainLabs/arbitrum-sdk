@@ -114,7 +114,7 @@ export class ChildTransactionReceipt implements TransactionReceipt {
 
   /**
    * Get any child-to-parent-messages created by this transaction
-   * @param l2SignerOrProvider
+   * @param parentSignerOrProvider
    */
   public async getChildToParentMessages<T extends SignerOrProvider>(
     parentSignerOrProvider: T

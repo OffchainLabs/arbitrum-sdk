@@ -69,9 +69,9 @@ export class ChildToParentMessage {
   /**
    * Instantiates a new `ChildToParentMessageWriter` or `ChildToParentMessageReader` object.
    *
-   * @param {SignerOrProvider} ParentSignerOrProvider Signer or provider to be used for executing or reading the Child-to-Parent message.
+   * @param {SignerOrProvider} parentSignerOrProvider Signer or provider to be used for executing or reading the Child-to-Parent message.
    * @param {ChildToParentTransactionEvent} event The event containing the data of the Child-to-Parent message.
-   * @param {Provider} [ParentProvider] Optional. Used to override the Provider which is attached to `ParentSignerOrProvider` in case you need more control. This will be a required parameter in a future major version update.
+   * @param {Provider} [parentProvider] Optional. Used to override the Provider which is attached to `ParentSignerOrProvider` in case you need more control. This will be a required parameter in a future major version update.
    */
   public static fromEvent<T extends SignerOrProvider>(
     parentSignerOrProvider: T,
@@ -289,9 +289,9 @@ export class ChildToParentMessageWriter extends ChildToParentMessageReader {
   /**
    * Instantiates a new `ChildToParentMessageWriter` object.
    *
-   * @param {Signer} ParentSigner The signer to be used for executing the Child-to-Parent message.
+   * @param {Signer} parentSigner The signer to be used for executing the Child-to-Parent message.
    * @param {ChildToParentTransactionEvent} event The event containing the data of the Child-to-Parent message.
-   * @param {Provider} [ParentProvider] Optional. Used to override the Provider which is attached to `ParentSigner` in case you need more control. This will be a required parameter in a future major version update.
+   * @param {Provider} [parentProvider] Optional. Used to override the Provider which is attached to `parentSigner` in case you need more control. This will be a required parameter in a future major version update.
    */
   constructor(
     parentSigner: Signer,
