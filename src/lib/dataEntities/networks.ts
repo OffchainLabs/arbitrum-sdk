@@ -67,6 +67,10 @@ export interface ArbitrumNetwork {
    */
   nativeToken?: string
   /**
+   * Whether or not it is a testnet chain.
+   */
+  isTestnet: boolean
+  /**
    * Whether or not the chain was registered by the user.
    */
   isCustom: boolean
@@ -197,6 +201,7 @@ const networks: {
     },
     confirmPeriodBlocks: 45818,
     isCustom: false,
+    isTestnet: false,
   },
   42170: {
     chainId: 42170,
@@ -209,6 +214,7 @@ const networks: {
       sequencerInbox: '0x211E1c4c7f1bF5351Ac850Ed10FD68CFfCF6c21b',
     },
     isCustom: false,
+    isTestnet: false,
     name: 'Arbitrum Nova',
     parentChainId: 1,
     tokenBridge: {
@@ -243,6 +249,7 @@ const networks: {
       sequencerInbox: '0x6c97864CE4bEf387dE0b3310A44230f7E3F1be0D',
     },
     isCustom: false,
+    isTestnet: true,
     name: 'Arbitrum Rollup Sepolia Testnet',
     parentChainId: 11155111,
     tokenBridge: {
