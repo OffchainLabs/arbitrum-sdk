@@ -24,7 +24,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Install node_modules
-        uses: OffchainLabs/actions/node-modules/install@main
+        uses: OffchainLabs/actions/node-modules/install@953e8475606f180ce2b0531d411983ce37f34751
 
   lint:
     name: Lint on Node.js v${{ matrix.node-version }}
@@ -47,7 +47,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Restore node_modules
-        uses: OffchainLabs/actions/node-modules/restore@main
+        uses: OffchainLabs/actions/node-modules/restore@953e8475606f180ce2b0531d411983ce37f34751
 
       - name: Lint sdk
         run: |
@@ -92,7 +92,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Restore node_modules
-        uses: OffchainLabs/actions/node-modules/restore@main
+        uses: OffchainLabs/actions/node-modules/restore@953e8475606f180ce2b0531d411983ce37f34751
 
       - run: yarn audit:ci
 
@@ -113,7 +113,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Restore node_modules
-        uses: OffchainLabs/actions/node-modules/restore@main
+        uses: OffchainLabs/actions/node-modules/restore@953e8475606f180ce2b0531d411983ce37f34751
 
       - name: Build
         run: |
@@ -153,7 +153,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Restore node_modules
-        uses: OffchainLabs/actions/node-modules/restore@main
+        uses: OffchainLabs/actions/node-modules/restore@953e8475606f180ce2b0531d411983ce37f34751
 
       - name: Set up the local node
         uses: OffchainLabs/actions/run-nitro-test-node@main
