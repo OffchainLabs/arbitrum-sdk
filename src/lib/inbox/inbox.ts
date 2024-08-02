@@ -415,9 +415,8 @@ export class InboxTools {
   }
 
   /**
-   * Sign a transaction with msg.to, msg.value and msg.data.
-   * You can use this as a helper to call inboxTools.sendChainSignedMessage
-   * above.
+   * Assemble a transaction with msg.to, msg.value and msg.data.
+   * This is used right below to provide a transaction to signChildTx and sendChildTx.
    * @param txRequest A signed transaction which can be sent directly to chain,
    * tx.to, tx.data, tx.value must be provided when not contract creation, if
    * contractCreation is true, no need provide tx.to. tx.gasPrice and tx.nonce
@@ -426,10 +425,10 @@ export class InboxTools {
    * @param childSigner ethers Signer type, used to sign Chain transaction
    * @returns The parent delayed inbox's transaction signed data.
    */
-  public async signChildTx(
+  public async assembleChildTx(
     txRequest: RequiredTransactionRequestType,
     childSigner: Signer
-  ): Promise<string> {
+  ): Promise<RequiredTransactionRequestType> {
     const tx: RequiredTransactionRequestType = { ...txRequest }
     const contractCreation = this.isContractCreation(tx)
 
@@ -472,6 +471,52 @@ export class InboxTools {
     if (contractCreation) {
       delete tx.to
     }
+    return tx
+  }
+
+  /**
+   * Sign a transaction with msg.to, msg.value and msg.data.
+   * You can use this as a helper to call inboxTools.sendChainSignedMessage
+   * above.
+   * @param txRequest A signed transaction which can be sent directly to chain,
+   * tx.to, tx.data, tx.value must be provided when not contract creation, if
+   * contractCreation is true, no need provide tx.to. tx.gasPrice and tx.nonce
+   * can be overrided. (You can also send contract creation transaction by set tx.to
+   * to zero address or null)
+   * @param childSigner ethers Signer type, used to sign Chain transaction
+   * @returns The parent delayed inbox's transaction signed data.
+   */
+  public async signChildTx(
+    txRequest: RequiredTransactionRequestType,
+    childSigner: Signer
+  ): Promise<string> {
+    const tx: RequiredTransactionRequestType = await this.assembleChildTx(
+      txRequest,
+      childSigner
+    )
     return await childSigner.signTransaction(tx)
+  }
+
+  /**
+   * Sign a transaction with msg.to, msg.value and msg.data.
+   * A copy of `signChildTx` above but that instead of just signing also sends the transaction.
+   * This is a workaround wallets in browsers not supporting signing only.
+   * @param txRequest A signed transaction which can be sent directly to chain,
+   * tx.to, tx.data, tx.value must be provided when not contract creation, if
+   * contractCreation is true, no need provide tx.to. tx.gasPrice and tx.nonce
+   * can be overrided. (You can also send contract creation transaction by set tx.to
+   * to zero address or null)
+   * @param childSigner ethers Signer type, used to sign and send Chain transaction
+   * @returns The parent delayed inbox's transaction signed data.
+   */
+  public async sendChildTx(
+    txRequest: RequiredTransactionRequestType,
+    childSigner: Signer
+  ): Promise<string> {
+    const tx: RequiredTransactionRequestType = await this.assembleChildTx(
+      txRequest,
+      childSigner
+    )
+    return (await childSigner.sendTransaction(tx)).hash
   }
 }
