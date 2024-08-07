@@ -1,6 +1,6 @@
-import { isL2NetworkWithCustomFeeToken } from './customFeeTokenTestHelpers'
+import { isArbitrumNetworkWithCustomFeeToken } from './customFeeTokenTestHelpers'
 
-const customGasTokenEnvironment = isL2NetworkWithCustomFeeToken()
+const customGasTokenEnvironment = isArbitrumNetworkWithCustomFeeToken()
 
 /**
  * Only run when in an eth chain environment

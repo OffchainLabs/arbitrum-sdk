@@ -23,11 +23,11 @@ import dotenv from 'dotenv'
 
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
-  L1Network,
-  L2Network,
-  getL1Network,
-  getL2Network,
-  addCustomNetwork,
+  ArbitrumNetwork,
+  getArbitrumNetwork,
+  registerCustomArbitrumNetwork,
+  TokenBridge,
+  assertArbitrumNetworkHasTokenBridge,
 } from '../src/lib/dataEntities/networks'
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
@@ -35,11 +35,11 @@ import * as path from 'path'
 import * as fs from 'fs'
 import { ArbSdkError } from '../src/lib/dataEntities/errors'
 import {
-  approveL1CustomFeeToken,
-  fundL1CustomFeeToken,
-  isL2NetworkWithCustomFeeToken,
+  approveParentCustomFeeToken,
+  fundParentCustomFeeToken,
+  isArbitrumNetworkWithCustomFeeToken,
 } from '../tests/integration/custom-fee-token/customFeeTokenTestHelpers'
-import { fundL1 } from '../tests/integration/testHelpers'
+import { fundParentSigner } from '../tests/integration/testHelpers'
 
 dotenv.config()
 
@@ -72,114 +72,84 @@ export const getSigner = (provider: JsonRpcProvider, key?: string) => {
 }
 
 export const testSetup = async (): Promise<{
-  l1Network: L1Network | L2Network
-  l2Network: L2Network
-  l1Signer: Signer
-  l2Signer: Signer
-  l1Provider: Provider
-  l2Provider: Provider
+  childChain: ArbitrumNetwork & {
+    tokenBridge: TokenBridge
+  }
+  parentSigner: Signer
+  childSigner: Signer
+  parentProvider: Provider
+  childProvider: Provider
   erc20Bridger: Erc20Bridger
   ethBridger: EthBridger
   adminErc20Bridger: AdminErc20Bridger
   inboxTools: InboxTools
-  l1Deployer: Signer
-  l2Deployer: Signer
+  parentDeployer: Signer
+  childDeployer: Signer
 }> => {
   const ethProvider = new JsonRpcProvider(config.ethUrl)
   const arbProvider = new JsonRpcProvider(config.arbUrl)
 
-  const l1Deployer = getSigner(ethProvider, config.ethKey)
-  const l2Deployer = getSigner(arbProvider, config.arbKey)
+  const parentDeployer = getSigner(ethProvider, config.ethKey)
+  const childDeployer = getSigner(arbProvider, config.arbKey)
 
   const seed = Wallet.createRandom()
-  const l1Signer = seed.connect(ethProvider)
-  const l2Signer = seed.connect(arbProvider)
+  const parentSigner = seed.connect(ethProvider)
+  const childSigner = seed.connect(arbProvider)
 
-  let setL1Network: L1Network | L2Network, setL2Network: L2Network
+  let setChildChain: ArbitrumNetwork
+
   try {
-    const l1Network = isTestingOrbitChains
-      ? await getL2Network(l1Deployer)
-      : await getL1Network(l1Deployer)
-    const l2Network = await getL2Network(l2Deployer)
-    setL1Network = l1Network
-    setL2Network = l2Network
+    const l2Network = await getArbitrumNetwork(childDeployer)
+    setChildChain = l2Network
   } catch (err) {
+    const localNetworks = getLocalNetworksFromFile()
     // the networks havent been added yet
-
     // check if theres an existing network available
-    const localNetworkFile = getLocalNetworksFromFile()
-
-    const { l1Network, l2Network } = localNetworkFile
-
-    if (isTestingOrbitChains) {
-      const _l1Network = l1Network as L2Network
-      const ethLocal: L1Network = {
-        blockTime: 10,
-        chainID: _l1Network.partnerChainID,
-        explorerUrl: '',
-        isCustom: true,
-        name: 'EthLocal',
-        partnerChainIDs: [_l1Network.chainID],
-        isArbitrum: false,
-      }
-
-      addCustomNetwork({
-        customL1Network: ethLocal,
-        customL2Network: _l1Network,
-      })
-
-      addCustomNetwork({
-        customL2Network: l2Network,
-      })
-
-      setL1Network = l1Network
-      setL2Network = l2Network
-    } else {
-      addCustomNetwork({
-        customL1Network: l1Network as L1Network,
-        customL2Network: l2Network,
-      })
-
-      setL1Network = l1Network
-      setL2Network = l2Network
-    }
+    const childChain = (
+      isTestingOrbitChains ? localNetworks.l3Network : localNetworks.l2Network
+    ) as ArbitrumNetwork
+    setChildChain = registerCustomArbitrumNetwork(childChain)
   }
 
-  const erc20Bridger = new Erc20Bridger(setL2Network)
-  const adminErc20Bridger = new AdminErc20Bridger(setL2Network)
-  const ethBridger = new EthBridger(setL2Network)
-  const inboxTools = new InboxTools(l1Signer, setL2Network)
+  assertArbitrumNetworkHasTokenBridge(setChildChain)
 
-  if (isL2NetworkWithCustomFeeToken()) {
-    await fundL1(l1Signer)
-    await fundL1CustomFeeToken(l1Signer)
-    await approveL1CustomFeeToken(l1Signer)
+  const erc20Bridger = new Erc20Bridger(setChildChain)
+  const adminErc20Bridger = new AdminErc20Bridger(setChildChain)
+  const ethBridger = new EthBridger(setChildChain)
+  const inboxTools = new InboxTools(parentSigner, setChildChain)
+
+  if (isArbitrumNetworkWithCustomFeeToken()) {
+    await fundParentSigner(parentSigner)
+    await fundParentCustomFeeToken(parentSigner)
+    await approveParentCustomFeeToken(parentSigner)
   }
 
   return {
-    l1Signer,
-    l2Signer,
-    l1Provider: ethProvider,
-    l2Provider: arbProvider,
-    l1Network: setL1Network,
-    l2Network: setL2Network,
+    parentSigner,
+    childSigner,
+    parentProvider: ethProvider,
+    childProvider: arbProvider,
+    childChain: setChildChain,
     erc20Bridger,
     adminErc20Bridger,
     ethBridger,
     inboxTools,
-    l1Deployer,
-    l2Deployer,
+    parentDeployer,
+    childDeployer,
   }
 }
 
 export function getLocalNetworksFromFile(): {
-  l1Network: L1Network | L2Network
-  l2Network: L2Network
+  l2Network: ArbitrumNetwork
+  l3Network?: ArbitrumNetwork
 } {
   const pathToLocalNetworkFile = path.join(__dirname, '..', 'localNetwork.json')
   if (!fs.existsSync(pathToLocalNetworkFile)) {
     throw new ArbSdkError('localNetwork.json not found, must gen:network first')
   }
   const localNetworksFile = fs.readFileSync(pathToLocalNetworkFile, 'utf8')
-  return JSON.parse(localNetworksFile)
+  const localL2: ArbitrumNetwork = JSON.parse(localNetworksFile).l2Network
+  const localL3: ArbitrumNetwork = JSON.parse(localNetworksFile).l3Network
+
+  return { l2Network: localL2, l3Network: localL3 }
 }

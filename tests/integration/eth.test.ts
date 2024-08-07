@@ -24,21 +24,21 @@ import { parseEther } from '@ethersproject/units'
 import { constants } from 'ethers'
 
 import {
-  fundL1,
-  fundL2,
+  fundParentSigner,
+  fundChildSigner,
   mineUntilStop,
   prettyLog,
   skipIfMainnet,
 } from './testHelpers'
-import { L2ToL1Message } from '../../src/lib/message/L2ToL1Message'
-import { L2ToL1MessageStatus } from '../../src/lib/dataEntities/message'
-import { L2TransactionReceipt } from '../../src/lib/message/L2Transaction'
-import { L1ToL2MessageStatus } from '../../src/lib/message/L1ToL2Message'
+import { ChildToParentMessage } from '../../src/lib/message/ChildToParentMessage'
+import { ChildToParentMessageStatus } from '../../src/lib/dataEntities/message'
+import { ChildTransactionReceipt } from '../../src/lib/message/ChildTransaction'
+import { ParentToChildMessageStatus } from '../../src/lib/message/ParentToChildMessage'
 import { testSetup } from '../../scripts/testSetup'
-import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
+import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { itOnlyWhenEth } from './custom-fee-token/mochaExtensions'
-import { L1TransactionReceipt } from '../../src'
+import { ParentTransactionReceipt } from '../../src'
 import {
   getNativeTokenDecimals,
   scaleToNativeTokenDecimals,
@@ -53,18 +53,18 @@ describe('Ether', async () => {
   })
 
   it('transfers ether on l2', async () => {
-    const { l2Signer } = await testSetup()
+    const { childSigner } = await testSetup()
 
-    await fundL2(l2Signer)
+    await fundChildSigner(childSigner)
     const randomAddress = Wallet.createRandom().address
     const amountToSend = parseEther('0.000005')
 
-    const balanceBefore = await l2Signer.provider!.getBalance(
-      await l2Signer.getAddress()
+    const balanceBefore = await childSigner.provider!.getBalance(
+      await childSigner.getAddress()
     )
 
     const rec = await (
-      await l2Signer.sendTransaction({
+      await childSigner.sendTransaction({
         to: randomAddress,
         value: amountToSend,
         maxFeePerGas: 15000000000,
@@ -72,10 +72,10 @@ describe('Ether', async () => {
       })
     ).wait()
 
-    const balanceAfter = await l2Signer.provider!.getBalance(
-      await l2Signer.getAddress()
+    const balanceAfter = await childSigner.provider!.getBalance(
+      await childSigner.getAddress()
     )
-    const randomBalanceAfter = await l2Signer.provider!.getBalance(
+    const randomBalanceAfter = await childSigner.provider!.getBalance(
       randomAddress
     )
     expect(randomBalanceAfter.toString(), 'random address balance after').to.eq(
@@ -92,10 +92,10 @@ describe('Ether', async () => {
   itOnlyWhenEth(
     '"EthBridger.approveGasToken" throws when eth is used as native/gas token',
     async () => {
-      const { ethBridger, l1Signer } = await testSetup()
+      const { ethBridger, parentSigner } = await testSetup()
 
       try {
-        await ethBridger.approveGasToken({ l1Signer })
+        await ethBridger.approveGasToken({ parentSigner })
         expect.fail(`"EthBridger.approveGasToken" should have thrown`)
       } catch (error: any) {
         expect(error.message).to.equal('chain uses ETH as its native/gas token')
@@ -104,111 +104,155 @@ describe('Ether', async () => {
   )
 
   it('deposits ether', async () => {
-    const { ethBridger, l1Signer, l1Provider, l2Network, l2Signer } =
-      await testSetup()
-    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+    const {
+      ethBridger,
+      parentSigner,
+      parentProvider,
+      childChain,
+      childSigner,
+    } = await testSetup()
+    const decimals = await getNativeTokenDecimals({
+      parentProvider,
+      childNetwork: childChain,
+    })
 
-    await fundL1(l1Signer)
-    const inboxAddress = ethBridger.l2Network.ethBridge.inbox
+    await fundParentSigner(parentSigner)
+    const inboxAddress = ethBridger.childNetwork.ethBridge.inbox
 
-    const initialInboxBalance = await l1Signer.provider!.getBalance(
+    const initialInboxBalance = await parentSigner.provider!.getBalance(
       inboxAddress
     )
     const amount = '0.0002'
     const ethToDeposit = parseUnits(amount, decimals)
     const res = await ethBridger.deposit({
       amount: ethToDeposit,
-      l1Signer: l1Signer,
+      parentSigner: parentSigner,
     })
     const rec = await res.wait()
 
-    expect(rec.status).to.equal(1, 'eth deposit L1 txn failed')
-    const finalInboxBalance = await l1Signer.provider!.getBalance(inboxAddress)
+    expect(rec.status).to.equal(1, 'eth deposit parent txn failed')
+    const finalInboxBalance = await parentSigner.provider!.getBalance(
+      inboxAddress
+    )
     expect(
       initialInboxBalance.add(ethToDeposit).eq(finalInboxBalance),
       'balance failed to update after eth deposit'
     )
 
-    const waitResult = await rec.waitForL2(l2Signer.provider!)
-
-    const l1ToL2Messages = await rec.getEthDeposits(l2Signer.provider!)
-    expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
-    const l1ToL2Message = l1ToL2Messages[0]
-
-    const walletAddress = await l1Signer.getAddress()
-    expect(l1ToL2Message.to).to.eq(walletAddress, 'message inputs value error')
-    expect(l1ToL2Message.value.toString(), 'message inputs value error').to.eq(
-      parseEther(amount).toString()
+    const waitResult = await rec.waitForChildTransactionReceipt(
+      childSigner.provider!
     )
 
-    prettyLog('l2TxHash: ' + waitResult.message.l2DepositTxHash)
-    prettyLog('l2 transaction found!')
-    expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
-    expect(waitResult.l2TxReceipt).to.exist
-    expect(waitResult.l2TxReceipt).to.not.be.null
+    const parentToChildMessages = await rec.getEthDeposits(
+      childSigner.provider!
+    )
+    expect(parentToChildMessages.length).to.eq(
+      1,
+      'failed to find 1 parent-to-child message'
+    )
+    const parentToChildMessage = parentToChildMessages[0]
 
-    const testWalletL2EthBalance = await l2Signer.getBalance()
+    const walletAddress = await parentSigner.getAddress()
+    expect(parentToChildMessage.to).to.eq(
+      walletAddress,
+      'message inputs value error'
+    )
+    expect(
+      parentToChildMessage.value.toString(),
+      'message inputs value error'
+    ).to.eq(parseEther(amount).toString())
+    expect(
+      parentToChildMessage.value.toString(),
+      'message inputs value error'
+    ).to.eq(ethToDeposit.toString())
+
+    prettyLog('childDepositTxHash: ' + waitResult.message.childTxHash)
+    prettyLog('chain transaction found!')
+    expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
+    expect(waitResult.childTxReceipt).to.exist
+    expect(waitResult.childTxReceipt).to.not.be.null
+
+    const testWalletL2EthBalance = await childSigner.getBalance()
     expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(
       parseEther(amount).toString()
     )
   })
 
   it('deposits ether to a specific L2 address', async function () {
-    const { ethBridger, l1Signer, l1Provider, l2Network, l2Signer } =
-      await testSetup()
-    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+    const {
+      ethBridger,
+      parentSigner,
+      parentProvider,
+      childChain,
+      childSigner,
+    } = await testSetup()
+    const decimals = await getNativeTokenDecimals({
+      parentProvider,
+      childNetwork: childChain,
+    })
 
-    await fundL1(l1Signer)
-    const inboxAddress = ethBridger.l2Network.ethBridge.inbox
+    await fundParentSigner(parentSigner)
+    const inboxAddress = ethBridger.childNetwork.ethBridge.inbox
     const destWallet = Wallet.createRandom()
 
-    const initialInboxBalance = await l1Signer.provider!.getBalance(
+    const initialInboxBalance = await parentSigner.provider!.getBalance(
       inboxAddress
     )
     const amount = '0.0002'
     const ethToDeposit = parseUnits(amount, decimals)
     const res = await ethBridger.depositTo({
       amount: ethToDeposit,
-      l1Signer: l1Signer,
+      parentSigner: parentSigner,
       destinationAddress: destWallet.address,
-      l2Provider: l2Signer.provider!,
+      childProvider: childSigner.provider!,
     })
     const rec = await res.wait()
 
     expect(rec.status).to.equal(1, 'eth deposit L1 txn failed')
-    const finalInboxBalance = await l1Signer.provider!.getBalance(inboxAddress)
+    const finalInboxBalance = await parentSigner.provider!.getBalance(
+      inboxAddress
+    )
     expect(
       initialInboxBalance.add(ethToDeposit).eq(finalInboxBalance),
       'balance failed to update after eth deposit'
     )
 
-    const l1ToL2Messages = await rec.getL1ToL2Messages(l2Signer.provider!)
-    expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
-    const l1ToL2Message = l1ToL2Messages[0]
+    const parentToChildMessages = await rec.getParentToChildMessages(
+      childSigner.provider!
+    )
+    expect(parentToChildMessages.length).to.eq(
+      1,
+      'failed to find 1 parent-to-child message'
+    )
+    const parentToChildMessage = parentToChildMessages[0]
 
-    expect(l1ToL2Message.messageData.destAddress).to.eq(
+    expect(parentToChildMessage.messageData.destAddress).to.eq(
       destWallet.address,
       'message inputs value error'
     )
     expect(
-      l1ToL2Message.messageData.l2CallValue.toString(),
+      parentToChildMessage.messageData.l2CallValue.toString(),
       'message inputs value error'
     ).to.eq(parseEther(amount).toString())
 
-    const retryableTicketResult = await l1ToL2Message.waitForStatus()
+    const retryableTicketResult = await parentToChildMessage.waitForStatus()
     expect(retryableTicketResult.status).to.eq(
-      L1ToL2MessageStatus.REDEEMED,
+      ParentToChildMessageStatus.REDEEMED,
       'Retryable ticket not redeemed'
     )
 
-    const retryableTxReceipt = await l2Signer.provider!.getTransactionReceipt(
-      l1ToL2Message.retryableCreationId
-    )
+    const retryableTxReceipt =
+      await childSigner.provider!.getTransactionReceipt(
+        parentToChildMessage.retryableCreationId
+      )
     expect(retryableTxReceipt).to.exist
     expect(retryableTxReceipt).to.not.be.null
 
-    const l2RetryableTxReceipt = new L2TransactionReceipt(retryableTxReceipt)
-    const ticketRedeemEvents = l2RetryableTxReceipt.getRedeemScheduledEvents()
+    const childRetryableTxReceipt = new ChildTransactionReceipt(
+      retryableTxReceipt
+    )
+    const ticketRedeemEvents =
+      childRetryableTxReceipt.getRedeemScheduledEvents()
     expect(ticketRedeemEvents.length).to.eq(
       1,
       'failed finding the redeem event'
@@ -216,29 +260,37 @@ describe('Ether', async () => {
     expect(ticketRedeemEvents[0].retryTxHash).to.exist
     expect(ticketRedeemEvents[0].retryTxHash).to.not.be.null
 
-    const testWalletL2EthBalance = await l2Signer.provider!.getBalance(
+    const testWalletChildEthBalance = await childSigner.provider!.getBalance(
       destWallet.address
     )
-    expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(
+    expect(testWalletChildEthBalance.toString(), 'final balance').to.eq(
       parseEther(amount).toString()
     )
   })
 
   it('deposit ether to a specific L2 address with manual redeem', async function () {
-    const { ethBridger, l1Signer, l1Provider, l2Network, l2Signer } =
-      await testSetup()
-    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+    const {
+      ethBridger,
+      parentSigner,
+      parentProvider,
+      childChain,
+      childSigner,
+    } = await testSetup()
+    const decimals = await getNativeTokenDecimals({
+      parentProvider,
+      childNetwork: childChain,
+    })
 
-    await fundL1(l1Signer)
+    await fundParentSigner(parentSigner)
     const destWallet = Wallet.createRandom()
 
     const amount = '0.0002'
     const ethToDeposit = parseUnits(amount, decimals)
     const res = await ethBridger.depositTo({
       amount: ethToDeposit,
-      l1Signer: l1Signer,
+      parentSigner: parentSigner,
       destinationAddress: destWallet.address,
-      l2Provider: l2Signer.provider!,
+      childProvider: childSigner.provider!,
       retryableGasOverrides: {
         gasLimit: {
           // causes auto-redeem to fail which allows us to check balances before it happens
@@ -247,50 +299,65 @@ describe('Ether', async () => {
       },
     })
     const rec = await res.wait()
-    const l1ToL2Messages = await rec.getL1ToL2Messages(l2Signer.provider!)
-    expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
-    const l1ToL2MessageReader = l1ToL2Messages[0]
+    const parentToChildMessages = await rec.getParentToChildMessages(
+      childSigner.provider!
+    )
+    expect(parentToChildMessages.length).to.eq(
+      1,
+      'failed to find 1 parent-to-child message'
+    )
+    const parentToChildMessageReader = parentToChildMessages[0]
 
-    const retryableTicketResult = await l1ToL2MessageReader.waitForStatus()
+    const retryableTicketResult =
+      await parentToChildMessageReader.waitForStatus()
 
     expect(retryableTicketResult.status).to.eq(
-      L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2,
+      ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD,
       'unexpected status, expected auto-redeem to fail'
     )
 
-    let testWalletL2EthBalance = await l2Signer.provider!.getBalance(
+    let testWalletChildEthBalance = await childSigner.provider!.getBalance(
       destWallet.address
     )
 
     expect(
-      testWalletL2EthBalance.eq(constants.Zero),
+      testWalletChildEthBalance.eq(constants.Zero),
       'balance before auto-redeem'
     ).to.be.true
 
-    await fundL2(l2Signer)
+    await fundChildSigner(childSigner)
 
-    const l1TxHash = await l1Signer.provider!.getTransactionReceipt(res.hash)
-    const l1Receipt = new L1TransactionReceipt(l1TxHash)
+    const parentTxHash = await parentSigner.provider!.getTransactionReceipt(
+      res.hash
+    )
+    const parentTxReceipt = new ParentTransactionReceipt(parentTxHash)
 
-    const l1ToL2MessageWriter = (await l1Receipt.getL1ToL2Messages(l2Signer))[0]
+    const parentToChildMessageWriter = (
+      await parentTxReceipt.getParentToChildMessages(childSigner)
+    )[0]
 
-    await (await l1ToL2MessageWriter.redeem()).wait()
+    await (await parentToChildMessageWriter.redeem()).wait()
 
-    testWalletL2EthBalance = await l2Signer.provider!.getBalance(
+    testWalletChildEthBalance = await childSigner.provider!.getBalance(
       destWallet.address
     )
 
     expect(
-      testWalletL2EthBalance.toString(),
+      testWalletChildEthBalance.toString(),
       'balance after manual redeem'
     ).to.eq(parseEther(amount).toString())
   })
 
   it('withdraw Ether transaction succeeds', async () => {
-    const { l2Signer, l1Signer, l1Provider, l2Network, ethBridger } =
-      await testSetup()
-    await fundL2(l2Signer)
-    await fundL1(l1Signer)
+    const {
+      childSigner,
+      parentSigner,
+      parentProvider,
+      childChain,
+      ethBridger,
+    } = await testSetup()
+    await fundChildSigner(childSigner)
+    await fundParentSigner(parentSigner)
 
     const ethToWithdraw = parseEther('0.00000002')
     const randomAddress = Wallet.createRandom().address
@@ -298,16 +365,18 @@ describe('Ether', async () => {
     const request = await ethBridger.getWithdrawalRequest({
       amount: ethToWithdraw,
       destinationAddress: randomAddress,
-      from: await l2Signer.getAddress(),
+      from: await childSigner.getAddress(),
     })
 
-    const l1GasEstimate = await request.estimateL1GasLimit(l1Signer.provider!)
+    const l1GasEstimate = await request.estimateParentGasLimit(
+      parentSigner.provider!
+    )
 
     const withdrawEthRes = await ethBridger.withdraw({
       amount: ethToWithdraw,
-      l2Signer: l2Signer,
+      childSigner: childSigner,
       destinationAddress: randomAddress,
-      from: await l2Signer.getAddress(),
+      from: await childSigner.getAddress(),
     })
 
     const withdrawEthRec = await withdrawEthRes.wait()
@@ -318,15 +387,15 @@ describe('Ether', async () => {
     )
 
     const withdrawMessage = (
-      await withdrawEthRec.getL2ToL1Messages(l1Signer)
+      await withdrawEthRec.getChildToParentMessages(parentSigner)
     )[0]
     expect(
       withdrawMessage,
       'eth withdraw getWithdrawalsInL2Transaction query came back empty'
     ).to.exist
 
-    const withdrawEvents = await L2ToL1Message.getL2ToL1Events(
-      l2Signer.provider!,
+    const withdrawEvents = await ChildToParentMessage.getChildToParentEvents(
+      childSigner.provider!,
       { fromBlock: withdrawEthRec.blockNumber, toBlock: 'latest' },
       undefined,
       randomAddress
@@ -337,14 +406,14 @@ describe('Ether', async () => {
       'eth withdraw getL2ToL1EventData failed'
     )
 
-    const messageStatus = await withdrawMessage.status(l2Signer.provider!)
+    const messageStatus = await withdrawMessage.status(childSigner.provider!)
     expect(
       messageStatus,
       `eth withdraw status returned ${messageStatus}`
-    ).to.be.eq(L2ToL1MessageStatus.UNCONFIRMED)
+    ).to.be.eq(ChildToParentMessageStatus.UNCONFIRMED)
 
     // CHRIS: TODO: comment this back in when fixed in nitro
-    // const actualFinalBalance = await l2Signer.getBalance()
+    // const actualFinalBalance = await childSigner.getBalance()
     // const expectedFinalBalance = initialBalance
     //   .sub(ethToWithdraw)
     //   .sub(withdrawEthRec.gasUsed.mul(withdrawEthRec.effectiveGasPrice))
@@ -353,24 +422,24 @@ describe('Ether', async () => {
     // )
 
     // run a miner whilst withdrawing
-    const miner1 = Wallet.createRandom().connect(l1Signer.provider!)
-    const miner2 = Wallet.createRandom().connect(l2Signer.provider!)
-    await fundL1(miner1, parseEther('1'))
-    await fundL2(miner2, parseEther('1'))
+    const miner1 = Wallet.createRandom().connect(parentSigner.provider!)
+    const miner2 = Wallet.createRandom().connect(childSigner.provider!)
+    await fundParentSigner(miner1, parseEther('1'))
+    await fundChildSigner(miner2, parseEther('1'))
     const state = { mining: true }
     await Promise.race([
       mineUntilStop(miner1, state),
       mineUntilStop(miner2, state),
-      withdrawMessage.waitUntilReadyToExecute(l2Signer.provider!),
+      withdrawMessage.waitUntilReadyToExecute(childSigner.provider!),
     ])
     state.mining = false
 
     expect(
-      await withdrawMessage.status(l2Signer.provider!),
+      await withdrawMessage.status(childSigner.provider!),
       'confirmed status'
-    ).to.eq(L2ToL1MessageStatus.CONFIRMED)
+    ).to.eq(ChildToParentMessageStatus.CONFIRMED)
 
-    const execTx = await withdrawMessage.execute(l2Signer.provider!)
+    const execTx = await withdrawMessage.execute(childSigner.provider!)
     const execRec = await execTx.wait()
 
     expect(
@@ -379,18 +448,21 @@ describe('Ether', async () => {
     ).to.be.lessThan(l1GasEstimate.toNumber())
 
     expect(
-      await withdrawMessage.status(l2Signer.provider!),
+      await withdrawMessage.status(childSigner.provider!),
       'executed status'
-    ).to.eq(L2ToL1MessageStatus.EXECUTED)
+    ).to.eq(ChildToParentMessageStatus.EXECUTED)
 
-    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+    const decimals = await getNativeTokenDecimals({
+      parentProvider,
+      childNetwork: childChain,
+    })
 
-    const finalRandomBalance = isL2NetworkWithCustomFeeToken()
+    const finalRandomBalance = isArbitrumNetworkWithCustomFeeToken()
       ? await ERC20__factory.connect(
           ethBridger.nativeToken!,
-          l1Signer.provider!
+          parentSigner.provider!
         ).balanceOf(randomAddress)
-      : await l1Signer.provider!.getBalance(randomAddress)
+      : await parentSigner.provider!.getBalance(randomAddress)
     expect(finalRandomBalance.toString(), 'L1 final balance').to.eq(
       scaleToNativeTokenDecimals({ amount: ethToWithdraw, decimals }).toString()
     )

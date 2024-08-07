@@ -17,53 +17,81 @@
 'use strict'
 
 export {
-  Erc20L1L3Bridger,
   EthL1L3Bridger,
+  EthL1L3DepositStatus,
+  EthL1L3DepositRequestParams,
+  Erc20L1L3Bridger,
+  Erc20L1L3DepositStatus,
+  Erc20L1L3DepositRequestParams,
+  Erc20L1L3DepositRequestRetryableOverrides,
+  GetL1L3DepositStatusParams,
 } from './lib/assetBridger/l1l3Bridger'
 export { EthBridger } from './lib/assetBridger/ethBridger'
 export { Erc20Bridger } from './lib/assetBridger/erc20Bridger'
 export {
-  L2TransactionReceipt,
-  L2ContractTransaction,
-} from './lib/message/L2Transaction'
+  ChildTransactionReceipt,
+  ChildContractTransaction,
+} from './lib/message/ChildTransaction'
 export {
-  L2ToL1Message,
-  L2ToL1MessageWriter,
-  L2ToL1MessageReader,
-} from './lib/message/L2ToL1Message'
+  ChildToParentMessage,
+  ChildToParentMessageWriter,
+  ChildToParentMessageReader,
+  ChildToParentMessageReaderOrWriter,
+  ChildToParentTransactionEvent,
+} from './lib/message/ChildToParentMessage'
 export {
-  L1ContractTransaction,
-  L1TransactionReceipt,
-} from './lib/message/L1Transaction'
+  ParentEthDepositTransaction,
+  ParentEthDepositTransactionReceipt,
+  ParentContractCallTransaction,
+  ParentContractCallTransactionReceipt,
+  ParentContractTransaction,
+  ParentTransactionReceipt,
+} from './lib/message/ParentTransaction'
 export {
-  L1ToL2MessageStatus,
-  EthDepositStatus,
-  L1ToL2Message,
-  L1ToL2MessageReader,
-  L1ToL2MessageReaderClassic,
-  L1ToL2MessageWriter,
-} from './lib/message/L1ToL2Message'
-export { L1ToL2MessageGasEstimator } from './lib/message/L1ToL2MessageGasEstimator'
+  EthDepositMessage,
+  EthDepositMessageStatus,
+  EthDepositMessageWaitForStatusResult,
+  ParentToChildMessage,
+  ParentToChildMessageReader,
+  ParentToChildMessageReaderClassic,
+  ParentToChildMessageWriter,
+  ParentToChildMessageStatus,
+  ParentToChildMessageWaitForStatusResult,
+} from './lib/message/ParentToChildMessage'
+export { ParentToChildMessageGasEstimator } from './lib/message/ParentToChildMessageGasEstimator'
 export { argSerializerConstructor } from './lib/utils/byte_serialize_params'
 export { CallInput, MultiCaller } from './lib/utils/multicall'
 export {
-  L1Networks,
-  L2Networks,
-  L1Network,
+  ArbitrumNetwork,
+  getArbitrumNetwork,
+  getArbitrumNetworks,
+  ArbitrumNetworkInformationFromRollup,
+  getArbitrumNetworkInformationFromRollup,
+  getChildrenForNetwork,
+  registerCustomArbitrumNetwork,
+  // deprecated, but here for backwards compatibility
   L2Network,
-  getL1Network,
-  getL2Network,
-  addCustomNetwork,
-  addDefaultLocalNetwork,
+  L2NetworkTokenBridge,
+  mapL2NetworkToArbitrumNetwork,
+  mapL2NetworkTokenBridgeToTokenBridge,
 } from './lib/dataEntities/networks'
 export { InboxTools } from './lib/inbox/inbox'
 export { EventFetcher } from './lib/utils/eventFetcher'
 export { ArbitrumProvider } from './lib/utils/arbProvider'
 export * as constants from './lib/dataEntities/constants'
-export { L2ToL1MessageStatus } from './lib/dataEntities/message'
+export {
+  ChildToParentMessageStatus,
+  RetryableMessageParams,
+} from './lib/dataEntities/message'
 export {
   RetryableData,
   RetryableDataTools,
 } from './lib/dataEntities/retryableData'
-
+export { EventArgs } from './lib/dataEntities/event'
 export { Address } from './lib/dataEntities/address'
+export {
+  ParentToChildTransactionRequest,
+  isParentToChildTransactionRequest,
+  ChildToParentTransactionRequest,
+  isChildToParentTransactionRequest,
+} from './lib/dataEntities/transactionRequest'

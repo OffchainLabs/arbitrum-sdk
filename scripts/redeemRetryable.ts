@@ -20,7 +20,7 @@ import { ContractReceipt } from '@ethersproject/contracts'
 
 import { testSetup } from '../scripts/testSetup'
 import args from './getCLargs'
-import { L1TransactionReceipt } from '../src/lib/message/L1Transaction'
+import { L1TransactionReceipt } from '../src/lib/message/ParentTransaction'
 import { L1ToL2MessageStatus, L1ToL2MessageWriter } from '../src'
 import { fundL2 } from '../integration_test/testHelpers'
 
@@ -35,14 +35,14 @@ if (!l1Txn) {
 }
 
 ;(async () => {
-  const { l1Signer, l2Signer } = await testSetup()
+  const { parentSigner, childSigner } = await testSetup()
   // TODO: Should use the PRIVKEY envvar signer directly
-  fundL2(l2Signer)
-  const l1Provider = l1Signer.provider!
+  fundL2(childSigner)
+  const l1Provider = parentSigner.provider!
   const l1Receipt = new L1TransactionReceipt(
     await l1Provider.getTransactionReceipt(l1Txn)
   )
-  const l1ToL2Message = await l1Receipt.getL1ToL2Message(l2Signer)
+  const l1ToL2Message = await l1Receipt.getL1ToL2Message(childSigner)
   if (l1ToL2Message instanceof L1ToL2MessageWriter) {
     const redeemStatus = (await l1ToL2Message.waitForStatus()).status
     if (redeemStatus == L1ToL2MessageStatus.REDEEMED) {

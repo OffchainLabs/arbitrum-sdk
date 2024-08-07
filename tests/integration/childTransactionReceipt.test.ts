@@ -19,20 +19,20 @@
 import { expect } from 'chai'
 
 import {
-  fundL1,
-  fundL2,
+  fundParentSigner,
+  fundChildSigner,
   mineUntilStop,
   skipIfMainnet,
   wait,
 } from './testHelpers'
-import { L2TransactionReceipt } from '../../src'
+import { ChildTransactionReceipt } from '../../src'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { BigNumber, Wallet } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
 import { testSetup } from '../../scripts/testSetup'
 
 async function waitForL1BatchConfirmations(
-  arbTxReceipt: L2TransactionReceipt,
+  arbTxReceipt: ChildTransactionReceipt,
   l2Provider: JsonRpcProvider,
   timeoutMs: number
 ) {
@@ -65,24 +65,24 @@ describe('ArbProvider', () => {
   })
 
   it('does find l1 batch info', async () => {
-    const { l2Signer, l1Signer } = await testSetup()
-    const l2Provider = l2Signer.provider! as JsonRpcProvider
+    const { childSigner, parentSigner } = await testSetup()
+    const l2Provider = childSigner.provider! as JsonRpcProvider
 
     // set up miners
-    const miner1 = Wallet.createRandom().connect(l1Signer.provider!)
-    const miner2 = Wallet.createRandom().connect(l2Signer.provider!)
-    await fundL1(miner1, parseEther('0.1'))
-    await fundL2(miner2, parseEther('0.1'))
+    const miner1 = Wallet.createRandom().connect(parentSigner.provider!)
+    const miner2 = Wallet.createRandom().connect(childSigner.provider!)
+    await fundParentSigner(miner1, parseEther('0.1'))
+    await fundChildSigner(miner2, parseEther('0.1'))
     const state = { mining: true }
     mineUntilStop(miner1, state)
     mineUntilStop(miner2, state)
 
-    await fundL2(l2Signer)
+    await fundChildSigner(childSigner)
     const randomAddress = Wallet.createRandom().address
     const amountToSend = parseEther('0.000005')
 
     // send an l2 transaction, and get the receipt
-    const tx = await l2Signer.sendTransaction({
+    const tx = await childSigner.sendTransaction({
       to: randomAddress,
       value: amountToSend,
     })
@@ -92,7 +92,7 @@ describe('ArbProvider', () => {
     // eslint-disable-next-line no-constant-condition
     while (true) {
       await wait(300)
-      const arbTxReceipt = new L2TransactionReceipt(rec)
+      const arbTxReceipt = new ChildTransactionReceipt(rec)
 
       const l1BatchNumber = (
         await arbTxReceipt.getBatchNumber(l2Provider).catch(() => {

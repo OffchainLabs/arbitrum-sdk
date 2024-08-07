@@ -15,31 +15,36 @@ const ethProvider = () => new StaticJsonRpcProvider(config.ethUrl)
 const arbProvider = () => new StaticJsonRpcProvider(config.arbUrl)
 const localNetworks = () => getLocalNetworksFromFile()
 
-export function isL2NetworkWithCustomFeeToken(): boolean {
-  const nt = localNetworks().l2Network.nativeToken
+export function isArbitrumNetworkWithCustomFeeToken(): boolean {
+  const nt = localNetworks().l3Network?.nativeToken
   return typeof nt !== 'undefined' && nt !== ethers.constants.AddressZero
 }
 
 export async function testSetup() {
   const result = await _testSetup()
-  const { l2Network, l1Provider } = result
+  const { childChain, parentProvider } = result
 
-  const nativeToken = l2Network.nativeToken!
-  const nativeTokenContract = ERC20__factory.connect(nativeToken, l1Provider)
+  const nativeToken = childChain.nativeToken!
+  const nativeTokenContract = ERC20__factory.connect(
+    nativeToken,
+    parentProvider
+  )
 
   return { ...result, nativeTokenContract }
 }
 
-export async function fundL1CustomFeeToken(l1SignerOrAddress: Signer | string) {
-  const nativeToken = localNetworks().l2Network.nativeToken
+export async function fundParentCustomFeeToken(
+  parentSignerOrAddress: Signer | string
+) {
+  const nativeToken = localNetworks().l3Network?.nativeToken
   const address =
-    typeof l1SignerOrAddress === 'string'
-      ? l1SignerOrAddress
-      : await l1SignerOrAddress.getAddress()
+    typeof parentSignerOrAddress === 'string'
+      ? parentSignerOrAddress
+      : await parentSignerOrAddress.getAddress()
 
   if (typeof nativeToken === 'undefined') {
     throw new Error(
-      `can't call "fundL1CustomFeeToken" for network that uses eth as native token`
+      `can't call "fundParentCustomFeeToken" for network that uses eth as native token`
     )
   }
 
@@ -58,18 +63,18 @@ export async function fundL1CustomFeeToken(l1SignerOrAddress: Signer | string) {
   await tx.wait()
 }
 
-export async function approveL1CustomFeeToken(l1Signer: Signer) {
+export async function approveParentCustomFeeToken(parentSigner: Signer) {
   const ethBridger = await EthBridger.fromProvider(arbProvider())
 
-  const tx = await ethBridger.approveGasToken({ l1Signer })
+  const tx = await ethBridger.approveGasToken({ parentSigner })
   await tx.wait()
 }
 
-export async function getL1CustomFeeTokenAllowance(
+export async function getParentCustomFeeTokenAllowance(
   owner: string,
   spender: string
 ) {
-  const nativeToken = localNetworks().l2Network.nativeToken
+  const nativeToken = localNetworks().l3Network?.nativeToken
   const nativeTokenContract = ERC20__factory.connect(
     nativeToken!,
     ethProvider()
@@ -77,26 +82,29 @@ export async function getL1CustomFeeTokenAllowance(
   return nativeTokenContract.allowance(owner, spender)
 }
 
-export async function approveL1CustomFeeTokenForErc20Deposit(
-  l1Signer: Signer,
-  erc20L1Address: string
+export async function approveParentCustomFeeTokenForErc20Deposit(
+  parentSigner: Signer,
+  erc20ParentAddress: string
 ) {
   const erc20Bridger = await Erc20Bridger.fromProvider(arbProvider())
 
-  const tx = await erc20Bridger.approveGasToken({ erc20L1Address, l1Signer })
+  const tx = await erc20Bridger.approveGasToken({
+    erc20ParentAddress: erc20ParentAddress,
+    parentSigner,
+  })
   await tx.wait()
 }
 
-export async function fundL2CustomFeeToken(l2Signer: Signer) {
+export async function fundChildCustomFeeToken(childSigner: Signer) {
   const deployerWallet = new Wallet(config.arbKey, arbProvider())
 
   const decimals = await getNativeTokenDecimals({
-    l1Provider: ethProvider(),
-    l2Network: localNetworks().l2Network,
+    parentProvider: ethProvider(),
+    childNetwork: localNetworks().l2Network,
   })
 
   const tx = await deployerWallet.sendTransaction({
-    to: await l2Signer.getAddress(),
+    to: await childSigner.getAddress(),
     value: utils.parseUnits('1', decimals),
   })
   await tx.wait()

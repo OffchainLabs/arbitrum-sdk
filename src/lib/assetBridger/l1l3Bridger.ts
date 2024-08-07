@@ -18,33 +18,32 @@ import { IL1Teleporter__factory } from '../abi/factories/IL1Teleporter__factory'
 import { Address } from '../dataEntities/address'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
-  L1Network,
-  L2Network,
+  ArbitrumNetwork,
   Teleporter,
-  l1Networks,
-  l2Networks,
+  assertArbitrumNetworkHasTokenBridge,
+  getArbitrumNetworks,
 } from '../dataEntities/networks'
 import {
   SignerOrProvider,
   SignerProviderUtils,
 } from '../dataEntities/signerOrProvider'
-import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
+import { ParentToChildTransactionRequest } from '../dataEntities/transactionRequest'
 import {
-  L1ToL2MessageReader,
-  L1ToL2MessageStatus,
-} from '../message/L1ToL2Message'
-import { L1ToL2MessageCreator } from '../message/L1ToL2MessageCreator'
+  ParentToChildMessageReader,
+  ParentToChildMessageStatus,
+} from '../message/ParentToChildMessage'
+import { ParentToChildMessageCreator } from '../message/ParentToChildMessageCreator'
 import {
   GasOverrides,
-  L1ToL2MessageGasEstimator,
+  ParentToChildMessageGasEstimator,
   PercentIncrease,
-} from '../message/L1ToL2MessageGasEstimator'
+} from '../message/ParentToChildMessageGasEstimator'
 import {
-  L1ContractCallTransaction,
-  L1ContractCallTransactionReceipt,
-  L1EthDepositTransactionReceipt,
-  L1TransactionReceipt,
-} from '../message/L1Transaction'
+  ParentContractCallTransaction,
+  ParentContractCallTransactionReceipt,
+  ParentEthDepositTransactionReceipt,
+  ParentTransactionReceipt,
+} from '../message/ParentTransaction'
 import { Erc20Bridger } from './erc20Bridger'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { OmitTyped } from '../utils/types'
@@ -111,7 +110,7 @@ export type TokenApproveParams = {
   amount?: BigNumber
 }
 
-export type Erc20DepositRequestRetryableOverrides = {
+export type Erc20L1L3DepositRequestRetryableOverrides = {
   /**
    * Optional L1 gas price override. Used to estimate submission fees.
    */
@@ -142,7 +141,7 @@ export type Erc20DepositRequestRetryableOverrides = {
   l2l3TokenBridgeRetryableGas?: TeleporterRetryableGasOverride
 }
 
-export type Erc20DepositRequestParams = {
+export type Erc20L1L3DepositRequestParams = {
   /**
    * Address of L1 token
    */
@@ -174,43 +173,43 @@ export type Erc20DepositRequestParams = {
   /**
    * Optional overrides for retryable gas parameters
    */
-  retryableOverrides?: Erc20DepositRequestRetryableOverrides
+  retryableOverrides?: Erc20L1L3DepositRequestRetryableOverrides
 }
 
 export type TxReference =
   | { txHash: string }
-  | { tx: L1ContractCallTransaction }
-  | { txReceipt: L1ContractCallTransactionReceipt }
+  | { tx: ParentContractCallTransaction }
+  | { txReceipt: ParentContractCallTransactionReceipt }
 
-export type GetDepositStatusParams = {
+export type GetL1L3DepositStatusParams = {
   l1Provider: Provider
   l2Provider: Provider
   l3Provider: Provider
 } & TxReference
 
-export type Erc20DepositStatus = {
+export type Erc20L1L3DepositStatus = {
   /**
    * L1 to L2 token bridge message
    */
-  l1l2TokenBridgeRetryable: L1ToL2MessageReader
+  l1l2TokenBridgeRetryable: ParentToChildMessageReader
   /**
    * L1 to L2 fee token bridge message
    */
-  l1l2GasTokenBridgeRetryable: L1ToL2MessageReader | undefined
+  l1l2GasTokenBridgeRetryable: ParentToChildMessageReader | undefined
   /**
    * L2ForwarderFactory message
    */
-  l2ForwarderFactoryRetryable: L1ToL2MessageReader
+  l2ForwarderFactoryRetryable: ParentToChildMessageReader
   /**
    * L2 to L3 token bridge message
    */
-  l2l3TokenBridgeRetryable: L1ToL2MessageReader | undefined
+  l2l3TokenBridgeRetryable: ParentToChildMessageReader | undefined
   /**
    * Indicates that the L2ForwarderFactory call was front ran by another teleportation.
    *
    * This is true if:
    * - l1l2TokenBridgeRetryable status is REDEEMED; AND
-   * - l2ForwarderFactoryRetryable status is FUNDS_DEPOSITED_ON_L2; AND
+   * - l2ForwarderFactoryRetryable status is FUNDS_DEPOSITED_ON_CHILD; AND
    * - L2Forwarder token balance is 0
    *
    * The first teleportation with l2ForwarderFactoryRetryable redemption *after* this teleportation's l1l2TokenBridgeRetryable redemption
@@ -225,7 +224,7 @@ export type Erc20DepositStatus = {
   completed: boolean
 }
 
-export type EthDepositRequestParams = {
+export type EthL1L3DepositRequestParams = {
   /**
    * Amount of ETH to send to L3
    */
@@ -256,15 +255,15 @@ export type EthDepositRequestParams = {
   l3TicketGasOverrides?: Omit<GasOverrides, 'deposit'>
 }
 
-export type EthDepositStatus = {
+export type EthL1L3DepositStatus = {
   /**
    * L1 to L2 message
    */
-  l2Retryable: L1ToL2MessageReader
+  l2Retryable: ParentToChildMessageReader
   /**
    * L2 to L3 message
    */
-  l3Retryable: L1ToL2MessageReader | undefined
+  l3Retryable: ParentToChildMessageReader | undefined
   /**
    * Whether the teleportation has completed
    */
@@ -275,31 +274,27 @@ export type EthDepositStatus = {
  * Base functionality for L1 to L3 bridging.
  */
 class BaseL1L3Bridger {
-  public readonly l1Network: L1Network
-  public readonly l2Network: L2Network
-  public readonly l3Network: L2Network
+  public readonly l1Network: { chainId: number }
+  public readonly l2Network: ArbitrumNetwork
+  public readonly l3Network: ArbitrumNetwork
 
   public readonly defaultGasPricePercentIncrease: BigNumber =
     BigNumber.from(500)
   public readonly defaultGasLimitPercentIncrease: BigNumber =
     BigNumber.from(100)
 
-  constructor(l3Network: L2Network) {
-    const l2Network = l2Networks[l3Network.partnerChainID]
+  constructor(l3Network: ArbitrumNetwork) {
+    const l2Network = getArbitrumNetworks().find(
+      network => network.chainId === l3Network.parentChainId
+    )
+
     if (!l2Network) {
       throw new ArbSdkError(
-        `Unknown l2 network chain id: ${l3Network.partnerChainID}`
+        `Unknown arbitrum network chain id: ${l3Network.parentChainId}`
       )
     }
 
-    const l1Network = l1Networks[l2Network.partnerChainID]
-    if (!l1Network) {
-      throw new ArbSdkError(
-        `Unknown l1 network chain id: ${l2Network.partnerChainID}`
-      )
-    }
-
-    this.l1Network = l1Network
+    this.l1Network = { chainId: l2Network.parentChainId }
     this.l2Network = l2Network
     this.l3Network = l3Network
   }
@@ -309,7 +304,7 @@ class BaseL1L3Bridger {
    * @param sop
    */
   protected async _checkL1Network(sop: SignerOrProvider): Promise<void> {
-    await SignerProviderUtils.checkNetworkMatches(sop, this.l1Network.chainID)
+    await SignerProviderUtils.checkNetworkMatches(sop, this.l1Network.chainId)
   }
 
   /**
@@ -317,7 +312,7 @@ class BaseL1L3Bridger {
    * @param sop
    */
   protected async _checkL2Network(sop: SignerOrProvider): Promise<void> {
-    await SignerProviderUtils.checkNetworkMatches(sop, this.l2Network.chainID)
+    await SignerProviderUtils.checkNetworkMatches(sop, this.l2Network.chainId)
   }
 
   /**
@@ -325,7 +320,7 @@ class BaseL1L3Bridger {
    * @param sop
    */
   protected async _checkL3Network(sop: SignerOrProvider): Promise<void> {
-    await SignerProviderUtils.checkNetworkMatches(sop, this.l3Network.chainID)
+    await SignerProviderUtils.checkNetworkMatches(sop, this.l3Network.chainId)
   }
 
   protected _percentIncrease(num: BigNumber, increase: BigNumber): BigNumber {
@@ -345,12 +340,12 @@ class BaseL1L3Bridger {
   protected async _getTxFromTxRef(
     txRef: TxReference,
     provider: Provider
-  ): Promise<L1ContractCallTransaction> {
+  ): Promise<ParentContractCallTransaction> {
     if ('tx' in txRef) {
       return txRef.tx
     }
 
-    return L1TransactionReceipt.monkeyPatchContractCallWait(
+    return ParentTransactionReceipt.monkeyPatchContractCallWait(
       await provider.getTransaction(this._getTxHashFromTxRef(txRef))
     )
   }
@@ -358,12 +353,12 @@ class BaseL1L3Bridger {
   protected async _getTxReceiptFromTxRef(
     txRef: TxReference,
     provider: Provider
-  ): Promise<L1ContractCallTransactionReceipt> {
+  ): Promise<ParentContractCallTransactionReceipt> {
     if ('txReceipt' in txRef) {
       return txRef.txReceipt
     }
 
-    return new L1ContractCallTransactionReceipt(
+    return new ParentContractCallTransactionReceipt(
       await provider.getTransactionReceipt(this._getTxHashFromTxRef(txRef))
     )
   }
@@ -410,7 +405,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    */
   protected _l1FeeTokenAddress: string | undefined
 
-  public constructor(l3Network: L2Network) {
+  public constructor(l3Network: ArbitrumNetwork) {
     super(l3Network)
 
     if (!this.l2Network.teleporter) {
@@ -449,7 +444,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     let l1FeeTokenAddress: string | undefined
 
     try {
-      l1FeeTokenAddress = await this.l2Erc20Bridger.getL1ERC20Address(
+      l1FeeTokenAddress = await this.l2Erc20Bridger.getParentErc20Address(
         this.l2GasTokenAddress,
         l2Provider
       )
@@ -510,23 +505,23 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   /**
    * Get the corresponding L2 token address for the provided L1 token
    */
-  public getL2ERC20Address(
+  public getL2Erc20Address(
     erc20L1Address: string,
     l1Provider: Provider
   ): Promise<string> {
-    return this.l2Erc20Bridger.getL2ERC20Address(erc20L1Address, l1Provider)
+    return this.l2Erc20Bridger.getChildErc20Address(erc20L1Address, l1Provider)
   }
 
   /**
    * Get the corresponding L3 token address for the provided L1 token
    */
-  public async getL3ERC20Address(
+  public async getL3Erc20Address(
     erc20L1Address: string,
     l1Provider: Provider,
     l2Provider: Provider
   ): Promise<string> {
-    return this.l3Erc20Bridger.getL2ERC20Address(
-      await this.getL2ERC20Address(erc20L1Address, l1Provider),
+    return this.l3Erc20Bridger.getChildErc20Address(
+      await this.getL2Erc20Address(erc20L1Address, l1Provider),
       l2Provider
     )
   }
@@ -538,7 +533,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     erc20L1Address: string,
     l1Provider: Provider
   ): Promise<string> {
-    return this.l2Erc20Bridger.getL1GatewayAddress(erc20L1Address, l1Provider)
+    return this.l2Erc20Bridger.getParentGatewayAddress(
+      erc20L1Address,
+      l1Provider
+    )
   }
 
   /**
@@ -549,8 +547,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l1Provider: Provider,
     l2Provider: Provider
   ): Promise<string> {
-    const l2Token = await this.getL2ERC20Address(erc20L1Address, l1Provider)
-    return this.l3Erc20Bridger.getL1GatewayAddress(l2Token, l2Provider)
+    const l2Token = await this.getL2Erc20Address(erc20L1Address, l1Provider)
+    return this.l3Erc20Bridger.getParentGatewayAddress(l2Token, l2Provider)
   }
 
   /**
@@ -596,7 +594,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l1TokenAddress: string,
     l1Provider: Provider
   ): Promise<boolean> {
-    return this.l2Erc20Bridger.l1TokenIsDisabled(l1TokenAddress, l1Provider)
+    return this.l2Erc20Bridger.isDepositDisabled(l1TokenAddress, l1Provider)
   }
 
   /**
@@ -606,7 +604,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l2TokenAddress: string,
     l2Provider: Provider
   ): Promise<boolean> {
-    return this.l3Erc20Bridger.l1TokenIsDisabled(l2TokenAddress, l2Provider)
+    return this.l3Erc20Bridger.isDepositDisabled(l2TokenAddress, l2Provider)
   }
 
   /**
@@ -621,9 +619,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     const chainId = (await l1OrL2Provider.getNetwork()).chainId
 
     let predictor
-    if (chainId === this.l1Network.chainID) {
+    if (chainId === this.l1Network.chainId) {
       predictor = this.teleporter.l1Teleporter
-    } else if (chainId === this.l2Network.chainID) {
+    } else if (chainId === this.l2Network.chainId) {
       predictor = this.teleporter.l2ForwarderFactory
     } else {
       throw new ArbSdkError(`Unknown chain id: ${chainId}`)
@@ -732,7 +730,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    * Also returns the amount of fee tokens required for teleportation.
    */
   public async getDepositRequest(
-    params: Erc20DepositRequestParams &
+    params: Erc20L1L3DepositRequestParams &
       (
         | {
             from: string
@@ -741,6 +739,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         | { l1Signer: Signer }
       )
   ): Promise<DepositRequestResult> {
+    assertArbitrumNetworkHasTokenBridge(this.l2Network)
+    assertArbitrumNetworkHasTokenBridge(this.l3Network)
     const l1Provider =
       'l1Provider' in params ? params.l1Provider : params.l1Signer.provider!
 
@@ -772,12 +772,12 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     > = {
       l1Token: params.erc20L1Address,
       l3FeeTokenL1Addr: l1FeeToken,
-      l1l2Router: this.l2Network.tokenBridge.l1GatewayRouter,
+      l1l2Router: this.l2Network.tokenBridge.parentGatewayRouter,
       l2l3RouterOrInbox:
         l1FeeToken &&
         getAddress(params.erc20L1Address) === getAddress(l1FeeToken)
           ? this.l3Network.ethBridge.inbox
-          : this.l3Network.tokenBridge.l1GatewayRouter,
+          : this.l3Network.tokenBridge.parentGatewayRouter,
       to: params.destinationAddress || from,
       amount: params.amount,
     }
@@ -810,12 +810,12 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    */
   public async deposit(
     params:
-      | (Erc20DepositRequestParams & {
+      | (Erc20L1L3DepositRequestParams & {
           l1Signer: Signer
           overrides?: PayableOverrides
         })
       | TxRequestParams
-  ): Promise<L1ContractCallTransaction> {
+  ): Promise<ParentContractCallTransaction> {
     await this._checkL1Network(params.l1Signer)
 
     const depositRequest =
@@ -828,7 +828,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       ...params.overrides,
     })
 
-    return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
+    return ParentTransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
   /**
@@ -876,8 +876,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
    * Can provide either the txHash, the tx, or the txReceipt
    */
   public async getDepositStatus(
-    params: GetDepositStatusParams
-  ): Promise<Erc20DepositStatus> {
+    params: GetL1L3DepositStatusParams
+  ): Promise<Erc20L1L3DepositStatus> {
     await this._checkL1Network(params.l1Provider)
     await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
@@ -896,11 +896,11 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       await partialResult.l2ForwarderFactoryRetryable.getSuccessfulRedeem()
 
     const l2l3Message =
-      factoryRedeem.status === L1ToL2MessageStatus.REDEEMED
+      factoryRedeem.status === ParentToChildMessageStatus.REDEEMED
         ? (
-            await new L1TransactionReceipt(
-              factoryRedeem.l2TxReceipt
-            ).getL1ToL2Messages(params.l3Provider)
+            await new ParentTransactionReceipt(
+              factoryRedeem.childTxReceipt
+            ).getParentToChildMessages(params.l3Provider)
           )[0]
         : undefined
 
@@ -912,8 +912,9 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     const l1l2TokenBridgeRetryableStatus =
       await partialResult.l1l2TokenBridgeRetryable.status()
     if (
-      l1l2TokenBridgeRetryableStatus === L1ToL2MessageStatus.REDEEMED &&
-      factoryRedeem.status === L1ToL2MessageStatus.FUNDS_DEPOSITED_ON_L2
+      l1l2TokenBridgeRetryableStatus === ParentToChildMessageStatus.REDEEMED &&
+      factoryRedeem.status ===
+        ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
     ) {
       // decoding the factory call is the most reliable way to get the owner and other parameters
       const decodedFactoryCall = this._decodeCallForwarderCalldata(
@@ -941,7 +942,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       ...partialResult,
       l2l3TokenBridgeRetryable: l2l3Message,
       l2ForwarderFactoryRetryableFrontRan,
-      completed: (await l2l3Message?.status()) === L1ToL2MessageStatus.REDEEMED,
+      completed:
+        (await l2l3Message?.status()) === ParentToChildMessageStatus.REDEEMED,
     }
   }
 
@@ -995,7 +997,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       '0x'
     )
 
-    const estimates = await new L1ToL2MessageGasEstimator(
+    const estimates = await new ParentToChildMessageGasEstimator(
       params.childProvider
     ).estimateAll(
       {
@@ -1027,6 +1029,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l1Provider: Provider
     l2Provider: Provider
   }): Promise<RetryableGasValues> {
+    assertArbitrumNetworkHasTokenBridge(this.l2Network)
+
     const parentGatewayAddress = await this.getL1L2GatewayAddress(
       params.l1Token,
       params.l1Provider
@@ -1042,7 +1046,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       amount: BigNumber.from(params.amount),
       isWeth:
         getAddress(parentGatewayAddress) ===
-        getAddress(this.l2Network.tokenBridge.l1WethGateway),
+        getAddress(this.l2Network.tokenBridge.parentWethGateway),
     })
   }
 
@@ -1057,6 +1061,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l1Provider: Provider
     l2Provider: Provider
   }): Promise<RetryableGasValues> {
+    assertArbitrumNetworkHasTokenBridge(this.l2Network)
+
     if (params.l3FeeTokenL1Addr === this.skipL1GasTokenMagic) {
       return {
         gasLimit: BigNumber.from(0),
@@ -1078,7 +1084,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       amount: params.feeTokenAmount,
       isWeth:
         getAddress(parentGatewayAddress) ===
-        getAddress(this.l2Network.tokenBridge.l1WethGateway),
+        getAddress(this.l2Network.tokenBridge.parentWethGateway),
     })
   }
 
@@ -1119,6 +1125,8 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
     l3Provider: Provider
     l2ForwarderAddress: string
   }): Promise<RetryableGasValues> {
+    assertArbitrumNetworkHasTokenBridge(this.l3Network)
+
     const teleportationType = this.teleportationType(
       params.partialTeleportParams
     )
@@ -1133,7 +1141,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       }
     } else if (teleportationType === TeleportationType.OnlyGasToken) {
       // we are bridging the fee token to l3, this will not go through the l2l3 token bridge, instead it's just a regular retryable
-      const estimate = await new L1ToL2MessageGasEstimator(
+      const estimate = await new ParentToChildMessageGasEstimator(
         params.l3Provider
       ).estimateAll(
         {
@@ -1164,7 +1172,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         parentProvider: params.l2Provider,
         childProvider: params.l3Provider,
         parentGasPrice: params.l2GasPrice,
-        parentErc20Address: await this.getL2ERC20Address(
+        parentErc20Address: await this.getL2Erc20Address(
           params.partialTeleportParams.l1Token,
           params.l1Provider
         ),
@@ -1174,7 +1182,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         amount: BigNumber.from(params.partialTeleportParams.amount),
         isWeth:
           getAddress(parentGatewayAddress) ===
-          getAddress(this.l3Network.tokenBridge.l1WethGateway),
+          getAddress(this.l3Network.tokenBridge.parentWethGateway),
       })
     }
   }
@@ -1188,7 +1196,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
       IL1Teleporter.TeleportParamsStruct,
       'gasParams'
     >,
-    retryableOverrides: Erc20DepositRequestRetryableOverrides,
+    retryableOverrides: Erc20L1L3DepositRequestRetryableOverrides,
     l1Provider: Provider,
     l2Provider: Provider,
     l3Provider: Provider
@@ -1403,15 +1411,15 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
   }
 
   protected async _getL1ToL2Messages(
-    l1TxReceipt: L1ContractCallTransactionReceipt,
+    l1TxReceipt: ParentContractCallTransactionReceipt,
     l2Provider: Provider
   ) {
-    const l1l2Messages = await l1TxReceipt.getL1ToL2Messages(l2Provider)
+    const l1l2Messages = await l1TxReceipt.getParentToChildMessages(l2Provider)
 
     let partialResult: {
-      l1l2TokenBridgeRetryable: L1ToL2MessageReader
-      l1l2GasTokenBridgeRetryable: L1ToL2MessageReader | undefined
-      l2ForwarderFactoryRetryable: L1ToL2MessageReader
+      l1l2TokenBridgeRetryable: ParentToChildMessageReader
+      l1l2GasTokenBridgeRetryable: ParentToChildMessageReader | undefined
+      l2ForwarderFactoryRetryable: ParentToChildMessageReader
     }
 
     if (l1l2Messages.length === 2) {
@@ -1436,7 +1444,7 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
  * Bridge ETH from L1 to L3 using a double retryable ticket
  */
 export class EthL1L3Bridger extends BaseL1L3Bridger {
-  constructor(l3Network: L2Network) {
+  constructor(l3Network: ArbitrumNetwork) {
     super(l3Network)
 
     if (
@@ -1453,7 +1461,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
    * Get a tx request to deposit ETH to L3 via a double retryable ticket
    */
   public async getDepositRequest(
-    params: EthDepositRequestParams &
+    params: EthL1L3DepositRequestParams &
       (
         | {
             from: string
@@ -1461,7 +1469,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
           }
         | { l1Signer: Signer }
       )
-  ): Promise<L1ToL2TransactionRequest> {
+  ): Promise<ParentToChildTransactionRequest> {
     const l1Provider =
       'l1Provider' in params ? params.l1Provider : params.l1Signer.provider!
     await this._checkL1Network(l1Provider)
@@ -1474,33 +1482,35 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
     const l3DestinationAddress = params.destinationAddress || from
     const l2RefundAddress = params.l2RefundAddress || from
 
-    const l3TicketRequest = await L1ToL2MessageCreator.getTicketCreationRequest(
-      {
-        to: l3DestinationAddress,
-        data: '0x',
-        from: new Address(from).applyAlias().value,
-        l2CallValue: BigNumber.from(params.amount),
-        excessFeeRefundAddress: l3DestinationAddress,
-        callValueRefundAddress: l3DestinationAddress,
-      },
-      params.l2Provider,
-      params.l3Provider,
-      params.l3TicketGasOverrides
-    )
+    const l3TicketRequest =
+      await ParentToChildMessageCreator.getTicketCreationRequest(
+        {
+          to: l3DestinationAddress,
+          data: '0x',
+          from: new Address(from).applyAlias().value,
+          l2CallValue: BigNumber.from(params.amount),
+          excessFeeRefundAddress: l3DestinationAddress,
+          callValueRefundAddress: l3DestinationAddress,
+        },
+        params.l2Provider,
+        params.l3Provider,
+        params.l3TicketGasOverrides
+      )
 
-    const l2TicketRequest = await L1ToL2MessageCreator.getTicketCreationRequest(
-      {
-        from,
-        to: l3TicketRequest.txRequest.to,
-        l2CallValue: BigNumber.from(l3TicketRequest.txRequest.value),
-        data: ethers.utils.hexlify(l3TicketRequest.txRequest.data),
-        excessFeeRefundAddress: l2RefundAddress,
-        callValueRefundAddress: l2RefundAddress,
-      },
-      l1Provider,
-      params.l2Provider,
-      params.l2TicketGasOverrides
-    )
+    const l2TicketRequest =
+      await ParentToChildMessageCreator.getTicketCreationRequest(
+        {
+          from,
+          to: l3TicketRequest.txRequest.to,
+          l2CallValue: BigNumber.from(l3TicketRequest.txRequest.value),
+          data: ethers.utils.hexlify(l3TicketRequest.txRequest.data),
+          excessFeeRefundAddress: l2RefundAddress,
+          callValueRefundAddress: l2RefundAddress,
+        },
+        l1Provider,
+        params.l2Provider,
+        params.l2TicketGasOverrides
+      )
 
     return l2TicketRequest
   }
@@ -1510,12 +1520,12 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
    */
   public async deposit(
     params:
-      | (EthDepositRequestParams & {
+      | (EthL1L3DepositRequestParams & {
           l1Signer: Signer
           overrides?: PayableOverrides
         })
       | TxRequestParams
-  ): Promise<L1ContractCallTransaction> {
+  ): Promise<ParentContractCallTransaction> {
     await this._checkL1Network(params.l1Signer)
 
     const depositRequest =
@@ -1528,7 +1538,7 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
       ...params.overrides,
     })
 
-    return L1TransactionReceipt.monkeyPatchContractCallWait(tx)
+    return ParentTransactionReceipt.monkeyPatchContractCallWait(tx)
   }
 
   /**
@@ -1562,11 +1572,11 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
    * Get the status of a deposit given an L1 tx receipt. Does not check if the tx is actually a deposit tx.
    *
    * @return Information regarding each step of the deposit
-   * and `EthDepositStatus.completed` which indicates whether the deposit has fully completed.
+   * and `EthL1L3DepositStatus.completed` which indicates whether the deposit has fully completed.
    */
   public async getDepositStatus(
-    params: GetDepositStatusParams
-  ): Promise<EthDepositStatus> {
+    params: GetL1L3DepositStatusParams
+  ): Promise<EthL1L3DepositStatus> {
     await this._checkL1Network(params.l1Provider)
     await this._checkL2Network(params.l2Provider)
     await this._checkL3Network(params.l3Provider)
@@ -1577,11 +1587,11 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
     )
 
     const l1l2Message = (
-      await l1TxReceipt.getL1ToL2Messages(params.l2Provider)
+      await l1TxReceipt.getParentToChildMessages(params.l2Provider)
     )[0]
     const l1l2Redeem = await l1l2Message.getSuccessfulRedeem()
 
-    if (l1l2Redeem.status != L1ToL2MessageStatus.REDEEMED) {
+    if (l1l2Redeem.status != ParentToChildMessageStatus.REDEEMED) {
       return {
         l2Retryable: l1l2Message,
         l3Retryable: undefined,
@@ -1590,9 +1600,9 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
     }
 
     const l2l3Message = (
-      await new L1EthDepositTransactionReceipt(
-        l1l2Redeem.l2TxReceipt
-      ).getL1ToL2Messages(params.l3Provider)
+      await new ParentEthDepositTransactionReceipt(
+        l1l2Redeem.childTxReceipt
+      ).getParentToChildMessages(params.l3Provider)
     )[0]
 
     if (l2l3Message === undefined) {
@@ -1602,7 +1612,8 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
     return {
       l2Retryable: l1l2Message,
       l3Retryable: l2l3Message,
-      completed: (await l2l3Message.status()) === L1ToL2MessageStatus.REDEEMED,
+      completed:
+        (await l2l3Message.status()) === ParentToChildMessageStatus.REDEEMED,
     }
   }
 
