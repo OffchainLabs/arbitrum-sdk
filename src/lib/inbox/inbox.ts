@@ -215,7 +215,7 @@ export class InboxTools {
           sequencerInbox.interface.decodeFunctionResult(
             'maxTimeVariation',
             returnData
-          )[0],
+          ) as Awaited<ReturnType<SequencerInbox['maxTimeVariation']>>,
       },
       multicall.getBlockNumberInput(),
       multicall.getCurrentBlockTimestampInput(),
