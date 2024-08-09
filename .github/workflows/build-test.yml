@@ -156,11 +156,10 @@ jobs:
         uses: OffchainLabs/actions/node-modules/restore@main
 
       - name: Set up the local node
-        uses: OffchainLabs/actions/run-nitro-test-node@main
+        uses: OffchainLabs/actions/run-nitro-test-node@feat-simplify
         with:
           nitro-testnode-ref: ed3cda65c4723b58a2f8be0fbc0c41f4ff2609cd
-          l3-node: ${{ matrix.orbit-test == '1' }}
-          args: ${{ matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
+          args: --tokenbridge ${{ matrix.orbit-test == '1' && '--l3node' || '' }} ${{ matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
