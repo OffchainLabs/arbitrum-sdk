@@ -215,7 +215,7 @@ export class InboxTools {
           sequencerInbox.interface.decodeFunctionResult(
             'maxTimeVariation',
             returnData
-          ) as Awaited<ReturnType<SequencerInbox['maxTimeVariation']>>, //casted until sync with @arbitrum/nitro-contracts 
+          ) as Awaited<ReturnType<SequencerInbox['maxTimeVariation']>>,
       },
       multicall.getBlockNumberInput(),
       multicall.getCurrentBlockTimestampInput(),
