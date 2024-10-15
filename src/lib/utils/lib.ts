@@ -1,11 +1,12 @@
+import { BigNumber, constants } from 'ethers'
 import { Provider } from '@ethersproject/abstract-provider'
 import { TransactionReceipt, JsonRpcProvider } from '@ethersproject/providers'
 import { ArbSdkError } from '../dataEntities/errors'
 import { ArbitrumProvider } from './arbProvider'
-import { l2Networks } from '../dataEntities/networks'
+import { L2Network, l2Networks } from '../dataEntities/networks'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
-import { BigNumber } from 'ethers'
+import { ERC20__factory } from '../abi/factories/ERC20__factory'
 
 export const wait = (ms: number): Promise<void> =>
   new Promise(res => setTimeout(res, ms))
@@ -194,4 +195,76 @@ export const getBlockRangesForL1Block = async (
   }
 
   return [result[0], props.maxL2Block]
+}
+
+export async function getNativeTokenDecimals({
+  l1Provider,
+  l2Network,
+}: {
+  l1Provider: Provider
+  l2Network: L2Network
+}) {
+  const nativeTokenAddress = l2Network.nativeToken
+
+  if (!nativeTokenAddress || nativeTokenAddress === constants.AddressZero) {
+    return 18
+  }
+
+  const nativeTokenContract = ERC20__factory.connect(
+    nativeTokenAddress,
+    l1Provider
+  )
+
+  try {
+    return await nativeTokenContract.decimals()
+  } catch {
+    return 0
+  }
+}
+
+export function scaleToNativeTokenDecimals({
+  amount,
+  decimals,
+}: {
+  amount: BigNumber
+  decimals: number
+}) {
+  // do nothing for 18 decimals
+  if (decimals === 18) {
+    return amount
+  }
+
+  if (decimals < 18) {
+    const scaledAmount = amount.div(
+      BigNumber.from(10).pow(BigNumber.from(18 - decimals))
+    )
+    // round up if necessary
+    if (
+      scaledAmount
+        .mul(BigNumber.from(10).pow(BigNumber.from(18 - decimals)))
+        .lt(amount)
+    ) {
+      return scaledAmount.add(BigNumber.from(1))
+    }
+    return scaledAmount
+  }
+
+  // decimals > 18
+  return amount.mul(BigNumber.from(10).pow(BigNumber.from(decimals - 18)))
+}
+
+export function nativeTokenDecimalsTo18Decimals({
+  amount,
+  decimals,
+}: {
+  amount: BigNumber
+  decimals: number
+}) {
+  if (decimals < 18) {
+    return amount.mul(BigNumber.from(10).pow(18 - decimals))
+  } else if (decimals > 18) {
+    return amount.div(BigNumber.from(10).pow(decimals - 18))
+  }
+
+  return amount
 }

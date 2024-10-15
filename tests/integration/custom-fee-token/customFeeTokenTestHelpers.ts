@@ -8,6 +8,7 @@ import {
 } from '../../../scripts/testSetup'
 import { Erc20Bridger, EthBridger } from '../../../src'
 import { ERC20__factory } from '../../../src/lib/abi/factories/ERC20__factory'
+import { getNativeTokenDecimals } from '../../../src/lib/utils/lib'
 
 // `config` isn't initialized yet, so we have to wrap these in functions
 const ethProvider = () => new StaticJsonRpcProvider(config.ethUrl)
@@ -43,13 +44,17 @@ export async function fundL1CustomFeeToken(l1SignerOrAddress: Signer | string) {
   }
 
   const deployerWallet = new Wallet(
-    utils.sha256(utils.toUtf8Bytes('user_token_bridge_deployer')),
+    utils.sha256(utils.toUtf8Bytes('user_fee_token_deployer')),
     ethProvider()
   )
 
   const tokenContract = ERC20__factory.connect(nativeToken, deployerWallet)
+  const decimals = await tokenContract.decimals()
 
-  const tx = await tokenContract.transfer(address, utils.parseEther('10'))
+  const tx = await tokenContract.transfer(
+    address,
+    utils.parseUnits('10', decimals)
+  )
   await tx.wait()
 }
 
@@ -85,9 +90,14 @@ export async function approveL1CustomFeeTokenForErc20Deposit(
 export async function fundL2CustomFeeToken(l2Signer: Signer) {
   const deployerWallet = new Wallet(config.arbKey, arbProvider())
 
+  const decimals = await getNativeTokenDecimals({
+    l1Provider: ethProvider(),
+    l2Network: localNetworks().l2Network,
+  })
+
   const tx = await deployerWallet.sendTransaction({
     to: await l2Signer.getAddress(),
-    value: utils.parseEther('1'),
+    value: utils.parseUnits('1', decimals),
   })
   await tx.wait()
 }

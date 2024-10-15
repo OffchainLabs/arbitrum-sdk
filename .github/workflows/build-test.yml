@@ -124,25 +124,47 @@ jobs:
         run: CI=true yarn test:unit
 
   test-integration:
-    name: Test (Integration) on Node.js v${{ matrix.node-version }}${{ matrix.orbit-test == '1' && ' with L3' || '' }}${{ matrix.custom-fee == '1' && ' with custom gas token' || '' }}
+    name: Test (Integration) on Node.js v${{ matrix.node-version }}${{ matrix.orbit-test == '1' && ' with L3' || '' }}${{ matrix.decimals == '16' && ' with custom gas token (16 decimals)' || matrix.decimals == '20' && ' with custom gas token (20 decimals)' || matrix.decimals == '18' && ' with custom gas token (18 decimals)' || '' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false # runs all tests to completion even if one fails
       matrix:
-        node-version: [18, 20]
-        orbit-test: ['0', '1']
-        custom-fee: ['0']
         include:
+          - orbit-test: '0'
+            node-version: 18
+          - orbit-test: '0'
+            node-version: 20
+
           - orbit-test: '1'
-            custom-fee: '1'
             node-version: 18
           - orbit-test: '1'
-            custom-fee: '1'
+            node-version: 20
+
+          - orbit-test: '1'
+            decimals: 16
+            node-version: 18
+          - orbit-test: '1'
+            decimals: 16
+            node-version: 20
+
+          - orbit-test: '1'
+            decimals: 18
+            node-version: 18
+          - orbit-test: '1'
+            decimals: 18
+            node-version: 20
+
+          - orbit-test: '1'
+            decimals: 20
+            node-version: 18
+          - orbit-test: '1'
+            decimals: 20
             node-version: 20
 
     needs: install
     env:
       ORBIT_TEST: ${{ matrix.orbit-test }}
+      DECIMALS: ${{ matrix.decimals || '18' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -158,9 +180,9 @@ jobs:
       - name: Set up the local node
         uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
-          nitro-testnode-ref: ed3cda65c4723b58a2f8be0fbc0c41f4ff2609cd
+          nitro-testnode-ref: adapt-bridge-amount
           l3-node: ${{ matrix.orbit-test == '1' }}
-          args: ${{ matrix.custom-fee == '1' && '--l3-fee-token' || '' }}
+          args: ${{ matrix.decimals == 16 && '--l3-fee-token --l3-fee-token-decimals 16' || matrix.decimals == 20 && '--l3-fee-token --l3-fee-token-decimals 20' || matrix.decimals == 18 && '--l3-fee-token' || '' }}
 
       - name: Copy .env
         run: cp ./.env-sample ./.env

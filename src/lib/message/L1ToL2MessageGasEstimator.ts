@@ -11,7 +11,12 @@ import {
   RetryableDataTools,
 } from '../dataEntities/retryableData'
 import { L1ToL2TransactionRequest } from '../dataEntities/transactionRequest'
-import { getBaseFee, isDefined } from '../utils/lib'
+import {
+  getBaseFee,
+  getNativeTokenDecimals,
+  isDefined,
+  scaleToNativeTokenDecimals,
+} from '../utils/lib'
 import { OmitTyped } from '../utils/types'
 import {
   L1ToL2MessageGasParams,
@@ -220,7 +225,10 @@ export class L1ToL2MessageGasEstimator {
     const { data } = retryableEstimateData
     const gasLimitDefaults = this.applyGasLimitDefaults(options?.gasLimit)
 
-    // estimate the l2 gas price
+    const l2Network = await getL2Network(this.l2Provider)
+    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+
+    // estimate the l1 gas price
     const maxFeePerGasPromise = this.estimateMaxFeePerGas(options?.maxFeePerGas)
 
     // estimate the submission fee
@@ -254,10 +262,13 @@ export class L1ToL2MessageGasEstimator {
 
     const deposit =
       options?.deposit?.base ||
-      gasLimit
-        .mul(maxFeePerGas)
-        .add(maxSubmissionFee)
-        .add(retryableEstimateData.l2CallValue)
+      scaleToNativeTokenDecimals({
+        amount: gasLimit
+          .mul(maxFeePerGas)
+          .add(maxSubmissionFee)
+          .add(retryableEstimateData.l2CallValue),
+        decimals,
+      })
 
     return {
       gasLimit,

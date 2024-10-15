@@ -21,7 +21,7 @@ import chalk from 'chalk'
 
 import { BigNumber } from '@ethersproject/bignumber'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { parseEther } from '@ethersproject/units'
+import { parseEther } from 'ethers/lib/utils'
 
 import { config, getSigner, testSetup } from '../../scripts/testSetup'
 
@@ -37,8 +37,9 @@ import { ArbSdkError } from '../../src/lib/dataEntities/errors'
 import { ERC20 } from '../../src/lib/abi/ERC20'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
+import { scaleToNativeTokenDecimals } from '../../src/lib/utils/lib'
 
-export const preFundAmount = parseEther('0.1')
+const preFundAmount = parseEther('0.1')
 
 export const prettyLog = (text: string): void => {
   console.log(chalk.blue(`    *** ${text}`))
@@ -248,6 +249,8 @@ export const depositToken = async ({
   retryableOverrides?: GasOverrides
   destinationAddress?: string
 }) => {
+  let feeTokenBalanceBefore: BigNumber | undefined
+
   await (
     await erc20Bridger.approveToken({
       erc20L1Address: l1TokenAddress,
@@ -288,6 +291,11 @@ export const depositToken = async ({
       feeTokenAllowance.eq(Erc20Bridger.MAX_APPROVAL),
       'set fee token allowance failed'
     ).to.be.true
+
+    feeTokenBalanceBefore = await ERC20__factory.connect(
+      erc20Bridger.nativeToken!,
+      l1Signer
+    ).balanceOf(senderAddress)
   }
 
   const initialBridgeTokenBalance = await l1Token.balanceOf(
@@ -326,6 +334,34 @@ export const depositToken = async ({
   expect(tokenBalL1After.toString(), 'user bal after').to.eq(
     tokenBalL1Before.sub(depositAmount).toString()
   )
+
+  if (isL2NetworkWithCustomFeeToken()) {
+    const nativeTokenContract = ERC20__factory.connect(
+      erc20Bridger.nativeToken!,
+      l1Signer
+    )
+
+    const feeTokenBalanceAfter = await nativeTokenContract.balanceOf(
+      senderAddress
+    )
+
+    // makes sure gas spent was rescaled correctly for non-18 decimal fee tokens
+    const feeTokenDecimals = await nativeTokenContract.decimals()
+
+    const MAX_BASE_ESTIMATED_GAS_FEE = BigNumber.from(1_000_000_000_000_000)
+
+    const maxScaledEstimatedGasFee = scaleToNativeTokenDecimals({
+      amount: MAX_BASE_ESTIMATED_GAS_FEE,
+      decimals: feeTokenDecimals,
+    })
+
+    expect(
+      feeTokenBalanceBefore!
+        .sub(feeTokenBalanceAfter)
+        .lte(maxScaledEstimatedGasFee),
+      'Too much custom fee token used as gas'
+    ).to.be.true
+  }
 
   const waitRes = await depositRec.waitForL2(l2Signer)
 

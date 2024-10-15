@@ -30,15 +30,23 @@ import { GasOverrides } from '../../src/lib/message/L1ToL2MessageGasEstimator'
 const depositAmount = BigNumber.from(100)
 import { ERC20Inbox__factory } from '../../src/lib/abi/factories/ERC20Inbox__factory'
 import { isL2NetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
+import {
+  getNativeTokenDecimals,
+  scaleToNativeTokenDecimals,
+} from '../../src/lib/utils/lib'
 
 describe('RevertData', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
 
-  const createRevertParams = () => {
+  const createRevertParams = async () => {
     const l2CallValue = BigNumber.from(137)
     const maxSubmissionCost = BigNumber.from(1618)
+
+    const { l1Provider, l2Network } = await testSetup()
+    const decimals = await getNativeTokenDecimals({ l1Provider, l2Network })
+
     return {
       to: Wallet.createRandom().address,
       excessFeeRefundAddress: Wallet.createRandom().address,
@@ -46,10 +54,13 @@ describe('RevertData', () => {
       l2CallValue,
       data: hexlify(randomBytes(32)),
       maxSubmissionCost: maxSubmissionCost,
-      value: l2CallValue
-        .add(maxSubmissionCost)
-        .add(RetryableDataTools.ErrorTriggeringParams.gasLimit)
-        .add(RetryableDataTools.ErrorTriggeringParams.maxFeePerGas),
+      value: scaleToNativeTokenDecimals({
+        amount: l2CallValue
+          .add(maxSubmissionCost)
+          .add(RetryableDataTools.ErrorTriggeringParams.gasLimit)
+          .add(RetryableDataTools.ErrorTriggeringParams.maxFeePerGas),
+        decimals,
+      }),
       gasLimit: RetryableDataTools.ErrorTriggeringParams.gasLimit,
       maxFeePerGas: RetryableDataTools.ErrorTriggeringParams.maxFeePerGas,
     }
@@ -71,7 +82,7 @@ describe('RevertData', () => {
       value,
       gasLimit,
       maxFeePerGas,
-    } = createRevertParams()
+    } = await createRevertParams()
 
     try {
       if (isL2NetworkWithCustomFeeToken()) {
