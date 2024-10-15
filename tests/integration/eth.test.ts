@@ -162,19 +162,13 @@ describe('Ether', async () => {
       parentToChildMessage.value.toString(),
       'message inputs value error'
     ).to.eq(parseEther(amount).toString())
-    expect(
-      parentToChildMessage.value.toString(),
-      'message inputs value error'
-    ).to.eq(ethToDeposit.toString())
 
-    prettyLog('childDepositTxHash: ' + waitResult.message.childTxHash)
-    prettyLog('chain transaction found!')
     expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
     expect(waitResult.childTxReceipt).to.exist
     expect(waitResult.childTxReceipt).to.not.be.null
 
-    const testWalletL2EthBalance = await childSigner.getBalance()
-    expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(
+    const testWalletChildEthBalance = await childSigner.getBalance()
+    expect(testWalletChildEthBalance.toString(), 'final balance').to.eq(
       parseEther(amount).toString()
     )
   })
@@ -352,9 +346,9 @@ describe('Ether', async () => {
   it('withdraw Ether transaction succeeds', async () => {
     const {
       childSigner,
+      childChain,
       parentSigner,
       parentProvider,
-      childChain,
       ethBridger,
     } = await testSetup()
     await fundChildSigner(childSigner)
