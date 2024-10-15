@@ -20,7 +20,7 @@ import { expect } from 'chai'
 import { ethers, constants, Wallet } from 'ethers'
 import dotenv from 'dotenv'
 
-import { parseEther } from '@ethersproject/units'
+import { parseEther, parseUnits } from '@ethersproject/units'
 
 import {
   fundParentSigner as fundParentSignerEther,
@@ -32,6 +32,7 @@ import {
 import { describeOnlyWhenCustomGasToken } from './mochaExtensions'
 import { ChildToParentMessageStatus } from '../../../src'
 import { ChildToParentMessage } from '../../../src/lib/message/ChildToParentMessage'
+import { getNativeTokenDecimals } from '../../../src/lib/utils/lib'
 
 dotenv.config()
 
@@ -50,9 +51,18 @@ describeOnlyWhenCustomGasToken(
     })
 
     it('approves the custom fee token to be spent by the Inbox on the parent chain (arbitrary amount, using params)', async function () {
-      const { ethBridger, nativeTokenContract, parentSigner } =
-        await testSetup()
-      const amount = ethers.utils.parseEther('1')
+      const {
+        ethBridger,
+        nativeTokenContract,
+        parentSigner,
+        parentProvider,
+        childChain,
+      } = await testSetup()
+      const decimals = await getNativeTokenDecimals({
+        l1Provider: parentProvider,
+        l2Network: childChain,
+      })
+      const amount = ethers.utils.parseUnits('1', decimals)
 
       await fundParentSignerEther(parentSigner)
       await fundParentCustomFeeToken(parentSigner)
@@ -164,11 +174,17 @@ describeOnlyWhenCustomGasToken(
         parentProvider,
         childSigner,
         childProvider,
+        childChain,
         ethBridger,
         nativeTokenContract,
       } = await testSetup()
+      const decimals = await getNativeTokenDecimals({
+        l1Provider: parentProvider,
+        l2Network: childChain,
+      })
+
       const bridge = ethBridger.childNetwork.ethBridge.bridge
-      const amount = parseEther('0.2')
+      const amount = parseUnits('0.2', decimals)
 
       await fundParentSignerEther(parentSigner)
       await fundChildCustomFeeToken(childSigner)

@@ -11,7 +11,12 @@ import {
   RetryableDataTools,
 } from '../dataEntities/retryableData'
 import { ParentToChildTransactionRequest } from '../dataEntities/transactionRequest'
-import { getBaseFee, isDefined } from '../utils/lib'
+import {
+  getBaseFee,
+  getNativeTokenDecimals,
+  isDefined,
+  scaleToNativeTokenDecimals,
+} from '../utils/lib'
 import { OmitTyped } from '../utils/types'
 import {
   ParentToChildMessageGasParams,
@@ -226,6 +231,12 @@ export class ParentToChildMessageGasEstimator {
     const { data } = retryableEstimateData
     const gasLimitDefaults = this.applyGasLimitDefaults(options?.gasLimit)
 
+    const l2Network = await getArbitrumNetwork(this.childProvider)
+    const decimals = await getNativeTokenDecimals({
+      l1Provider: parentProvider,
+      l2Network,
+    })
+
     // estimate the child gas price
     const maxFeePerGasPromise = this.estimateMaxFeePerGas(options?.maxFeePerGas)
 
@@ -260,10 +271,13 @@ export class ParentToChildMessageGasEstimator {
 
     const deposit =
       options?.deposit?.base ||
-      gasLimit
-        .mul(maxFeePerGas)
-        .add(maxSubmissionFee)
-        .add(retryableEstimateData.l2CallValue)
+      scaleToNativeTokenDecimals({
+        amount: gasLimit
+          .mul(maxFeePerGas)
+          .add(maxSubmissionFee)
+          .add(retryableEstimateData.l2CallValue),
+        decimals,
+      })
 
     return {
       gasLimit,

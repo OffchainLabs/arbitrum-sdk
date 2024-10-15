@@ -39,6 +39,11 @@ import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFe
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { itOnlyWhenEth } from './custom-fee-token/mochaExtensions'
 import { ParentTransactionReceipt } from '../../src'
+import {
+  getNativeTokenDecimals,
+  scaleToNativeTokenDecimals,
+} from '../../src/lib/utils/lib'
+import { parseUnits } from 'ethers/lib/utils'
 
 dotenv.config()
 
@@ -99,7 +104,17 @@ describe('Ether', async () => {
   )
 
   it('deposits ether', async () => {
-    const { ethBridger, parentSigner, childSigner } = await testSetup()
+    const {
+      ethBridger,
+      parentSigner,
+      parentProvider,
+      childChain,
+      childSigner,
+    } = await testSetup()
+    const decimals = await getNativeTokenDecimals({
+      l1Provider: parentProvider,
+      l2Network: childChain,
+    })
 
     await fundParentSigner(parentSigner)
     const inboxAddress = ethBridger.childNetwork.ethBridge.inbox
@@ -107,7 +122,8 @@ describe('Ether', async () => {
     const initialInboxBalance = await parentSigner.provider!.getBalance(
       inboxAddress
     )
-    const ethToDeposit = parseEther('0.0002')
+    const amount = '0.0002'
+    const ethToDeposit = parseUnits(amount, decimals)
     const res = await ethBridger.deposit({
       amount: ethToDeposit,
       parentSigner: parentSigner,
@@ -127,6 +143,16 @@ describe('Ether', async () => {
       childSigner.provider!
     )
 
+    const l1ToL2Messages = await rec.getEthDeposits(childSigner.provider!)
+    expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
+    const l1ToL2Message = l1ToL2Messages[0]
+
+    const walletAddress = await parentSigner.getAddress()
+    expect(l1ToL2Message.to).to.eq(walletAddress, 'message inputs value error')
+    expect(l1ToL2Message.value.toString(), 'message inputs value error').to.eq(
+      parseEther(amount).toString()
+    )
+
     const parentToChildMessages = await rec.getEthDeposits(
       childSigner.provider!
     )
@@ -136,30 +162,24 @@ describe('Ether', async () => {
     )
     const parentToChildMessage = parentToChildMessages[0]
 
-    const walletAddress = await parentSigner.getAddress()
-    expect(parentToChildMessage.to).to.eq(
-      walletAddress,
-      'message inputs value error'
-    )
-    expect(
-      parentToChildMessage.value.toString(),
-      'message inputs value error'
-    ).to.eq(ethToDeposit.toString())
-
-    prettyLog('childDepositTxHash: ' + waitResult.message.childTxHash)
-    prettyLog('chain transaction found!')
-    expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
-    expect(waitResult.childTxReceipt).to.exist
-    expect(waitResult.childTxReceipt).to.not.be.null
-
-    const testWalletChildEthBalance = await childSigner.getBalance()
-    expect(testWalletChildEthBalance.toString(), 'final balance').to.eq(
-      ethToDeposit.toString()
+    const testWalletL2EthBalance = await childSigner.getBalance()
+    expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(
+      parseEther(amount).toString()
     )
   })
 
-  it('deposits ether to a specific child address', async () => {
-    const { ethBridger, parentSigner, childSigner } = await testSetup()
+  it('deposits ether to a specific L2 address', async function () {
+    const {
+      ethBridger,
+      parentSigner,
+      parentProvider,
+      childChain,
+      childSigner,
+    } = await testSetup()
+    const decimals = await getNativeTokenDecimals({
+      l1Provider: parentProvider,
+      l2Network: childChain,
+    })
 
     await fundParentSigner(parentSigner)
     const inboxAddress = ethBridger.childNetwork.ethBridge.inbox
@@ -168,7 +188,8 @@ describe('Ether', async () => {
     const initialInboxBalance = await parentSigner.provider!.getBalance(
       inboxAddress
     )
-    const ethToDeposit = parseEther('0.0002')
+    const amount = '0.0002'
+    const ethToDeposit = parseUnits(amount, decimals)
     const res = await ethBridger.depositTo({
       amount: ethToDeposit,
       parentSigner: parentSigner,
@@ -202,7 +223,7 @@ describe('Ether', async () => {
     expect(
       parentToChildMessage.messageData.l2CallValue.toString(),
       'message inputs value error'
-    ).to.eq(ethToDeposit.toString())
+    ).to.eq(parseEther(amount).toString())
 
     const retryableTicketResult = await parentToChildMessage.waitForStatus()
     expect(retryableTicketResult.status).to.eq(
@@ -233,17 +254,28 @@ describe('Ether', async () => {
       destWallet.address
     )
     expect(testWalletChildEthBalance.toString(), 'final balance').to.eq(
-      ethToDeposit.toString()
+      parseEther(amount).toString()
     )
   })
 
-  it('deposit ether to a specific child address with manual redeem', async () => {
-    const { ethBridger, parentSigner, childSigner } = await testSetup()
+  it('deposit ether to a specific L2 address with manual redeem', async function () {
+    const {
+      ethBridger,
+      parentSigner,
+      parentProvider,
+      childChain,
+      childSigner,
+    } = await testSetup()
+    const decimals = await getNativeTokenDecimals({
+      l1Provider: parentProvider,
+      l2Network: childChain,
+    })
 
     await fundParentSigner(parentSigner)
     const destWallet = Wallet.createRandom()
 
-    const ethToDeposit = parseEther('0.0002')
+    const amount = '0.0002'
+    const ethToDeposit = parseUnits(amount, decimals)
     const res = await ethBridger.depositTo({
       amount: ethToDeposit,
       parentSigner: parentSigner,
@@ -303,11 +335,17 @@ describe('Ether', async () => {
     expect(
       testWalletChildEthBalance.toString(),
       'balance after manual redeem'
-    ).to.eq(ethToDeposit.toString())
+    ).to.eq(parseEther(amount).toString())
   })
 
   it('withdraw Ether transaction succeeds', async () => {
-    const { childSigner, parentSigner, ethBridger } = await testSetup()
+    const {
+      childSigner,
+      childChain,
+      parentSigner,
+      parentProvider,
+      ethBridger,
+    } = await testSetup()
     await fundChildSigner(childSigner)
     await fundParentSigner(parentSigner)
 
@@ -404,6 +442,11 @@ describe('Ether', async () => {
       'executed status'
     ).to.eq(ChildToParentMessageStatus.EXECUTED)
 
+    const decimals = await getNativeTokenDecimals({
+      l1Provider: parentProvider,
+      l2Network: childChain,
+    })
+
     const finalRandomBalance = isArbitrumNetworkWithCustomFeeToken()
       ? await ERC20__factory.connect(
           ethBridger.nativeToken!,
@@ -411,7 +454,7 @@ describe('Ether', async () => {
         ).balanceOf(randomAddress)
       : await parentSigner.provider!.getBalance(randomAddress)
     expect(finalRandomBalance.toString(), 'L1 final balance').to.eq(
-      ethToWithdraw.toString()
+      scaleToNativeTokenDecimals({ amount: ethToWithdraw, decimals }).toString()
     )
   })
 })
