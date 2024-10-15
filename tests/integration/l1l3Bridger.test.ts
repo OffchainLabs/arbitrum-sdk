@@ -411,7 +411,16 @@ describe('L1 to L3 Bridging', () => {
 
     itOnlyWhenCustomGasToken(
       'should throw getting l1 gas token address when it is unavailable',
-      async () => {
+      async function () {
+        const decimals = await getNativeTokenDecimals({
+          parentProvider: l1Signer.provider!,
+          childNetwork: l3Network,
+        })
+
+        if (decimals !== 18) {
+          this.skip()
+        }
+
         const networkCopy = JSON.parse(
           JSON.stringify(l3Network)
         ) as ArbitrumNetwork
@@ -950,11 +959,19 @@ describe('L1 to L3 Bridging', () => {
       await testHappyPathNonFeeOrStandard(depositParams)
     })
 
-    it('happy path weth', async () => {
-      assertArbitrumNetworkHasTokenBridge(l2Network)
+    it('happy path weth', async function () {
+      const decimals = await getNativeTokenDecimals({
+        parentProvider: l1Signer.provider!,
+        childNetwork: l3Network,
+      })
+
+      if (decimals !== 18) {
+        this.skip()
+      }
+
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
       const weth = AeWETH__factory.connect(
-        l2Network.tokenBridge.parentWeth,
+        l2Network.tokenBridge!.parentWeth,
         l1Signer
       )
 
@@ -971,7 +988,7 @@ describe('L1 to L3 Bridging', () => {
       ).wait()
 
       const depositParams: Erc20L1L3DepositRequestParams = {
-        erc20L1Address: l2Network.tokenBridge.parentWeth,
+        erc20L1Address: l2Network.tokenBridge!.parentWeth,
         destinationAddress: l3Recipient,
         amount,
         l2Provider: l2Signer.provider!,
