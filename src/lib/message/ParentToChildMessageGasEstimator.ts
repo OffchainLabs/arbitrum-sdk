@@ -237,7 +237,7 @@ export class ParentToChildMessageGasEstimator {
       childNetwork,
     })
 
-    // estimate the l1 gas price
+    // estimate the child gas price
     const maxFeePerGasPromise = this.estimateMaxFeePerGas(options?.maxFeePerGas)
 
     // estimate the submission fee

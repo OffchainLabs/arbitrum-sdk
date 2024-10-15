@@ -143,15 +143,7 @@ describe('Ether', async () => {
       childSigner.provider!
     )
 
-    const l1ToL2Messages = await rec.getEthDeposits(childSigner.provider!)
-    expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
-    const l1ToL2Message = l1ToL2Messages[0]
-
     const walletAddress = await parentSigner.getAddress()
-    expect(l1ToL2Message.to).to.eq(walletAddress, 'message inputs value error')
-    expect(l1ToL2Message.value.toString(), 'message inputs value error').to.eq(
-      parseEther(amount).toString()
-    )
 
     const parentToChildMessages = await rec.getEthDeposits(
       childSigner.provider!

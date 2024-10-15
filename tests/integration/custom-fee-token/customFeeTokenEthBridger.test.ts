@@ -30,9 +30,9 @@ import {
 } from '../testHelpers'
 
 import { describeOnlyWhenCustomGasToken } from './mochaExtensions'
-import { getNativeTokenDecimals } from '../../../src/lib/utils/lib'
 import { ChildToParentMessageStatus } from '../../../src'
 import { ChildToParentMessage } from '../../../src/lib/message/ChildToParentMessage'
+import { getNativeTokenDecimals } from '../../../src/lib/utils/lib'
 
 dotenv.config()
 

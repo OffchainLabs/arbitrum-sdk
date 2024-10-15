@@ -75,12 +75,12 @@ import { defaultAbiCoder } from 'ethers/lib/utils'
 import { OmitTyped, RequiredPick } from '../utils/types'
 import { RetryableDataTools } from '../dataEntities/retryableData'
 import { EventArgs } from '../dataEntities/event'
+import { ParentToChildMessageGasParams } from '../message/ParentToChildMessageCreator'
 import {
   getNativeTokenDecimals,
   isArbitrumChain,
   scaleToNativeTokenDecimals,
 } from '../utils/lib'
-import { ParentToChildMessageGasParams } from '../message/ParentToChildMessageCreator'
 import { L2ERC20Gateway__factory } from '../abi/factories/L2ERC20Gateway__factory'
 import { getErc20ParentAddressFromParentToChildTxRequest } from '../utils/calldata'
 
@@ -1128,7 +1128,7 @@ export class AdminErc20Bridger extends Erc20Bridger {
       const data = parentToken.interface.encodeFunctionData(
         'registerTokenOnL2',
         [
-          parentTokenAddress,
+          childTokenAddress,
           setTokenGas.maxSubmissionCost,
           setGatewayGas.maxSubmissionCost,
           setTokenGas.gasLimit,
