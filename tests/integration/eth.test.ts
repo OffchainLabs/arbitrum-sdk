@@ -27,7 +27,6 @@ import {
   fundParentSigner,
   fundChildSigner,
   mineUntilStop,
-  prettyLog,
   skipIfMainnet,
 } from './testHelpers'
 import { ChildToParentMessage } from '../../src/lib/message/ChildToParentMessage'
