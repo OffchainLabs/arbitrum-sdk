@@ -27,7 +27,6 @@ import {
   fundParentSigner,
   fundChildSigner,
   mineUntilStop,
-  prettyLog,
   skipIfMainnet,
 } from './testHelpers'
 import { ChildToParentMessage } from '../../src/lib/message/ChildToParentMessage'
@@ -139,10 +138,6 @@ describe('Ether', async () => {
       'balance failed to update after eth deposit'
     )
 
-    const waitResult = await rec.waitForChildTransactionReceipt(
-      childSigner.provider!
-    )
-
     const l1ToL2Messages = await rec.getEthDeposits(childSigner.provider!)
     expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
     const l1ToL2Message = l1ToL2Messages[0]
@@ -160,7 +155,6 @@ describe('Ether', async () => {
       1,
       'failed to find 1 parent-to-child message'
     )
-    const parentToChildMessage = parentToChildMessages[0]
 
     const testWalletL2EthBalance = await childSigner.getBalance()
     expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(
