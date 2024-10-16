@@ -27,7 +27,6 @@ import {
   fundParentSigner,
   fundChildSigner,
   mineUntilStop,
-  prettyLog,
   skipIfMainnet,
 } from './testHelpers'
 import { ChildToParentMessage } from '../../src/lib/message/ChildToParentMessage'
@@ -148,12 +147,12 @@ describe('Ether', async () => {
     const parentToChildMessages = await rec.getEthDeposits(
       childSigner.provider!
     )
+    const parentToChildMessage = parentToChildMessages[0]
+
     expect(parentToChildMessages.length).to.eq(
       1,
       'failed to find 1 parent-to-child message'
     )
-    const parentToChildMessage = parentToChildMessages[0]
-
     expect(parentToChildMessage.to).to.eq(
       walletAddress,
       'message inputs value error'
