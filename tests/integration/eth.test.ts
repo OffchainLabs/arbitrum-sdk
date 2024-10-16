@@ -149,6 +149,10 @@ describe('Ether', async () => {
     )
     const parentToChildMessage = parentToChildMessages[0]
 
+    expect(parentToChildMessages.length).to.eq(
+      1,
+      'failed to find 1 parent-to-child message'
+    )
     expect(parentToChildMessage.to).to.eq(
       walletAddress,
       'message inputs value error'
