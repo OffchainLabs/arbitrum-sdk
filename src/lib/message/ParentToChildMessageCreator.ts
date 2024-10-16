@@ -156,7 +156,7 @@ export class ParentToChildMessageCreator {
     )
 
     const childChain = await getArbitrumNetwork(childProvider)
-    const nativeTokenIsEth = typeof childChain.nativeToken === 'undefined'
+    const nativeTokenIsEth = typeof childChain.nativeToken === 'undefined' || childChain.nativeToken === constants.AddressZero
 
     const data = ParentToChildMessageCreator.getTicketCreationRequestCallData(
       params,
