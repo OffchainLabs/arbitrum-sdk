@@ -104,15 +104,6 @@
     // Issue with sol2uml library that generates UML diagrams from Solidity code. Only used at build time.
     // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>axios
     // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>sol2uml>axios
-    "GHSA-wf5p-g6vw-rhxx",
-    // elliptic
-    // waiting for it to release a fix but low severity so we can ignore it
-    // from: @ethersproject/signing-key>elliptic
-    // https://github.com/advisories/GHSA-49q7-c7j4-3p7m
-    "GHSA-49q7-c7j4-3p7m",
-    // https://github.com/advisories/GHSA-977x-g7h5-7qgw
-    "GHSA-977x-g7h5-7qgw",
-    // https://github.com/advisories/GHSA-f7q4-pwc6-w24p
-    "GHSA-f7q4-pwc6-w24p"
+    "GHSA-wf5p-g6vw-rhxx"
   ]
 }

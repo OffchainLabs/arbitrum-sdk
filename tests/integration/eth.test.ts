@@ -27,7 +27,6 @@ import {
   fundParentSigner,
   fundChildSigner,
   mineUntilStop,
-  prettyLog,
   skipIfMainnet,
 } from './testHelpers'
 import { ChildToParentMessage } from '../../src/lib/message/ChildToParentMessage'
@@ -143,27 +142,32 @@ describe('Ether', async () => {
       childSigner.provider!
     )
 
-    const l1ToL2Messages = await rec.getEthDeposits(childSigner.provider!)
-    expect(l1ToL2Messages.length).to.eq(1, 'failed to find 1 l1 to l2 message')
-    const l1ToL2Message = l1ToL2Messages[0]
-
     const walletAddress = await parentSigner.getAddress()
-    expect(l1ToL2Message.to).to.eq(walletAddress, 'message inputs value error')
-    expect(l1ToL2Message.value.toString(), 'message inputs value error').to.eq(
-      parseEther(amount).toString()
-    )
 
     const parentToChildMessages = await rec.getEthDeposits(
       childSigner.provider!
     )
+    const parentToChildMessage = parentToChildMessages[0]
+
     expect(parentToChildMessages.length).to.eq(
       1,
       'failed to find 1 parent-to-child message'
     )
-    const parentToChildMessage = parentToChildMessages[0]
+    expect(parentToChildMessage.to).to.eq(
+      walletAddress,
+      'message inputs value error'
+    )
+    expect(
+      parentToChildMessage.value.toString(),
+      'message inputs value error'
+    ).to.eq(parseEther(amount).toString())
 
-    const testWalletL2EthBalance = await childSigner.getBalance()
-    expect(testWalletL2EthBalance.toString(), 'final balance').to.eq(
+    expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
+    expect(waitResult.childTxReceipt).to.exist
+    expect(waitResult.childTxReceipt).to.not.be.null
+
+    const testWalletChildEthBalance = await childSigner.getBalance()
+    expect(testWalletChildEthBalance.toString(), 'final balance').to.eq(
       parseEther(amount).toString()
     )
   })
