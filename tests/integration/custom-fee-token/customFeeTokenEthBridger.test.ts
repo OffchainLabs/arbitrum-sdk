@@ -59,8 +59,8 @@ describeOnlyWhenCustomGasToken(
         childChain,
       } = await testSetup()
       const decimals = await getNativeTokenDecimals({
-        l1Provider: parentProvider,
-        l2Network: childChain,
+        parentProvider,
+        childNetwork: childChain,
       })
       const amount = ethers.utils.parseUnits('1', decimals)
 
@@ -179,8 +179,8 @@ describeOnlyWhenCustomGasToken(
         nativeTokenContract,
       } = await testSetup()
       const decimals = await getNativeTokenDecimals({
-        l1Provider: parentProvider,
-        l2Network: childChain,
+        parentProvider,
+        childNetwork: childChain,
       })
 
       const bridge = ethBridger.childNetwork.ethBridge.bridge

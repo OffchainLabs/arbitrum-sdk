@@ -46,10 +46,7 @@ import {
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 import { testSetup } from '../../scripts/testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
-import {
-  fundParentCustomFeeToken,
-  isArbitrumNetworkWithCustomFeeToken,
-} from './custom-fee-token/customFeeTokenTestHelpers'
+import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 
 const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
@@ -75,10 +72,6 @@ describe('Custom ERC20', () => {
     }
     await fundParentSigner(testState.parentSigner)
     await fundChildSigner(testState.childSigner)
-
-    if (isArbitrumNetworkWithCustomFeeToken()) {
-      await fundParentCustomFeeToken(testState.parentSigner)
-    }
   })
 
   it('register custom token', async () => {

@@ -46,8 +46,8 @@ describe('RevertData', () => {
 
     const { parentProvider, childChain } = await testSetup()
     const decimals = await getNativeTokenDecimals({
-      l1Provider: parentProvider,
-      l2Network: childChain,
+      parentProvider,
+      childNetwork: childChain,
     })
 
     return {

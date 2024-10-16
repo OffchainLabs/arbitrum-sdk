@@ -383,8 +383,8 @@ describe('L1 to L3 Bridging', () => {
       'should properly get l2 and l1 fee token addresses',
       async function () {
         const decimals = await getNativeTokenDecimals({
-          l1Provider: l1Signer.provider!,
-          l2Network: l3Network,
+          parentProvider: l1Signer.provider!,
+          childNetwork: l3Network,
         })
 
         if (decimals !== 18) {
@@ -413,8 +413,8 @@ describe('L1 to L3 Bridging', () => {
       'should throw getting l1 gas token address when it is unavailable',
       async function () {
         const decimals = await getNativeTokenDecimals({
-          l1Provider: l1Signer.provider!,
-          l2Network: l3Network,
+          parentProvider: l1Signer.provider!,
+          childNetwork: l3Network,
         })
 
         if (decimals !== 18) {
@@ -441,8 +441,8 @@ describe('L1 to L3 Bridging', () => {
       'should throw when the fee token does not use 18 decimals on L1 or L2',
       async function () {
         const decimals = await getNativeTokenDecimals({
-          l1Provider: l1Signer.provider!,
-          l2Network: l3Network,
+          parentProvider: l1Signer.provider!,
+          childNetwork: l3Network,
         })
 
         if (decimals !== 18) {
@@ -938,8 +938,8 @@ describe('L1 to L3 Bridging', () => {
 
     it('happy path non fee token or standard', async function () {
       const decimals = await getNativeTokenDecimals({
-        l1Provider: l1Signer.provider!,
-        l2Network: l3Network,
+        parentProvider: l1Signer.provider!,
+        childNetwork: l3Network,
       })
 
       if (decimals !== 18) {
@@ -961,8 +961,8 @@ describe('L1 to L3 Bridging', () => {
 
     it('happy path weth', async function () {
       const decimals = await getNativeTokenDecimals({
-        l1Provider: l1Signer.provider!,
-        l2Network: l3Network,
+        parentProvider: l1Signer.provider!,
+        childNetwork: l3Network,
       })
 
       if (decimals !== 18) {
@@ -1000,8 +1000,8 @@ describe('L1 to L3 Bridging', () => {
 
     itOnlyWhenCustomGasToken('happy path OnlyCustomFee', async function () {
       const decimals = await getNativeTokenDecimals({
-        l1Provider: l1Signer.provider!,
-        l2Network: l3Network,
+        parentProvider: l1Signer.provider!,
+        childNetwork: l3Network,
       })
 
       if (decimals !== 18) {

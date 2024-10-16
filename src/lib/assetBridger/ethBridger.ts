@@ -317,8 +317,8 @@ export class EthBridger extends AssetBridger<
     params: EthDepositToRequestParams
   ): Promise<ParentToChildTransactionRequest> {
     const decimals = await getNativeTokenDecimals({
-      l1Provider: params.parentProvider,
-      l2Network: this.childNetwork,
+      parentProvider: params.parentProvider,
+      childNetwork: this.childNetwork,
     })
 
     const amountToBeMintedOnChildChain = nativeTokenDecimalsTo18Decimals({

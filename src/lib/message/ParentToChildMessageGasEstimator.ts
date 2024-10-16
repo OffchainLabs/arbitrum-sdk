@@ -231,10 +231,10 @@ export class ParentToChildMessageGasEstimator {
     const { data } = retryableEstimateData
     const gasLimitDefaults = this.applyGasLimitDefaults(options?.gasLimit)
 
-    const l2Network = await getArbitrumNetwork(this.childProvider)
+    const childNetwork = await getArbitrumNetwork(this.childProvider)
     const decimals = await getNativeTokenDecimals({
-      l1Provider: parentProvider,
-      l2Network,
+      parentProvider,
+      childNetwork,
     })
 
     // estimate the child gas price

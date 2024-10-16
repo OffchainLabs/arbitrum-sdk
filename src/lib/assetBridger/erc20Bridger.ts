@@ -685,8 +685,8 @@ export class Erc20Bridger extends AssetBridger<
     }
 
     const decimals = await getNativeTokenDecimals({
-      l1Provider: parentProvider,
-      l2Network: this.childNetwork,
+      parentProvider,
+      childNetwork: this.childNetwork,
     })
 
     const depositFunc = (
@@ -1096,8 +1096,8 @@ export class AdminErc20Bridger extends Erc20Bridger {
     }
 
     const nativeTokenDecimals = await getNativeTokenDecimals({
-      l1Provider: parentProvider,
-      l2Network: this.childNetwork,
+      parentProvider,
+      childNetwork: this.childNetwork,
     })
 
     type GasParams = {

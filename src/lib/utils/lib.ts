@@ -198,13 +198,13 @@ export const getBlockRangesForL1Block = async (
 }
 
 export async function getNativeTokenDecimals({
-  l1Provider,
-  l2Network,
+  parentProvider,
+  childNetwork,
 }: {
-  l1Provider: Provider
-  l2Network: ArbitrumNetwork
+  parentProvider: Provider
+  childNetwork: ArbitrumNetwork
 }) {
-  const nativeTokenAddress = l2Network.nativeToken
+  const nativeTokenAddress = childNetwork.nativeToken
 
   if (!nativeTokenAddress || nativeTokenAddress === constants.AddressZero) {
     return 18
@@ -212,7 +212,7 @@ export async function getNativeTokenDecimals({
 
   const nativeTokenContract = ERC20__factory.connect(
     nativeTokenAddress,
-    l1Provider
+    parentProvider
   )
 
   try {

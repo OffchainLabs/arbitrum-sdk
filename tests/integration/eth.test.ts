@@ -111,8 +111,8 @@ describe('Ether', async () => {
       childSigner,
     } = await testSetup()
     const decimals = await getNativeTokenDecimals({
-      l1Provider: parentProvider,
-      l2Network: childChain,
+      parentProvider,
+      childNetwork: childChain,
     })
 
     await fundParentSigner(parentSigner)
@@ -181,8 +181,8 @@ describe('Ether', async () => {
       childSigner,
     } = await testSetup()
     const decimals = await getNativeTokenDecimals({
-      l1Provider: parentProvider,
-      l2Network: childChain,
+      parentProvider,
+      childNetwork: childChain,
     })
 
     await fundParentSigner(parentSigner)
@@ -271,8 +271,8 @@ describe('Ether', async () => {
       childSigner,
     } = await testSetup()
     const decimals = await getNativeTokenDecimals({
-      l1Provider: parentProvider,
-      l2Network: childChain,
+      parentProvider,
+      childNetwork: childChain,
     })
 
     await fundParentSigner(parentSigner)
@@ -447,8 +447,8 @@ describe('Ether', async () => {
     ).to.eq(ChildToParentMessageStatus.EXECUTED)
 
     const decimals = await getNativeTokenDecimals({
-      l1Provider: parentProvider,
-      l2Network: childChain,
+      parentProvider,
+      childNetwork: childChain,
     })
 
     const finalRandomBalance = isArbitrumNetworkWithCustomFeeToken()
