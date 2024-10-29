@@ -67,3 +67,7 @@ export {
 } from './lib/dataEntities/retryableData'
 
 export { Address } from './lib/dataEntities/address'
+export {
+  scaleFrom18DecimalsToNativeTokenDecimals,
+  scaleFromNativeTokenDecimalsTo18Decimals,
+} from './lib/utils/lib'
