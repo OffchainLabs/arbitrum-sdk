@@ -32,7 +32,7 @@ import { ERC20Inbox__factory } from '../../src/lib/abi/factories/ERC20Inbox__fac
 import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import {
   getNativeTokenDecimals,
-  scaleToNativeTokenDecimals,
+  scaleFrom18DecimalsToNativeTokenDecimals,
 } from '../../src/lib/utils/lib'
 
 describe('RevertData', () => {
@@ -57,7 +57,7 @@ describe('RevertData', () => {
       l2CallValue,
       data: hexlify(randomBytes(32)),
       maxSubmissionCost: maxSubmissionCost,
-      value: scaleToNativeTokenDecimals({
+      value: scaleFrom18DecimalsToNativeTokenDecimals({
         amount: l2CallValue
           .add(maxSubmissionCost)
           .add(RetryableDataTools.ErrorTriggeringParams.gasLimit)

@@ -37,7 +37,7 @@ import { ArbSdkError } from '../../src/lib/dataEntities/errors'
 import { ERC20 } from '../../src/lib/abi/ERC20'
 import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
-import { scaleToNativeTokenDecimals } from '../../src/lib/utils/lib'
+import { scaleFrom18DecimalsToNativeTokenDecimals } from '../../src/lib/utils/lib'
 
 const preFundAmount = parseEther('0.1')
 
@@ -355,7 +355,7 @@ export const depositToken = async ({
 
     const MAX_BASE_ESTIMATED_GAS_FEE = BigNumber.from(1_000_000_000_000_000)
 
-    const maxScaledEstimatedGasFee = scaleToNativeTokenDecimals({
+    const maxScaledEstimatedGasFee = scaleFrom18DecimalsToNativeTokenDecimals({
       amount: MAX_BASE_ESTIMATED_GAS_FEE,
       decimals: feeTokenDecimals,
     })
