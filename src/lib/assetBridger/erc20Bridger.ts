@@ -74,7 +74,7 @@ import { L1ToL2MessageGasParams } from '../message/L1ToL2MessageCreator'
 import {
   getNativeTokenDecimals,
   isArbitrumChain,
-  scaleToNativeTokenDecimals,
+  scaleFrom18DecimalsToNativeTokenDecimals,
 } from '../utils/lib'
 import { L2ERC20Gateway__factory } from '../abi/factories/L2ERC20Gateway__factory'
 
@@ -596,7 +596,7 @@ export class Erc20Bridger extends AssetBridger<
           // callHookData
           '0x',
           // nativeTokenTotalFee
-          scaleToNativeTokenDecimals({
+          scaleFrom18DecimalsToNativeTokenDecimals({
             amount: depositParams.gasLimit
               .mul(depositParams.maxFeePerGas)
               .add(depositParams.maxSubmissionCost), // will be zero
@@ -1071,11 +1071,11 @@ export class AdminErc20Bridger extends Erc20Bridger {
         setTokenGas.gasLimit,
         setGatewayGas.gasLimit,
         doubleFeePerGas,
-        scaleToNativeTokenDecimals({
+        scaleFrom18DecimalsToNativeTokenDecimals({
           amount: setTokenDeposit,
           decimals: nativeTokenDecimals,
         }),
-        scaleToNativeTokenDecimals({
+        scaleFrom18DecimalsToNativeTokenDecimals({
           amount: setGatewayDeposit,
           decimals: nativeTokenDecimals,
         }),
