@@ -5,8 +5,8 @@ import { expect } from 'chai'
 import { BigNumber } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
 import {
-  nativeTokenDecimalsTo18Decimals,
-  scaleToNativeTokenDecimals,
+  scaleFromNativeTokenDecimalsTo18Decimals,
+  scaleFrom18DecimalsToNativeTokenDecimals,
 } from '../../src/lib/utils/lib'
 
 const AMOUNT_TO_SCALE = parseEther('1.23456789')
@@ -18,31 +18,34 @@ describe('Native token', () => {
 
   it('scales to native token decimals', () => {
     expect(
-      scaleToNativeTokenDecimals({ amount: AMOUNT_TO_SCALE, decimals: 18 }).eq(
-        BigNumber.from('1234567890000000000')
-      ),
+      scaleFrom18DecimalsToNativeTokenDecimals({
+        amount: AMOUNT_TO_SCALE,
+        decimals: 18,
+      }).eq(BigNumber.from('1234567890000000000')),
       decimalsToError(18)
     ).to.be.true
 
     // Rounds up the last digit - in this case no decimals so rounds up 1 to 2
     expect(
-      scaleToNativeTokenDecimals({ amount: AMOUNT_TO_SCALE, decimals: 0 }).eq(
-        BigNumber.from('2')
-      ),
+      scaleFrom18DecimalsToNativeTokenDecimals({
+        amount: AMOUNT_TO_SCALE,
+        decimals: 0,
+      }).eq(BigNumber.from('2')),
       decimalsToError(0)
     ).to.be.true
 
     // Rounds up the last digit
     expect(
-      scaleToNativeTokenDecimals({ amount: AMOUNT_TO_SCALE, decimals: 1 }).eq(
-        BigNumber.from('13')
-      ),
+      scaleFrom18DecimalsToNativeTokenDecimals({
+        amount: AMOUNT_TO_SCALE,
+        decimals: 1,
+      }).eq(BigNumber.from('13')),
       decimalsToError(1)
     ).to.be.true
 
     // Rounds up the last digit
     expect(
-      scaleToNativeTokenDecimals({
+      scaleFrom18DecimalsToNativeTokenDecimals({
         amount: AMOUNT_TO_SCALE,
         decimals: 6,
       }).eq(BigNumber.from('1234568')),
@@ -51,31 +54,34 @@ describe('Native token', () => {
 
     // Rounds up the last digit
     expect(
-      scaleToNativeTokenDecimals({ amount: AMOUNT_TO_SCALE, decimals: 7 }).eq(
-        BigNumber.from('12345679')
-      ),
+      scaleFrom18DecimalsToNativeTokenDecimals({
+        amount: AMOUNT_TO_SCALE,
+        decimals: 7,
+      }).eq(BigNumber.from('12345679')),
       decimalsToError(7)
     ).to.be.true
 
     // Does not round up the last digit because all original decimals are included
     expect(
-      scaleToNativeTokenDecimals({ amount: AMOUNT_TO_SCALE, decimals: 8 }).eq(
-        BigNumber.from('123456789')
-      ),
+      scaleFrom18DecimalsToNativeTokenDecimals({
+        amount: AMOUNT_TO_SCALE,
+        decimals: 8,
+      }).eq(BigNumber.from('123456789')),
       decimalsToError(8)
     ).to.be.true
 
     // Does not round up the last digit because all original decimals are included
     expect(
-      scaleToNativeTokenDecimals({ amount: AMOUNT_TO_SCALE, decimals: 9 }).eq(
-        BigNumber.from('1234567890')
-      ),
+      scaleFrom18DecimalsToNativeTokenDecimals({
+        amount: AMOUNT_TO_SCALE,
+        decimals: 9,
+      }).eq(BigNumber.from('1234567890')),
       decimalsToError(9)
     ).to.be.true
 
     // Does not round up the last digit because all original decimals are included
     expect(
-      scaleToNativeTokenDecimals({
+      scaleFrom18DecimalsToNativeTokenDecimals({
         amount: AMOUNT_TO_SCALE,
         decimals: 24,
       }).eq(BigNumber.from('1234567890000000000000000')),
@@ -85,7 +91,7 @@ describe('Native token', () => {
 
   it('scales native token decimals to 18 decimals', () => {
     expect(
-      nativeTokenDecimalsTo18Decimals({
+      scaleFromNativeTokenDecimalsTo18Decimals({
         amount: AMOUNT_TO_SCALE,
         decimals: 16,
       }).eq(BigNumber.from('123456789000000000000')),
@@ -93,7 +99,7 @@ describe('Native token', () => {
     ).to.be.true
 
     expect(
-      nativeTokenDecimalsTo18Decimals({
+      scaleFromNativeTokenDecimalsTo18Decimals({
         amount: AMOUNT_TO_SCALE,
         decimals: 18,
       }).eq(BigNumber.from('1234567890000000000')),
@@ -101,7 +107,7 @@ describe('Native token', () => {
     ).to.be.true
 
     expect(
-      nativeTokenDecimalsTo18Decimals({
+      scaleFromNativeTokenDecimalsTo18Decimals({
         amount: AMOUNT_TO_SCALE,
         decimals: 20,
       }).eq(BigNumber.from('12345678900000000')),
