@@ -95,3 +95,7 @@ export {
   ChildToParentTransactionRequest,
   isChildToParentTransactionRequest,
 } from './lib/dataEntities/transactionRequest'
+export {
+  scaleFrom18DecimalsToNativeTokenDecimals,
+  scaleFromNativeTokenDecimalsTo18Decimals,
+} from './lib/utils/lib'

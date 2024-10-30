@@ -222,7 +222,7 @@ export async function getNativeTokenDecimals({
   }
 }
 
-export function scaleToNativeTokenDecimals({
+export function scaleFrom18DecimalsToNativeTokenDecimals({
   amount,
   decimals,
 }: {
@@ -253,7 +253,7 @@ export function scaleToNativeTokenDecimals({
   return amount.mul(BigNumber.from(10).pow(BigNumber.from(decimals - 18)))
 }
 
-export function nativeTokenDecimalsTo18Decimals({
+export function scaleFromNativeTokenDecimalsTo18Decimals({
   amount,
   decimals,
 }: {
