@@ -9,7 +9,10 @@ import {
 import { L1ContractTransaction, L1TransactionReceipt } from './L1Transaction'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { ERC20Inbox__factory } from '../abi/factories/ERC20Inbox__factory'
-import { getL2Network } from '../dataEntities/networks'
+import {
+  getL2Network,
+  isL2NetworkNativeTokenEther,
+} from '../dataEntities/networks'
 import { PayableOverrides } from '@ethersproject/contracts'
 import { SignerProviderUtils } from '../dataEntities/signerOrProvider'
 import { MissingProviderArbSdkError } from '../dataEntities/errors'
@@ -147,7 +150,7 @@ export class L1ToL2MessageCreator {
     )
 
     const l2Network = await getL2Network(l2Provider)
-    const nativeTokenIsEth = typeof l2Network.nativeToken === 'undefined'
+    const nativeTokenIsEth = isL2NetworkNativeTokenEther(l2Network)
 
     const data = L1ToL2MessageCreator.getTicketCreationRequestCallData(
       params,

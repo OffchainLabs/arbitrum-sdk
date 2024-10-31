@@ -16,6 +16,8 @@
 /* eslint-env node */
 'use strict'
 
+import { constants } from 'ethers'
+
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
 import {
@@ -650,6 +652,13 @@ const createNetworkStateHandler = () => {
       l2Networks = getArbitrumChains()
     },
   }
+}
+
+export function isL2NetworkNativeTokenEther(network: L2Network): boolean {
+  return (
+    typeof network.nativeToken === 'undefined' ||
+    network.nativeToken === constants.AddressZero
+  )
 }
 
 const { resetNetworksToDefault } = createNetworkStateHandler()
