@@ -6,7 +6,10 @@ import {
   getL2Network,
   l1Networks,
   l2Networks,
+  isL2NetworkNativeTokenEther,
+  L2Network,
 } from '../../src/lib/dataEntities/networks'
+import { constants } from 'ethers'
 
 const ethereumMainnetChainId = 1
 const arbitrumOneChainId = 42161
@@ -313,6 +316,30 @@ describe('Networks', async () => {
 
       expect(l2NetworksKeys).to.have.length(expected.length)
       expect(l2NetworksKeys).to.have.members(expected)
+    })
+  })
+
+  describe('isL2NetworkNativeTokenEther', () => {
+    it('returns `true` when `nativeToken` is undefined', () => {
+      expect(
+        isL2NetworkNativeTokenEther({ nativeToken: undefined } as L2Network)
+      ).to.equal(true)
+    })
+
+    it('returns `true` when `nativeToken` is zero address', () => {
+      expect(
+        isL2NetworkNativeTokenEther({
+          nativeToken: constants.AddressZero,
+        } as L2Network)
+      ).to.equal(true)
+    })
+
+    it('returns `false` when `nativeToken` is a valid address', () => {
+      expect(
+        isL2NetworkNativeTokenEther({
+          nativeToken: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+        } as L2Network)
+      ).to.equal(false)
     })
   })
 })
