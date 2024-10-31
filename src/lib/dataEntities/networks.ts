@@ -17,12 +17,14 @@
 ;('use strict')
 
 import { Provider } from '@ethersproject/abstract-provider'
+import { constants } from 'ethers'
 
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
 import { ARB1_NITRO_GENESIS_L2_BLOCK } from './constants'
 import { RollupAdminLogic__factory } from '../abi/factories/RollupAdminLogic__factory'
 import { Prettify } from '../utils/types'
+import { IERC20Bridge__factory } from '../abi/factories/IERC20Bridge__factory'
 
 /**
  * Represents an Arbitrum chain, e.g. Arbitrum One, Arbitrum Sepolia, or an L3 chain.
@@ -340,6 +342,17 @@ async function getArbitrumNetworkBySignerOrProvider(
   return getArbitrumNetworkByChainId(chainId)
 }
 
+async function getNativeToken(
+  bridge: string,
+  provider: Provider
+): Promise<string> {
+  try {
+    return await IERC20Bridge__factory.connect(bridge, provider).nativeToken()
+  } catch (err) {
+    return constants.AddressZero
+  }
+}
+
 /**
  * Returns all Arbitrum networks registered in the SDK, both default and custom.
  */
@@ -349,7 +362,7 @@ export function getArbitrumNetworks(): ArbitrumNetwork[] {
 
 export type ArbitrumNetworkInformationFromRollup = Pick<
   ArbitrumNetwork,
-  'parentChainId' | 'confirmPeriodBlocks' | 'ethBridge'
+  'parentChainId' | 'confirmPeriodBlocks' | 'ethBridge' | 'nativeToken'
 >
 
 /**
@@ -388,6 +401,7 @@ export async function getArbitrumNetworkInformationFromRollup(
       outbox,
       rollup: rollupAddress,
     },
+    nativeToken: await getNativeToken(bridge, parentProvider),
   }
 }
 
