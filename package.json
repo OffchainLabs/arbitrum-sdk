@@ -68,7 +68,7 @@
     "@typescript-eslint/eslint-plugin-tslint": "^5.27.1",
     "@typescript-eslint/parser": "^5.14.0",
     "audit-ci": "^6.3.0",
-    "axios": "^1.6.5",
+    "axios": "^1.7.4",
     "chai": "^4.2.0",
     "chalk": "^4.1.0",
     "dotenv": "^10.0.0",
@@ -97,6 +97,10 @@
   "resolutions": {
     "lodash.pick": "https://github.com/lodash/lodash/archive/refs/tags/4.17.21.tar.gz",
     "**/@ethersproject/providers/ws": "7.5.10",
-    "**/hardhat/ws": "7.5.10"
+    "**/hardhat/ws": "7.5.10",
+    "**/hardhat/@sentry/node/cookie": "0.7.0",
+    "**/micromatch": "4.0.8",
+    "**/elliptic": "6.6.0",
+    "**/secp256k1": "4.0.4"
   }
 }
