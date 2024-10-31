@@ -7,8 +7,11 @@ import {
   getChildrenForNetwork,
   isParentNetwork,
   getMulticallAddress,
+  isArbitrumNetworkNativeTokenEther,
+  ArbitrumNetwork,
 } from '../../src/lib/dataEntities/networks'
 import { SignerOrProvider } from '../../src/lib/dataEntities/signerOrProvider'
+import { constants } from 'ethers'
 
 const ethereumMainnetChainId = 1
 const arbitrumOneChainId = 42161
@@ -218,6 +221,32 @@ describe('Networks', async () => {
       expect(networkPromise).to.be.an.instanceOf(Promise)
       const network = await networkPromise
       expect(network.chainId).to.equal(arbitrumOneChainId)
+    })
+  })
+
+  describe('isArbitrumNetworkNativeTokenEther', () => {
+    it('returns `true` when `nativeToken` is undefined', () => {
+      expect(
+        isArbitrumNetworkNativeTokenEther({
+          nativeToken: undefined,
+        } as ArbitrumNetwork)
+      ).to.equal(true)
+    })
+
+    it('returns `true` when `nativeToken` is zero address', () => {
+      expect(
+        isArbitrumNetworkNativeTokenEther({
+          nativeToken: constants.AddressZero,
+        } as ArbitrumNetwork)
+      ).to.equal(true)
+    })
+
+    it('returns `false` when `nativeToken` is a valid address', () => {
+      expect(
+        isArbitrumNetworkNativeTokenEther({
+          nativeToken: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+        } as ArbitrumNetwork)
+      ).to.equal(false)
     })
   })
 })

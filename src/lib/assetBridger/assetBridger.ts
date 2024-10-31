@@ -16,12 +16,13 @@
 /* eslint-env node */
 'use strict'
 
-import { constants } from 'ethers'
-
 import { ParentContractTransaction } from '../message/ParentTransaction'
 import { ChildContractTransaction } from '../message/ChildTransaction'
 
-import { ArbitrumNetwork } from '../dataEntities/networks'
+import {
+  ArbitrumNetwork,
+  isArbitrumNetworkNativeTokenEther,
+} from '../dataEntities/networks'
 import {
   SignerOrProvider,
   SignerProviderUtils,
@@ -69,7 +70,7 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    * @returns {boolean}
    */
   protected get nativeTokenIsEth() {
-    return !this.nativeToken || this.nativeToken === constants.AddressZero
+    return isArbitrumNetworkNativeTokenEther(this.childNetwork)
   }
 
   /**

@@ -565,6 +565,15 @@ export function assertArbitrumNetworkHasTokenBridge<T extends ArbitrumNetwork>(
   }
 }
 
+export function isArbitrumNetworkNativeTokenEther(
+  network: ArbitrumNetwork
+): boolean {
+  return (
+    typeof network.nativeToken === 'undefined' ||
+    network.nativeToken === constants.AddressZero
+  )
+}
+
 const { resetNetworksToDefault } = createNetworkStateHandler()
 
 export { resetNetworksToDefault }
