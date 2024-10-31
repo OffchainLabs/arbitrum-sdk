@@ -16,8 +16,6 @@
 /* eslint-env node */
 'use strict'
 
-import { constants } from 'ethers'
-
 import { L1ContractTransaction } from '../message/L1Transaction'
 import { L2ContractTransaction } from '../message/L2Transaction'
 
@@ -25,6 +23,7 @@ import {
   L1Network,
   L2Network,
   getParentForNetwork,
+  isL2NetworkNativeTokenEther,
 } from '../dataEntities/networks'
 import {
   SignerOrProvider,
@@ -73,7 +72,7 @@ export abstract class AssetBridger<DepositParams, WithdrawParams> {
    * @returns {boolean}
    */
   protected get nativeTokenIsEth() {
-    return !this.nativeToken || this.nativeToken === constants.AddressZero
+    return isL2NetworkNativeTokenEther(this.l2Network)
   }
 
   /**
