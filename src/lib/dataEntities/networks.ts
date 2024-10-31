@@ -17,6 +17,7 @@
 ;('use strict')
 
 import { Provider } from '@ethersproject/abstract-provider'
+import { constants } from 'ethers'
 
 import { SignerOrProvider, SignerProviderUtils } from './signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
@@ -549,6 +550,15 @@ export function assertArbitrumNetworkHasTokenBridge<T extends ArbitrumNetwork>(
       `The ArbitrumNetwork object with chainId ${network.chainId} is missing the token bridge contracts addresses. Please add them in the "tokenBridge" property.`
     )
   }
+}
+
+export function isArbitrumNetworkNativeTokenEther(
+  network: ArbitrumNetwork
+): boolean {
+  return (
+    typeof network.nativeToken === 'undefined' ||
+    network.nativeToken === constants.AddressZero
+  )
 }
 
 const { resetNetworksToDefault } = createNetworkStateHandler()
