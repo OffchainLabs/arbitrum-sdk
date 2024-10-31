@@ -115,8 +115,8 @@ export interface TokenBridge {
   childWethGateway: string
   parentWeth: string
   childWeth: string
-  parentProxyAdmin: string
-  childProxyAdmin: string
+  parentProxyAdmin?: string
+  childProxyAdmin?: string
   parentMultiCall: string
   childMultiCall: string
 }
