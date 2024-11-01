@@ -1,6 +1,6 @@
 # Arbitrum SDK
 
-[![npm version](https://badge.fury.io/js/%40arbitrum%2Fsdk.svg)](https://badge.fury.io/js/@arbitrum%2Fsdk.svg)
+[![npm version](https://badge.fury.io/js/%40arbitrum%2Fsdk.svg)](https://www.npmjs.com/package/@arbitrum/sdk)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 A TypeScript library for client-side interactions with Arbitrum. The Arbitrum SDK provides essential helper functionality and direct access to underlying smart contract interfaces, enabling developers to build powerful applications on the Arbitrum network.
@@ -83,11 +83,11 @@ async function bridgeEth(parentSigner: ethers.Signer, childChainId: number) {
 }
 ```
 
-For more detailed usage examples and API references, please refer to the [Arbitrum SDK documentation](https://docs.arbitrum.io/sdk).
+For more detailed usage examples and API references, please refer to the [Arbitrum SDK documentation](https://docs.arbitrum.io/welcome/get-started).
 
 ## Running Integration Tests
 
-1. Set up a Nitro test node by following the instructions [here](https://docs.arbitrum.io/node-running/how-tos/local-dev-node).
+1. Set up a Nitro test node by following the instructions [here](https://docs.arbitrum.io/build-decentralized-apps/public-chains#nitro).
 2. Copy `.env.example` to `.env` and update relevant environment variables.
 3. Generate the network configuration against your active Nitro test node:
 
@@ -103,7 +103,7 @@ For more detailed usage examples and API references, please refer to the [Arbitr
 
 ## Documentation
 
-For comprehensive guides and API documentation, visit the [Arbitrum SDK Documentation](https://docs.arbitrum.io/sdk).
+For comprehensive guides and API documentation, visit the [Arbitrum SDK Documentation](https://docs.arbitrum.io/welcome/get-started).
 
 ## License
 
