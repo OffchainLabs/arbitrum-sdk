@@ -21,7 +21,10 @@ export {
   EthL1L3Bridger,
 } from './lib/assetBridger/l1l3Bridger'
 export { EthBridger } from './lib/assetBridger/ethBridger'
-export { Erc20Bridger } from './lib/assetBridger/erc20Bridger'
+export {
+  Erc20Bridger,
+  AdminErc20Bridger,
+} from './lib/assetBridger/erc20Bridger'
 export {
   L2TransactionReceipt,
   L2ContractTransaction,
