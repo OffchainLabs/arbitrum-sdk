@@ -1,5 +1,5 @@
 import { PublicClient } from 'viem'
-import { depositEth, SendDepositEthParams } from './sendDepositEth'
+import { sendDepositEth, SendDepositEthParams } from './sendDepositEth'
 
 export type ArbitrumPublicActions = {
   sendDepositEth: (args: SendDepositEthParams) => Promise<`0x${string}`>
@@ -10,7 +10,7 @@ export function arbitrumPublicActions() {
     publicClient: TClient
   ): ArbitrumPublicActions => {
     return {
-      sendDepositEth: args => depositEth(publicClient, args),
+      sendDepositEth: args => sendDepositEth(publicClient, args),
     }
   }
 }

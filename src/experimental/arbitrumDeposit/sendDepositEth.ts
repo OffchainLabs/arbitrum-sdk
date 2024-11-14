@@ -3,7 +3,7 @@ import { parseTransaction, PublicClient, serializeTransaction } from 'viem'
 export type SendDepositEthParams = {
   signedTx: any
 }
-export async function depositEth(
+export async function sendDepositEth(
   publicClient: PublicClient,
   { signedTx }: SendDepositEthParams
 ) {
