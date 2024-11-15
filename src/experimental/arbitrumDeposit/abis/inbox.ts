@@ -4,7 +4,7 @@ export const inboxAbi = [
     name: 'depositEth',
     outputs: [{ type: 'uint256' }],
     stateMutability: 'payable',
-    type: 'function'
+    type: 'function',
   },
   {
     inputs: [
@@ -15,28 +15,26 @@ export const inboxAbi = [
       { name: 'callValueRefundAddress', type: 'address' },
       { name: 'gasLimit', type: 'uint256' },
       { name: 'maxFeePerGas', type: 'uint256' },
-      { name: 'data', type: 'bytes' }
+      { name: 'data', type: 'bytes' },
     ],
     name: 'createRetryableTicket',
     outputs: [{ type: 'uint256' }],
     stateMutability: 'payable',
-    type: 'function'
+    type: 'function',
   },
   {
     anonymous: false,
     inputs: [
       { indexed: false, name: 'messageNum', type: 'uint256' },
-      { indexed: false, name: 'data', type: 'bytes' }
+      { indexed: false, name: 'data', type: 'bytes' },
     ],
     name: 'InboxMessageDelivered',
-    type: 'event'
+    type: 'event',
   },
   {
     anonymous: false,
-    inputs: [
-      { indexed: false, name: 'messageNum', type: 'uint256' }
-    ],
+    inputs: [{ indexed: false, name: 'messageNum', type: 'uint256' }],
     name: 'InboxMessageDeliveredFromOrigin',
-    type: 'event'
-  }
-] as const 
+    type: 'event',
+  },
+] as const
