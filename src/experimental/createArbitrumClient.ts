@@ -1,13 +1,12 @@
 import { Chain, PublicClient, createPublicClient, http } from 'viem'
-import { ArbitrumNetwork } from '../../lib/dataEntities/networks'
+import { ArbitrumNetwork } from '../lib/dataEntities/networks'
 import { arbitrumDepositActions } from './actions'
 
 export type ArbitrumChain = Chain & ArbitrumNetwork
 
 export type ArbitrumClients = {
-  parentChainPublicClient: PublicClient
-  childChainPublicClient: PublicClient &
-    ReturnType<typeof arbitrumDepositActions>
+  parentPublicClient: PublicClient
+  childPublicClient: PublicClient & ReturnType<typeof arbitrumDepositActions>
 }
 export type ChildChainPublicClient = PublicClient &
   ReturnType<typeof arbitrumDepositActions>
@@ -25,18 +24,18 @@ export function createArbitrumClient({
   parentRpcUrl,
   childRpcUrl,
 }: CreateArbitrumClientParams): ArbitrumClients {
-  const parentChainPublicClient = createPublicClient({
+  const parentPublicClient = createPublicClient({
     chain: parentChain,
     transport: http(parentRpcUrl || parentChain.rpcUrls.default.http[0]),
   })
 
-  const childChainPublicClient = createPublicClient({
+  const childPublicClient = createPublicClient({
     chain: childChain,
     transport: http(childRpcUrl || childChain.rpcUrls.default.http[0]),
   }).extend(arbitrumDepositActions())
 
   return {
-    parentChainPublicClient,
-    childChainPublicClient,
+    parentPublicClient,
+    childPublicClient,
   } as any as ArbitrumClients
 }

@@ -6,7 +6,7 @@ import {
   type PublicClient,
   TransactionRequest,
 } from 'viem'
-import { EthBridger } from '../../lib/assetBridger/ethBridger'
+import { EthBridger } from '../lib/assetBridger/ethBridger'
 import { transformPublicClientToProvider } from './transformViemToEthers'
 
 export type PrepareDepositEthParameters = {

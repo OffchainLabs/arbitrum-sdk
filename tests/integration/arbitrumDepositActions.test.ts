@@ -3,7 +3,7 @@ import { createWalletClient, http, parseEther } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { config, testSetup } from '../../scripts/testSetup'
 import { localEthChain, localArbChain } from '../../src/experimental/chains'
-import { createArbitrumClient } from '../../src/experimental/arbitrumDeposit/createArbitrumClient'
+import { createArbitrumClient } from '../../src/experimental/createArbitrumClient'
 
 describe('arbitrumDepositActions', function () {
   before(async function () {
@@ -22,23 +22,22 @@ describe('arbitrumDepositActions', function () {
     })
 
     // Create public clients using helper
-    const { parentChainPublicClient, childChainPublicClient } =
-      createArbitrumClient({
-        parentChain: localEthChain,
-        // @ts-expect-error
-        childChain: localArbChain,
-        parentRpcUrl: config.ethUrl,
-        childRpcUrl: config.arbUrl,
-      })
+    const { parentPublicClient, childPublicClient } = createArbitrumClient({
+      parentChain: localEthChain,
+      // @ts-expect-error
+      childChain: localArbChain,
+      parentRpcUrl: config.ethUrl,
+      childRpcUrl: config.arbUrl,
+    })
 
     // Get initial L2 balance
-    const initialBalance = await childChainPublicClient.getBalance({
+    const initialBalance = await childPublicClient.getBalance({
       address: account.address,
     })
 
     // Prepare and send deposit transaction
     // @ts-expect-error
-    const request = await childChainPublicClient.prepareDepositEthTransaction({
+    const request = await childPublicClient.prepareDepositEthTransaction({
       amount: depositAmount,
       account,
     })
@@ -49,7 +48,7 @@ describe('arbitrumDepositActions', function () {
     })
 
     // Wait for L1 transaction
-    const receipt = await parentChainPublicClient.waitForTransactionReceipt({
+    const receipt = await parentPublicClient.waitForTransactionReceipt({
       hash,
     })
 
@@ -63,7 +62,7 @@ describe('arbitrumDepositActions', function () {
     while (attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 3000))
 
-      const currentBalance = await childChainPublicClient.getBalance({
+      const currentBalance = await childPublicClient.getBalance({
         address: account.address,
       })
 
@@ -93,30 +92,27 @@ describe('arbitrumDepositActions', function () {
     })
 
     // Create public clients using helper
-    const { parentChainPublicClient, childChainPublicClient } =
-      createArbitrumClient({
-        parentChain: localEthChain,
-        // @ts-expect-error
-        childChain: localArbChain,
-        parentRpcUrl: config.ethUrl,
-        childRpcUrl: config.arbUrl,
-      })
+    const { parentPublicClient, childPublicClient } = createArbitrumClient({
+      parentChain: localEthChain,
+      // @ts-expect-error
+      childChain: localArbChain,
+      parentRpcUrl: config.ethUrl,
+      childRpcUrl: config.arbUrl,
+    })
 
     // Get initial destination balance
-    const initialBalance = await childChainPublicClient.getBalance({
+    const initialBalance = await childPublicClient.getBalance({
       address: destinationAddress,
     })
 
     // Prepare and send deposit transaction
     // @ts-expect-error
-    const request = await childChainPublicClient.prepareDepositEthToTransaction(
-      {
-        amount: depositAmount,
-        account: account.address,
-        destinationAddress,
-        parentPublicClient: parentChainPublicClient,
-      }
-    )
+    const request = await childPublicClient.prepareDepositEthToTransaction({
+      amount: depositAmount,
+      account: account.address,
+      destinationAddress,
+      parentPublicClient,
+    })
 
     const hash = await parentWalletClient.sendTransaction({
       ...request,
@@ -124,7 +120,7 @@ describe('arbitrumDepositActions', function () {
     })
 
     // Wait for L1 transaction
-    const receipt = await parentChainPublicClient.waitForTransactionReceipt({
+    const receipt = await parentPublicClient.waitForTransactionReceipt({
       hash,
     })
 
@@ -138,7 +134,7 @@ describe('arbitrumDepositActions', function () {
     while (attempts < maxAttempts) {
       await new Promise(resolve => setTimeout(resolve, 3000))
 
-      const currentBalance = await childChainPublicClient.getBalance({
+      const currentBalance = await childPublicClient.getBalance({
         address: destinationAddress,
       })
 
