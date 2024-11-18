@@ -10,11 +10,11 @@ describe('arbitrumDepositActions', function () {
     await testSetup()
   })
 
-  it('deposits ETH from L1 to L2', async function () {
+  it('deposits ETH from parent to child', async function () {
     const account = privateKeyToAccount(`0x${config.ethKey}` as `0x${string}`)
     const depositAmount = parseEther('0.01')
 
-    // Create L1 wallet client
+    // Create parent wallet client
     const parentWalletClient = createWalletClient({
       account,
       chain: localEthChain,
@@ -30,7 +30,7 @@ describe('arbitrumDepositActions', function () {
       childRpcUrl: config.arbUrl,
     })
 
-    // Get initial L2 balance
+    // Get initial child balance
     const initialBalance = await childPublicClient.getBalance({
       address: account.address,
     })
@@ -47,20 +47,20 @@ describe('arbitrumDepositActions', function () {
       chain: localEthChain,
     })
 
-    // Wait for L1 transaction
+    // Wait for parent transaction
     const receipt = await parentPublicClient.waitForTransactionReceipt({
       hash,
     })
 
     expect(receipt.status).to.equal('success')
 
-    // Wait for L2 balance to increase
+    // Wait for child balance to increase
     let finalBalance = initialBalance
     let attempts = 0
-    const maxAttempts = 10
+    const maxAttempts = 12
 
     while (attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 3000))
+      await new Promise(resolve => setTimeout(resolve, 1500))
 
       const currentBalance = await childPublicClient.getBalance({
         address: account.address,
@@ -78,13 +78,13 @@ describe('arbitrumDepositActions', function () {
     expect(balanceDiff).to.equal(depositAmount)
   })
 
-  it('deposits ETH from L1 to a different L2 address', async function () {
+  it('deposits ETH from parent to a different child address', async function () {
     const account = privateKeyToAccount(`0x${config.ethKey}` as `0x${string}`)
     const destinationAddress =
       '0x1234567890123456789012345678901234567890' as `0x${string}`
     const depositAmount = parseEther('0.01')
 
-    // Create L1 wallet client
+    // Create parent wallet client
     const parentWalletClient = createWalletClient({
       account,
       chain: localEthChain,
@@ -119,20 +119,20 @@ describe('arbitrumDepositActions', function () {
       chain: localEthChain,
     })
 
-    // Wait for L1 transaction
+    // Wait for parent transaction
     const receipt = await parentPublicClient.waitForTransactionReceipt({
       hash,
     })
 
     expect(receipt.status).to.equal('success')
 
-    // Wait for L2 balance to increase
+    // Wait for child balance to increase
     let finalBalance = initialBalance
     let attempts = 0
-    const maxAttempts = 10
+    const maxAttempts = 12
 
     while (attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 3000))
+      await new Promise(resolve => setTimeout(resolve, 1500))
 
       const currentBalance = await childPublicClient.getBalance({
         address: destinationAddress,
