@@ -1,11 +1,5 @@
 import { BigNumber } from 'ethers'
-import {
-  Account,
-  Address,
-  Client,
-  type PublicClient,
-  TransactionRequest,
-} from 'viem'
+import { Account, Address, Chain, PublicClient, TransactionRequest } from 'viem'
 import { EthBridger } from '../lib/assetBridger/ethBridger'
 import { transformPublicClientToProvider } from './transformViemToEthers'
 
@@ -14,13 +8,24 @@ export type PrepareDepositEthParameters = {
   account: Account | Address
 }
 
-export type PrepareDepositEthToParameters = PrepareDepositEthParameters & {
+export type PrepareDepositEthToParameters = {
+  amount: bigint
+  account: Address
   destinationAddress: Address
   parentPublicClient: PublicClient
 }
 
-export async function prepareDepositEthTransaction(
-  client: Client,
+export type ArbitrumDepositActions = {
+  prepareDepositEthTransaction: (
+    params: PrepareDepositEthParameters
+  ) => Promise<TransactionRequest>
+  prepareDepositEthToTransaction: (
+    params: PrepareDepositEthToParameters
+  ) => Promise<TransactionRequest>
+}
+
+async function prepareDepositEthTransaction(
+  client: PublicClient,
   { amount, account }: PrepareDepositEthParameters
 ): Promise<TransactionRequest> {
   const provider = transformPublicClientToProvider(client)
@@ -37,8 +42,8 @@ export async function prepareDepositEthTransaction(
   }
 }
 
-export async function prepareDepositEthToTransaction(
-  client: Client,
+async function prepareDepositEthToTransaction(
+  client: PublicClient,
   {
     amount,
     account,
@@ -53,7 +58,7 @@ export async function prepareDepositEthToTransaction(
   const request = await ethBridger.getDepositToRequest({
     amount: BigNumber.from(amount),
     destinationAddress,
-    from: typeof account === 'string' ? account : account.address,
+    from: account,
     parentProvider,
     childProvider,
   })
@@ -66,12 +71,10 @@ export async function prepareDepositEthToTransaction(
 }
 
 export function arbitrumDepositActions() {
-  return function (client: Client) {
-    return {
-      prepareDepositEthTransaction: (args: PrepareDepositEthParameters) =>
-        prepareDepositEthTransaction(client, args),
-      prepareDepositEthToTransaction: (args: PrepareDepositEthToParameters) =>
-        prepareDepositEthToTransaction(client, args),
-    }
-  }
+  return (client: PublicClient): ArbitrumDepositActions => ({
+    prepareDepositEthTransaction: params =>
+      prepareDepositEthTransaction(client, params),
+    prepareDepositEthToTransaction: params =>
+      prepareDepositEthToTransaction(client, params),
+  })
 }
