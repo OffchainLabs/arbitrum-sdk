@@ -194,6 +194,6 @@ function generateViemChain(
     rpcUrls: {
       default: { http: [rpcUrl] },
       public: { http: [rpcUrl] },
-    }
-  } as const satisfies Chain
+    },
+  } as const
 }

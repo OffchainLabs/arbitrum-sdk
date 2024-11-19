@@ -1,5 +1,5 @@
 import { BigNumber } from 'ethers'
-import { Account, Address, Chain, PublicClient, TransactionRequest } from 'viem'
+import { Account, Address, PublicClient, TransactionRequest } from 'viem'
 import { EthBridger } from '../lib/assetBridger/ethBridger'
 import { transformPublicClientToProvider } from './transformViemToEthers'
 
