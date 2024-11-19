@@ -14,7 +14,8 @@
     "noImplicitThis": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "skipLibCheck": true
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.js"]
 }
