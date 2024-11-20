@@ -3,6 +3,7 @@ import { createWalletClient, http, parseEther, type Chain } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { config, testSetup } from '../../scripts/testSetup'
 import { createArbitrumClient } from '../../src/experimental/createArbitrumClient'
+import { fundParentSigner } from './testHelpers'
 
 describe('arbitrumDepositActions', function () {
   let localEthChain: Chain
@@ -12,6 +13,7 @@ describe('arbitrumDepositActions', function () {
     const setup = await testSetup()
     localEthChain = setup.localEthChain
     localArbChain = setup.localArbChain
+    await fundParentSigner(setup.parentSigner)
   })
 
   it('deposits ETH from parent to child', async function () {
