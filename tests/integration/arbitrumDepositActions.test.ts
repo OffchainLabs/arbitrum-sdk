@@ -4,6 +4,11 @@ import { privateKeyToAccount } from 'viem/accounts'
 import { config, testSetup } from '../../scripts/testSetup'
 import { createArbitrumClient } from '../../src/experimental/createArbitrumClient'
 import { fundParentSigner } from './testHelpers'
+import {
+  approveParentCustomFeeToken,
+  fundParentCustomFeeToken,
+  isArbitrumNetworkWithCustomFeeToken,
+} from './custom-fee-token/customFeeTokenTestHelpers'
 
 describe('arbitrumDepositActions', function () {
   let localEthChain: Chain
@@ -14,6 +19,10 @@ describe('arbitrumDepositActions', function () {
     localEthChain = setup.localEthChain
     localArbChain = setup.localArbChain
     await fundParentSigner(setup.parentSigner)
+    if (isArbitrumNetworkWithCustomFeeToken()) {
+      await fundParentCustomFeeToken(setup.parentSigner)
+      await approveParentCustomFeeToken(setup.parentSigner)
+    }
   })
 
   it('deposits ETH from parent to child', async function () {
