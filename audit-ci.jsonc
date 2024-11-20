@@ -104,6 +104,16 @@
     // Issue with sol2uml library that generates UML diagrams from Solidity code. Only used at build time.
     // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>axios
     // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>sol2uml>axios
-    "GHSA-wf5p-g6vw-rhxx"
+    "GHSA-wf5p-g6vw-rhxx",
+    // https://github.com/advisories/GHSA-3xgq-45jj-v275
+    // cross-spawn command injection vulnerability
+    // Only used during development via audit-ci, nyc, and patch-package
+    // from: audit-ci>cross-spawn
+    // from: nyc>foreground-child>cross-spawn
+    // from: nyc>spawn-wrap>foreground-child>cross-spawn
+    // from: @arbitrum/nitro-contracts>patch-package>cross-spawn
+    // from: @arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>patch-package>cross-spawn
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>patch-package>cross-spawn
+    "GHSA-3xgq-45jj-v275"
   ]
 }
