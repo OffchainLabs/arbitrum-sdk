@@ -1,9 +1,22 @@
-import { Chain, PublicClient, createPublicClient, http } from 'viem'
-import { arbitrumDepositActions, ArbitrumDepositActions } from './actions'
+import {
+  Chain,
+  PublicClient,
+  WalletClient,
+  createPublicClient,
+  http,
+} from 'viem'
+import {
+  ArbitrumDepositActions,
+  ArbitrumParentWalletActions,
+  arbitrumDepositActions,
+  arbitrumParentWalletActions,
+} from './actions'
 
 export type ArbitrumClients = {
   parentPublicClient: PublicClient
   childPublicClient: PublicClient & ArbitrumDepositActions
+  parentWalletClient: WalletClient & ArbitrumParentWalletActions
+  childWalletClient: WalletClient
 }
 
 export type CreateArbitrumClientParams = {
@@ -11,6 +24,8 @@ export type CreateArbitrumClientParams = {
   childChain: Chain
   parentRpcUrl?: string
   childRpcUrl?: string
+  parentWalletClient: WalletClient
+  childWalletClient: WalletClient
 }
 
 export function createArbitrumClient({
@@ -18,6 +33,8 @@ export function createArbitrumClient({
   childChain,
   parentRpcUrl,
   childRpcUrl,
+  parentWalletClient,
+  childWalletClient,
 }: CreateArbitrumClientParams): ArbitrumClients {
   const parentPublicClient = createPublicClient({
     chain: parentChain,
@@ -29,8 +46,14 @@ export function createArbitrumClient({
     transport: http(childRpcUrl || childChain.rpcUrls.default.http[0]),
   }).extend(arbitrumDepositActions())
 
+  const extendedParentWalletClient = parentWalletClient.extend(
+    arbitrumParentWalletActions(parentPublicClient, childPublicClient)
+  )
+
   return {
     parentPublicClient,
     childPublicClient,
+    parentWalletClient: extendedParentWalletClient,
+    childWalletClient,
   }
 }
