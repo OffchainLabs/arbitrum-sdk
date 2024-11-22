@@ -8,7 +8,7 @@ import {
 import {
   ArbitrumDepositActions,
   ArbitrumParentWalletActions,
-  arbitrumDepositActions,
+  arbitrumParentClientActions,
   arbitrumParentWalletActions,
 } from './actions'
 
@@ -44,7 +44,7 @@ export function createArbitrumClient({
   const childPublicClient = createPublicClient({
     chain: childChain,
     transport: http(childRpcUrl || childChain.rpcUrls.default.http[0]),
-  }).extend(arbitrumDepositActions())
+  }).extend(arbitrumParentClientActions())
 
   const extendedParentWalletClient = parentWalletClient.extend(
     arbitrumParentWalletActions(parentPublicClient, childPublicClient)

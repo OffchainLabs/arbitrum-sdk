@@ -20,8 +20,17 @@ export type PrepareDepositEthParameters = {
   account: Account | Address
 }
 
+const DEFAULT_CONFIRMATIONS = 1
+const DEFAULT_TIMEOUT = 1000 * 60 * 5 // 5 minutes
+
 export type WaitForCrossChainTxParameters = {
   hash: Hash
+  timeout?: number
+  confirmations?: number
+}
+
+export type SendCrossChainTransactionParameters = {
+  request: TransactionRequest
   timeout?: number
   confirmations?: number
 }
@@ -31,6 +40,14 @@ export type CrossChainTransactionStatus = {
   complete: boolean
   message?: unknown
   childTxReceipt?: unknown
+  hash: Hash
+}
+
+export type DepositEthParameters = {
+  amount: bigint
+  account: Account | Address
+  confirmations?: number
+  timeout?: number
 }
 
 export type ArbitrumDepositActions = {
@@ -42,6 +59,14 @@ export type ArbitrumDepositActions = {
 export type ArbitrumParentWalletActions = {
   waitForCrossChainTransaction: (
     params: WaitForCrossChainTxParameters
+  ) => Promise<CrossChainTransactionStatus>
+
+  sendCrossChainTransaction: (
+    params: SendCrossChainTransactionParameters
+  ) => Promise<CrossChainTransactionStatus>
+
+  depositEth: (
+    params: DepositEthParameters
   ) => Promise<CrossChainTransactionStatus>
 }
 
@@ -66,11 +91,14 @@ async function prepareDepositEthTransaction(
 async function waitForCrossChainTransaction(
   parentClient: PublicClient,
   childClient: PublicClient,
-  { hash, timeout, confirmations }: WaitForCrossChainTxParameters
+  {
+    hash,
+    confirmations = DEFAULT_CONFIRMATIONS,
+    timeout = DEFAULT_TIMEOUT,
+  }: WaitForCrossChainTxParameters
 ): Promise<CrossChainTransactionStatus> {
   const childProvider = transformPublicClientToProvider(childClient)
 
-  // Wait for the transaction to be mined and get the receipt
   const viemReceipt = await parentClient.waitForTransactionReceipt({
     hash,
     confirmations,
@@ -90,6 +118,7 @@ async function waitForCrossChainTransaction(
         complete: Boolean(result),
         message: ethDeposits[0],
         childTxReceipt: result,
+        hash,
       }
     }
   } catch (e) {
@@ -109,6 +138,7 @@ async function waitForCrossChainTransaction(
         complete: result.status === ParentToChildMessageStatus.REDEEMED,
         message: messages[0],
         childTxReceipt: result,
+        hash,
       }
     }
   } catch (e) {
@@ -118,7 +148,53 @@ async function waitForCrossChainTransaction(
   throw new Error('No cross chain message found in transaction')
 }
 
-export function arbitrumDepositActions() {
+async function sendCrossChainTransaction(
+  parentClient: PublicClient,
+  childClient: PublicClient,
+  walletClient: WalletClient,
+  {
+    request,
+    confirmations = DEFAULT_CONFIRMATIONS,
+    timeout = DEFAULT_TIMEOUT,
+  }: SendCrossChainTransactionParameters
+): Promise<CrossChainTransactionStatus> {
+  const hash = await walletClient.sendTransaction({
+    ...request,
+    chain: walletClient.chain,
+    account: walletClient.account as Account,
+  })
+
+  return waitForCrossChainTransaction(parentClient, childClient, {
+    hash,
+    confirmations,
+    timeout,
+  })
+}
+
+async function depositEth(
+  parentClient: PublicClient,
+  childClient: PublicClient,
+  walletClient: WalletClient,
+  {
+    amount,
+    account,
+    confirmations = DEFAULT_CONFIRMATIONS,
+    timeout = DEFAULT_TIMEOUT,
+  }: DepositEthParameters
+): Promise<CrossChainTransactionStatus> {
+  const request = await prepareDepositEthTransaction(childClient, {
+    amount,
+    account,
+  })
+
+  return sendCrossChainTransaction(parentClient, childClient, walletClient, {
+    request,
+    confirmations,
+    timeout,
+  })
+}
+
+export function arbitrumParentClientActions() {
   return (client: PublicClient): ArbitrumDepositActions => ({
     prepareDepositEthTransaction: params =>
       prepareDepositEthTransaction(client, params),
@@ -132,5 +208,14 @@ export function arbitrumParentWalletActions(
   return (walletClient: WalletClient): ArbitrumParentWalletActions => ({
     waitForCrossChainTransaction: (params: WaitForCrossChainTxParameters) =>
       waitForCrossChainTransaction(parentClient, childClient, params),
+    sendCrossChainTransaction: (params: SendCrossChainTransactionParameters) =>
+      sendCrossChainTransaction(
+        parentClient,
+        childClient,
+        walletClient,
+        params
+      ),
+    depositEth: (params: DepositEthParameters) =>
+      depositEth(parentClient, childClient, walletClient, params),
   })
 }

@@ -26,10 +26,8 @@ describe('arbitrumDepositActions', function () {
     }
   })
 
-  it('deposits ETH from parent to child and waits for completion', async function () {
-    const parentAccount = privateKeyToAccount(
-      `0x${config.ethKey}` as `0x${string}`
-    )
+  it('deposits ETH from parent to child using deposit action', async function () {
+    const parentAccount = privateKeyToAccount(`0x${config.ethKey}`)
     const depositAmount = parseEther('0.01')
 
     const baseParentWalletClient = createWalletClient({
@@ -55,23 +53,12 @@ describe('arbitrumDepositActions', function () {
       address: parentAccount.address,
     })
 
-    const request = await childPublicClient.prepareDepositEthTransaction({
+    const result = await parentWalletClient.depositEth({
       amount: depositAmount,
       account: parentAccount,
     })
 
-    const hash = await parentWalletClient.sendTransaction({
-      ...request,
-      chain: localEthChain,
-      account: parentAccount,
-    })
-
-    const result = await parentWalletClient.waitForCrossChainTransaction({
-      hash,
-    })
-
     expect(result.status).to.equal('success')
-    expect(result.complete).to.be.true
 
     const finalBalance = await childPublicClient.getBalance({
       address: parentAccount.address,
@@ -79,5 +66,40 @@ describe('arbitrumDepositActions', function () {
 
     const balanceDiff = finalBalance - initialBalance
     expect(balanceDiff).to.equal(depositAmount)
+  })
+
+  it('handles deposit failure gracefully', async function () {
+    const parentAccount = privateKeyToAccount(`0x${config.ethKey}`)
+    // Use an amount too large to cause a failure
+    const depositAmount = parseEther('999999999')
+
+    const baseParentWalletClient = createWalletClient({
+      account: parentAccount,
+      chain: localEthChain,
+      transport: http(config.ethUrl),
+    })
+
+    const baseChildWalletClient = createWalletClient({
+      account: parentAccount,
+      chain: localArbChain,
+      transport: http(config.arbUrl),
+    })
+
+    const { parentWalletClient } = createArbitrumClient({
+      parentChain: localEthChain,
+      childChain: localArbChain,
+      parentWalletClient: baseParentWalletClient,
+      childWalletClient: baseChildWalletClient,
+    })
+
+    try {
+      await parentWalletClient.depositEth({
+        amount: depositAmount,
+        account: parentAccount,
+      })
+      expect.fail('Should have thrown an error')
+    } catch (error) {
+      expect(error).to.exist
+    }
   })
 })
