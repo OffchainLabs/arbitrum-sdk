@@ -16,7 +16,7 @@ export type ArbitrumClients = {
   parentPublicClient: PublicClient
   childPublicClient: PublicClient & ArbitrumDepositActions
   parentWalletClient: WalletClient & ArbitrumParentWalletActions
-  childWalletClient: WalletClient
+  childWalletClient?: WalletClient
 }
 
 export type CreateArbitrumClientParams = {
@@ -25,7 +25,7 @@ export type CreateArbitrumClientParams = {
   parentRpcUrl?: string
   childRpcUrl?: string
   parentWalletClient: WalletClient
-  childWalletClient: WalletClient
+  childWalletClient?: WalletClient
 }
 
 export function createArbitrumClient({

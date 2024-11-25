@@ -13,12 +13,15 @@ import {
 describe('arbitrumDepositActions', function () {
   let localEthChain: Chain
   let localArbChain: Chain
+  let setup: Awaited<ReturnType<typeof testSetup>>
 
   before(async function () {
-    const setup = await testSetup()
+    setup = await testSetup()
     localEthChain = setup.localEthChain
     localArbChain = setup.localArbChain
+  })
 
+  beforeEach(async function () {
     await fundParentSigner(setup.parentSigner)
     if (isArbitrumNetworkWithCustomFeeToken()) {
       await fundParentCustomFeeToken(setup.parentSigner)
