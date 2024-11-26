@@ -8,9 +8,12 @@ import {
   approveParentCustomFeeToken,
   fundParentCustomFeeToken,
   isArbitrumNetworkWithCustomFeeToken,
+  getAmountInEnvironmentDecimals,
+  normalizeBalanceDiffByDecimals as normalizeBalanceDiffFByDecimals,
+  approveCustomFeeTokenWithViem,
 } from './custom-fee-token/customFeeTokenTestHelpers'
 
-describe('arbitrumDepositActions', function () {
+describe.only('arbitrumDepositActions', function () {
   let localEthChain: Chain
   let localArbChain: Chain
   let setup: Awaited<ReturnType<typeof testSetup>>
@@ -31,7 +34,10 @@ describe('arbitrumDepositActions', function () {
 
   it('deposits ETH from parent to child using deposit action', async function () {
     const parentAccount = privateKeyToAccount(`0x${config.ethKey}`)
-    const depositAmount = parseEther('0.01')
+
+    const [depositAmount, tokenDecimals] = await getAmountInEnvironmentDecimals(
+      '0.01'
+    )
 
     const baseParentWalletClient = createWalletClient({
       account: parentAccount,
@@ -56,6 +62,12 @@ describe('arbitrumDepositActions', function () {
       address: parentAccount.address,
     })
 
+    await approveCustomFeeTokenWithViem({
+      parentAccount,
+      parentWalletClient,
+      chain: localEthChain,
+    })
+
     const result = await parentWalletClient.depositEth({
       amount: depositAmount,
       account: parentAccount,
@@ -68,7 +80,13 @@ describe('arbitrumDepositActions', function () {
     })
 
     const balanceDiff = finalBalance - initialBalance
-    expect(balanceDiff).to.equal(depositAmount)
+
+    const normalizedBalanceDiff = normalizeBalanceDiffFByDecimals(
+      balanceDiff,
+      tokenDecimals
+    )
+
+    expect(normalizedBalanceDiff.toString()).to.equal(depositAmount.toString())
   })
 
   it('handles deposit failure gracefully', async function () {
