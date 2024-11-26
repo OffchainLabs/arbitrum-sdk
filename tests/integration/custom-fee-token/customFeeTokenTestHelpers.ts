@@ -66,7 +66,7 @@ export async function fundParentCustomFeeToken(
 
   const tx = await tokenContract.transfer(
     address,
-    utils.parseUnits('10', decimals)
+    utils.parseUnits('1000', decimals)
   )
   await tx.wait()
 }
