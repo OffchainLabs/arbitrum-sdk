@@ -7,6 +7,7 @@ import {
   type Hex,
   type WalletClient,
   type Chain,
+  formatUnits,
 } from 'viem'
 
 import {
@@ -135,7 +136,13 @@ export function normalizeBalanceDiffByDecimals(
   balanceDiff: bigint,
   tokenDecimals: number
 ): bigint {
-  return balanceDiff / BigInt(10 ** (18 - tokenDecimals))
+  // Convert to 18 decimals (ETH standard) for comparison
+  if (tokenDecimals === 18) return balanceDiff
+
+  // Convert to decimal string with proper precision
+  const formattedDiff = formatUnits(balanceDiff, 18)
+  // Parse back with target decimals
+  return parseUnits(formattedDiff, tokenDecimals)
 }
 
 export async function approveCustomFeeTokenWithViem({
