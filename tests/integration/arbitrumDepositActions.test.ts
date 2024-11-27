@@ -13,7 +13,7 @@ import {
   approveCustomFeeTokenWithViem,
 } from './custom-fee-token/customFeeTokenTestHelpers'
 
-describe.only('arbitrumDepositActions', function () {
+describe('arbitrumDepositActions', function () {
   let localEthChain: Chain
   let localArbChain: Chain
   let setup: Awaited<ReturnType<typeof testSetup>>
