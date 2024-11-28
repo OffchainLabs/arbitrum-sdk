@@ -27,7 +27,10 @@ export {
   GetL1L3DepositStatusParams,
 } from './lib/assetBridger/l1l3Bridger'
 export { EthBridger } from './lib/assetBridger/ethBridger'
-export { Erc20Bridger } from './lib/assetBridger/erc20Bridger'
+export {
+  Erc20Bridger,
+  AdminErc20Bridger,
+} from './lib/assetBridger/erc20Bridger'
 export {
   ChildTransactionReceipt,
   ChildContractTransaction,
@@ -95,3 +98,7 @@ export {
   ChildToParentTransactionRequest,
   isChildToParentTransactionRequest,
 } from './lib/dataEntities/transactionRequest'
+export {
+  scaleFrom18DecimalsToNativeTokenDecimals,
+  scaleFromNativeTokenDecimalsTo18Decimals,
+} from './lib/utils/lib'

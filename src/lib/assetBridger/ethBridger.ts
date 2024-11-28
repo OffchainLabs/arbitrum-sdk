@@ -51,7 +51,7 @@ import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import {
   getNativeTokenDecimals,
   isArbitrumChain,
-  nativeTokenDecimalsTo18Decimals,
+  scaleFromNativeTokenDecimalsTo18Decimals,
 } from '../utils/lib'
 
 export type ApproveGasTokenParams = {
@@ -321,10 +321,11 @@ export class EthBridger extends AssetBridger<
       childNetwork: this.childNetwork,
     })
 
-    const amountToBeMintedOnChildChain = nativeTokenDecimalsTo18Decimals({
-      amount: params.amount,
-      decimals,
-    })
+    const amountToBeMintedOnChildChain =
+      scaleFromNativeTokenDecimalsTo18Decimals({
+        amount: params.amount,
+        decimals,
+      })
 
     const requestParams = {
       ...params,

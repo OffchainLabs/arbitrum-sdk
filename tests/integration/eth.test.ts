@@ -40,7 +40,7 @@ import { itOnlyWhenEth } from './custom-fee-token/mochaExtensions'
 import { ParentTransactionReceipt } from '../../src'
 import {
   getNativeTokenDecimals,
-  scaleToNativeTokenDecimals,
+  scaleFrom18DecimalsToNativeTokenDecimals,
 } from '../../src/lib/utils/lib'
 import { parseUnits } from 'ethers/lib/utils'
 
@@ -458,7 +458,10 @@ describe('Ether', async () => {
         ).balanceOf(randomAddress)
       : await parentSigner.provider!.getBalance(randomAddress)
     expect(finalRandomBalance.toString(), 'L1 final balance').to.eq(
-      scaleToNativeTokenDecimals({ amount: ethToWithdraw, decimals }).toString()
+      scaleFrom18DecimalsToNativeTokenDecimals({
+        amount: ethToWithdraw,
+        decimals,
+      }).toString()
     )
   })
 })

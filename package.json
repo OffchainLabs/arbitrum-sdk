@@ -1,6 +1,6 @@
 {
   "name": "@arbitrum/sdk",
-  "version": "4.0.2-beta.0",
+  "version": "4.0.2",
   "description": "Typescript library client-side interactions with Arbitrum",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
@@ -96,6 +96,7 @@
     "**/hardhat/ws": "7.5.10",
     "**/hardhat/@sentry/node/cookie": "0.7.0",
     "**/micromatch": "4.0.8",
-    "**/elliptic": "6.5.7"
+    "**/elliptic": "6.6.0",
+    "**/secp256k1": "4.0.4"
   }
 }
