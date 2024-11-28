@@ -714,7 +714,7 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
         ARB_RETRYABLE_TX_ADDRESS,
         this.chainSigner
       )
-      return await arbRetryableTx.cancel(this.retryableCreationId, overrides)
+      return await arbRetryableTx.cancel(this.retryableCreationId, {...overrides})
     } else {
       throw new ArbSdkError(
         `Cannot cancel as retryable does not exist. Message status: ${
@@ -739,7 +739,7 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
         ARB_RETRYABLE_TX_ADDRESS,
         this.chainSigner
       )
-      return await arbRetryableTx.keepalive(this.retryableCreationId, overrides)
+      return await arbRetryableTx.keepalive(this.retryableCreationId, {...overrides})
     } else {
       throw new ArbSdkError(
         `Cannot keep alive as retryable does not exist. Message status: ${
