@@ -1,4 +1,5 @@
 module.exports = {
+  root: true,
   env: {
     commonjs: true,
     es6: true,
@@ -50,7 +51,7 @@ module.exports = {
       },
     },
     {
-      files: ['src/**/*.ts', 'src/**/*.tsx'],
+      files: ['**/src/**/*.ts', '**/src/**/*.tsx'],
       parser: '@typescript-eslint/parser',
       parserOptions: {
         project: 'tsconfig.json',

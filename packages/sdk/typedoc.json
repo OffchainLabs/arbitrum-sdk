@@ -1,0 +1,7 @@
+{
+  "extends": ["../../typedoc.json"],
+  "entryPoints": ["./src/lib"],
+  "exclude": ["./src/lib/abi"],
+  "customCss": "./theme/style.css",
+  "out": "docs"
+}

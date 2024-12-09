@@ -1,5 +1,5 @@
-build/**
-cache/**
-dist/**
-src/lib/abi/**
+node_modules
+dist
+coverage
+src/lib/abi
 .nyc_output
