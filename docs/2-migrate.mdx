@@ -25,15 +25,15 @@ Most instances of "L1" and "L2" have been replaced with "parent" and "child" res
 - The `L1Network` is no longer required to be registered before bridging.
 - Only Arbitrum networks need to be registered.
 - Arbitrum networks are defined as Arbitrum One, Arbitrum testnets, and any Orbit chain.
-- If you need a full list of Arbitrum networks, you can use the new [`getArbitrumNetworks`](./reference/dataEntities/networks#getArbitrumNetworks) function.
-- To list all of the children of a network, use the new [`getChildrenForNetwork`](./reference/dataEntities/networks#getChildrenForNetwork) function.
+- If you need a full list of Arbitrum networks, you can use the new [`getArbitrumNetworks`](./reference/dataEntities/networks#getarbitrumnetworks) function.
+- To list all of the children of a network, use the new [`getChildrenForNetwork`](./reference/dataEntities/networks#getchildrenfornetwork) function.
 
 | v3 Name               | v4 Name                                                                                            |
 | --------------------- | -------------------------------------------------------------------------------------------------- |
 | `L2Network`           | [`ArbitrumNetwork`](./reference/dataEntities/networks#arbitrumnetwork)                             |
-| `getL2Network`        | [`getArbitrumNetwork`](./reference/dataEntities/networks#getArbitrumNetwork)                       |
-| `l2Networks`          | [`getArbitrumNetworks`](./reference/dataEntities/networks#getArbitrumNetworks)                     |
-| `addCustomNetwork`    | [`registerCustomArbitrumNetwork`](./reference/dataEntities/networks#registerCustomArbitrumNetwork) |
+| `getL2Network`        | [`getArbitrumNetwork`](./reference/dataEntities/networks#getarbitrumnetwork)                       |
+| `l2Networks`          | [`getArbitrumNetworks`](./reference/dataEntities/networks#getarbitrumnetworks)                     |
+| `addCustomNetwork`    | [`registerCustomArbitrumNetwork`](./reference/dataEntities/networks#registercustomarbitrumnetwork) |
 | `Network`             | *removed*                                                                                          |
 | `L1Network`           | *removed*                                                                                          |
 | `getL1Network`        | *removed*                                                                                          |
