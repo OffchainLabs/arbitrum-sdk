@@ -2,7 +2,7 @@
   "root": false,
   "extends": ["../../.eslintrc.js"],
   "parserOptions": {
-    "project": "./tsconfig.json",
-    "tsconfigRootDir": "."
-  }
+    "files": ["src/**/*.ts", "src/**/*.js"]
+  },
+  "ignorePatterns": ["dist/**/*", "node_modules/**/*"]
 } 
