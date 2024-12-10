@@ -1,6 +1,5 @@
-node_modules
-dist
-coverage
+dist/**
+node_modules/**
+coverage/**
 src/lib/abi
-.nyc_output
 docs/**

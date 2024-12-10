@@ -2,6 +2,7 @@
   "compilerOptions": {
     "target": "ES2017",
     "module": "commonjs",
+    "moduleResolution": "node",
     "declaration": true,
     "strict": true,
     "allowJs": true,
@@ -12,6 +13,10 @@
     "noImplicitThis": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "experimentalDecorators": true
+    "experimentalDecorators": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@ethersproject/*": ["./node_modules/@ethersproject/*"]
+    }
   }
 }
