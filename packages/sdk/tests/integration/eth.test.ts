@@ -17,8 +17,8 @@
 'use strict'
 
 import { expect } from 'chai'
-import dotenv from 'dotenv'
-import path from 'path'
+import * as dotenv from 'dotenv'
+import * as path from 'path'
 
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'

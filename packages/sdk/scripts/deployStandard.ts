@@ -1,11 +1,11 @@
 import { instantiateBridge } from './instantiate_bridge'
-import dotenv from 'dotenv'
+import * as dotenv from 'dotenv'
 import args from './getCLargs'
 import { constants, BigNumber, utils } from 'ethers'
 import { MultiCaller } from '../src'
 import axios from 'axios'
 import prompt from 'prompts'
-import path from 'path'
+import * as path from 'path'
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
 
 const privKey = process.env.PRIVKEY as string

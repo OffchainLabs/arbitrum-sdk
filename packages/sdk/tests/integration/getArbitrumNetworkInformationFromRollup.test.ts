@@ -1,5 +1,5 @@
-import path from 'path'
-import dotenv from 'dotenv'
+import * as path from 'path'
+import * as dotenv from 'dotenv'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { constants } from 'ethers'
 import { expect } from 'chai'

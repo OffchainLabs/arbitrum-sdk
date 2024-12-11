@@ -19,7 +19,7 @@
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { Wallet } from '@ethersproject/wallet'
 
-import dotenv from 'dotenv'
+import * as dotenv from 'dotenv'
 import args from './getCLargs'
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {

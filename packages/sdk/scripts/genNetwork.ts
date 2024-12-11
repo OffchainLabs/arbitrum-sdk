@@ -1,4 +1,5 @@
 import * as dotenv from 'dotenv'
+import * as path from 'path'
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
 import { execSync } from 'child_process'
 import * as fs from 'fs'

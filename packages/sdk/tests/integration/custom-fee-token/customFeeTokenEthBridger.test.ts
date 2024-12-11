@@ -18,8 +18,8 @@
 
 import { expect } from 'chai'
 import { ethers, constants, Wallet } from 'ethers'
-import dotenv from 'dotenv'
-import path from 'path'
+import * as dotenv from 'dotenv'
+import * as path from 'path'
 
 import { parseEther, parseUnits } from '@ethersproject/units'
 
