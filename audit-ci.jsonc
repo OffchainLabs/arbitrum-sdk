@@ -114,6 +114,12 @@
     // from: @arbitrum/nitro-contracts>patch-package>cross-spawn
     // from: @arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>patch-package>cross-spawn
     // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>patch-package>cross-spawn
-    "GHSA-3xgq-45jj-v275"
+    "GHSA-3xgq-45jj-v275",
+    // https://github.com/advisories/GHSA-mwcw-c2x4-8c55
+    // nanoid infinite loop vulnerability when handling non-integer values
+    // Only used by mocha for test file IDs during test execution, not in production code
+    // from: hardhat>mocha>nanoid
+    // from: mocha>nanoid
+    "GHSA-mwcw-c2x4-8c55"
   ]
 }
