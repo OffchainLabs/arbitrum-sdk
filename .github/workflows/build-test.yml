@@ -198,8 +198,5 @@ jobs:
       - name: Generate network file
         run: yarn gen:network
 
-      - name: debug
-        run: pwd && ls && cd packages && ls && cd sdk && ls
-
       - name: Run integration tests
         run: CI=true yarn test:integration

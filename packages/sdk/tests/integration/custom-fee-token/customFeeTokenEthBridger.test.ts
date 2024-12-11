@@ -19,6 +19,7 @@
 import { expect } from 'chai'
 import { ethers, constants, Wallet } from 'ethers'
 import dotenv from 'dotenv'
+import path from 'path'
 
 import { parseEther, parseUnits } from '@ethersproject/units'
 
@@ -34,7 +35,7 @@ import { ChildToParentMessageStatus } from '../../../src'
 import { ChildToParentMessage } from '../../../src/lib/message/ChildToParentMessage'
 import { getNativeTokenDecimals } from '../../../src/lib/utils/lib'
 
-dotenv.config()
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env') })
 
 describeOnlyWhenCustomGasToken(
   'EthBridger (with custom fee token)',

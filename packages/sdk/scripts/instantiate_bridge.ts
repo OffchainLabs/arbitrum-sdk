@@ -29,7 +29,7 @@ import {
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 
-dotenv.config()
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
 
 const arbKey = process.env['ARB_KEY'] as string
 const ethKey = process.env['ETH_KEY'] as string

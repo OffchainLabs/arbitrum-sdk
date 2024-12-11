@@ -5,7 +5,8 @@ import { constants, BigNumber, utils } from 'ethers'
 import { MultiCaller } from '../src'
 import axios from 'axios'
 import prompt from 'prompts'
-dotenv.config()
+import path from 'path'
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
 
 const privKey = process.env.PRIVKEY as string
 if (!privKey) {

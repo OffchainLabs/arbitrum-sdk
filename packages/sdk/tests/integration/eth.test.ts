@@ -18,6 +18,7 @@
 
 import { expect } from 'chai'
 import dotenv from 'dotenv'
+import path from 'path'
 
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
@@ -44,7 +45,7 @@ import {
 } from '../../src/lib/utils/lib'
 import { parseUnits } from 'ethers/lib/utils'
 
-dotenv.config()
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
 
 describe('Ether', async () => {
   beforeEach('skipIfMainnet', async function () {

@@ -41,7 +41,7 @@ import {
 } from '../tests/integration/custom-fee-token/customFeeTokenTestHelpers'
 import { fundParentSigner } from '../tests/integration/testHelpers'
 
-dotenv.config()
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
 
 const isTestingOrbitChains = process.env.ORBIT_TEST === '1'
 

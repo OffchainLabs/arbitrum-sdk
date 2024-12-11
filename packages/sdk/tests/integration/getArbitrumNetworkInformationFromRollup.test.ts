@@ -1,3 +1,4 @@
+import path from 'path' 
 import dotenv from 'dotenv'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { constants } from 'ethers'
@@ -8,7 +9,7 @@ import {
   getArbitrumNetworkInformationFromRollup,
 } from '../../src/lib/dataEntities/networks'
 
-dotenv.config()
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
 
 describe('getArbitrumNetworkInformationFromRollup', () => {
   it('fetches information about arbitrum one', async () => {
