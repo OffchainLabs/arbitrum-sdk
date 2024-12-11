@@ -1,4 +1,4 @@
-import path from 'path' 
+import path from 'path'
 import dotenv from 'dotenv'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { constants } from 'ethers'
