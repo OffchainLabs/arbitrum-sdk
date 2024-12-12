@@ -1,6 +1,4 @@
 {
-  "name": "@arbitrum/monorepo",
-  "version": "0.0.0",
   "private": true,
   "scripts": {
     "audit:ci": "audit-ci --config ./audit-ci.jsonc",
@@ -15,10 +13,6 @@
   "workspaces": {
     "packages": [
       "packages/*"
-    ],
-    "nohoist": [
-      "**/typechain/**",
-      "**/@typechain/**"
     ]
   },
   "devDependencies": {
