@@ -25,9 +25,6 @@ jobs:
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
-        with:
-          # TODO: Fix cache key implementation - using random value is not optimal for caching
-          cache-key: ${{ github.run_id }}-${{ github.run_number }}
 
   lint:
     name: Lint on Node.js v${{ matrix.node-version }}

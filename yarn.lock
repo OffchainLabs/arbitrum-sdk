@@ -4536,7 +4536,6 @@ mnemonist@^0.38.0:
   integrity sha512-bZTFT5rrPKtPJxj8KSV0WkPyNxl72vQepqqVUAW2ARUpUSF2qXMB6jZj7hW5/k7C1rtpzqbD/IIbJwLXUjCHeg==
   dependencies:
     obliterator "^2.0.0"
-    
 
 mocha@^10.0.0:
   version "10.2.0"
