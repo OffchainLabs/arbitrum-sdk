@@ -19,7 +19,7 @@
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { Wallet } from '@ethersproject/wallet'
 import { Provider } from '@ethersproject/abstract-provider'
-import * as dotenv from 'dotenv'
+import { loadEnv } from '../src/lib/utils/env'
 
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
@@ -41,7 +41,7 @@ import {
 } from '../tests/integration/custom-fee-token/customFeeTokenTestHelpers'
 import { fundParentSigner } from '../tests/integration/testHelpers'
 
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
+loadEnv()
 
 const isTestingOrbitChains = process.env.ORBIT_TEST === '1'
 

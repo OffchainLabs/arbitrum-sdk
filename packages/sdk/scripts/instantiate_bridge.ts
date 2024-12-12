@@ -18,8 +18,8 @@
 
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { Wallet } from '@ethersproject/wallet'
+import { loadEnv } from '../src/lib/utils/env'
 
-import * as dotenv from 'dotenv'
 import args from './getCLargs'
 import { EthBridger, InboxTools, Erc20Bridger } from '../src'
 import {
@@ -29,7 +29,7 @@ import {
 import { Signer } from 'ethers'
 import { AdminErc20Bridger } from '../src/lib/assetBridger/erc20Bridger'
 
-dotenv.config({ path: path.resolve(__dirname, '../../../.env') })
+loadEnv()
 
 const arbKey = process.env['ARB_KEY'] as string
 const ethKey = process.env['ETH_KEY'] as string
