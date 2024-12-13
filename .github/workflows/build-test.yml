@@ -6,6 +6,7 @@ on:
 
 env:
   MAINNET_RPC: ${{ secrets.MAINNET_RPC }}
+  CACHE_KEY: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
 jobs:
   install:
@@ -26,7 +27,7 @@ jobs:
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
         with:
-          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
+          cache-key: ${{ env.CACHE_KEY }}
 
 
   lint:
@@ -51,6 +52,8 @@ jobs:
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
+        with:
+          cache-key: ${{ env.CACHE_KEY }}
 
       - name: Lint sdk
         run: |
@@ -96,6 +99,8 @@ jobs:
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
+        with:
+          cache-key: ${{ env.CACHE_KEY }}
 
       - run: yarn audit:ci
 
@@ -117,6 +122,8 @@ jobs:
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
+        with:
+          cache-key: ${{ env.CACHE_KEY }}
 
       - name: Build
         run: |
@@ -180,7 +187,7 @@ jobs:
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
         with:
-          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
+          cache-key: ${{ env.CACHE_KEY }}
 
       - name: Set up the local node
         uses: OffchainLabs/actions/run-nitro-test-node@main
