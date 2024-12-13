@@ -26,7 +26,7 @@ jobs:
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
         with:
-          cache-key: ${{ github.run_id }}-${{ github.run_number }}
+          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
   lint:
     name: Lint on Node.js v${{ matrix.node-version }}
