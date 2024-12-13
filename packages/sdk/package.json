@@ -19,6 +19,9 @@
     "url": "https://github.com/offchainlabs/arbitrum-sdk/issues"
   },
   "homepage": "https://offchainlabs.com",
+  "files": [
+    "dist/**/*"
+  ],
   "scripts": {
     "audit:ci": "audit-ci --config ./audit-ci.jsonc",
     "prepare": "yarn run gen:abi",
@@ -52,7 +55,13 @@
     "async-mutex": "^0.4.0",
     "ethers": "^5.1.0"
   },
-  "files": [
-    "dist/**/*"
-  ]
+  "resolutions": {
+    "lodash.pick": "https://github.com/lodash/lodash/archive/refs/tags/4.17.21.tar.gz",
+    "**/@ethersproject/providers/ws": "7.5.10",
+    "**/hardhat/ws": "7.5.10",
+    "**/hardhat/@sentry/node/cookie": "0.7.0",
+    "**/micromatch": "4.0.8",
+    "**/elliptic": "6.6.0",
+    "**/secp256k1": "4.0.4"
+  }
 }
