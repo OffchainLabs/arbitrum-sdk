@@ -29,7 +29,6 @@ jobs:
         with:
           cache-key: ${{ env.CACHE_KEY }}
 
-
   lint:
     name: Lint on Node.js v${{ matrix.node-version }}
     runs-on: ubuntu-latest
