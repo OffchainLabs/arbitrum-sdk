@@ -34,7 +34,7 @@ import {
   ChildTransactionReceipt,
 } from '../../src'
 import { TestERC20 } from '../../src/lib/abi/TestERC20'
-import { testSetup } from '../../scripts/testSetup'
+import { testSetup } from '../testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import {
   ARB_RETRYABLE_TX_ADDRESS,

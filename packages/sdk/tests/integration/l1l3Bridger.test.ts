@@ -2,7 +2,7 @@ import {
   getLocalNetworksFromFile,
   getSigner,
   testSetup,
-} from '../../scripts/testSetup'
+} from '../testSetup'
 import {
   Address,
   Erc20Bridger,

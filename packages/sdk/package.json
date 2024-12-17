@@ -25,7 +25,7 @@
   "scripts": {
     "audit:ci": "audit-ci --config ./audit-ci.jsonc",
     "prepare": "yarn run gen:abi",
-    "gen:abi": "node ./scripts/genAbi.js",
+    "gen:abi": "ts-node ./scripts/genAbi.ts",
     "gen:network": "ts-node ./scripts/genNetwork.ts",
     "prepublishOnly": "yarn build && yarn format",
     "preversion": "yarn lint",

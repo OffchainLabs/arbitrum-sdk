@@ -44,7 +44,7 @@ import {
   assertArbitrumNetworkHasTokenBridge,
 } from '../../src/lib/dataEntities/networks'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
-import { testSetup } from '../../scripts/testSetup'
+import { testSetup } from '../testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 

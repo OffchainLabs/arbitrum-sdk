@@ -38,8 +38,8 @@ import {
   approveParentCustomFeeToken,
   fundParentCustomFeeToken,
   isArbitrumNetworkWithCustomFeeToken,
-} from '../tests/integration/custom-fee-token/customFeeTokenTestHelpers'
-import { fundParentSigner } from '../tests/integration/testHelpers'
+} from './integration/custom-fee-token/customFeeTokenTestHelpers'
+import { fundParentSigner } from './integration/testHelpers'
 
 loadEnv()
 

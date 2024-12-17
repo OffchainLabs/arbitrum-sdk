@@ -23,7 +23,7 @@ import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__facto
 import { fundParentSigner, skipIfMainnet } from './testHelpers'
 import { RetryableDataTools } from '../../src'
 import { Wallet } from 'ethers'
-import { testSetup } from '../../scripts/testSetup'
+import { testSetup } from '../testSetup'
 import { parseEther, randomBytes } from 'ethers/lib/utils'
 import { Inbox__factory } from '../../src/lib/abi/factories/Inbox__factory'
 import { GasOverrides } from '../../src/lib/message/ParentToChildMessageGasEstimator'
