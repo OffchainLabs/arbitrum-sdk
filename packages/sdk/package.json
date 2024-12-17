@@ -30,7 +30,7 @@
     "prepublishOnly": "yarn build && yarn format",
     "preversion": "yarn lint",
     "prebuild": "yarn gen:abi",
-    "build": "./scripts/builder",
+    "build": "rm -rf dist && tsc -p tsconfig.json",
     "watch": "tsc --watch",
     "test": "mocha",
     "test:coverage": "nyc mocha",
