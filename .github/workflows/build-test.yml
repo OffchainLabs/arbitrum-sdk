@@ -6,7 +6,7 @@ on:
 
 env:
   MAINNET_RPC: ${{ secrets.MAINNET_RPC }}
-  CACHE_KEY: ${{ github.runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
+  CACHE_KEY: ${{ github.runner.os }}-yarn-${{ github.hashFiles('yarn.lock') }}-monorepo
 
 jobs:
   install:
