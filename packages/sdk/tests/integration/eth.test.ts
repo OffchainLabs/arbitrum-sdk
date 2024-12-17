@@ -17,8 +17,7 @@
 'use strict'
 
 import { expect } from 'chai'
-import dotenv from 'dotenv'
-
+import { loadEnv } from '../../src/lib/utils/env'
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
 import { constants } from 'ethers'
@@ -44,7 +43,7 @@ import {
 } from '../../src/lib/utils/lib'
 import { parseUnits } from 'ethers/lib/utils'
 
-dotenv.config()
+loadEnv()
 
 describe('Ether', async () => {
   beforeEach('skipIfMainnet', async function () {

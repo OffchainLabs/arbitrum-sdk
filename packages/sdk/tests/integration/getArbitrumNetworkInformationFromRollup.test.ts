@@ -1,14 +1,14 @@
-import dotenv from 'dotenv'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { constants } from 'ethers'
 import { expect } from 'chai'
+import { loadEnv } from '../../src/lib/utils/env'
 
 import {
   getArbitrumNetwork,
   getArbitrumNetworkInformationFromRollup,
 } from '../../src/lib/dataEntities/networks'
 
-dotenv.config()
+loadEnv()
 
 describe('getArbitrumNetworkInformationFromRollup', () => {
   it('fetches information about arbitrum one', async () => {

@@ -1,5 +1,4 @@
-import * as dotenv from 'dotenv'
-dotenv.config()
+import { loadEnv } from '../src/lib/utils/env'
 import { execSync } from 'child_process'
 import * as fs from 'fs'
 
@@ -10,6 +9,8 @@ import {
   ArbitrumNetwork,
   mapL2NetworkToArbitrumNetwork,
 } from '../src/lib/dataEntities/networks'
+
+loadEnv()
 
 const isTestingOrbitChains = process.env.ORBIT_TEST === '1'
 

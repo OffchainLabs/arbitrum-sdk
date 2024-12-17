@@ -25,6 +25,8 @@ jobs:
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
+        with:
+          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
   lint:
     name: Lint on Node.js v${{ matrix.node-version }}
@@ -48,6 +50,8 @@ jobs:
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
+        with:
+          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
       - name: Lint sdk
         run: |
@@ -93,6 +97,8 @@ jobs:
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
+        with:
+          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
       - run: yarn audit:ci
 
@@ -114,6 +120,8 @@ jobs:
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
+        with:
+          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
       - name: Build
         run: |
@@ -176,6 +184,8 @@ jobs:
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
+        with:
+          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
       - name: Set up the local node
         uses: OffchainLabs/actions/run-nitro-test-node@main
