@@ -20,7 +20,7 @@ import { expect } from 'chai'
 import { BigNumber } from 'ethers'
 
 import { skipIfMainnet } from './testHelpers'
-import { testSetup } from '../../scripts/testSetup'
+import { testSetup } from '../testSetup'
 import { ParentToChildMessageGasEstimator } from '../../src/lib/message/ParentToChildMessageGasEstimator'
 import {
   itOnlyWhenEth,

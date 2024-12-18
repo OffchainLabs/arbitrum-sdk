@@ -32,7 +32,7 @@ import { ChildToParentMessage } from '../../src/lib/message/ChildToParentMessage
 import { ChildToParentMessageStatus } from '../../src/lib/dataEntities/message'
 import { ChildTransactionReceipt } from '../../src/lib/message/ChildTransaction'
 import { ParentToChildMessageStatus } from '../../src/lib/message/ParentToChildMessage'
-import { testSetup } from '../../scripts/testSetup'
+import { testSetup } from '../testSetup'
 import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { itOnlyWhenEth } from './custom-fee-token/mochaExtensions'

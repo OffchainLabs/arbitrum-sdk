@@ -5,7 +5,7 @@ import {
   testSetup as _testSetup,
   config,
   getLocalNetworksFromFile,
-} from '../../../scripts/testSetup'
+} from '../../testSetup'
 import { Erc20Bridger, EthBridger } from '../../../src'
 import { ERC20__factory } from '../../../src/lib/abi/factories/ERC20__factory'
 import { getNativeTokenDecimals } from '../../../src/lib/utils/lib'

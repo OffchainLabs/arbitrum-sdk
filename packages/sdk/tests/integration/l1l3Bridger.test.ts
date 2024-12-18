@@ -1,8 +1,4 @@
-import {
-  getLocalNetworksFromFile,
-  getSigner,
-  testSetup,
-} from '../../scripts/testSetup'
+import { getLocalNetworksFromFile, getSigner, testSetup } from '../testSetup'
 import {
   Address,
   Erc20Bridger,

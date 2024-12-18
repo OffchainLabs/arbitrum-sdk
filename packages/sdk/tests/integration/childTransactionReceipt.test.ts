@@ -29,7 +29,7 @@ import { ChildTransactionReceipt } from '../../src'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { BigNumber, Wallet } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
-import { testSetup } from '../../scripts/testSetup'
+import { testSetup } from '../testSetup'
 
 async function waitForL1BatchConfirmations(
   arbTxReceipt: ChildTransactionReceipt,

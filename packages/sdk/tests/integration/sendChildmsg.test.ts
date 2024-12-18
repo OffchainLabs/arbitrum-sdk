@@ -23,7 +23,7 @@ import {
   getArbitrumNetwork,
   ArbitrumNetwork,
 } from '../../src/lib/dataEntities/networks'
-import { testSetup } from '../../scripts/testSetup'
+import { testSetup } from '../testSetup'
 import { greeter } from './helper/greeter'
 import { expect } from 'chai'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'

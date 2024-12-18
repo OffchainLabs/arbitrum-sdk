@@ -29,7 +29,7 @@ import {
 } from './testHelpers'
 import { ParentToChildMessageStatus } from '../../src'
 import { Wallet } from 'ethers'
-import { testSetup } from '../../scripts/testSetup'
+import { testSetup } from '../testSetup'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { describeOnlyWhenEth } from './custom-fee-token/mochaExtensions'
 

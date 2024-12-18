@@ -1,17 +1,19 @@
-const { runTypeChain, glob } = require('typechain')
-const { execSync } = require('child_process')
-const { unlinkSync, existsSync, rmSync } = require('fs')
+import { runTypeChain, glob } from 'typechain'
+import { execSync } from 'child_process'
+import { unlinkSync, rmSync } from 'fs'
+import * as path from 'path'
 
-const getPackagePath = packageName => {
+const ABI_PATH = path.resolve(__dirname, '../src/lib/abi')
+
+const getPackagePath = (packageName: string): string => {
   const path = require.resolve(`${packageName}/package.json`)
   return path.substr(0, path.indexOf('package.json'))
 }
 
 async function main() {
-  if (existsSync('./src/lib/abi/')) {
-    console.log('Removing previously generated ABIs.\n')
-    rmSync('./src/lib/abi/', { recursive: true })
-  }
+  console.log('Removing previously generated ABIs.\n')
+  rmSync(`${ABI_PATH}`, { recursive: true, force: true })
+  rmSync(`${ABI_PATH}/classic`, { recursive: true, force: true })
 
   const cwd = process.cwd()
 
@@ -59,7 +61,7 @@ async function main() {
     cwd,
     filesToProcess: nitroFiles,
     allFiles: nitroFiles,
-    outDir: './src/lib/abi/',
+    outDir: `${ABI_PATH}`,
     target: 'ethers-v5',
   })
 
@@ -72,13 +74,13 @@ async function main() {
     cwd,
     filesToProcess: classicFiles,
     allFiles: classicFiles,
-    outDir: './src/lib/abi/classic',
+    outDir: `${ABI_PATH}/classic`,
     target: 'ethers-v5',
   })
 
   // we delete the index file since it doesn't play well with tree shaking
-  unlinkSync(`${cwd}/src/lib/abi/index.ts`)
-  unlinkSync(`${cwd}/src/lib/abi/classic/index.ts`)
+  unlinkSync(`${ABI_PATH}/index.ts`)
+  unlinkSync(`${ABI_PATH}/classic/index.ts`)
 
   console.log('Typechain generated')
 }

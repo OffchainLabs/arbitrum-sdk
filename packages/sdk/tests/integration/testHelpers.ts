@@ -23,7 +23,7 @@ import { BigNumber } from '@ethersproject/bignumber'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { parseEther } from 'ethers/lib/utils'
 
-import { config, getSigner, testSetup } from '../../scripts/testSetup'
+import { config, getSigner, testSetup } from '../testSetup'
 
 import { Signer, Wallet } from 'ethers'
 import { Erc20Bridger, ChildToParentMessageStatus } from '../../src'

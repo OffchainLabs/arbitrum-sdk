@@ -27,7 +27,7 @@ import { L1CustomGateway__factory } from '../../src/lib/abi/factories/L1CustomGa
 import { L2ERC20Gateway__factory } from '../../src/lib/abi/factories/L2ERC20Gateway__factory'
 import { L1ERC20Gateway__factory } from '../../src/lib/abi/factories/L1ERC20Gateway__factory'
 
-import { testSetup } from '../../scripts/testSetup'
+import { testSetup } from '../testSetup'
 import { randomBytes, hexlify } from 'ethers/lib/utils'
 import { itOnlyWhenEth } from './custom-fee-token/mochaExtensions'
 

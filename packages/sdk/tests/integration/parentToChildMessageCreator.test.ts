@@ -19,7 +19,7 @@
 import { expect } from 'chai'
 import { providers, utils } from 'ethers'
 import { fundParentSigner, skipIfMainnet } from './testHelpers'
-import { testSetup } from '../../scripts/testSetup'
+import { testSetup } from '../testSetup'
 import { ParentToChildMessageCreator } from '../../src/lib/message/ParentToChildMessageCreator'
 import { ParentToChildMessageStatus } from '../../src/lib/message/ParentToChildMessage'
 

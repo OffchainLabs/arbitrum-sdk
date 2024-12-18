@@ -56,7 +56,7 @@ jobs:
       - name: Lint sdk
         run: |
           yarn gen:abi
-          yarn build --reporter-options output=$TEST_PATH/sdk.xml
+          yarn build
           yarn lint --format junit -o $TEST_PATH/sdk-lint.xml
 
       - name: Upload build artifacts
