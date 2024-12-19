@@ -1,0 +1,32 @@
+{
+  "name": "@arbitrum/viem-sdk",
+  "version": "4.0.2",
+  "description": "Typescript library client-side interactions with Arbitrum using viem",
+  "author": "Offchain Labs, Inc.",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/offchainlabs/arbitrum-sdk.git"
+  },
+  "engines": {
+    "node": ">=v11",
+    "npm": "please-use-yarn",
+    "yarn": ">= 1.0.0"
+  },
+  "bugs": {
+    "url": "https://github.com/offchainlabs/arbitrum-sdk/issues"
+  },
+  "homepage": "https://offchainlabs.com",
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.json",
+    "test": "mocha tests"
+  },
+  "dependencies": {
+    "viem": "^2.21.55"
+  }
+}
