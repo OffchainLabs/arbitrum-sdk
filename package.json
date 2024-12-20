@@ -5,7 +5,7 @@
     "build": "yarn workspace @arbitrum/sdk build",
     "lint": "yarn workspace @arbitrum/sdk lint",
     "format": "yarn workspace @arbitrum/sdk format",
-    "test:unit": "yarn workspace @arbitrum/sdk test:unit",
+    "test:unit": "yarn workspaces run test:unit",
     "test:integration": "yarn workspace @arbitrum/sdk test:integration",
     "gen:abi": "yarn workspace @arbitrum/sdk gen:abi",
     "gen:network": "yarn workspace @arbitrum/sdk gen:network"
