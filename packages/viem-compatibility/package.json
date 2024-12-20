@@ -1,7 +1,7 @@
 {
-  "name": "@arbitrum/viem-sdk",
+  "name": "@arbitrum/viem-compatibility",
   "version": "4.0.2",
-  "description": "Typescript library client-side interactions with Arbitrum using viem",
+  "description": "Typescript library for compatibility with viem",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
   "main": "dist/index.js",
@@ -23,8 +23,7 @@
     "dist/**/*"
   ],
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.json",
-    "test": "mocha tests"
+    "build": "rm -rf dist && tsc -p tsconfig.json"
   },
   "dependencies": {
     "viem": "^2.21.55"
