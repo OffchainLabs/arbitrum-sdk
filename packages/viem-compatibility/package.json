@@ -1,7 +1,7 @@
 {
   "name": "@arbitrum/viem-compatibility",
-  "version": "4.0.2",
-  "description": "Typescript library for compatibility with viem",
+  "version": "0.0.1",
+  "description": "Typescript library for ethers compatibility with viem",
   "author": "Offchain Labs, Inc.",
   "license": "Apache-2.0",
   "main": "dist/index.js",
