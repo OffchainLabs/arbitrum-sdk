@@ -3,8 +3,8 @@
   "scripts": {
     "audit:ci": "audit-ci --config ./audit-ci.jsonc",
     "build": "yarn workspace @arbitrum/sdk build",
-    "lint": "yarn workspace @arbitrum/sdk lint",
-    "format": "yarn workspace @arbitrum/sdk format",
+    "lint": "yarn workspaces run lint",
+    "format": "yarn workspaces run format",
     "test:unit": "yarn workspaces run test:unit",
     "test:integration": "yarn workspace @arbitrum/sdk test:integration",
     "gen:abi": "yarn workspace @arbitrum/sdk gen:abi",
