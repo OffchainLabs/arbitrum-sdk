@@ -30,12 +30,5 @@
   },
   "dependencies": {
     "viem": "^2.21.55"
-  },
-  "devDependencies": {
-    "@types/chai": "^4.2.11",
-    "@types/mocha": "^9.0.0",
-    "chai": "^4.2.0",
-    "mocha": "^9.2.1",
-    "ts-node": "^10.2.1"
   }
 }
