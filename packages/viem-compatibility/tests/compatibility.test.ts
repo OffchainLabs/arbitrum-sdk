@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { StaticJsonRpcProvider } from '@ethersproject/providers'
+import { BigNumber, providers } from 'ethers'
 import {
   createPublicClient,
   defineChain,
@@ -7,11 +7,9 @@ import {
   PublicClient,
   TransactionReceipt,
 } from 'viem'
-import { mainnet } from 'viem/chains'
-import { BigNumber } from 'ethers'
+import { arbitrumSepolia, mainnet } from 'viem/chains'
 import {
   publicClientToProvider,
-  transformPublicClientToProvider,
   viemTransactionReceiptToEthersTransactionReceipt,
 } from '../src/compatibility'
 
@@ -37,40 +35,50 @@ describe('viem compatibility', () => {
       }) as unknown as PublicClient
 
       const provider = publicClientToProvider(publicClient)
-      expect(provider).to.be.instanceOf(StaticJsonRpcProvider)
+      expect(provider).to.be.instanceOf(providers.StaticJsonRpcProvider)
       expect(provider.network.chainId).to.equal(testChain.id)
       expect(provider.network.name).to.equal(testChain.name)
       expect(provider.connection.url).to.equal('https://example.com')
     })
 
+    it('successfully converts PublicClient to Provider', () => {
+      const publicClient = createPublicClient({
+        chain: arbitrumSepolia,
+        transport: http(),
+      }) as unknown as PublicClient
+
+      const provider = publicClientToProvider(publicClient)
+
+      expect(provider.network.chainId).to.equal(publicClient.chain!.id)
+      expect(provider.network.name).to.equal(publicClient.chain!.name)
+      expect(provider.connection.url).to.equal(
+        'https://sepolia-rollup.arbitrum.io/rpc'
+      )
+    })
+
+    it('successfully converts PublicClient to Provider (custom Transport)', () => {
+      const publicClient = createPublicClient({
+        chain: arbitrumSepolia,
+        transport: http('https://arbitrum-sepolia.gateway.tenderly.co'),
+      }) as unknown as PublicClient
+
+      const provider = publicClientToProvider(publicClient)
+
+      expect(provider.network.chainId).to.equal(publicClient.chain!.id)
+      expect(provider.network.name).to.equal(publicClient.chain!.name)
+      expect(provider.connection.url).to.equal(
+        'https://arbitrum-sepolia.gateway.tenderly.co'
+      )
+    })
+
     it('throws error when chain is undefined', () => {
       const publicClient = {
         chain: undefined,
+        transport: http(),
       } as unknown as PublicClient
 
       expect(() => publicClientToProvider(publicClient)).to.throw(
         '[publicClientToProvider] "chain" is undefined'
-      )
-    })
-  })
-
-  describe('transformPublicClientToProvider', () => {
-    it('transforms valid public client to provider', () => {
-      const transport = http('https://example.com')
-      const publicClient = createPublicClient({
-        chain: testChain,
-        transport,
-      }) as unknown as PublicClient
-
-      const provider = transformPublicClientToProvider(publicClient)
-      expect(provider).to.be.instanceOf(StaticJsonRpcProvider)
-    })
-
-    it('throws error for invalid provider', () => {
-      const invalidClient = {} as PublicClient
-
-      expect(() => transformPublicClientToProvider(invalidClient)).to.throw(
-        'Invalid provider'
       )
     })
   })
@@ -89,15 +97,15 @@ describe('viem compatibility', () => {
         logs: [
           {
             address: '0xcontract',
-            topics: ['0xtopic1'],
-            data: '0xdata',
-            blockNumber: BigInt(123),
-            transactionHash: '0xtx',
-            transactionIndex: 1,
             blockHash: '0xblock',
+            blockNumber: BigInt(123),
+            data: '0xdata',
             logIndex: 0,
             removed: false,
-          },
+            transactionHash: '0xtx',
+            transactionIndex: 1,
+            topics: [],
+          } as any,
         ],
         blockNumber: BigInt(123),
         cumulativeGasUsed: BigInt(42000),

@@ -2,21 +2,19 @@ import {
   Log as EthersLog,
   TransactionReceipt as EthersTransactionReceipt,
 } from '@ethersproject/abstract-provider'
-import { StaticJsonRpcProvider } from '@ethersproject/providers'
-import { BigNumber } from 'ethers'
+import { BigNumber, providers } from 'ethers'
 import {
-  Chain,
-  Client,
   PublicClient,
-  Transport,
   Log as ViemLog,
   TransactionReceipt as ViemTransactionReceipt,
 } from 'viem'
 
+interface HttpTransportConfig {
+  url: string
+}
+
 // based on https://wagmi.sh/react/ethers-adapters#reference-implementation
-export function publicClientToProvider<TChain extends Chain | undefined>(
-  publicClient: PublicClient<Transport, TChain>
-) {
+export function publicClientToProvider(publicClient: PublicClient) {
   const { chain } = publicClient
 
   if (typeof chain === 'undefined') {
@@ -29,30 +27,10 @@ export function publicClientToProvider<TChain extends Chain | undefined>(
     ensAddress: chain.contracts?.ensRegistry?.address,
   }
 
-  return new StaticJsonRpcProvider(chain.rpcUrls.default.http[0], network)
-}
+  const transport = publicClient.transport as unknown as HttpTransportConfig
+  const url = transport.url ?? chain.rpcUrls.default.http[0]
 
-function isPublicClient(object: any): object is PublicClient {
-  return (
-    object !== undefined &&
-    object !== null &&
-    typeof object === 'object' &&
-    'transport' in object &&
-    object.transport !== null &&
-    typeof object.transport === 'object' &&
-    'url' in object.transport &&
-    typeof object.transport.url === 'string' &&
-    object.type === 'publicClient'
-  )
-}
-
-export const transformPublicClientToProvider = (
-  provider: PublicClient | Client
-): StaticJsonRpcProvider => {
-  if (isPublicClient(provider)) {
-    return publicClientToProvider(provider)
-  }
-  throw new Error('Invalid provider')
+  return new providers.StaticJsonRpcProvider(url, network)
 }
 
 function viemLogToEthersLog(log: ViemLog): EthersLog {

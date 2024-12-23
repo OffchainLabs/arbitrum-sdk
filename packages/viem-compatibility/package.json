@@ -28,7 +28,8 @@
     "lint": "eslint .",
     "format": "prettier './**/*.{js,json,md,ts,yml}' '!./src/lib/abi' --write && yarn run lint --fix"
   },
-  "dependencies": {
-    "viem": "^2.21.55"
+  "peerDependencies": {
+    "ethers": "^5.0.0",
+    "viem": "^2.0.0"
   }
 }
