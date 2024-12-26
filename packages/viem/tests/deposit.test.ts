@@ -1,18 +1,18 @@
+import { registerCustomArbitrumNetwork } from '@arbitrum/sdk'
+import {
+  approveCustomFeeTokenWithViem,
+  approveParentCustomFeeToken,
+  fundParentCustomFeeToken,
+  getAmountInEnvironmentDecimals,
+  isArbitrumNetworkWithCustomFeeToken,
+  normalizeBalanceDiffByDecimals,
+} from '@arbitrum/sdk/tests/integration/custom-fee-token/customFeeTokenTestHelpers'
+import { fundParentSigner } from '@arbitrum/sdk/tests/integration/testHelpers'
+import { config, testSetup } from '@arbitrum/sdk/tests/testSetup'
 import { expect } from 'chai'
 import { createWalletClient, http, parseEther, type Chain } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { config, testSetup } from '../../sdk/tests/testSetup'
 import { createArbitrumClient } from '../src/createArbitrumClient'
-import { fundParentSigner } from '../../sdk/tests/integration/testHelpers'
-import { registerCustomArbitrumNetwork } from '../../sdk/src/lib/dataEntities/networks'
-import {
-  approveParentCustomFeeToken,
-  fundParentCustomFeeToken,
-  isArbitrumNetworkWithCustomFeeToken,
-  getAmountInEnvironmentDecimals,
-  normalizeBalanceDiffByDecimals,
-  approveCustomFeeTokenWithViem,
-} from '../../sdk/tests/integration/custom-fee-token/customFeeTokenTestHelpers'
 
 describe('deposit', function () {
   this.timeout(300000)

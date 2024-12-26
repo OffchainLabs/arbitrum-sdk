@@ -1,8 +1,12 @@
-import { EthBridger } from '../../sdk/src'
 import {
+  EthBridger,
   ParentToChildMessageStatus,
   ParentTransactionReceipt,
-} from '../../sdk/src'
+} from '@arbitrum/sdk'
+import {
+  publicClientToProvider,
+  viemTransactionReceiptToEthersTransactionReceipt,
+} from '@offchainlabs/ethers-viem-compat'
 import { BigNumber } from 'ethers'
 import {
   Account,
@@ -12,10 +16,6 @@ import {
   TransactionRequest,
   WalletClient,
 } from 'viem'
-import {
-  publicClientToProvider,
-  viemTransactionReceiptToEthersTransactionReceipt,
-} from '@offchainlabs/ethers-viem-compat'
 
 export type PrepareDepositEthParameters = {
   amount: bigint
