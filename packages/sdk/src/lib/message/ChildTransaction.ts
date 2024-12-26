@@ -191,7 +191,7 @@ export class ChildTransactionReceipt implements TransactionReceipt {
     contractTransaction.wait = async (_confirmations?: number) => {
       // we ignore the confirmations for now since child chain transactions shouldn't re-org
       // in future we should give users a more fine grained way to check the finality of
-      // an child chain transaction - check if a batch is on a parent chain, if an assertion has been made, and if
+      // a child chain transaction - check if a batch is on a parent chain, if an assertion has been made, and if
       // it has been confirmed.
       const result = await wait()
       return new ChildTransactionReceipt(result)
