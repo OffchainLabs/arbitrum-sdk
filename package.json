@@ -6,7 +6,7 @@
     "lint": "yarn workspaces run lint",
     "format": "yarn workspaces run format",
     "test:unit": "yarn workspaces run test:unit",
-    "test:integration": "yarn workspace @arbitrum/sdk test:integration",
+    "test:integration": "yarn workspaces run test:integration",
     "gen:abi": "yarn workspace @arbitrum/sdk gen:abi",
     "gen:network": "yarn workspace @arbitrum/sdk gen:network"
   },

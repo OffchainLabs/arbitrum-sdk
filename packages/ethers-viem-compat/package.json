@@ -25,6 +25,7 @@
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.json",
     "test:unit": "mocha -r ts-node/register 'tests/**/*.test.ts'",
+    "test:integration": "echo 'No integration tests for ethers-viem-compat'",
     "lint": "eslint .",
     "format": "prettier './**/*.{js,json,md,ts,yml}' '!./src/lib/abi' --write && yarn run lint --fix"
   },
