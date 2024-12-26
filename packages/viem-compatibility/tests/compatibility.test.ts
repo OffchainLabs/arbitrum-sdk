@@ -1,13 +1,8 @@
 import { expect } from 'chai'
 import { BigNumber, providers } from 'ethers'
-import {
-  createPublicClient,
-  defineChain,
-  http,
-  PublicClient,
-  TransactionReceipt,
-} from 'viem'
+import { createPublicClient, defineChain, http, TransactionReceipt } from 'viem'
 import { arbitrumSepolia, mainnet } from 'viem/chains'
+
 import {
   publicClientToProvider,
   viemTransactionReceiptToEthersTransactionReceipt,
@@ -32,7 +27,7 @@ describe('viem compatibility', () => {
       const publicClient = createPublicClient({
         chain: testChain,
         transport,
-      }) as unknown as PublicClient
+      })
 
       const provider = publicClientToProvider(publicClient)
       expect(provider).to.be.instanceOf(providers.StaticJsonRpcProvider)
@@ -45,7 +40,7 @@ describe('viem compatibility', () => {
       const publicClient = createPublicClient({
         chain: arbitrumSepolia,
         transport: http(),
-      }) as unknown as PublicClient
+      })
 
       const provider = publicClientToProvider(publicClient)
 
@@ -60,7 +55,7 @@ describe('viem compatibility', () => {
       const publicClient = createPublicClient({
         chain: arbitrumSepolia,
         transport: http('https://arbitrum-sepolia.gateway.tenderly.co'),
-      }) as unknown as PublicClient
+      })
 
       const provider = publicClientToProvider(publicClient)
 
@@ -72,10 +67,11 @@ describe('viem compatibility', () => {
     })
 
     it('throws error when chain is undefined', () => {
-      const publicClient = {
+      const transport = http('https://example.com')
+      const publicClient = createPublicClient({
         chain: undefined,
-        transport: http(),
-      } as unknown as PublicClient
+        transport,
+      })
 
       expect(() => publicClientToProvider(publicClient)).to.throw(
         '[publicClientToProvider] "chain" is undefined'
@@ -105,7 +101,7 @@ describe('viem compatibility', () => {
             transactionHash: '0xtx',
             transactionIndex: 1,
             topics: [],
-          } as any,
+          },
         ],
         blockNumber: BigInt(123),
         cumulativeGasUsed: BigInt(42000),
