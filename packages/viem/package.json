@@ -31,7 +31,7 @@
   },
   "dependencies": {
     "@arbitrum/sdk": "4.0.2",
-    "@arbitrum/viem-compatibility": "0.0.1"
+    "@offchainlabs/ethers-viem-compat": "0.0.1"
   },
   "peerDependencies": {
     "ethers": "^5.0.0",

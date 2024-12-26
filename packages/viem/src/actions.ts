@@ -15,7 +15,7 @@ import {
 import {
   publicClientToProvider,
   viemTransactionReceiptToEthersTransactionReceipt,
-} from '@arbitrum/viem-compatibility'
+} from '@offchainlabs/ethers-viem-compat'
 
 export type PrepareDepositEthParameters = {
   amount: bigint
