@@ -1,5 +1,5 @@
 {
-  "name": "@arbitrum/viem-compatibility",
+  "name": "@offchainlabs/ethers-viem-compat",
   "version": "0.0.1",
   "description": "Typescript library for ethers compatibility with viem",
   "author": "Offchain Labs, Inc.",
