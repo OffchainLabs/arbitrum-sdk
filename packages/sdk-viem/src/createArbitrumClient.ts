@@ -6,8 +6,10 @@ import {
   http,
 } from 'viem'
 import {
+  ArbitrumChildWalletActions,
   ArbitrumDepositActions,
   ArbitrumParentWalletActions,
+  arbitrumChildWalletActions,
   arbitrumParentClientActions,
   arbitrumParentWalletActions,
 } from './actions'
@@ -16,7 +18,7 @@ export type ArbitrumClients = {
   parentPublicClient: PublicClient
   childPublicClient: PublicClient & ArbitrumDepositActions
   parentWalletClient: WalletClient & ArbitrumParentWalletActions
-  childWalletClient?: WalletClient
+  childWalletClient?: WalletClient & ArbitrumChildWalletActions
 }
 
 export type CreateArbitrumClientParams = {
@@ -50,10 +52,14 @@ export function createArbitrumClient({
     arbitrumParentWalletActions(parentPublicClient, childPublicClient)
   )
 
+  const extendedChildWalletClient = childWalletClient?.extend(
+    arbitrumChildWalletActions(parentPublicClient, childPublicClient)
+  )
+
   return {
     parentPublicClient,
     childPublicClient,
     parentWalletClient: extendedParentWalletClient,
-    childWalletClient,
+    childWalletClient: extendedChildWalletClient,
   }
 }

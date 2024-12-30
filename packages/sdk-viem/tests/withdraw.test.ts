@@ -5,7 +5,6 @@ import {
   fundParentCustomFeeToken,
   getAmountInEnvironmentDecimals,
   isArbitrumNetworkWithCustomFeeToken,
-  normalizeBalanceDiffByDecimals,
 } from '@arbitrum/sdk/tests/integration/custom-fee-token/customFeeTokenTestHelpers'
 import { fundParentSigner } from '@arbitrum/sdk/tests/integration/testHelpers'
 import { config, testSetup } from '@arbitrum/sdk/tests/testSetup'
@@ -13,8 +12,9 @@ import { expect } from 'chai'
 import { createWalletClient, http, parseEther, type Chain } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { createArbitrumClient } from '../src/createArbitrumClient'
+import { executeConfirmedWithdrawal } from './helpers'
 
-describe.skip('deposit', function () {
+describe('withdraw', function () {
   this.timeout(300000)
 
   let localEthChain: Chain
@@ -37,11 +37,9 @@ describe.skip('deposit', function () {
     }
   })
 
-  it('deposits ETH from parent to child using deposit action', async function () {
+  it('withdraws ETH from child to parent using withdraw action', async function () {
     const parentAccount = privateKeyToAccount(`0x${config.ethKey}`)
-    const [depositAmount, tokenDecimals] = await getAmountInEnvironmentDecimals(
-      '0.01'
-    )
+    const [withdrawAmount] = await getAmountInEnvironmentDecimals('0.01')
 
     const baseParentWalletClient = createWalletClient({
       account: parentAccount,
@@ -55,48 +53,70 @@ describe.skip('deposit', function () {
       transport: http(config.arbUrl),
     })
 
-    const { childPublicClient, parentWalletClient } = createArbitrumClient({
-      parentChain: localEthChain,
-      childChain: localArbChain,
-      parentWalletClient: baseParentWalletClient,
-      childWalletClient: baseChildWalletClient,
+    const { parentPublicClient, childPublicClient, childWalletClient } =
+      createArbitrumClient({
+        parentChain: localEthChain,
+        childChain: localArbChain,
+        parentWalletClient: baseParentWalletClient,
+        childWalletClient: baseChildWalletClient,
+      })
+
+    const initialParentBalance = await parentPublicClient.getBalance({
+      address: parentAccount.address,
     })
 
-    const initialBalance = await childPublicClient.getBalance({
+    const initialChildBalance = await childPublicClient.getBalance({
       address: parentAccount.address,
     })
 
     if (isArbitrumNetworkWithCustomFeeToken()) {
       await approveCustomFeeTokenWithViem({
         parentAccount,
-        parentWalletClient,
+        parentWalletClient: baseParentWalletClient,
         chain: localEthChain,
       })
     }
 
-    const result = await parentWalletClient.depositEth({
-      amount: depositAmount,
+    // Start withdrawal
+    const result = await childWalletClient!.withdrawEth({
+      amount: withdrawAmount,
+      destinationAddress: parentAccount.address,
       account: parentAccount,
     })
 
     expect(result.status).to.equal('success')
+    expect(result.complete).to.equal(false)
 
-    const finalBalance = await childPublicClient.getBalance({
+    const receipt = await childPublicClient.waitForTransactionReceipt({
+      hash: result.hash,
+    })
+
+    const { status } = await executeConfirmedWithdrawal(
+      receipt,
+      childPublicClient,
+      parentPublicClient
+    )
+
+    expect(status).to.be.true
+
+    const finalParentBalance = await parentPublicClient.getBalance({
       address: parentAccount.address,
     })
 
-    const balanceDiff = finalBalance - initialBalance
-    const normalizedBalanceDiff = normalizeBalanceDiffByDecimals(
-      BigInt(balanceDiff),
-      tokenDecimals
-    )
+    const finalChildBalance = await childPublicClient.getBalance({
+      address: parentAccount.address,
+    })
 
-    expect(normalizedBalanceDiff.toString()).to.equal(depositAmount.toString())
+    // Check that balance decreased on child chain
+    expect(finalChildBalance < initialChildBalance).to.be.true
+
+    // Check that balance increased on parent chain
+    expect(finalParentBalance > initialParentBalance).to.be.true
   })
 
-  it('handles deposit failure gracefully', async function () {
+  it('handles withdrawal failure gracefully', async function () {
     const parentAccount = privateKeyToAccount(`0x${config.ethKey}`)
-    const depositAmount = parseEther('999999999')
+    const withdrawAmount = parseEther('999999999')
 
     const baseParentWalletClient = createWalletClient({
       account: parentAccount,
@@ -110,7 +130,7 @@ describe.skip('deposit', function () {
       transport: http(config.arbUrl),
     })
 
-    const { parentWalletClient } = createArbitrumClient({
+    const { childWalletClient } = createArbitrumClient({
       parentChain: localEthChain,
       childChain: localArbChain,
       parentWalletClient: baseParentWalletClient,
@@ -118,8 +138,9 @@ describe.skip('deposit', function () {
     })
 
     try {
-      await parentWalletClient.depositEth({
-        amount: depositAmount,
+      await childWalletClient!.withdrawEth({
+        amount: withdrawAmount,
+        destinationAddress: parentAccount.address,
         account: parentAccount,
       })
       expect.fail('Should have thrown an error')
