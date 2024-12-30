@@ -358,7 +358,7 @@ export class InboxTools {
     overrides?: Overrides
   ): Promise<
     // if a message delivered event was supplied then we'll definitely return
-    // a contract transaction or throw an error. If one isnt supplied then we may
+    // a contract transaction or throw an error. If one isn't supplied then we may
     // find no eligible events, and so return null
     T extends ForceInclusionParams
       ? ContractTransaction
