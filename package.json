@@ -2,13 +2,14 @@
   "private": true,
   "scripts": {
     "audit:ci": "audit-ci --config ./audit-ci.jsonc",
-    "build": "yarn workspace @arbitrum/sdk build",
+    "build": "yarn workspaces run build",
     "lint": "yarn workspaces run lint",
     "format": "yarn workspaces run format",
     "test:unit": "yarn workspaces run test:unit",
     "test:integration": "yarn workspaces run test:integration",
     "gen:abi": "yarn workspace @arbitrum/sdk gen:abi",
-    "gen:network": "yarn workspace @arbitrum/sdk gen:network"
+    "gen:network": "yarn workspace @arbitrum/sdk gen:network",
+    "clean": "yarn workspaces run clean"
   },
   "workspaces": {
     "packages": [
