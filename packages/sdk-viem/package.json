@@ -28,11 +28,12 @@
     "test:unit": "echo 'No unit tests for sdk-viem'",
     "test:integration": "mocha -r ts-node/register 'tests/**/*.test.ts'",
     "lint": "eslint .",
-    "format": "prettier './**/*.{js,json,md,ts,yml}' '!./src/lib/abi' --write && yarn run lint --fix"
+    "format": "prettier './**/*.{js,json,md,ts,yml}' '!./src/lib/abi' --write && yarn run lint --fix",
+    "clean": "rm -rf node_modules && rm -rf dist"
   },
   "dependencies": {
-    "@arbitrum/sdk": "4.0.2",
-    "@offchainlabs/ethers-viem-compat": "0.0.1"
+    "@arbitrum/sdk": "workspace:*",
+    "@offchainlabs/ethers-viem-compat": "workspace:*"
   },
   "peerDependencies": {
     "ethers": "^5.0.0",

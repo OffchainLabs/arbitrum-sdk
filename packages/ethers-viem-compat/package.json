@@ -27,7 +27,8 @@
     "test:unit": "mocha -r ts-node/register 'tests/**/*.test.ts'",
     "test:integration": "echo 'No integration tests for ethers-viem-compat'",
     "lint": "eslint .",
-    "format": "prettier './**/*.{js,json,md,ts,yml}' '!./src/lib/abi' --write && yarn run lint --fix"
+    "format": "prettier './**/*.{js,json,md,ts,yml}' '!./src/lib/abi' --write && yarn run lint --fix",
+    "clean": "rm -rf node_modules && rm -rf dist"
   },
   "peerDependencies": {
     "ethers": "^5.0.0",
