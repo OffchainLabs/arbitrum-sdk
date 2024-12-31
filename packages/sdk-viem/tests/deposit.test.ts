@@ -14,7 +14,7 @@ import { createWalletClient, http, parseEther, type Chain } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { createArbitrumClient } from '../src/createArbitrumClient'
 
-describe.skip('deposit', function () {
+describe('deposit', function () {
   this.timeout(300000)
 
   let localEthChain: Chain

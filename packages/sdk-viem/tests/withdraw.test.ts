@@ -5,6 +5,7 @@ import {
   fundParentCustomFeeToken,
   getAmountInEnvironmentDecimals,
   isArbitrumNetworkWithCustomFeeToken,
+  normalizeBalanceDiffByDecimals,
 } from '@arbitrum/sdk/tests/integration/custom-fee-token/customFeeTokenTestHelpers'
 import { fundParentSigner } from '@arbitrum/sdk/tests/integration/testHelpers'
 import { config, testSetup } from '@arbitrum/sdk/tests/testSetup'
@@ -39,7 +40,8 @@ describe('withdraw', function () {
 
   it('withdraws ETH from child to parent using withdraw action', async function () {
     const parentAccount = privateKeyToAccount(`0x${config.ethKey}`)
-    const [withdrawAmount] = await getAmountInEnvironmentDecimals('0.01')
+    const [withdrawAmount, tokenDecimals] =
+      await getAmountInEnvironmentDecimals('0.01')
 
     const baseParentWalletClient = createWalletClient({
       account: parentAccount,
@@ -62,11 +64,11 @@ describe('withdraw', function () {
       })
 
     const initialParentBalance = await parentPublicClient.getBalance({
-      address: parentAccount.address,
+      address: parentAccount.address as `0x${string}`,
     })
 
     const initialChildBalance = await childPublicClient.getBalance({
-      address: parentAccount.address,
+      address: parentAccount.address as `0x${string}`,
     })
 
     if (isArbitrumNetworkWithCustomFeeToken()) {
@@ -100,18 +102,28 @@ describe('withdraw', function () {
     expect(status).to.be.true
 
     const finalParentBalance = await parentPublicClient.getBalance({
-      address: parentAccount.address,
+      address: parentAccount.address as `0x${string}`,
     })
 
     const finalChildBalance = await childPublicClient.getBalance({
-      address: parentAccount.address,
+      address: parentAccount.address as `0x${string}`,
     })
 
     // Check that balance decreased on child chain
-    expect(finalChildBalance < initialChildBalance).to.be.true
+    const childBalanceDiff = finalChildBalance - initialChildBalance
+    const normalizedChildBalanceDiff = normalizeBalanceDiffByDecimals(
+      BigInt(childBalanceDiff),
+      tokenDecimals
+    )
+    expect(normalizedChildBalanceDiff < BigInt(0)).to.be.true
 
     // Check that balance increased on parent chain
-    expect(finalParentBalance > initialParentBalance).to.be.true
+    const parentBalanceDiff = finalParentBalance - initialParentBalance
+    const normalizedParentBalanceDiff = normalizeBalanceDiffByDecimals(
+      BigInt(parentBalanceDiff),
+      tokenDecimals
+    )
+    expect(normalizedParentBalanceDiff >= withdrawAmount).to.be.true
   })
 
   it('handles withdrawal failure gracefully', async function () {
