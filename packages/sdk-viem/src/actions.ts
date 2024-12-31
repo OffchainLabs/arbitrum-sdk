@@ -1,4 +1,6 @@
 import {
+  ChildToParentMessageStatus,
+  ChildTransactionReceipt,
   EthBridger,
   ParentToChildMessageStatus,
   ParentTransactionReceipt,
@@ -17,14 +19,10 @@ import {
   WalletClient,
 } from 'viem'
 
-export type PrepareDepositEthParameters = {
-  amount: bigint
-  account: Account | Address
-}
+export const DEFAULT_CONFIRMATIONS = 1
+export const DEFAULT_TIMEOUT = 1000 * 60 * 5 // 5 minutes
 
-const DEFAULT_CONFIRMATIONS = 1
-const DEFAULT_TIMEOUT = 1000 * 60 * 5 // 5 minutes
-
+// Cross-chain transaction types
 export type WaitForCrossChainTxParameters = {
   hash: Hash
   timeout?: number
@@ -45,9 +43,13 @@ export type CrossChainTransactionStatus = {
   hash: Hash
 }
 
-export type DepositEthParameters = {
+// Deposit types
+export type PrepareDepositEthParameters = {
   amount: bigint
   account: Account | Address
+}
+
+export type DepositEthParameters = PrepareDepositEthParameters & {
   confirmations?: number
   timeout?: number
 }
@@ -58,6 +60,32 @@ export type ArbitrumDepositActions = {
   ) => Promise<TransactionRequest>
 }
 
+// Withdraw types
+export type PrepareWithdrawEthParameters = {
+  amount: bigint
+  destinationAddress: Address
+  account: Account | Address
+}
+
+export type WithdrawEthParameters = PrepareWithdrawEthParameters & {
+  confirmations?: number
+  timeout?: number
+}
+
+export type ArbitrumChildWalletActions = {
+  prepareWithdrawEthTransaction: (
+    params: PrepareWithdrawEthParameters
+  ) => Promise<{
+    request: TransactionRequest
+    l1GasEstimate: bigint
+  }>
+
+  withdrawEth: (
+    params: WithdrawEthParameters
+  ) => Promise<CrossChainTransactionStatus>
+}
+
+// Parent wallet types
 export type ArbitrumParentWalletActions = {
   waitForCrossChainTransaction: (
     params: WaitForCrossChainTxParameters
@@ -72,25 +100,8 @@ export type ArbitrumParentWalletActions = {
   ) => Promise<CrossChainTransactionStatus>
 }
 
-async function prepareDepositEthTransaction(
-  client: PublicClient,
-  { amount, account }: PrepareDepositEthParameters
-): Promise<TransactionRequest> {
-  const provider = publicClientToProvider(client)
-  const ethBridger = await EthBridger.fromProvider(provider)
-  const request = await ethBridger.getDepositRequest({
-    amount: BigNumber.from(amount),
-    from: typeof account === 'string' ? account : account.address,
-  })
-
-  return {
-    to: request.txRequest.to as `0x${string}`,
-    value: BigNumber.from(request.txRequest.value).toBigInt(),
-    data: request.txRequest.data as `0x${string}`,
-  }
-}
-
-async function waitForCrossChainTransaction(
+// Cross-chain transaction functions
+export async function waitForCrossChainTransaction(
   parentClient: PublicClient,
   childClient: PublicClient,
   {
@@ -150,7 +161,7 @@ async function waitForCrossChainTransaction(
   throw new Error('No cross chain message found in transaction')
 }
 
-async function sendCrossChainTransaction(
+export async function sendCrossChainTransaction(
   parentClient: PublicClient,
   childClient: PublicClient,
   walletClient: WalletClient,
@@ -164,6 +175,7 @@ async function sendCrossChainTransaction(
     ...request,
     chain: walletClient.chain,
     account: walletClient.account as Account,
+    kzg: undefined,
   })
 
   return waitForCrossChainTransaction(parentClient, childClient, {
@@ -173,7 +185,26 @@ async function sendCrossChainTransaction(
   })
 }
 
-async function depositEth(
+// Deposit functions
+export async function prepareDepositEthTransaction(
+  client: PublicClient,
+  { amount, account }: PrepareDepositEthParameters
+): Promise<TransactionRequest> {
+  const provider = publicClientToProvider(client)
+  const ethBridger = await EthBridger.fromProvider(provider)
+  const request = await ethBridger.getDepositRequest({
+    amount: BigNumber.from(amount),
+    from: typeof account === 'string' ? account : account.address,
+  })
+
+  return {
+    to: request.txRequest.to as `0x${string}`,
+    value: BigNumber.from(request.txRequest.value).toBigInt(),
+    data: request.txRequest.data as `0x${string}`,
+  }
+}
+
+export async function depositEth(
   parentClient: PublicClient,
   childClient: PublicClient,
   walletClient: WalletClient,
@@ -196,6 +227,97 @@ async function depositEth(
   })
 }
 
+// Withdraw functions
+export async function prepareWithdrawEthTransaction(
+  client: PublicClient,
+  { amount, destinationAddress, account }: PrepareWithdrawEthParameters
+): Promise<{
+  request: TransactionRequest
+  l1GasEstimate: bigint
+}> {
+  const provider = publicClientToProvider(client)
+  const ethBridger = await EthBridger.fromProvider(provider)
+  const request = await ethBridger.getWithdrawalRequest({
+    amount: BigNumber.from(amount),
+    destinationAddress,
+    from: typeof account === 'string' ? account : account.address,
+  })
+
+  const l1GasEstimate = await request.estimateParentGasLimit(provider)
+
+  return {
+    request: {
+      to: request.txRequest.to as `0x${string}`,
+      value: BigNumber.from(request.txRequest.value).toBigInt(),
+      data: request.txRequest.data as `0x${string}`,
+    },
+    l1GasEstimate: l1GasEstimate.toBigInt(),
+  }
+}
+
+export async function withdrawEth(
+  parentClient: PublicClient,
+  childClient: PublicClient,
+  walletClient: WalletClient,
+  {
+    amount,
+    destinationAddress,
+    account,
+    confirmations = DEFAULT_CONFIRMATIONS,
+  }: WithdrawEthParameters
+): Promise<CrossChainTransactionStatus> {
+  const { request } = await prepareWithdrawEthTransaction(childClient, {
+    amount,
+    destinationAddress,
+    account,
+  })
+
+  const hash = await walletClient.sendTransaction({
+    ...request,
+    chain: walletClient.chain,
+    account: walletClient.account as Account,
+    kzg: undefined,
+  })
+
+  const childProvider = publicClientToProvider(childClient)
+  const parentProvider = publicClientToProvider(parentClient)
+
+  const viemReceipt = await childClient.waitForTransactionReceipt({
+    hash,
+    confirmations,
+  })
+
+  const ethersReceipt =
+    viemTransactionReceiptToEthersTransactionReceipt(viemReceipt)
+
+  const childReceipt = new ChildTransactionReceipt(ethersReceipt)
+
+  const messages = await childReceipt.getChildToParentMessages(parentProvider)
+  if (messages.length === 0) {
+    return {
+      status: 'failed',
+      complete: false,
+      hash,
+      message: undefined,
+      childTxReceipt: undefined,
+    }
+  }
+
+  const message = messages[0]
+  const messageStatus = await message.status(childProvider)
+
+  // For withdrawals, return early since it needs to wait for challenge period
+  const isUnconfirmed = messageStatus === ChildToParentMessageStatus.UNCONFIRMED
+  return {
+    status: isUnconfirmed ? 'success' : 'failed',
+    complete: false, // Not complete until executed after challenge period
+    message,
+    childTxReceipt: ethersReceipt,
+    hash,
+  }
+}
+
+// Client action creators
 export function arbitrumParentClientActions() {
   return (client: PublicClient): ArbitrumDepositActions => ({
     prepareDepositEthTransaction: params =>
@@ -219,5 +341,17 @@ export function arbitrumParentWalletActions(
       ),
     depositEth: (params: DepositEthParameters) =>
       depositEth(parentClient, childClient, walletClient, params),
+  })
+}
+
+export function arbitrumChildWalletActions(
+  parentClient: PublicClient,
+  childClient: PublicClient
+) {
+  return (walletClient: WalletClient): ArbitrumChildWalletActions => ({
+    prepareWithdrawEthTransaction: (params: PrepareWithdrawEthParameters) =>
+      prepareWithdrawEthTransaction(childClient, params),
+    withdrawEth: (params: WithdrawEthParameters) =>
+      withdrawEth(parentClient, childClient, walletClient, params),
   })
 }
