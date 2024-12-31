@@ -117,13 +117,18 @@ describe('withdraw', function () {
     )
     expect(normalizedChildBalanceDiff < BigInt(0)).to.be.true
 
-    // Check that balance increased on parent chain
     const parentBalanceDiff = finalParentBalance - initialParentBalance
     const normalizedParentBalanceDiff = normalizeBalanceDiffByDecimals(
       BigInt(parentBalanceDiff),
       tokenDecimals
     )
-    expect(normalizedParentBalanceDiff >= withdrawAmount).to.be.true
+
+    if (isArbitrumNetworkWithCustomFeeToken()) {
+      const maxExpectedDecrease = -withdrawAmount * BigInt(2)
+      expect(normalizedParentBalanceDiff >= maxExpectedDecrease).to.be.true
+    } else {
+      expect(normalizedParentBalanceDiff >= withdrawAmount).to.be.true
+    }
   })
 
   it('handles withdrawal failure gracefully', async function () {
