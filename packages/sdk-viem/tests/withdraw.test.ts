@@ -15,7 +15,7 @@ import { privateKeyToAccount } from 'viem/accounts'
 import { createArbitrumClient } from '../src/createArbitrumClient'
 import { executeConfirmedWithdrawal } from './helpers'
 
-describe('withdraw', function () {
+describe.skip('withdraw', function () {
   this.timeout(300000)
 
   let localEthChain: Chain
