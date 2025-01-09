@@ -72,7 +72,7 @@ export type ArbitrumParentWalletActions = {
   ) => Promise<CrossChainTransactionStatus>
 }
 
-async function prepareDepositEthTransaction(
+export async function prepareDepositEthTransaction(
   client: PublicClient,
   { amount, account }: PrepareDepositEthParameters
 ): Promise<TransactionRequest> {
@@ -84,13 +84,13 @@ async function prepareDepositEthTransaction(
   })
 
   return {
-    to: request.txRequest.to as `0x${string}`,
+    to: request.txRequest.to as Address,
     value: BigNumber.from(request.txRequest.value).toBigInt(),
-    data: request.txRequest.data as `0x${string}`,
+    data: request.txRequest.data as Address,
   }
 }
 
-async function waitForCrossChainTransaction(
+export async function waitForCrossChainTransaction(
   parentClient: PublicClient,
   childClient: PublicClient,
   {
@@ -150,7 +150,7 @@ async function waitForCrossChainTransaction(
   throw new Error('No cross chain message found in transaction')
 }
 
-async function sendCrossChainTransaction(
+export async function sendCrossChainTransaction(
   parentClient: PublicClient,
   childClient: PublicClient,
   walletClient: WalletClient,
@@ -173,7 +173,7 @@ async function sendCrossChainTransaction(
   })
 }
 
-async function depositEth(
+export async function depositEth(
   parentClient: PublicClient,
   childClient: PublicClient,
   walletClient: WalletClient,
