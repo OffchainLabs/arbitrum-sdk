@@ -35,7 +35,7 @@ describe('deposit', function () {
   it('deposits ETH from parent to child using deposit action', async function () {
     const [depositAmount, tokenDecimals] = await getAmountInEnvironmentDecimals(
       '0.01'
-    ) 
+    )
 
     const { childPublicClient, parentWalletClient } = setup
 

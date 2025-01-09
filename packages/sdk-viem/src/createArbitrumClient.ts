@@ -7,7 +7,7 @@ import {
 } from 'viem'
 import {
   ArbitrumParentWalletActions,
-  arbitrumParentWalletActions
+  arbitrumParentWalletActions,
 } from './actions'
 
 export type ArbitrumClients = {
