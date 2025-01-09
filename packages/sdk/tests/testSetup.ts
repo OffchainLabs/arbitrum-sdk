@@ -41,6 +41,7 @@ import {
 } from './integration/custom-fee-token/customFeeTokenTestHelpers'
 import { fundParentSigner } from './integration/testHelpers'
 import { Chain } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
 
 loadEnv()
 
@@ -88,6 +89,8 @@ export const testSetup = async (): Promise<{
   childDeployer: Signer
   localEthChain: Chain
   localArbChain: Chain
+  parentAccount: ReturnType<typeof privateKeyToAccount>
+  childAccount: ReturnType<typeof privateKeyToAccount>
 }> => {
   const ethProvider = new JsonRpcProvider(config.ethUrl)
   const arbProvider = new JsonRpcProvider(config.arbUrl)
@@ -138,6 +141,9 @@ export const testSetup = async (): Promise<{
   const ethBridger = new EthBridger(setChildChain)
   const inboxTools = new InboxTools(parentSigner, setChildChain)
 
+  const parentAccount = privateKeyToAccount(seed.privateKey as `0x${string}`)
+  const childAccount = privateKeyToAccount(seed.privateKey as `0x${string}`)
+
   if (isArbitrumNetworkWithCustomFeeToken()) {
     await fundParentSigner(parentSigner)
     await fundParentCustomFeeToken(parentSigner)
@@ -158,6 +164,8 @@ export const testSetup = async (): Promise<{
     childDeployer,
     localEthChain,
     localArbChain,
+    parentAccount,
+    childAccount,
   }
 }
 
