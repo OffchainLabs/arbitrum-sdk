@@ -1,3 +1,4 @@
+import { registerCustomArbitrumNetwork } from '@arbitrum/sdk'
 import {
   approveParentCustomFeeToken,
   fundParentCustomFeeToken,
@@ -20,6 +21,7 @@ describe('deposit', function () {
 
   before(async function () {
     setup = await testSetup()
+    registerCustomArbitrumNetwork(setup.childChain)
   })
 
   beforeEach(async function () {
@@ -33,7 +35,7 @@ describe('deposit', function () {
   it('deposits ETH from parent to child using deposit action', async function () {
     const [depositAmount, tokenDecimals] = await getAmountInEnvironmentDecimals(
       '0.01'
-    )
+    ) 
 
     const { childPublicClient, parentWalletClient } = setup
 
