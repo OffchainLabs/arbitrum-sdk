@@ -1,7 +1,4 @@
-import {
-  Erc20Bridger,
-  registerCustomArbitrumNetwork
-} from '@arbitrum/sdk'
+import { Erc20Bridger, registerCustomArbitrumNetwork } from '@arbitrum/sdk'
 import { ERC20__factory } from '@arbitrum/sdk/src/lib/abi/factories/ERC20__factory'
 import { TestERC20__factory } from '@arbitrum/sdk/src/lib/abi/factories/TestERC20__factory'
 import { TestERC20 } from '@arbitrum/sdk/src/lib/abi/TestERC20'
@@ -12,15 +9,14 @@ import {
   isArbitrumNetworkWithCustomFeeToken,
 } from '@arbitrum/sdk/tests/integration/custom-fee-token/customFeeTokenTestHelpers'
 import {
-  fundParentSigner
+  fundChildSigner,
+  fundParentSigner,
 } from '@arbitrum/sdk/tests/integration/testHelpers'
-import { config, testSetup } from '@arbitrum/sdk/tests/testSetup'
 import { Signer } from '@ethersproject/abstract-signer'
 import { expect } from 'chai'
 import { BigNumber } from 'ethers'
-import { createWalletClient, http, type Chain, type PublicClient } from 'viem'
-import { privateKeyToAccount } from 'viem/accounts'
-import { createArbitrumClient } from '../src/createArbitrumClient'
+import { type PublicClient } from 'viem'
+import { testSetup } from './testSetup'
 
 async function deposit({
   parentTokenAddress,
@@ -109,36 +105,21 @@ async function deposit({
 describe('deposit erc20', function () {
   this.timeout(300000)
 
-  let localEthChain: Chain
-  let localArbChain: Chain
   let setup: Awaited<ReturnType<typeof testSetup>>
-  let parentTestToken: TestERC20
-  let childTestToken: TestERC20
-  let parentAccount: ReturnType<typeof privateKeyToAccount>
+  let testToken: TestERC20
   let erc20Bridger: Erc20Bridger
 
   before('init', async () => {
     setup = await testSetup()
-    localEthChain = setup.localEthChain
-    localArbChain = setup.localArbChain
-    parentAccount = setup.parentAccount
     registerCustomArbitrumNetwork(setup.childChain)
 
-    // Fund the parent signer before deploying contracts
     await fundParentSigner(setup.parentSigner)
+    await fundChildSigner(setup.childSigner)
 
     const deployErc20 = new TestERC20__factory().connect(setup.parentSigner)
-    parentTestToken = await deployErc20.deploy()
-    await parentTestToken.deployed()
-    await (await parentTestToken.mint()).wait()
-
-    // Fund the child signer before deploying child contract
-    await fundParentSigner(setup.childSigner)
-
-    // const deployChildErc20 = new TestERC20__factory().connect(setup.childSigner)
-    // childTestToken = await deployChildErc20.deploy()
-    // await childTestToken.deployed()
-    // await (await childTestToken.mint()).wait()
+    testToken = await deployErc20.deploy()
+    await testToken.deployed()
+    await (await testToken.mint()).wait()
 
     erc20Bridger = await Erc20Bridger.fromProvider(setup.childProvider)
   })
@@ -158,33 +139,14 @@ describe('deposit erc20', function () {
     const destinationAddress =
       '0x1234567890123456789012345678901234567890' as const
 
-    const baseParentWalletClient = createWalletClient({
-      account: parentAccount,
-      chain: localEthChain,
-      transport: http(config.ethUrl),
-    })
+    const { parentAccount, parentWalletClient } = setup
 
-    const baseChildWalletClient = createWalletClient({
-      account: parentAccount,
-      chain: localArbChain,
-      transport: http(config.arbUrl),
-    })
-
-    const { parentWalletClient } = createArbitrumClient({
-      parentChain: localEthChain,
-      childChain: localArbChain,
-      parentWalletClient: baseParentWalletClient,
-      childWalletClient: baseChildWalletClient,
-    })
-
-    const initialBalance = await parentTestToken.balanceOf(
-      parentAccount.address
-    )
+    const initialBalance = await testToken.balanceOf(parentAccount.address)
 
     // Use the local deposit function
     await deposit({
       depositAmount: BigNumber.from(depositAmount),
-      parentTokenAddress: parentTestToken.address,
+      parentTokenAddress: testToken.address,
       erc20Bridger: erc20Bridger as any,
       parentSigner: setup.parentSigner,
       childSigner: setup.childSigner,
@@ -192,7 +154,7 @@ describe('deposit erc20', function () {
       parentWalletClient: parentWalletClient as any,
     })
 
-    const finalBalance = await parentTestToken.balanceOf(parentAccount.address)
+    const finalBalance = await testToken.balanceOf(parentAccount.address)
     expect(finalBalance.toString()).to.equal(
       (BigInt(initialBalance.toString()) - depositAmount).toString()
     )
@@ -200,30 +162,12 @@ describe('deposit erc20', function () {
 
   it('handles deposit failure gracefully', async function () {
     const [depositAmount] = await getAmountInEnvironmentDecimals('0.01')
-
-    const baseParentWalletClient = createWalletClient({
-      account: parentAccount,
-      chain: localEthChain,
-      transport: http(config.ethUrl),
-    })
-
-    const baseChildWalletClient = createWalletClient({
-      account: parentAccount,
-      chain: localArbChain,
-      transport: http(config.arbUrl),
-    })
-
-    const { parentWalletClient } = createArbitrumClient({
-      parentChain: localEthChain,
-      childChain: localArbChain,
-      parentWalletClient: baseParentWalletClient,
-      childWalletClient: baseChildWalletClient,
-    })
+    const { parentWalletClient } = setup
 
     try {
       await deposit({
         depositAmount: BigNumber.from(depositAmount),
-        parentTokenAddress: parentTestToken.address,
+        parentTokenAddress: testToken.address,
         erc20Bridger,
         parentSigner: setup.parentSigner,
         childSigner: setup.childSigner,
