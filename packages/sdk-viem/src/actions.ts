@@ -100,7 +100,6 @@ export type ArbitrumParentWalletActions = {
   ) => Promise<CrossChainTransactionStatus>
 }
 
-
 export async function waitForCrossChainTransaction(
   parentClient: PublicClient,
   childClient: PublicClient,
