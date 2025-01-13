@@ -5,6 +5,7 @@ import {
   Erc20Bridger,
   ParentToChildMessageStatus,
   ParentTransactionReceipt,
+  ParentToChildTransactionRequest,
 } from '@arbitrum/sdk'
 import {
   publicClientToProvider,
@@ -31,7 +32,7 @@ export type WaitForCrossChainTxParameters = {
 }
 
 export type SendCrossChainTransactionParameters = {
-  request: TransactionRequest
+  request: TransactionRequest | ParentToChildTransactionRequest
   timeout?: number
   confirmations?: number
 }
@@ -62,6 +63,26 @@ export type PrepareDepositErc20Parameters = {
   account: Account | Address
   destinationAddress?: string
   childClient: PublicClient
+  retryableGasOverrides?: {
+    gasLimit?: {
+      base?: BigNumber
+      percentIncrease?: BigNumber
+      min?: BigNumber
+    }
+    maxSubmissionFee?: {
+      base?: BigNumber
+      percentIncrease?: BigNumber
+    }
+    maxFeePerGas?: {
+      base?: BigNumber
+      percentIncrease?: BigNumber
+    }
+    deposit?: {
+      base?: BigNumber
+    }
+  }
+  maxSubmissionCost?: BigNumber
+  excessFeeRefundAddress?: string
 }
 
 export type DepositErc20Parameters = PrepareDepositErc20Parameters & {
@@ -78,6 +99,22 @@ export type PrepareApproveErc20Parameters = {
 
 export type ApproveErc20Parameters = Omit<
   PrepareApproveErc20Parameters,
+  '_account'
+> & {
+  account: Account | Address
+  confirmations?: number
+  timeout?: number
+}
+
+// ERC20 Gas Token Approval types
+export type PrepareApproveGasTokenParameters = {
+  erc20ParentAddress: string
+  amount?: bigint
+  _account: Account | Address
+}
+
+export type ApproveGasTokenParameters = Omit<
+  PrepareApproveGasTokenParameters,
   '_account'
 > & {
   account: Account | Address
@@ -142,6 +179,10 @@ export type ArbitrumParentWalletActions = {
 
   approveErc20: (
     params: ApproveErc20Parameters
+  ) => Promise<CrossChainTransactionStatus>
+
+  approveGasToken: (
+    params: ApproveGasTokenParameters
   ) => Promise<CrossChainTransactionStatus>
 }
 
@@ -280,24 +321,37 @@ export async function prepareDepositErc20Transaction(
     account,
     destinationAddress,
     childClient,
+    retryableGasOverrides,
+    maxSubmissionCost,
+    excessFeeRefundAddress,
   }: PrepareDepositErc20Parameters
 ): Promise<TransactionRequest> {
   const childProvider = publicClientToProvider(childClient)
   const parentProvider = publicClientToProvider(parentClient)
   const erc20Bridger = await Erc20Bridger.fromProvider(childProvider)
-  const request = await erc20Bridger.getDepositRequest({
-    amount: BigNumber.from(amount),
-    erc20ParentAddress,
-    from: typeof account === 'string' ? account : account.address,
-    destinationAddress,
-    childProvider: childProvider,
-    parentProvider: parentProvider,
-  })
 
+  const depositParams = {
+    parentProvider,
+    childProvider,
+    erc20ParentAddress,
+    amount: BigNumber.from(amount),
+    maxSubmissionCost,
+    excessFeeRefundAddress:
+      excessFeeRefundAddress ||
+      (typeof account === 'string' ? account : account.address),
+    destinationAddress:
+      destinationAddress ||
+      (typeof account === 'string' ? account : account.address),
+    retryableGasOverrides,
+    from: typeof account === 'string' ? account : account.address,
+  }
+
+  const request = await erc20Bridger.getDepositRequest(depositParams)
   return {
     to: request.txRequest.to as `0x${string}`,
     value: BigNumber.from(request.txRequest.value).toBigInt(),
     data: request.txRequest.data as `0x${string}`,
+    from: request.txRequest.from as `0x${string}`,
   }
 }
 
@@ -312,14 +366,81 @@ export async function depositErc20(
     destinationAddress,
     confirmations = DEFAULT_CONFIRMATIONS,
     timeout = DEFAULT_TIMEOUT,
+    retryableGasOverrides,
+    maxSubmissionCost,
+    excessFeeRefundAddress,
   }: DepositErc20Parameters
 ): Promise<CrossChainTransactionStatus> {
+  const childProvider = publicClientToProvider(childClient)
+  const parentProvider = publicClientToProvider(parentClient)
+  const erc20Bridger = await Erc20Bridger.fromProvider(childProvider)
+
+  // Validate token registration
+  const isRegistered = await erc20Bridger.isRegistered({
+    erc20ParentAddress,
+    parentProvider,
+    childProvider,
+  })
+
+  if (!isRegistered) {
+    const parentChainId = (await parentProvider.getNetwork()).chainId
+    throw new Error(
+      `Token ${erc20ParentAddress} on chain ${parentChainId} is not registered on the gateways`
+    )
+  }
+
+  // Get gateway address for allowance check
+  const expectedParentGatewayAddress = await erc20Bridger.getParentGatewayAddress(
+    erc20ParentAddress,
+    parentProvider
+  )
+
+  // Check token allowance
+  const parentToken = erc20Bridger.getParentTokenContract(
+    parentProvider,
+    erc20ParentAddress
+  )
+  const senderAddress = typeof account === 'string' ? account : account.address
+  const allowance = await parentToken.allowance(
+    senderAddress,
+    expectedParentGatewayAddress
+  )
+
+  if (allowance.lt(BigNumber.from(amount))) {
+    throw new Error(
+      'Insufficient token allowance. Please approve tokens before depositing.'
+    )
+  }
+
+  // Check if using custom fee token
+  const nativeToken = erc20Bridger.nativeToken
+  if (nativeToken) {
+    const feeTokenContract = erc20Bridger.getParentTokenContract(
+      parentProvider,
+      nativeToken
+    )
+    const feeTokenAllowance = await feeTokenContract.allowance(
+      senderAddress,
+      expectedParentGatewayAddress
+    )
+
+    if (feeTokenAllowance.lt(Erc20Bridger.MAX_APPROVAL)) {
+      throw new Error(
+        'Insufficient gas token allowance. Please approve gas token before depositing.'
+      )
+    }
+  }
+
+  // Prepare and send the deposit transaction
   const request = await prepareDepositErc20Transaction(parentClient, {
     amount,
     erc20ParentAddress,
     account,
     destinationAddress,
     childClient,
+    retryableGasOverrides,
+    maxSubmissionCost,
+    excessFeeRefundAddress,
   })
 
   return sendCrossChainTransaction(parentClient, childClient, walletClient, {
@@ -328,6 +449,8 @@ export async function depositErc20(
     timeout,
   })
 }
+
+
 
 // Approve ERC20 functions
 export async function prepareApproveErc20Transaction(
@@ -364,6 +487,75 @@ export async function approveErc20(
   }: ApproveErc20Parameters
 ): Promise<CrossChainTransactionStatus> {
   const request = await prepareApproveErc20Transaction(
+    parentClient,
+    childClient,
+    {
+      erc20ParentAddress,
+      amount,
+      _account: account,
+    }
+  )
+
+  const hash = await walletClient.sendTransaction({
+    ...request,
+    chain: walletClient.chain,
+    account: walletClient.account as Account,
+    kzg: undefined,
+  })
+
+  const receipt = await parentClient.waitForTransactionReceipt({
+    hash,
+    confirmations,
+    timeout,
+  })
+
+  return {
+    status: receipt.status === 'success' ? 'success' : 'failed',
+    complete: true,
+    hash,
+  }
+}
+
+// Approve Gas Token functions
+export async function prepareApproveGasTokenTransaction(
+  parentClient: PublicClient,
+  childClient: PublicClient,
+  { erc20ParentAddress, amount, _account }: PrepareApproveGasTokenParameters
+): Promise<TransactionRequest> {
+  const childProvider = publicClientToProvider(childClient)
+  const parentProvider = publicClientToProvider(parentClient)
+  const erc20Bridger = await Erc20Bridger.fromProvider(childProvider)
+
+  if (!erc20Bridger.nativeToken) {
+    throw new Error('chain uses ETH as its native/gas token')
+  }
+
+  const request = await erc20Bridger.getApproveGasTokenRequest({
+    erc20ParentAddress,
+    amount: amount ? BigNumber.from(amount) : undefined,
+    parentProvider,
+  })
+
+  return {
+    to: request.to as `0x${string}`,
+    value: BigNumber.from(request.value).toBigInt(),
+    data: request.data as `0x${string}`,
+  }
+}
+
+export async function approveGasToken(
+  parentClient: PublicClient,
+  childClient: PublicClient,
+  walletClient: WalletClient,
+  {
+    erc20ParentAddress,
+    amount,
+    account,
+    confirmations = DEFAULT_CONFIRMATIONS,
+    timeout = DEFAULT_TIMEOUT,
+  }: ApproveGasTokenParameters
+): Promise<CrossChainTransactionStatus> {
+  const request = await prepareApproveGasTokenTransaction(
     parentClient,
     childClient,
     {
@@ -515,6 +707,8 @@ export function arbitrumParentWalletActions(
       depositErc20(parentClient, childClient, walletClient, params),
     approveErc20: (params: ApproveErc20Parameters) =>
       approveErc20(parentClient, childClient, walletClient, params),
+    approveGasToken: (params: ApproveGasTokenParameters) =>
+      approveGasToken(parentClient, childClient, walletClient, params),
   })
 }
 
