@@ -19,7 +19,7 @@ export type ViemTestSetup = {
   childWalletClient: ArbitrumClients['childWalletClient']
   childChain: Awaited<ReturnType<typeof sdkTestSetup>>['childChain']
   parentSigner: Awaited<ReturnType<typeof sdkTestSetup>>['parentSigner']
-}
+} & Awaited<ReturnType<typeof sdkTestSetup>>
 
 function generateViemChain(
   networkData: {

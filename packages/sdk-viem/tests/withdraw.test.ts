@@ -6,7 +6,10 @@ import {
   isArbitrumNetworkWithCustomFeeToken,
   normalizeBalanceDiffByDecimals,
 } from '@arbitrum/sdk/tests/integration/custom-fee-token/customFeeTokenTestHelpers'
-import { fundParentSigner } from '@arbitrum/sdk/tests/integration/testHelpers'
+import {
+  fundChildSigner,
+  fundParentSigner,
+} from '@arbitrum/sdk/tests/integration/testHelpers'
 import { expect } from 'chai'
 import { parseEther } from 'viem'
 import { executeConfirmedWithdrawal } from './helpers'
@@ -23,6 +26,8 @@ describe('withdraw', function () {
 
   beforeEach(async function () {
     await fundParentSigner(setup.parentSigner)
+    await fundChildSigner(setup.childSigner)
+
     if (isArbitrumNetworkWithCustomFeeToken()) {
       await fundParentCustomFeeToken(setup.parentAccount.address)
       await approveParentCustomFeeToken(setup.parentSigner)
