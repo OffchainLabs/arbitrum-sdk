@@ -6,15 +6,17 @@ import {
   http,
 } from 'viem'
 import {
+  ArbitrumChildWalletActions,
   arbitrumChildWalletActions,
+  ArbitrumParentWalletActions,
   arbitrumParentWalletActions,
 } from './actions'
 
 export type ArbitrumClients = {
   parentPublicClient: PublicClient
   childPublicClient: PublicClient
-  parentWalletClient: WalletClient & typeof arbitrumParentWalletActions
-  childWalletClient?: WalletClient & typeof arbitrumChildWalletActions
+  parentWalletClient: WalletClient & ArbitrumParentWalletActions
+  childWalletClient?: WalletClient & ArbitrumChildWalletActions
 }
 
 export type CreateArbitrumClientParams = {
