@@ -1,4 +1,3 @@
-import { registerCustomArbitrumNetwork } from '@arbitrum/sdk'
 import {
   approveCustomFeeTokenWithViem,
   approveParentCustomFeeToken,
@@ -8,60 +7,40 @@ import {
   normalizeBalanceDiffByDecimals,
 } from '@arbitrum/sdk/tests/integration/custom-fee-token/customFeeTokenTestHelpers'
 import { fundParentSigner } from '@arbitrum/sdk/tests/integration/testHelpers'
-import { config, testSetup } from '@arbitrum/sdk/tests/testSetup'
 import { expect } from 'chai'
-import { createWalletClient, http, parseEther, type Chain } from 'viem'
-import { privateKeyToAccount } from 'viem/accounts'
-import { createArbitrumClient } from '../src/createArbitrumClient'
+import { parseEther } from 'viem'
 import { executeConfirmedWithdrawal } from './helpers'
+import { testSetup } from './testSetup'
 
 describe('withdraw', function () {
   this.timeout(300000)
 
-  let localEthChain: Chain
-  let localArbChain: Chain
   let setup: Awaited<ReturnType<typeof testSetup>>
 
   before(async function () {
     setup = await testSetup()
-    localEthChain = setup.localEthChain
-    localArbChain = setup.localArbChain
-    registerCustomArbitrumNetwork(setup.childChain)
   })
 
   beforeEach(async function () {
-    const parentAccount = privateKeyToAccount(`0x${config.ethKey}`)
     await fundParentSigner(setup.parentSigner)
     if (isArbitrumNetworkWithCustomFeeToken()) {
-      await fundParentCustomFeeToken(parentAccount.address)
+      await fundParentCustomFeeToken(setup.parentAccount.address)
       await approveParentCustomFeeToken(setup.parentSigner)
     }
   })
 
   it('withdraws ETH from child to parent using withdraw action', async function () {
-    const parentAccount = privateKeyToAccount(`0x${config.ethKey}`)
+    const {
+      parentAccount,
+      childPublicClient,
+      childWalletClient,
+      parentWalletClient,
+      parentPublicClient,
+      localEthChain,
+    } = setup
+
     const [withdrawAmount, tokenDecimals] =
       await getAmountInEnvironmentDecimals('0.01')
-
-    const baseParentWalletClient = createWalletClient({
-      account: parentAccount,
-      chain: localEthChain,
-      transport: http(config.ethUrl),
-    })
-
-    const baseChildWalletClient = createWalletClient({
-      account: parentAccount,
-      chain: localArbChain,
-      transport: http(config.arbUrl),
-    })
-
-    const { parentPublicClient, childPublicClient, childWalletClient } =
-      createArbitrumClient({
-        parentChain: localEthChain,
-        childChain: localArbChain,
-        parentWalletClient: baseParentWalletClient,
-        childWalletClient: baseChildWalletClient,
-      })
 
     const initialParentBalance = await parentPublicClient.getBalance({
       address: parentAccount.address as `0x${string}`,
@@ -74,7 +53,7 @@ describe('withdraw', function () {
     if (isArbitrumNetworkWithCustomFeeToken()) {
       await approveCustomFeeTokenWithViem({
         parentAccount,
-        parentWalletClient: baseParentWalletClient,
+        parentWalletClient,
         chain: localEthChain,
       })
     }
@@ -132,27 +111,9 @@ describe('withdraw', function () {
   })
 
   it('handles withdrawal failure gracefully', async function () {
-    const parentAccount = privateKeyToAccount(`0x${config.ethKey}`)
+    const { parentAccount, childWalletClient } = setup
+
     const withdrawAmount = parseEther('999999999')
-
-    const baseParentWalletClient = createWalletClient({
-      account: parentAccount,
-      chain: localEthChain,
-      transport: http(config.ethUrl),
-    })
-
-    const baseChildWalletClient = createWalletClient({
-      account: parentAccount,
-      chain: localArbChain,
-      transport: http(config.arbUrl),
-    })
-
-    const { childWalletClient } = createArbitrumClient({
-      parentChain: localEthChain,
-      childChain: localArbChain,
-      parentWalletClient: baseParentWalletClient,
-      childWalletClient: baseChildWalletClient,
-    })
 
     try {
       await childWalletClient!.withdrawEth({
