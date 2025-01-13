@@ -13,11 +13,13 @@ export type ViemTestSetup = {
   localEthChain: Chain
   localArbChain: Chain
   parentAccount: ReturnType<typeof privateKeyToAccount>
-  childPublicClient: ArbitrumClients['childPublicClient']
+  parentPublicClient: ArbitrumClients['parentPublicClient']
   parentWalletClient: ArbitrumClients['parentWalletClient']
+  childPublicClient: ArbitrumClients['childPublicClient']
+  childWalletClient: ArbitrumClients['childWalletClient']
   childChain: Awaited<ReturnType<typeof sdkTestSetup>>['childChain']
   parentSigner: Awaited<ReturnType<typeof sdkTestSetup>>['parentSigner']
-}
+} & Awaited<ReturnType<typeof sdkTestSetup>>
 
 function generateViemChain(
   networkData: {
@@ -76,7 +78,12 @@ export async function testSetup(): Promise<ViemTestSetup> {
     transport: http(config.arbUrl),
   })
 
-  const { childPublicClient, parentWalletClient } = createArbitrumClient({
+  const {
+    childPublicClient,
+    childWalletClient,
+    parentWalletClient,
+    parentPublicClient,
+  } = createArbitrumClient({
     parentChain: localEthChain,
     childChain: localArbChain,
     parentWalletClient: baseParentWalletClient,
@@ -89,7 +96,9 @@ export async function testSetup(): Promise<ViemTestSetup> {
     localArbChain,
     parentAccount,
     childPublicClient,
+    childWalletClient,
     parentWalletClient,
+    parentPublicClient,
   }
 }
 
