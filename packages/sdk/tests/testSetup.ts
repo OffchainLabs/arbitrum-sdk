@@ -40,8 +40,6 @@ import {
   isArbitrumNetworkWithCustomFeeToken,
 } from './integration/custom-fee-token/customFeeTokenTestHelpers'
 import { fundParentSigner } from './integration/testHelpers'
-import { Chain } from 'viem'
-import { privateKeyToAccount } from 'viem/accounts'
 
 loadEnv()
 
@@ -87,10 +85,7 @@ export const testSetup = async (): Promise<{
   inboxTools: InboxTools
   parentDeployer: Signer
   childDeployer: Signer
-  localEthChain: Chain
-  localArbChain: Chain
-  parentAccount: ReturnType<typeof privateKeyToAccount>
-  childAccount: ReturnType<typeof privateKeyToAccount>
+  seed: Wallet
 }> => {
   const ethProvider = new JsonRpcProvider(config.ethUrl)
   const arbProvider = new JsonRpcProvider(config.arbUrl)
@@ -119,30 +114,10 @@ export const testSetup = async (): Promise<{
 
   assertArbitrumNetworkHasTokenBridge(setChildChain)
 
-  // Generate Viem chains using the network data we already have
-  const localEthChain = generateViemChain(
-    {
-      chainId: setChildChain.parentChainId,
-      name: 'EthLocal',
-    },
-    config.ethUrl
-  )
-
-  const localArbChain = generateViemChain(
-    {
-      chainId: setChildChain.chainId,
-      name: setChildChain.name,
-    },
-    config.arbUrl
-  )
-
   const erc20Bridger = new Erc20Bridger(setChildChain)
   const adminErc20Bridger = new AdminErc20Bridger(setChildChain)
   const ethBridger = new EthBridger(setChildChain)
   const inboxTools = new InboxTools(parentSigner, setChildChain)
-
-  const parentAccount = privateKeyToAccount(seed.privateKey as `0x${string}`)
-  const childAccount = privateKeyToAccount(seed.privateKey as `0x${string}`)
 
   if (isArbitrumNetworkWithCustomFeeToken()) {
     await fundParentSigner(parentSigner)
@@ -162,10 +137,7 @@ export const testSetup = async (): Promise<{
     inboxTools,
     parentDeployer,
     childDeployer,
-    localEthChain,
-    localArbChain,
-    parentAccount,
-    childAccount,
+    seed,
   }
 }
 
@@ -182,26 +154,4 @@ export function getLocalNetworksFromFile(): {
   const localL3: ArbitrumNetwork = JSON.parse(localNetworksFile).l3Network
 
   return { l2Network: localL2, l3Network: localL3 }
-}
-
-function generateViemChain(
-  networkData: {
-    chainId: number
-    name: string
-  },
-  rpcUrl: string
-): Chain {
-  return {
-    id: networkData.chainId,
-    name: networkData.name,
-    nativeCurrency: {
-      decimals: 18,
-      name: 'Ether',
-      symbol: 'ETH',
-    },
-    rpcUrls: {
-      default: { http: [rpcUrl] },
-      public: { http: [rpcUrl] },
-    },
-  } as const
 }
