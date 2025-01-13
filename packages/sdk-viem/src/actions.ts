@@ -100,7 +100,7 @@ export type ArbitrumParentWalletActions = {
   ) => Promise<CrossChainTransactionStatus>
 }
 
-// Cross-chain transaction functions
+
 export async function waitForCrossChainTransaction(
   parentClient: PublicClient,
   childClient: PublicClient,
@@ -198,9 +198,9 @@ export async function prepareDepositEthTransaction(
   })
 
   return {
-    to: request.txRequest.to as `0x${string}`,
+    to: request.txRequest.to as Address,
     value: BigNumber.from(request.txRequest.value).toBigInt(),
-    data: request.txRequest.data as `0x${string}`,
+    data: request.txRequest.data as Address,
   }
 }
 

@@ -6,19 +6,15 @@ import {
   http,
 } from 'viem'
 import {
-  ArbitrumChildWalletActions,
-  ArbitrumDepositActions,
-  ArbitrumParentWalletActions,
   arbitrumChildWalletActions,
-  arbitrumParentClientActions,
   arbitrumParentWalletActions,
 } from './actions'
 
 export type ArbitrumClients = {
   parentPublicClient: PublicClient
-  childPublicClient: PublicClient & ArbitrumDepositActions
-  parentWalletClient: WalletClient & ArbitrumParentWalletActions
-  childWalletClient?: WalletClient & ArbitrumChildWalletActions
+  childPublicClient: PublicClient
+  parentWalletClient: WalletClient & typeof arbitrumParentWalletActions
+  childWalletClient?: WalletClient & typeof arbitrumChildWalletActions
 }
 
 export type CreateArbitrumClientParams = {
@@ -46,7 +42,7 @@ export function createArbitrumClient({
   const childPublicClient = createPublicClient({
     chain: childChain,
     transport: http(childRpcUrl || childChain.rpcUrls.default.http[0]),
-  }).extend(arbitrumParentClientActions())
+  })
 
   const extendedParentWalletClient = parentWalletClient.extend(
     arbitrumParentWalletActions(parentPublicClient, childPublicClient)
