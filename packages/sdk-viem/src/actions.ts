@@ -389,10 +389,11 @@ export async function depositErc20(
   }
 
   // Get gateway address for allowance check
-  const expectedParentGatewayAddress = await erc20Bridger.getParentGatewayAddress(
-    erc20ParentAddress,
-    parentProvider
-  )
+  const expectedParentGatewayAddress =
+    await erc20Bridger.getParentGatewayAddress(
+      erc20ParentAddress,
+      parentProvider
+    )
 
   // Check token allowance
   const parentToken = erc20Bridger.getParentTokenContract(
@@ -449,8 +450,6 @@ export async function depositErc20(
   })
 }
 
-
-
 // Approve ERC20 functions
 export async function prepareApproveErc20Transaction(
   parentClient: PublicClient,
@@ -460,6 +459,7 @@ export async function prepareApproveErc20Transaction(
   const childProvider = publicClientToProvider(childClient)
   const parentProvider = publicClientToProvider(parentClient)
   const erc20Bridger = await Erc20Bridger.fromProvider(childProvider)
+
   const request = await erc20Bridger.getApproveTokenRequest({
     erc20ParentAddress,
     amount: amount ? BigNumber.from(amount) : undefined,

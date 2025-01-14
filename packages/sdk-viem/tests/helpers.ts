@@ -63,4 +63,3 @@ export async function executeConfirmedWithdrawal(
     hash: execHash as Hash,
   }
 }
-
