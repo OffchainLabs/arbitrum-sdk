@@ -8,19 +8,15 @@ import {
   fundChildSigner,
   fundParentSigner,
 } from '@arbitrum/sdk/tests/integration/testHelpers'
-import TestERC20 from '@arbitrum/token-bridge-contracts/build/contracts/contracts/tokenbridge/test/TestERC20.sol/TestERC20.json'
 import { expect } from 'chai'
-import { Address, Hex } from 'viem'
+import { setupTestToken } from './helpers'
 import { testSetup } from './testSetup'
 
 describe('deposit erc20', function () {
   this.timeout(300000)
 
   let setup: Awaited<ReturnType<typeof testSetup>>
-  let testToken: {
-    address: Address
-    abi: typeof TestERC20.abi
-  }
+  let testToken: Awaited<ReturnType<typeof setupTestToken>>
 
   before('init', async () => {
     setup = await testSetup()
@@ -29,33 +25,7 @@ describe('deposit erc20', function () {
     await fundParentSigner(setup.parentSigner)
     await fundChildSigner(setup.childSigner)
 
-    const hash = await setup.parentWalletClient.deployContract({
-      abi: TestERC20.abi,
-      bytecode: TestERC20.bytecode as Hex,
-      chain: setup.localEthChain,
-      account: setup.parentAccount,
-    })
-
-    const receipt = await setup.parentPublicClient.waitForTransactionReceipt({
-      hash,
-    })
-
-    testToken = {
-      address: receipt.contractAddress! as Address,
-      abi: TestERC20.abi,
-    } as const
-
-    const mintHash = await setup.parentWalletClient.writeContract({
-      address: testToken.address,
-      abi: TestERC20.abi,
-      functionName: 'mint',
-      chain: setup.localEthChain,
-      account: setup.parentAccount,
-    })
-
-    await setup.parentPublicClient.waitForTransactionReceipt({
-      hash: mintHash,
-    })
+    testToken = await setupTestToken(setup)
   })
 
   beforeEach(async function () {

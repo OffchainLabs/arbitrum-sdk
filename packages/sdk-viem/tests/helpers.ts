@@ -4,12 +4,15 @@ import {
   ChildTransactionReceipt,
 } from '@arbitrum/sdk'
 import { config } from '@arbitrum/sdk/tests/testSetup'
+import TestERC20 from '@arbitrum/token-bridge-contracts/build/contracts/contracts/tokenbridge/test/TestERC20.sol/TestERC20.json'
 import {
   publicClientToProvider,
   viemTransactionReceiptToEthersTransactionReceipt,
 } from '@offchainlabs/ethers-viem-compat'
 import { Wallet } from 'ethers'
-import { Hash, PublicClient, TransactionReceipt } from 'viem'
+import { Address, Hash, Hex, PublicClient, TransactionReceipt } from 'viem'
+import { testSetup } from './testSetup'
+
 
 /**
  * Test utility to execute a withdrawal after it's been confirmed.
@@ -62,4 +65,45 @@ export async function executeConfirmedWithdrawal(
     status: Boolean(execReceipt.status),
     hash: execHash as Hash,
   }
+}
+
+/**
+ * Deploys and initializes a test ERC20 token contract for testing purposes.
+ * The function deploys the TestERC20 contract on the parent chain and mints initial tokens.
+ *
+ * @param setup - Test setup object containing wallet clients and chain configuration
+ * @returns An object containing the deployed token's address and ABI
+ */
+export const setupTestToken = async (
+  setup: Awaited<ReturnType<typeof testSetup>>
+) => {
+  const hash = await setup.parentWalletClient.deployContract({
+    abi: TestERC20.abi,
+    bytecode: TestERC20.bytecode as Hex,
+    chain: setup.localEthChain,
+    account: setup.parentAccount,
+    args: [],
+  })
+
+  const receipt = await setup.parentPublicClient.waitForTransactionReceipt({
+    hash,
+  })
+
+  const mintHash = await setup.parentWalletClient.writeContract({
+    address: receipt.contractAddress! as Address,
+    abi: TestERC20.abi,
+    functionName: 'mint',
+    chain: setup.localEthChain,
+    account: setup.parentAccount,
+    args: [],
+  })
+
+  await setup.parentPublicClient.waitForTransactionReceipt({
+    hash: mintHash,
+  })
+
+  return {
+    address: receipt.contractAddress! as Address,
+    abi: TestERC20.abi,
+  } as const
 }
