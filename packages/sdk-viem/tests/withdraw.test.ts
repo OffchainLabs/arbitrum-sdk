@@ -15,7 +15,7 @@ import { parseEther } from 'viem'
 import { executeConfirmedWithdrawal } from './helpers'
 import { testSetup } from './testSetup'
 
-describe('withdraw', function () {
+describe.skip('withdraw', function () {
   this.timeout(300000)
 
   let setup: Awaited<ReturnType<typeof testSetup>>

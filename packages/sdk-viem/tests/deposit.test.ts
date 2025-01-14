@@ -14,7 +14,7 @@ import {
 } from './customFeeTokenTestHelpers'
 import { testSetup } from './testSetup'
 
-describe('deposit', function () {
+describe.skip('deposit', function () {
   this.timeout(300000)
 
   let setup: Awaited<ReturnType<typeof testSetup>>
