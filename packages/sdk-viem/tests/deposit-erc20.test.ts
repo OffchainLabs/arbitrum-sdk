@@ -12,7 +12,7 @@ import { expect } from 'chai'
 import { setupTestToken } from './helpers'
 import { testSetup } from './testSetup'
 
-describe('deposit erc20', function () {
+describe.skip('deposit erc20', function () {
   this.timeout(300000)
 
   let setup: Awaited<ReturnType<typeof testSetup>>

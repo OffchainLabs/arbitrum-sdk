@@ -146,6 +146,19 @@ export type WithdrawEthParameters = PrepareWithdrawEthParameters & {
   timeout?: number
 }
 
+// ERC20 Withdraw types
+export type PrepareWithdrawErc20Parameters = {
+  amount: bigint
+  erc20ParentAddress: string
+  destinationAddress: Address
+  account: Account | Address
+}
+
+export type WithdrawErc20Parameters = PrepareWithdrawErc20Parameters & {
+  confirmations?: number
+  timeout?: number
+}
+
 export type ArbitrumChildWalletActions = {
   prepareWithdrawEthTransaction: (
     params: PrepareWithdrawEthParameters
@@ -156,6 +169,17 @@ export type ArbitrumChildWalletActions = {
 
   withdrawEth: (
     params: WithdrawEthParameters
+  ) => Promise<CrossChainTransactionStatus>
+
+  prepareWithdrawErc20Transaction: (
+    params: PrepareWithdrawErc20Parameters
+  ) => Promise<{
+    request: TransactionRequest
+    l1GasEstimate: bigint
+  }>
+
+  withdrawErc20: (
+    params: WithdrawErc20Parameters
   ) => Promise<CrossChainTransactionStatus>
 }
 
@@ -674,6 +698,109 @@ export async function withdrawEth(
   }
 }
 
+// Withdraw ERC20 functions
+export async function prepareWithdrawErc20Transaction(
+  client: PublicClient,
+  {
+    amount,
+    erc20ParentAddress,
+    destinationAddress,
+    account,
+  }: PrepareWithdrawErc20Parameters
+): Promise<{
+  request: TransactionRequest
+  l1GasEstimate: bigint
+}> {
+  const provider = publicClientToProvider(client)
+  const erc20Bridger = await Erc20Bridger.fromProvider(provider)
+  const request = await erc20Bridger.getWithdrawalRequest({
+    amount: BigNumber.from(amount),
+    erc20ParentAddress,
+    destinationAddress,
+    from: typeof account === 'string' ? account : account.address,
+  })
+
+  const l1GasEstimate = await request.estimateParentGasLimit(provider)
+
+  return {
+    request: {
+      to: request.txRequest.to as `0x${string}`,
+      value: BigNumber.from(request.txRequest.value).toBigInt(),
+      data: request.txRequest.data as `0x${string}`,
+    },
+    l1GasEstimate: l1GasEstimate.toBigInt(),
+  }
+}
+
+export async function withdrawErc20(
+  parentClient: PublicClient,
+  childClient: PublicClient,
+  walletClient: WalletClient,
+  {
+    amount,
+    erc20ParentAddress,
+    destinationAddress,
+    account,
+    confirmations = DEFAULT_CONFIRMATIONS,
+  }: WithdrawErc20Parameters
+): Promise<CrossChainTransactionStatus> {
+  const childProvider = publicClientToProvider(childClient)
+  const parentProvider = publicClientToProvider(parentClient)
+  const erc20Bridger = await Erc20Bridger.fromProvider(childProvider)
+
+  // Get the withdrawal request from the bridger
+  const withdrawalRequest = await erc20Bridger.getWithdrawalRequest({
+    amount: BigNumber.from(amount),
+    erc20ParentAddress,
+    destinationAddress,
+    from: typeof account === 'string' ? account : account.address,
+  })
+
+  // Send the transaction
+  const hash = await walletClient.sendTransaction({
+    to: withdrawalRequest.txRequest.to as `0x${string}`,
+    data: withdrawalRequest.txRequest.data as `0x${string}`,
+    value: BigNumber.from(withdrawalRequest.txRequest.value).toBigInt(),
+    chain: walletClient.chain,
+    account: walletClient.account as Account,
+    kzg: undefined,
+  })
+
+  const viemReceipt = await childClient.waitForTransactionReceipt({
+    hash,
+    confirmations,
+  })
+
+  const ethersReceipt =
+    viemTransactionReceiptToEthersTransactionReceipt(viemReceipt)
+
+  const childReceipt = new ChildTransactionReceipt(ethersReceipt)
+
+  const messages = await childReceipt.getChildToParentMessages(parentProvider)
+  if (messages.length === 0) {
+    return {
+      status: 'failed',
+      complete: false,
+      hash,
+      message: undefined,
+      childTxReceipt: undefined,
+    }
+  }
+
+  const message = messages[0]
+  const messageStatus = await message.status(childProvider)
+
+  // For withdrawals, return early since it needs to wait for challenge period
+  const isUnconfirmed = messageStatus === ChildToParentMessageStatus.UNCONFIRMED
+  return {
+    status: isUnconfirmed ? 'success' : 'failed',
+    complete: false, // Not complete until executed after challenge period
+    message,
+    childTxReceipt: ethersReceipt,
+    hash,
+  }
+}
+
 // Client action creators
 export function arbitrumParentClientActions() {
   return (client: PublicClient): ArbitrumDepositActions => ({
@@ -720,5 +847,9 @@ export function arbitrumChildWalletActions(
       prepareWithdrawEthTransaction(childClient, params),
     withdrawEth: (params: WithdrawEthParameters) =>
       withdrawEth(parentClient, childClient, walletClient, params),
+    prepareWithdrawErc20Transaction: (params: PrepareWithdrawErc20Parameters) =>
+      prepareWithdrawErc20Transaction(childClient, params),
+    withdrawErc20: (params: WithdrawErc20Parameters) =>
+      withdrawErc20(parentClient, childClient, walletClient, params),
   })
 }
