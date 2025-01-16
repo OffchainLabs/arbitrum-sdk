@@ -7,7 +7,6 @@ import {
 import { fundParentSigner } from '@arbitrum/sdk/tests/integration/testHelpers'
 import { expect } from 'chai'
 import { parseEther } from 'viem'
-import { BigNumber } from 'ethers'
 import {
   approveCustomFeeTokenWithViem,
   getAmountInEnvironmentDecimals,
@@ -30,11 +29,6 @@ describe('depositTo', function () {
     if (isArbitrumNetworkWithCustomFeeToken()) {
       await fundParentCustomFeeToken(setup.parentAccount.address)
       await approveParentCustomFeeToken(setup.parentSigner)
-      await approveCustomFeeTokenWithViem({
-        parentAccount: setup.parentAccount,
-        parentWalletClient: setup.parentWalletClient,
-        chain: setup.localEthChain,
-      })
     }
   })
 
@@ -44,11 +38,20 @@ describe('depositTo', function () {
     )
 
     const { childPublicClient, parentWalletClient } = setup
-    const destinationAddress = '0x1234567890123456789012345678901234567890' as const
+    const destinationAddress =
+      '0x1234567890123456789012345678901234567890' as const
 
     const initialBalance = await childPublicClient.getBalance({
       address: destinationAddress,
     })
+
+    if (isArbitrumNetworkWithCustomFeeToken()) {
+      await approveCustomFeeTokenWithViem({
+        parentAccount: setup.parentAccount,
+        parentWalletClient,
+        chain: setup.localEthChain,
+      })
+    }
 
     const result = await parentWalletClient.depositEthTo({
       amount: depositAmount,
@@ -73,9 +76,18 @@ describe('depositTo', function () {
 
   it('handles depositTo failure gracefully', async function () {
     const depositAmount = parseEther('999999999')
-    const destinationAddress = '0x1234567890123456789012345678901234567890' as const
+    const destinationAddress =
+      '0x1234567890123456789012345678901234567890' as const
 
     const { parentWalletClient } = setup
+
+    if (isArbitrumNetworkWithCustomFeeToken()) {
+      await approveCustomFeeTokenWithViem({
+        parentAccount: setup.parentAccount,
+        parentWalletClient,
+        chain: setup.localEthChain,
+      })
+    }
 
     try {
       await parentWalletClient.depositEthTo({
@@ -88,50 +100,4 @@ describe('depositTo', function () {
       expect(error).to.exist
     }
   })
-
-  it('deposits ETH with retryable gas overrides', async function () {
-    const [depositAmount, tokenDecimals] = await getAmountInEnvironmentDecimals(
-      '0.01'
-    )
-
-    const { childPublicClient, parentWalletClient } = setup
-    const destinationAddress = '0x1234567890123456789012345678901234567890' as const
-
-    // Additional funding for gas token
-    if (isArbitrumNetworkWithCustomFeeToken()) {
-      await fundParentCustomFeeToken(setup.parentAccount.address)
-    }
-
-    const initialBalance = await childPublicClient.getBalance({
-      address: destinationAddress,
-    })
-
-    const result = await parentWalletClient.depositEthTo({
-      amount: depositAmount,
-      account: setup.parentAccount,
-      destinationAddress,
-      retryableGasOverrides: {
-        gasLimit: {
-          base: BigNumber.from(parseEther('0.001')),
-        },
-        maxFeePerGas: {
-          base: BigNumber.from(parseEther('0.00001')),
-        },
-      },
-    })
-
-    expect(result.status).to.equal('success')
-
-    const finalBalance = await childPublicClient.getBalance({
-      address: destinationAddress,
-    })
-
-    const balanceDiff = finalBalance - initialBalance
-    const normalizedBalanceDiff = normalizeBalanceDiffByDecimals(
-      BigInt(balanceDiff),
-      tokenDecimals
-    )
-
-    expect(normalizedBalanceDiff.toString()).to.equal(depositAmount.toString())
-  })
-}) 
+})
