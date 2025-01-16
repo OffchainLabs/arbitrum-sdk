@@ -56,6 +56,36 @@ export type DepositEthParameters = PrepareDepositEthParameters & {
   timeout?: number
 }
 
+// Deposit types
+export type PrepareDepositEthToParameters = {
+  amount: bigint
+  account: Account | Address
+  destinationAddress: string
+  retryableGasOverrides?: {
+    gasLimit?: {
+      base?: BigNumber
+      percentIncrease?: BigNumber
+      min?: BigNumber
+    }
+    maxSubmissionFee?: {
+      base?: BigNumber
+      percentIncrease?: BigNumber
+    }
+    maxFeePerGas?: {
+      base?: BigNumber
+      percentIncrease?: BigNumber
+    }
+    deposit?: {
+      base?: BigNumber
+    }
+  }
+}
+
+export type DepositEthToParameters = PrepareDepositEthToParameters & {
+  confirmations?: number
+  timeout?: number
+}
+
 // ERC20 Deposit types
 export type PrepareDepositErc20Parameters = {
   amount: bigint
@@ -132,6 +162,9 @@ export type ArbitrumDepositActions = {
   prepareApproveErc20Transaction: (
     params: PrepareApproveErc20Parameters
   ) => Promise<TransactionRequest>
+  prepareDepositEthToTransaction: (
+    params: PrepareDepositEthToParameters
+  ) => Promise<TransactionRequest>
 }
 
 // Withdraw types
@@ -207,6 +240,10 @@ export type ArbitrumParentWalletActions = {
 
   approveGasToken: (
     params: ApproveGasTokenParameters
+  ) => Promise<CrossChainTransactionStatus>
+
+  depositEthTo: (
+    params: DepositEthToParameters
   ) => Promise<CrossChainTransactionStatus>
 }
 
@@ -801,6 +838,67 @@ export async function withdrawErc20(
   }
 }
 
+// Add new prepareDepositEthToTransaction function
+export async function prepareDepositEthToTransaction(
+  client: PublicClient,
+  childClient: PublicClient,
+  {
+    amount,
+    account,
+    destinationAddress,
+    retryableGasOverrides,
+  }: PrepareDepositEthToParameters
+): Promise<TransactionRequest> {
+  const provider = publicClientToProvider(client)
+  const childProvider = publicClientToProvider(childClient)
+  const ethBridger = await EthBridger.fromProvider(childProvider)
+  const request = await ethBridger.getDepositToRequest({
+    amount: BigNumber.from(amount),
+    destinationAddress,
+    from: typeof account === 'string' ? account : account.address,
+    parentProvider: provider,
+    childProvider,
+    retryableGasOverrides,
+  })
+
+  return {
+    to: request.txRequest.to as `0x${string}`,
+    value: BigNumber.from(request.txRequest.value).toBigInt(),
+    data: request.txRequest.data as `0x${string}`,
+  }
+}
+
+export async function depositEthTo(
+  parentClient: PublicClient,
+  childClient: PublicClient,
+  walletClient: WalletClient,
+  {
+    amount,
+    account,
+    destinationAddress,
+    retryableGasOverrides,
+    confirmations = DEFAULT_CONFIRMATIONS,
+    timeout = DEFAULT_TIMEOUT,
+  }: DepositEthToParameters
+): Promise<CrossChainTransactionStatus> {
+  const request = await prepareDepositEthToTransaction(
+    parentClient,
+    childClient,
+    {
+      amount,
+      account,
+      destinationAddress,
+      retryableGasOverrides,
+    }
+  )
+
+  return sendCrossChainTransaction(parentClient, childClient, walletClient, {
+    request,
+    confirmations,
+    timeout,
+  })
+}
+
 // Client action creators
 export function arbitrumParentClientActions() {
   return (client: PublicClient): ArbitrumDepositActions => ({
@@ -810,6 +908,8 @@ export function arbitrumParentClientActions() {
       prepareDepositErc20Transaction(client, params),
     prepareApproveErc20Transaction: (params: PrepareApproveErc20Parameters) =>
       prepareApproveErc20Transaction(client, client, params),
+    prepareDepositEthToTransaction: (params: PrepareDepositEthToParameters) =>
+      prepareDepositEthToTransaction(client, client, params),
   })
 }
 
@@ -829,6 +929,8 @@ export function arbitrumParentWalletActions(
       ),
     depositEth: (params: DepositEthParameters) =>
       depositEth(parentClient, childClient, walletClient, params),
+    depositEthTo: (params: DepositEthToParameters) =>
+      depositEthTo(parentClient, childClient, walletClient, params),
     depositErc20: (params: DepositErc20Parameters) =>
       depositErc20(parentClient, childClient, walletClient, params),
     approveErc20: (params: ApproveErc20Parameters) =>

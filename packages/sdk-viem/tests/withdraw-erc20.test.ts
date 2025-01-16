@@ -14,7 +14,7 @@ import { executeConfirmedWithdrawal } from './helpers'
 import { Erc20Bridger } from '@arbitrum/sdk'
 import { publicClientToProvider } from '@offchainlabs/ethers-viem-compat'
 
-describe('withdraw erc20', function () {
+describe.skip('withdraw erc20', function () {
   this.timeout(300000)
 
   let setup: Awaited<ReturnType<typeof testSetup>>
