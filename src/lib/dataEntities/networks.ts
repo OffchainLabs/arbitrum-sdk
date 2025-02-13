@@ -203,8 +203,8 @@ export const networks: Networks = {
     explorerUrl: 'https://arbiscan.io',
     partnerChainID: 1,
     partnerChainIDs: [],
-    isBold: true,
     isArbitrum: true,
+    isBold: true,
     tokenBridge: mainnetTokenBridge,
     ethBridge: mainnetETHBridge,
     teleporter: {
