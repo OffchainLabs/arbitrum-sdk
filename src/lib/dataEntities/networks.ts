@@ -230,8 +230,8 @@ export const networks: Networks = {
     ethBridge: {
       bridge: '0xC1Ebd02f738644983b6C4B2d440b8e77DdE276Bd',
       inbox: '0xc4448b71118c9071Bcb9734A0EAc55D18A153949',
-      outbox: '0xE7E8cCC7c381809BDC4b213CE44016300707B7Bd',
-      rollup: '0xFb209827c58283535b744575e11953DCC4bEAD88',
+      outbox: '0xD4B80C3D7240325D18E645B49e6535A3Bf95cc58',
+      rollup: '0xE7E8cCC7c381809BDC4b213CE44016300707B7Bd',
       sequencerInbox: '0x211E1c4c7f1bF5351Ac850Ed10FD68CFfCF6c21b',
     },
     explorerUrl: 'https://nova.arbiscan.io',
