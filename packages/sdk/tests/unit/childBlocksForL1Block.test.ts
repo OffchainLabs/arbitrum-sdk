@@ -73,7 +73,7 @@ describe('Child blocks lookup for a Parent block', () => {
     }
   }
 
-  it('successfully searches for an Child block range', async function () {
+  it('successfully searches for a Child block range', async function () {
     const childBlocks = await getBlockRangesForL1Block({
       arbitrumProvider: arbProvider,
       forL1Block: 17926532,
@@ -84,7 +84,7 @@ describe('Child blocks lookup for a Parent block', () => {
     await validateChildBlocks({ childBlocks, childBlocksCount: 2 })
   })
 
-  it('fails to search for an Child block range', async function () {
+  it('fails to search for a Child block range', async function () {
     const childBlocks = await getBlockRangesForL1Block({
       arbitrumProvider: arbProvider,
       forL1Block: 17926533,
