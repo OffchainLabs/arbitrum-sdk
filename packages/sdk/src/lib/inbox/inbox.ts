@@ -102,7 +102,7 @@ export class InboxTools {
         ).firstBlock.toNumber()
       } catch (e) {
         // l2BlockRangeForL1 reverts if no L2 block exist with the given L1 block number,
-        // since l1 block is updated in batch sometimes block can be skipped even when there are activities
+        // Since L1 blocks are updated in batches, some blocks may be skipped even if there is activity.
         // alternatively we use binary search to get the nearest block
         const _blockNum = (
           await getBlockRangesForL1Block({
@@ -314,7 +314,7 @@ export class InboxTools {
       this.parentProvider
     )
 
-    // events dont become eligible until they pass a delay
+    // events don’t become eligible until they pass a delay
     // find a block range which will emit eligible events
     const events = await this.getEventsAndIncreaseRange(
       bridge,
@@ -357,9 +357,9 @@ export class InboxTools {
     messageDeliveredEvent?: T,
     overrides?: Overrides
   ): Promise<
-    // if a message delivered event was supplied then we'll definitely return
-    // a contract transaction or throw an error. If one isnt supplied then we may
-    // find no eligible events, and so return null
+    // If a MessageDelivered event was supplied, we will always return
+    // a ContractTransaction or throw an error. If none is supplied, we may
+    // find no eligible events and return null.
     T extends ForceInclusionParams
       ? ContractTransaction
       : ContractTransaction | null
@@ -421,7 +421,7 @@ export class InboxTools {
    * @param txRequest A signed transaction which can be sent directly to chain,
    * tx.to, tx.data, tx.value must be provided when not contract creation, if
    * contractCreation is true, no need provide tx.to. tx.gasPrice and tx.nonce
-   * can be overrided. (You can also send contract creation transaction by set tx.to
+   * can be overridden. (You can also send contract creation transaction by set tx.to
    * to zero address or null)
    * @param childSigner ethers Signer type, used to sign Chain transaction
    * @returns The parent delayed inbox's transaction signed data.
