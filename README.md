@@ -103,7 +103,7 @@ For more detailed usage examples and API references, please refer to the [Arbitr
 
 ## Documentation
 
-For comprehensive guides and API documentation, visit the [Arbitrum SDK Documentation](https://docs.arbitrum.io/welcome/get-started).
+For comprehensive guides and API documentation, visit the [Arbitrum SDK Documentation](https://docs.arbitrum.io/sdk/introduction).
 
 ## License
 
