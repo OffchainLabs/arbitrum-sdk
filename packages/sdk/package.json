@@ -1,0 +1,58 @@
+{
+  "name": "@arbitrum/sdk",
+  "version": "4.0.3",
+  "description": "Typescript library client-side interactions with Arbitrum",
+  "author": "Offchain Labs, Inc.",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/offchainlabs/arbitrum-sdk.git"
+  },
+  "engines": {
+    "node": ">=v11",
+    "npm": "please-use-yarn",
+    "yarn": ">= 1.0.0"
+  },
+  "bugs": {
+    "url": "https://github.com/offchainlabs/arbitrum-sdk/issues"
+  },
+  "homepage": "https://offchainlabs.com",
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "audit:ci": "audit-ci --config ./audit-ci.jsonc",
+    "prepare": "yarn run gen:abi",
+    "gen:abi": "ts-node ./scripts/genAbi.ts",
+    "gen:network": "ts-node ./scripts/genNetwork.ts",
+    "prepublishOnly": "yarn build && yarn format",
+    "preversion": "yarn lint",
+    "prebuild": "yarn gen:abi",
+    "build": "rm -rf dist && tsc -p tsconfig.json",
+    "watch": "tsc --watch",
+    "test": "mocha",
+    "test:coverage": "nyc mocha",
+    "test:fork": "SHOULD_FORK=1 hardhat test tests/fork/*.test.ts",
+    "test:integration": "mocha tests/integration/ --timeout 30000000 --bail",
+    "test:unit": "mocha --parallel tests/unit/ --timeout 30000 --bail",
+    "test:ci": "nyc --reporter=lcovonly mocha --reporter xunit",
+    "lint": "eslint .",
+    "format": "prettier './**/*.{js,json,md,ts,yml}' '!./src/lib/abi' --write && yarn run lint --fix",
+    "clean:compile": "ts-node scripts/cleanCompileContracts.ts",
+    "checkRetryable": "ts-node scripts/checkRetryableStatus.ts",
+    "redeemRetryable": "ts-node scripts/redeemRetryable.ts",
+    "setStandard": "ts-node scripts/setStandardGateways.ts",
+    "setCustom": "ts-node scripts/setArbCustomGateways.ts",
+    "cancelRetryable": "ts-node scripts/cancelRetryable.ts",
+    "bridgeStandardToken": "ts-node scripts/deployStandard.ts"
+  },
+  "dependencies": {
+    "@ethersproject/address": "^5.0.8",
+    "@ethersproject/bignumber": "^5.1.1",
+    "@ethersproject/bytes": "^5.0.8",
+    "async-mutex": "^0.4.0",
+    "ethers": "^5.1.0"
+  }
+}

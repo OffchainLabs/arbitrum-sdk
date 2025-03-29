@@ -1,56 +1,19 @@
 {
-  "name": "@arbitrum/sdk",
-  "version": "4.0.2",
-  "description": "Typescript library client-side interactions with Arbitrum",
-  "author": "Offchain Labs, Inc.",
-  "license": "Apache-2.0",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/offchainlabs/arbitrum-sdk.git"
-  },
-  "engines": {
-    "node": ">=v11",
-    "npm": "please-use-yarn",
-    "yarn": ">= 1.0.0"
-  },
-  "bugs": {
-    "url": "https://github.com/offchainlabs/arbitrum-sdk/issues"
-  },
-  "homepage": "https://offchainlabs.com",
+  "private": true,
   "scripts": {
     "audit:ci": "audit-ci --config ./audit-ci.jsonc",
-    "prepare": "yarn run gen:abi",
-    "gen:abi": "node ./scripts/genAbi.js",
-    "gen:network": "ts-node ./scripts/genNetwork.ts",
-    "prepublishOnly": "yarn build && yarn format",
-    "preversion": "yarn lint",
-    "prebuild": "yarn gen:abi",
-    "build": "./scripts/builder",
-    "watch": "tsc --watch",
-    "test": "mocha",
-    "test:coverage": "nyc mocha",
-    "test:fork": "SHOULD_FORK=1 hardhat test tests/fork/*.test.ts",
-    "test:integration": "mocha tests/integration/ --timeout 30000000 --bail",
-    "test:unit": "mocha --parallel tests/unit/ --timeout 30000 --bail",
-    "test:ci": "nyc --reporter=lcovonly mocha --reporter xunit",
-    "lint": "eslint .",
-    "format": "prettier './**/*.{js,json,md,ts,yml}' '!./src/lib/abi' --write && yarn run lint --fix",
-    "clean:compile": "ts-node scripts/cleanCompileContracts.ts",
-    "checkRetryable": "ts-node scripts/checkRetryableStatus.ts",
-    "redeemRetryable": "ts-node scripts/redeemRetryable.ts",
-    "setStandard": "ts-node scripts/setStandardGateways.ts",
-    "setCustom": "ts-node scripts/setArbCustomGateways.ts",
-    "cancelRetryable": "ts-node scripts/cancelRetryable.ts",
-    "bridgeStandardToken": "ts-node scripts/deployStandard.ts"
+    "build": "yarn workspace @arbitrum/sdk build",
+    "lint": "yarn workspaces run lint",
+    "format": "yarn workspaces run format",
+    "test:unit": "yarn workspaces run test:unit",
+    "test:integration": "yarn workspace @arbitrum/sdk test:integration",
+    "gen:abi": "yarn workspace @arbitrum/sdk gen:abi",
+    "gen:network": "yarn workspace @arbitrum/sdk gen:network"
   },
-  "dependencies": {
-    "@ethersproject/address": "^5.0.8",
-    "@ethersproject/bignumber": "^5.1.1",
-    "@ethersproject/bytes": "^5.0.8",
-    "async-mutex": "^0.4.0",
-    "ethers": "^5.1.0"
+  "workspaces": {
+    "packages": [
+      "packages/*"
+    ]
   },
   "devDependencies": {
     "@arbitrum/nitro-contracts": "^1.1.1",
@@ -74,6 +37,7 @@
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-mocha": "^9.0.0",
     "eslint-plugin-prettier": "^4.0.0",
+    "ethers": "^5.0.0",
     "hardhat": "^2.18.3",
     "mocha": "^9.2.1",
     "nyc": "^15.1.0",
@@ -84,12 +48,10 @@
     "ts-node": "^10.2.1",
     "tslint": "^6.1.3",
     "typechain": "7.0.0",
-    "typescript": "^4.9.5",
+    "typescript": "^5.7.2",
+    "viem": "^2.0.0",
     "yargs": "^17.3.1"
   },
-  "files": [
-    "dist/**/*"
-  ],
   "resolutions": {
     "lodash.pick": "https://github.com/lodash/lodash/archive/refs/tags/4.17.21.tar.gz",
     "**/@ethersproject/providers/ws": "7.5.10",

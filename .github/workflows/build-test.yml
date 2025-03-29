@@ -25,6 +25,8 @@ jobs:
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
+        with:
+          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
   lint:
     name: Lint on Node.js v${{ matrix.node-version }}
@@ -48,17 +50,19 @@ jobs:
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
+        with:
+          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
       - name: Lint sdk
         run: |
           yarn gen:abi
-          yarn build --reporter-options output=$TEST_PATH/sdk.xml
+          yarn build
           yarn lint --format junit -o $TEST_PATH/sdk-lint.xml
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: lint-results
+          name: lint-results-${{ github.run_id }}-node-v${{ matrix.node-version }}
           path: ${{ env.TEST_PATH }}
 
       - name: Publish Test Report
@@ -93,6 +97,8 @@ jobs:
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
+        with:
+          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
       - run: yarn audit:ci
 
@@ -114,6 +120,8 @@ jobs:
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
+        with:
+          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
       - name: Build
         run: |
@@ -176,6 +184,8 @@ jobs:
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
+        with:
+          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
       - name: Set up the local node
         uses: OffchainLabs/actions/run-nitro-test-node@main
