@@ -70,11 +70,6 @@
     // from: @arbitrum/nitro-contracts>@openzeppelin/contracts
     // from: @arbitrum/token-bridge-contracts>@openzeppelin/contracts
     "GHSA-9vx6-7xxf-x967",
-    // https://github.com/advisories/GHSA-grv7-fg5c-xmjg
-    // Uncontrolled resource consumption in braces
-    // eslint and hardhat dependency, only used in dev
-    // from: hardhat>braces & eslint>braces
-    "GHSA-grv7-fg5c-xmjg",
     // https://github.com/advisories/GHSA-3h5v-q93c-6h6q
     // Exposure of Sensitive Information in ws
     // Issue with sol2uml library that generates UML diagrams from Solidity code. Only used at build time.

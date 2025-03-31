@@ -109,6 +109,7 @@
     "**/eslint/cross-spawn": "7.0.5",
     "**/foreground-child/cross-spawn": "7.0.5",
     "**/istanbul-lib-processinfo/cross-spawn": "7.0.5",
-    "**/hardhat/undici": "5.28.5"
+    "**/hardhat/undici": "5.28.5",
+    "**/chokidar/braces": "3.0.3"
   }
 }
