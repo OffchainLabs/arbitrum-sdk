@@ -56,9 +56,9 @@ jobs:
           yarn lint --format junit -o $TEST_PATH/sdk-lint.xml
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
-          name: lint-results
+          name: lint-results-${{ github.run_id }}-node-v${{ matrix.node-version }}
           path: ${{ env.TEST_PATH }}
 
       - name: Publish Test Report
