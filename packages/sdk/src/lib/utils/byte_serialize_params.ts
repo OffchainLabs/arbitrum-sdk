@@ -46,9 +46,9 @@ Arbitrum SDK includes methods for [serializing parameters](https://developer.off
  * @module Byte-Serialization
  */
 
+import { utils } from 'ethers'
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
-import { isAddress as _isAddress } from '@ethersproject/address'
 import { concat, hexZeroPad } from '@ethersproject/bytes'
 import { BigNumber } from '@ethersproject/bignumber'
 
@@ -65,6 +65,8 @@ type BytesNumber = 1 | 4 | 8 | 16 | 32
 interface AddressIndexMemo {
   [address: string]: number
 }
+
+const { isAddress: _isAddress } = utils
 
 export const getAddressIndex = (() => {
   const addressToIndexMemo: AddressIndexMemo = {}
@@ -93,7 +95,7 @@ export const getAddressIndex = (() => {
 
 /**
   to use:
-  
+
   ```js
   const mySerializeParamsFunction = argSerializerConstructor("rpcurl")
   mySerializeParamsFunction(["4","5", "6"])

@@ -16,13 +16,13 @@
 /* eslint-env node */
 'use strict'
 
+import { ethers, utils, Overrides } from 'ethers'
 import { TransactionReceipt } from '@ethersproject/providers'
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { ContractTransaction } from '@ethersproject/contracts'
 import { BigNumber } from '@ethersproject/bignumber'
 import { concat, zeroPad } from '@ethersproject/bytes'
-import { getAddress } from '@ethersproject/address'
 import { keccak256 } from '@ethersproject/keccak256'
 
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
@@ -36,13 +36,14 @@ import {
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
 import { ArbSdkError } from '../dataEntities/errors'
-import { ethers, Overrides } from 'ethers'
 import { ChildTransactionReceipt, RedeemTransaction } from './ChildTransaction'
 import { RetryableMessageParams } from '../dataEntities/message'
 import { getTransactionReceipt, isDefined } from '../utils/lib'
 import { EventFetcher } from '../utils/eventFetcher'
 import { ErrorCode, Logger } from '@ethersproject/logger'
 import { getArbitrumNetwork } from '../dataEntities/networks'
+
+const { getAddress } = utils
 
 export enum ParentToChildMessageStatus {
   /**
