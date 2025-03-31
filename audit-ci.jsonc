@@ -70,12 +70,6 @@
     // from: @arbitrum/nitro-contracts>@openzeppelin/contracts
     // from: @arbitrum/token-bridge-contracts>@openzeppelin/contracts
     "GHSA-9vx6-7xxf-x967",
-    // https://github.com/advisories/GHSA-3h5v-q93c-6h6q
-    // Exposure of Sensitive Information in ws
-    // Issue with sol2uml library that generates UML diagrams from Solidity code. Only used at build time.
-    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>convert-svg-to-png>convert-svg-core>puppeteer>ws
-    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>sol2uml>convert-svg-to-png>convert-svg-core>puppeteer>ws
-    "GHSA-3h5v-q93c-6h6q",
     // https://github.com/advisories/GHSA-wf5p-g6vw-rhxx
     // Axios: Server-Side Request Forgery vulnerability
     // Issue with sol2uml library that generates UML diagrams from Solidity code. Only used at build time.

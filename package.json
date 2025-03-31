@@ -97,6 +97,7 @@
   "resolutions": {
     "lodash.pick": "https://github.com/lodash/lodash/archive/refs/tags/4.17.21.tar.gz",
     "**/@ethersproject/providers/ws": "7.5.10",
+    "**/puppeteer/ws": "8.17.1",
     "**/hardhat/ws": "7.5.10",
     "**/hardhat/@sentry/node/cookie": "0.7.0",
     "**/follow-redirects": "1.15.6",
