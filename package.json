@@ -112,6 +112,6 @@
     "**/istanbul-lib-processinfo/cross-spawn": "7.0.5",
     "**/hardhat/undici": "5.28.5",
     "**/chokidar/braces": "3.0.3",
-    "**/sol2uml/axios": "0.28.0"
+    "**/sol2uml/axios": "0.30.0"
   }
 }
