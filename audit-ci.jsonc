@@ -70,11 +70,6 @@
     // from: @arbitrum/nitro-contracts>@openzeppelin/contracts
     // from: @arbitrum/token-bridge-contracts>@openzeppelin/contracts
     "GHSA-9vx6-7xxf-x967",
-    // https://github.com/advisories/GHSA-cxjh-pqwp-8mfp
-    // axios can leak auth headers when using `Proxy-Authentication` header. We do not use that header.
-    // from: axios>follow-redirects
-    // from: hardhat>solc>follow-redirects
-    "GHSA-cxjh-pqwp-8mfp",
     // https://github.com/advisories/GHSA-grv7-fg5c-xmjg
     // Uncontrolled resource consumption in braces
     // eslint and hardhat dependency, only used in dev
