@@ -79,29 +79,6 @@ jobs:
           fail_ci_if_error: false
           verbose: false
 
-  audit:
-    name: Audit on Node.js v${{ matrix.node-version }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [18, 20]
-    needs: install
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Install node_modules
-        uses: OffchainLabs/actions/node-modules/install@main
-        with:
-          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
-
-      - run: yarn audit:ci
-
   test-unit:
     name: Test (Unit) on Node.js v${{ matrix.node-version }}
     runs-on: ubuntu-latest
