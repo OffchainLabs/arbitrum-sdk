@@ -17,8 +17,7 @@
 'use strict'
 
 import { expect } from 'chai'
-import { Wallet, utils, constants } from 'ethers'
-import { BigNumber } from '@ethersproject/bignumber'
+import { Wallet, utils, constants, BigNumber } from 'ethers'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import {
   fundParentSigner,

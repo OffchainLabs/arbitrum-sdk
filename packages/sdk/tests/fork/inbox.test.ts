@@ -16,9 +16,9 @@
 /* eslint-env node */
 'use strict'
 
+import { BigNumber } from 'ethers'
 import { expect } from 'chai'
 
-import { BigNumber } from '@ethersproject/bignumber'
 import { Logger, LogLevel } from '@ethersproject/logger'
 Logger.setLogLevel(LogLevel.ERROR)
 

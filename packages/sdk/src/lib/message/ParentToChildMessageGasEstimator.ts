@@ -1,6 +1,5 @@
 import { Provider } from '@ethersproject/abstract-provider'
-import { BigNumber, BigNumberish } from '@ethersproject/bignumber'
-import { BytesLike, constants, utils } from 'ethers'
+import { BytesLike, constants, utils, BigNumber, BigNumberish } from 'ethers'
 import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'

@@ -17,12 +17,11 @@
 'use strict'
 
 import { assert, expect } from 'chai'
-import { BigNumber } from '@ethersproject/bignumber'
 import { hexlify } from '@ethersproject/bytes'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import { fundParentSigner, skipIfMainnet } from './testHelpers'
 import { RetryableDataTools } from '../../src'
-import { Wallet } from 'ethers'
+import { Wallet, BigNumber } from 'ethers'
 import { testSetup } from '../testSetup'
 import { parseEther, randomBytes } from 'ethers/lib/utils'
 import { Inbox__factory } from '../../src/lib/abi/factories/Inbox__factory'

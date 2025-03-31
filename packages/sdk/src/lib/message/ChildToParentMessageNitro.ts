@@ -22,7 +22,6 @@ import {
 } from '../dataEntities/constants'
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
-import { BigNumber } from '@ethersproject/bignumber'
 import { BlockTag } from '@ethersproject/abstract-provider'
 import { ErrorCode, Logger } from '@ethersproject/logger'
 
@@ -33,7 +32,7 @@ import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { L2ToL1TxEvent as ChildToParentTxEvent } from '../abi/ArbSys'
-import { ContractTransaction, Overrides } from 'ethers'
+import { ContractTransaction, Overrides, BigNumber } from 'ethers'
 import { Mutex } from 'async-mutex'
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { ArbSdkError } from '../dataEntities/errors'

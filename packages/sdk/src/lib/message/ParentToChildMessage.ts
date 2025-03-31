@@ -16,12 +16,11 @@
 /* eslint-env node */
 'use strict'
 
-import { ethers, utils, Overrides } from 'ethers'
+import { ethers, utils, Overrides, BigNumber } from 'ethers'
 import { TransactionReceipt } from '@ethersproject/providers'
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { ContractTransaction } from '@ethersproject/contracts'
-import { BigNumber } from '@ethersproject/bignumber'
 import { concat, zeroPad } from '@ethersproject/bytes'
 import { keccak256 } from '@ethersproject/keccak256'
 

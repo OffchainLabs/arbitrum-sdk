@@ -18,10 +18,9 @@
 
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
-import { BigNumber } from '@ethersproject/bignumber'
 import { BlockTag } from '@ethersproject/abstract-provider'
 
-import { ContractTransaction, Overrides } from 'ethers'
+import { ContractTransaction, Overrides, BigNumber } from 'ethers'
 import {
   SignerProviderUtils,
   SignerOrProvider,

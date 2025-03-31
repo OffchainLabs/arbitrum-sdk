@@ -16,10 +16,10 @@
 /* eslint-env node */
 'use strict'
 
+import { BigNumber } from 'ethers'
 import { TransactionReceipt } from '@ethersproject/providers'
 import { Log, Provider } from '@ethersproject/abstract-provider'
 import { ContractTransaction } from '@ethersproject/contracts'
-import { BigNumber } from '@ethersproject/bignumber'
 import {
   ParentToChildMessage,
   ParentToChildMessageReaderOrWriter,

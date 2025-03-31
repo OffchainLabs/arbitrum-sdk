@@ -1,6 +1,5 @@
-import { utils } from 'ethers'
+import { BigNumber, utils } from 'ethers'
 import { defaultAbiCoder } from '@ethersproject/abi'
-import { BigNumber } from '@ethersproject/bignumber'
 import { hexZeroPad } from '@ethersproject/bytes'
 
 const { getAddress } = utils

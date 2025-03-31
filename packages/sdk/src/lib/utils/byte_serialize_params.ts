@@ -46,11 +46,10 @@ Arbitrum SDK includes methods for [serializing parameters](https://developer.off
  * @module Byte-Serialization
  */
 
-import { utils } from 'ethers'
+import { BigNumber, utils } from 'ethers'
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { concat, hexZeroPad } from '@ethersproject/bytes'
-import { BigNumber } from '@ethersproject/bignumber'
 
 import { ArbAddressTable__factory } from '../abi/factories/ArbAddressTable__factory'
 import { ArbAddressTable } from '../abi/ArbAddressTable'
