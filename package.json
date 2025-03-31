@@ -107,6 +107,7 @@
     "**/patch-package/cross-spawn": "6.0.6",
     "**/eslint/cross-spawn": "7.0.5",
     "**/foreground-child/cross-spawn": "7.0.5",
-    "**/istanbul-lib-processinfo/cross-spawn": "7.0.5"
+    "**/istanbul-lib-processinfo/cross-spawn": "7.0.5",
+    "**/hardhat/undici": "5.28.5"
   }
 }
