@@ -101,6 +101,7 @@
     "**/hardhat/@sentry/node/cookie": "0.7.0",
     "**/micromatch": "4.0.8",
     "**/elliptic": "6.6.0",
-    "**/secp256k1": "4.0.4"
+    "**/secp256k1": "4.0.4",
+    "**/nanoid": "3.3.8"
   }
 }
