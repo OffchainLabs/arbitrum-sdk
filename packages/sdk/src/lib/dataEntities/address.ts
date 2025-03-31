@@ -1,7 +1,9 @@
-import { getAddress } from '@ethersproject/address'
 import { utils } from 'ethers'
+
 import { ADDRESS_ALIAS_OFFSET } from './constants'
 import { ArbSdkError } from './errors'
+
+const { getAddress } = utils
 
 /**
  * Ethereum/Arbitrum address class

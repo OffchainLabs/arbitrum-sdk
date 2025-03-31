@@ -16,9 +16,10 @@
 /* eslint-env node */
 'use strict'
 
+import { BigNumber, utils, ContractTransaction, Signer } from 'ethers'
+import { ethers, network } from 'hardhat'
 import { expect } from 'chai'
 
-import { BigNumber } from '@ethersproject/bignumber'
 import { Logger, LogLevel } from '@ethersproject/logger'
 Logger.setLogLevel(LogLevel.ERROR)
 
@@ -28,14 +29,12 @@ import { SequencerInbox__factory } from '../../src/lib/abi/factories/SequencerIn
 
 import { InboxTools } from '../../src'
 
-import { ethers, network } from 'hardhat'
-import { hexZeroPad } from '@ethersproject/bytes'
 import {
   ArbitrumNetwork,
   getArbitrumNetwork,
 } from '../../src/lib/dataEntities/networks'
-import { solidityKeccak256 } from 'ethers/lib/utils'
-import { ContractTransaction, Signer } from 'ethers'
+
+const { solidityKeccak256, hexZeroPad } = utils
 
 const submitL2Tx = async (
   tx: {

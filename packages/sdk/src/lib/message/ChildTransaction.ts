@@ -17,9 +17,8 @@
 'use strict'
 
 import { TransactionReceipt } from '@ethersproject/providers'
-import { BigNumber } from '@ethersproject/bignumber'
 import { Log } from '@ethersproject/abstract-provider'
-import { ContractTransaction, providers } from 'ethers'
+import { ContractTransaction, providers, BigNumber } from 'ethers'
 import {
   SignerProviderUtils,
   SignerOrProvider,

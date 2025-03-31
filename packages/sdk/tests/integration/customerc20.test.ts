@@ -17,8 +17,7 @@
 'use strict'
 
 import { expect } from 'chai'
-import { Signer, Wallet, constants, utils } from 'ethers'
-import { BigNumber } from '@ethersproject/bignumber'
+import { Signer, Wallet, constants, utils, BigNumber } from 'ethers'
 import { Logger, LogLevel } from '@ethersproject/logger'
 Logger.setLogLevel(LogLevel.ERROR)
 import { L1CustomGateway__factory } from '../../src/lib/abi/factories/L1CustomGateway__factory'

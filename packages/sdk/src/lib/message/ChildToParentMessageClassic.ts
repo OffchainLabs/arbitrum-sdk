@@ -22,7 +22,6 @@ import {
 } from '../dataEntities/constants'
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
-import { BigNumber } from '@ethersproject/bignumber'
 import { BlockTag } from '@ethersproject/abstract-provider'
 
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
@@ -30,7 +29,7 @@ import { Outbox__factory } from '../abi/classic/factories/Outbox__factory'
 
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { L2ToL1TransactionEvent as ChildToParentTransactionEvent } from '../abi/ArbSys'
-import { ContractTransaction, Overrides } from 'ethers'
+import { ContractTransaction, Overrides, BigNumber } from 'ethers'
 import { EventFetcher } from '../utils/eventFetcher'
 import {
   SignerProviderUtils,

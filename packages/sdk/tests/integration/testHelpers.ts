@@ -19,13 +19,12 @@
 import { expect } from 'chai'
 import chalk from 'chalk'
 
-import { BigNumber } from '@ethersproject/bignumber'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { parseEther } from 'ethers/lib/utils'
 
 import { config, getSigner, testSetup } from '../testSetup'
 
-import { Signer, Wallet } from 'ethers'
+import { Signer, Wallet, BigNumber } from 'ethers'
 import { Erc20Bridger, ChildToParentMessageStatus } from '../../src'
 import { ParentToChildMessageStatus } from '../../src/lib/message/ParentToChildMessage'
 import {

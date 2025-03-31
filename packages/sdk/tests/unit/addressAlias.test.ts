@@ -16,15 +16,16 @@
 /* eslint-env node */
 'use strict'
 
+import { utils, BigNumber } from 'ethers'
 import { expect } from 'chai'
 
 import { Address } from '../../src/lib/dataEntities/address'
-import { BigNumber } from 'ethers'
 import { ADDRESS_ALIAS_OFFSET } from '../../src/lib/dataEntities/constants'
-import { hexZeroPad } from '@ethersproject/bytes'
-import { getAddress } from '@ethersproject/address'
+
 const offset = BigNumber.from(ADDRESS_ALIAS_OFFSET)
 const maxAddr = BigNumber.from('0xffffffffffffffffffffffffffffffffffffffff')
+
+const { getAddress, hexZeroPad } = utils
 
 describe('Address', () => {
   const testApplyUndo = (
