@@ -103,6 +103,7 @@
     "**/elliptic": "6.6.1",
     "**/secp256k1": "4.0.4",
     "**/nanoid": "3.3.8",
-    "**/serialize-javascript": "6.0.2"
+    "**/serialize-javascript": "6.0.2",
+    "**/patch-package/cross-spawn": "6.0.6"
   }
 }
