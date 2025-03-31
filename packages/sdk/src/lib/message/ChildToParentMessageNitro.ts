@@ -291,6 +291,13 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
       ? this.parseAssertionCreatedEvent(log)
       : this.parseNodeCreatedAssertion(log)
 
+    if (
+      parsedLog.afterState.blockHash ===
+      '0x0000000000000000000000000000000000000000000000000000000000000000'
+    ) {
+      return arbitrumProvider.getBlock(0)
+    }
+
     const childBlock = await arbitrumProvider.getBlock(
       parsedLog.afterState.blockHash
     )
@@ -460,9 +467,13 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
               address: rollup.address,
             }
           )
-          latestCreatedAssertionId =
-            assertionCreatedEvents[assertionCreatedEvents.length - 1].event
-              .assertionHash
+          if (assertionCreatedEvents.length !== 0) {
+            latestCreatedAssertionId =
+              assertionCreatedEvents[assertionCreatedEvents.length - 1].event
+                .assertionHash
+          } else {
+            latestCreatedAssertionId = latestConfirmedAssertionId
+          }
         } else {
           latestCreatedAssertionId = await rollup.callStatic.latestNodeCreated()
         }
