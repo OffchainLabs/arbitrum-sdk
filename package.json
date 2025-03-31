@@ -100,7 +100,7 @@
     "**/hardhat/ws": "7.5.10",
     "**/hardhat/@sentry/node/cookie": "0.7.0",
     "**/micromatch": "4.0.8",
-    "**/elliptic": "6.6.0",
+    "**/elliptic": "6.6.1",
     "**/secp256k1": "4.0.4",
     "**/nanoid": "3.3.8",
     "**/serialize-javascript": "6.0.2"
