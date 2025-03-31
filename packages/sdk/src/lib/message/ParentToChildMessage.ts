@@ -21,7 +21,6 @@ import { TransactionReceipt } from '@ethersproject/providers'
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
 import { ContractTransaction } from '@ethersproject/contracts'
-import { concat, zeroPad } from '@ethersproject/bytes'
 import { keccak256 } from '@ethersproject/keccak256'
 
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
@@ -42,7 +41,7 @@ import { EventFetcher } from '../utils/eventFetcher'
 import { ErrorCode, Logger } from '@ethersproject/logger'
 import { getArbitrumNetwork } from '../dataEntities/networks'
 
-const { getAddress } = utils
+const { getAddress, concat, zeroPad } = utils
 
 export enum ParentToChildMessageStatus {
   /**

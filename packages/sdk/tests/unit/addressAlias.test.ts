@@ -21,12 +21,11 @@ import { expect } from 'chai'
 
 import { Address } from '../../src/lib/dataEntities/address'
 import { ADDRESS_ALIAS_OFFSET } from '../../src/lib/dataEntities/constants'
-import { hexZeroPad } from '@ethersproject/bytes'
 
 const offset = BigNumber.from(ADDRESS_ALIAS_OFFSET)
 const maxAddr = BigNumber.from('0xffffffffffffffffffffffffffffffffffffffff')
 
-const { getAddress } = utils
+const { getAddress, hexZeroPad } = utils
 
 describe('Address', () => {
   const testApplyUndo = (

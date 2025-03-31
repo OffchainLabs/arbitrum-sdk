@@ -49,7 +49,6 @@ Arbitrum SDK includes methods for [serializing parameters](https://developer.off
 import { BigNumber, utils } from 'ethers'
 import { Provider } from '@ethersproject/abstract-provider'
 import { Signer } from '@ethersproject/abstract-signer'
-import { concat, hexZeroPad } from '@ethersproject/bytes'
 
 import { ArbAddressTable__factory } from '../abi/factories/ArbAddressTable__factory'
 import { ArbAddressTable } from '../abi/ArbAddressTable'
@@ -65,7 +64,7 @@ interface AddressIndexMemo {
   [address: string]: number
 }
 
-const { isAddress: _isAddress } = utils
+const { isAddress: _isAddress, concat, hexZeroPad } = utils
 
 export const getAddressIndex = (() => {
   const addressToIndexMemo: AddressIndexMemo = {}

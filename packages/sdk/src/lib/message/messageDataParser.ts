@@ -1,8 +1,7 @@
 import { BigNumber, utils } from 'ethers'
 import { defaultAbiCoder } from '@ethersproject/abi'
-import { hexZeroPad } from '@ethersproject/bytes'
 
-const { getAddress } = utils
+const { getAddress, hexZeroPad } = utils
 
 export class SubmitRetryableMessageDataParser {
   /**

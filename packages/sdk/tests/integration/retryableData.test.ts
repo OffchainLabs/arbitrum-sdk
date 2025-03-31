@@ -17,13 +17,14 @@
 'use strict'
 
 import { assert, expect } from 'chai'
-import { hexlify } from '@ethersproject/bytes'
+import { Wallet, BigNumber, utils } from 'ethers'
+
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
 import { fundParentSigner, skipIfMainnet } from './testHelpers'
 import { RetryableDataTools } from '../../src'
-import { Wallet, BigNumber } from 'ethers'
+
 import { testSetup } from '../testSetup'
-import { parseEther, randomBytes } from 'ethers/lib/utils'
+
 import { Inbox__factory } from '../../src/lib/abi/factories/Inbox__factory'
 import { GasOverrides } from '../../src/lib/message/ParentToChildMessageGasEstimator'
 const depositAmount = BigNumber.from(100)
@@ -33,6 +34,8 @@ import {
   getNativeTokenDecimals,
   scaleFrom18DecimalsToNativeTokenDecimals,
 } from '../../src/lib/utils/lib'
+
+const { hexlify, parseEther, randomBytes } = utils
 
 describe('RevertData', () => {
   beforeEach('skipIfMainnet', async function () {
