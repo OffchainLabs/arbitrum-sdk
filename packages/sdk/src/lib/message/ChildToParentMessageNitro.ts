@@ -291,6 +291,7 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
       ? this.parseAssertionCreatedEvent(log)
       : this.parseNodeCreatedAssertion(log)
 
+    // if the chain is freshly deployed and latest confirmed/created is the genesis assertion that contains a empty block hash
     if (
       parsedLog.afterState.blockHash ===
       '0x0000000000000000000000000000000000000000000000000000000000000000'
