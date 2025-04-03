@@ -103,6 +103,7 @@
     "**/elliptic": "6.6.1",
     "**/nanoid": "3.3.8",
     "**/serialize-javascript": "6.0.2",
+    "**/istanbul-lib-instrument/@babel/core/@babel/helpers": "7.26.10",
     "**/hardhat/undici": "5.28.5",
     "**/chokidar/braces": "3.0.3",
     "**/sol2uml/axios": "0.30.0"
