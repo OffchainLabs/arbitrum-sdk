@@ -101,6 +101,7 @@
     "**/puppeteer/tar-fs": "2.1.2",
     "**/hardhat/ws": "7.5.10",
     "**/hardhat/@sentry/node/cookie": "0.7.0",
+    "**/follow-redirects": "1.15.6",
     "**/micromatch": "4.0.8",
     "**/elliptic": "6.6.1",
     "**/secp256k1": "4.0.4",
