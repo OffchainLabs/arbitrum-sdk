@@ -100,6 +100,7 @@
     "**/puppeteer/ws": "8.17.1",
     "**/puppeteer/tar-fs": "2.1.2",
     "**/hardhat/@sentry/node/cookie": "0.7.0",
+    "**/micromatch": "4.0.8",
     "**/elliptic": "6.6.1",
     "**/secp256k1": "4.0.4",
     "**/nanoid": "3.3.8",
