@@ -222,7 +222,7 @@ export class MultiCaller {
   }
 
   /**
-   * Multicall for token properties. Will collect all the requested properies for each of the
+   * Multicall for token properties. Will collect all the requested properties for each of the
    * supplied token addresses.
    * @param erc20Addresses
    * @param options Defaults to just 'name'
