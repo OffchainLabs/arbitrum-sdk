@@ -58,9 +58,6 @@
     // from @arbitrum/nitro-contracts>@offchainlabs/upgrade-executor>@openzeppelin/contracts-upgradeable
     // from @arbitrum/nitro-contracts>@offchainlabs/upgrade-executor>@openzeppelin/contracts
     "GHSA-wprv-93r4-jj2p",
-    // https://github.com/advisories/GHSA-3787-6prv-h9w3
-    // Undici proxy-authorization header not cleared on cross-origin redirect in fetch
-    "GHSA-3787-6prv-h9w3",
     // https://github.com/advisories/GHSA-699g-q6qh-q4v8
     // OpenZeppelin Contracts and Contracts Upgradeable duplicated execution of subcalls in v4.9.4
     // from: @offchainlabs/l1-l3-teleport-contracts>@openzeppelin/contracts
@@ -72,54 +69,6 @@
     // from: @arbitrum/token-bridge-contracts>@openzeppelin/contracts-upgradeable
     // from: @arbitrum/nitro-contracts>@openzeppelin/contracts
     // from: @arbitrum/token-bridge-contracts>@openzeppelin/contracts
-    "GHSA-9vx6-7xxf-x967",
-    // https://github.com/advisories/GHSA-cxjh-pqwp-8mfp
-    // axios can leak auth headers when using `Proxy-Authentication` header. We do not use that header.
-    // from: axios>follow-redirects
-    // from: hardhat>solc>follow-redirects
-    "GHSA-cxjh-pqwp-8mfp",
-    // https://github.com/advisories/GHSA-9qxr-qj54-h672
-    // Undici's fetch with integrity option is too lax when algorithm is specified but hash value is incorrect
-    // hardhat requests are only done during development
-    // from: hardhat>undici
-    "GHSA-9qxr-qj54-h672",
-    // https://github.com/advisories/GHSA-m4v8-wqvr-p9f7
-    // Undici's Proxy-Authorization header not cleared on cross-origin redirect for dispatch, request, stream, pipeline
-    // hardhat requests are only done during development
-    // from: hardhat>undici
-    "GHSA-m4v8-wqvr-p9f7",
-    // https://github.com/advisories/GHSA-grv7-fg5c-xmjg
-    // Uncontrolled resource consumption in braces
-    // eslint and hardhat dependency, only used in dev
-    // from: hardhat>braces & eslint>braces
-    "GHSA-grv7-fg5c-xmjg",
-    // https://github.com/advisories/GHSA-3h5v-q93c-6h6q
-    // Exposure of Sensitive Information in ws
-    // Issue with sol2uml library that generates UML diagrams from Solidity code. Only used at build time.
-    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>convert-svg-to-png>convert-svg-core>puppeteer>ws
-    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>sol2uml>convert-svg-to-png>convert-svg-core>puppeteer>ws
-    "GHSA-3h5v-q93c-6h6q",
-    // https://github.com/advisories/GHSA-wf5p-g6vw-rhxx
-    // Axios: Server-Side Request Forgery vulnerability
-    // Issue with sol2uml library that generates UML diagrams from Solidity code. Only used at build time.
-    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>axios
-    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>sol2uml>axios
-    "GHSA-wf5p-g6vw-rhxx",
-    // https://github.com/advisories/GHSA-3xgq-45jj-v275
-    // cross-spawn command injection vulnerability
-    // Only used during development via audit-ci, nyc, and patch-package
-    // from: audit-ci>cross-spawn
-    // from: nyc>foreground-child>cross-spawn
-    // from: nyc>spawn-wrap>foreground-child>cross-spawn
-    // from: @arbitrum/nitro-contracts>patch-package>cross-spawn
-    // from: @arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>patch-package>cross-spawn
-    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>patch-package>cross-spawn
-    "GHSA-3xgq-45jj-v275",
-    // https://github.com/advisories/GHSA-mwcw-c2x4-8c55
-    // nanoid infinite loop vulnerability when handling non-integer values
-    // Only used by mocha for test file IDs during test execution, not in production code
-    // from: hardhat>mocha>nanoid
-    // from: mocha>nanoid
-    "GHSA-mwcw-c2x4-8c55"
+    "GHSA-9vx6-7xxf-x967"
   ]
 }
