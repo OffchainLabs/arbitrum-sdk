@@ -1,40 +1,19 @@
 version: 2
 updates:
-  # ===  Internal dependencies ===
-  - package-ecosystem: 'npm'
+  - package-ecosystem: npm
     directories:
-      - '/'
-      - '/packages/*'
-    schedule:
-      interval: 'daily'
-    allow:
-      - dependency-name: '@arbitrum/*'
-      - dependency-name: '@offchainlabs/*'
+      - '/*'
+    schedule: { interval: daily }
     versioning-strategy: increase-if-necessary
-    ignore: # ignore patch updates
+    ignore:
       - dependency-name: '*'
         update-types: ['version-update:semver-patch']
-    reviewers:
-      - 'OffchainLabs/full-stack'
-    labels:
-      - 'dependencies'
-      - 'internal'
+    reviewers: ['OffchainLabs/full-stack']
+    labels: ['dependencies']
 
-  # ===  External dependencies ===
-  - package-ecosystem: 'npm'
-    directories:
-      - '/'
-      - '/packages/*'
-    schedule:
-      interval: 'daily'
-    ignore: # exclude internal dependencies
-      - dependency-name: '@arbitrum/*'
-      - dependency-name: '@offchainlabs/*'
-    # For all other (external) dependencies not caught by the ignore above,
-    # disable version updates, allowing only security updates.
-    open-pull-requests-limit: 0
-    reviewers:
-      - 'OffchainLabs/full-stack'
-    labels:
-      - 'dependencies'
-      - 'external'
+    groups:
+      internal:
+        patterns: ['@arbitrum/*', '@offchainlabs/*']
+      external-security:
+        exclude-patterns: ['@arbitrum/*', '@offchainlabs/*']
+        applies-to: security-updates
