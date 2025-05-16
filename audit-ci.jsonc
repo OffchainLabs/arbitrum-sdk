@@ -69,6 +69,17 @@
     // from: @arbitrum/token-bridge-contracts>@openzeppelin/contracts-upgradeable
     // from: @arbitrum/nitro-contracts>@openzeppelin/contracts
     // from: @arbitrum/token-bridge-contracts>@openzeppelin/contracts
-    "GHSA-9vx6-7xxf-x967"
+    "GHSA-9vx6-7xxf-x967",
+    // https://github.com/advisories/GHSA-xq7p-g2vc-g82p
+    // Homograph attack allows Unicode lookalike characters to bypass validation.
+    // we don't use them in this repo, they are nested dependencies
+    // from: @arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>bs58check>bs58>base-x
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>bs58check>bs58>base-x
+    "GHSA-xq7p-g2vc-g82p",
+    // https://github.com/advisories/GHSA-cxrh-j4jr-qwg3
+    // undici Denial of Service attack via bad certificate data
+    // we only use hardhat in a test and we don't use undici in the sdk
+    // from: hardhat>undici
+    "GHSA-cxrh-j4jr-qwg3"
   ]
 }
