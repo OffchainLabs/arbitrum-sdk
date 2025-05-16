@@ -16,10 +16,10 @@ jobs:
         node-version: [18, 20]
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
@@ -41,10 +41,10 @@ jobs:
       TEST_PATH: /tmp/test-results
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
@@ -66,18 +66,11 @@ jobs:
           path: ${{ env.TEST_PATH }}
 
       - name: Publish Test Report
-        uses: mikepenz/action-junit-report@v3
+        uses: mikepenz/action-junit-report@v5
         if: always() # always run even if the previous step fails
         with:
           report_paths: '${{ env.TEST_PATH }}/sdk-lint.xml'
           fail_on_failure: false
-
-      # TODO: need to fix codecov, hasn't been working for a while according to #172 comment
-      - name: Upload Coverage to Codecov
-        uses: codecov/codecov-action@v3
-        with:
-          fail_ci_if_error: false
-          verbose: false
 
   audit:
     name: Audit on Node.js v${{ matrix.node-version }}
@@ -88,10 +81,10 @@ jobs:
     needs: install
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
@@ -111,10 +104,10 @@ jobs:
     needs: install
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
@@ -175,10 +168,10 @@ jobs:
       DECIMALS: ${{ matrix.decimals || '18' }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
 
@@ -190,7 +183,7 @@ jobs:
       - name: Set up the local node
         uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
-          nitro-testnode-ref: adapt-bridge-amount
+          nitro-testnode-ref: f5a54d679733c65b81d5106488feb957ec579a46
           l3-node: ${{ matrix.orbit-test == '1' }}
           args: ${{ matrix.decimals == 16 && '--l3-fee-token --l3-fee-token-decimals 16' || matrix.decimals == 20 && '--l3-fee-token --l3-fee-token-decimals 20' || matrix.decimals == 18 && '--l3-fee-token' || '' }}
 
