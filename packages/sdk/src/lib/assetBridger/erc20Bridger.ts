@@ -144,6 +144,7 @@ export interface Erc20WithdrawParams extends EthWithdrawParams {
 export type ParentToChildTxReqAndSignerProvider =
   ParentToChildTransactionRequest & {
     parentSigner: Signer
+    parentProvider?: Provider
     childProvider: Provider
     overrides?: Overrides
   }
@@ -780,9 +781,9 @@ export class Erc20Bridger extends AssetBridger<
       )
     }
 
-    const parentProvider = SignerProviderUtils.getProviderOrThrow(
-      params.parentSigner
-    )
+    const parentProvider =
+      params.parentProvider ??
+      SignerProviderUtils.getProviderOrThrow(params.parentSigner)
 
     const erc20ParentAddress = isParentToChildTransactionRequest(params)
       ? getErc20ParentAddressFromParentToChildTxRequest(params)

@@ -105,9 +105,13 @@ export interface EthWithdrawParams {
 
 export type EthDepositParams = {
   /**
-   * Parent network provider or signer
+   * Parent network signer
    */
   parentSigner: Signer
+  /**
+   * Parent network provider, otherwise `parentSigner.provider` will be used
+   */
+  parentProvider?: Provider
   /**
    * The amount of ETH or tokens to be deposited
    */
