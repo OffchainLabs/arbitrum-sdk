@@ -1,6 +1,6 @@
 # Arbitrum SDK
 
-[![npm version](https://badge.fury.io/js/%40arbitrum%2Fsdk.svg)](https://badge.fury.io/js/@arbitrum%2Fsdk.svg)
+[![npm version](https://badge.fury.io/js/%40arbitrum%2Fsdk.svg)](https://www.npmjs.com/package/@arbitrum/sdk)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 A TypeScript library for client-side interactions with Arbitrum. The Arbitrum SDK provides essential helper functionality and direct access to underlying smart contract interfaces, enabling developers to build powerful applications on the Arbitrum network.
