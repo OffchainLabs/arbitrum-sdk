@@ -21,7 +21,7 @@ import { Signer } from '@ethersproject/abstract-signer'
 import { BigNumber } from '@ethersproject/bignumber'
 import { BlockTag } from '@ethersproject/abstract-provider'
 
-import { ContractTransaction, Overrides } from 'ethers'
+import { ContractTransaction, Overrides, PopulatedTransaction } from 'ethers'
 import {
   SignerProviderUtils,
   SignerOrProvider,
@@ -314,6 +314,25 @@ export class ChildToParentMessageWriter extends ChildToParentMessageReader {
         parentProvider
       )
     }
+  }
+
+  /**
+   * Gets the execute transaction for the ChildToParentMessage on Parent chain.
+   * Will throw an error if the outbox entry has not been created, which happens when the
+   * corresponding assertion is confirmed.
+   * @returns The populated transaction that can be sent to execute the message
+   */
+  public async getExecuteTransaction(
+    childProvider: Provider,
+    overrides?: Overrides
+  ): Promise<PopulatedTransaction> {
+    if (this.nitroWriter)
+      return this.nitroWriter.getExecuteTransaction(childProvider, overrides)
+    else
+      return await this.classicWriter!.getExecuteTransaction(
+        childProvider,
+        overrides
+      )
   }
 
   /**
