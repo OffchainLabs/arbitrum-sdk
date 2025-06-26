@@ -80,6 +80,26 @@
     // undici Denial of Service attack via bad certificate data
     // we only use hardhat in a test and we don't use undici in the sdk
     // from: hardhat>undici
-    "GHSA-cxrh-j4jr-qwg3"
+    "GHSA-cxrh-j4jr-qwg3",
+    // https://github.com/advisories/GHSA-pq67-2wwv-3xjx
+    // tar-fs Path Traversal vulnerability
+    // Only used in dev dependency sol2uml for documentation generation
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>convert-svg-to-png>convert-svg-core>puppeteer>tar-fs
+    "GHSA-pq67-2wwv-3xjx",
+    // https://github.com/advisories/GHSA-8cj5-5rvv-wf4v
+    // tar-fs denial of service vulnerability
+    // Only used in dev dependency sol2uml for documentation generation
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>convert-svg-to-png>convert-svg-core>puppeteer>tar-fs
+    "GHSA-8cj5-5rvv-wf4v",
+    // https://github.com/advisories/GHSA-v62p-rq8g-8h59
+    // pbkdf2 Key Derivation Function vulnerability
+    // Only used in dev dependency for ethereum-cryptography
+    // from: @arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>pbkdf2
+    "GHSA-v62p-rq8g-8h59",
+    // https://github.com/advisories/GHSA-h7cp-r72f-jxh6
+    // pbkdf2 Insufficient Iteration Count vulnerability
+    // Only used in dev dependency for ethereum-cryptography
+    // from: @arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>pbkdf2
+    "GHSA-h7cp-r72f-jxh6"
   ]
 }

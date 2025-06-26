@@ -56,7 +56,7 @@
     "lodash.pick": "https://github.com/lodash/lodash/archive/refs/tags/4.17.21.tar.gz",
     "**/@ethersproject/providers/ws": "7.5.10",
     "**/puppeteer/ws": "8.17.1",
-    "**/puppeteer/tar-fs": "2.1.2",
+    "**/puppeteer/tar-fs": "3.0.6",
     "**/hardhat/ws": "7.5.10",
     "**/hardhat/@sentry/node/cookie": "0.7.0",
     "**/follow-redirects": "1.15.6",
@@ -72,6 +72,11 @@
     "**/istanbul-lib-instrument/@babel/core/@babel/helpers": "7.26.10",
     "**/hardhat/undici": "5.28.5",
     "**/chokidar/braces": "3.0.3",
-    "**/sol2uml/axios": "0.30.0"
+    "**/sol2uml/axios": "0.30.0",
+    "**/brace-expansion": "1.1.12",
+    "**/convert-svg-core/brace-expansion": "2.0.2",
+    "**/hardhat/brace-expansion": "2.0.2",
+    "**/tar-fs": "3.0.6",
+    "**/pbkdf2": "3.1.2"
   }
 }
