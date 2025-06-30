@@ -67,7 +67,6 @@ const ethBridger = new EthBridger(childNetwork)
 const ethDepositTxResponse = await ethBridger.deposit({
   amount: utils.parseEther('23'),
   parentSigner, // an ethers v5 signer connected to mainnet ethereum
-  childProvider, // an ethers v5 provider connected to Arbitrum One
 })
 
 const ethDepositTxReceipt = await ethDepositTxResponse.wait()
