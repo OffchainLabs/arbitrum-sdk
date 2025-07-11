@@ -3,8 +3,6 @@
     "target": "ES2017",
     "module": "commonjs",
     "declaration": true,
-    "rootDir": "./src",
-    "outDir": "./dist",
     "strict": true,
     "allowJs": true,
     "noImplicitAny": true,
@@ -14,7 +12,9 @@
     "noImplicitThis": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "experimentalDecorators": true
-  },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.js"]
+    "experimentalDecorators": true,
+    "paths": {
+      "@ethersproject/*": ["./node_modules/@ethersproject/*"]
+    }
+  }
 }

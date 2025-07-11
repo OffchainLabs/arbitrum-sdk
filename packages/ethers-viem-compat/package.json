@@ -1,0 +1,35 @@
+{
+  "name": "@offchainlabs/ethers-viem-compat",
+  "version": "0.0.1",
+  "description": "Typescript library for ethers compatibility with viem",
+  "author": "Offchain Labs, Inc.",
+  "license": "Apache-2.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/offchainlabs/arbitrum-sdk.git"
+  },
+  "engines": {
+    "node": ">=v11",
+    "npm": "please-use-yarn",
+    "yarn": ">= 1.0.0"
+  },
+  "bugs": {
+    "url": "https://github.com/offchainlabs/arbitrum-sdk/issues"
+  },
+  "homepage": "https://offchainlabs.com",
+  "files": [
+    "dist/**/*"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.json",
+    "test:unit": "mocha -r ts-node/register 'tests/**/*.test.ts'",
+    "lint": "eslint .",
+    "format": "prettier './**/*.{js,json,md,ts,yml}' '!./src/lib/abi' --write && yarn run lint --fix"
+  },
+  "peerDependencies": {
+    "ethers": "^5.0.0",
+    "viem": "^2.0.0"
+  }
+}

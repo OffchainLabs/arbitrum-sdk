@@ -1,0 +1,198 @@
+# Introduction
+
+The Arbitrum SDK is a powerful TypeScript library that streamlines interactions with Arbitrum networks. It offers robust tools for bridging tokens and passing messages between networks through an intuitive interface to the underlying smart contracts.
+
+**Key Features**
+
+- Token Bridging: Effortlessly bridge tokens between Ethereum and Arbitrum.
+- Message Passing: Seamlessly pass messages across networks.
+- Contracts Interface: Leverage a strongly-typed interface for interacting with smart contracts.
+
+Below is an overview of the Arbitrum SDK functionality. See the [tutorials](https://github.com/OffchainLabs/arbitrum-tutorials) for more examples.
+
+## Getting Started
+
+Install dependencies
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+<Tabs>
+<TabItem value="npm" label="npm">
+
+```sh
+npm install @arbitrum/sdk
+```
+
+</TabItem>
+<TabItem value="yarn" label="yarn">
+
+```sh
+yarn add @arbitrum/sdk
+```
+
+</TabItem>
+<TabItem value="pnpm" label="pnpm">
+
+```sh
+pnpm install @arbitrum/sdk
+```
+
+</TabItem>
+</Tabs>
+
+## Using the Arbitrum SDK
+
+### Bridging assets
+
+Arbitrum SDK can be used to bridge assets to or from an Arbitrum Network. The following asset bridgers are currently available:
+
+- [`EthBridger`](./reference/assetBridger/ethBridger.md)
+- [`Erc20Bridger`](./reference/assetBridger/erc20Bridger.md)
+
+All asset bridgers have the following methods which accept different parameters depending on the asset bridger type:
+
+- [`deposit`](./reference/assetBridger/assetBridger.md#deposit) - moves assets from the Parent to the Child chain
+- [`withdraw`](./reference/assetBridger/assetBridger.md#withdraw) - moves assets from the Child to the Parent chain
+
+#### Example ETH Deposit to Arbitrum One
+
+```ts
+import { getArbitrumNetwork, EthBridger } from '@arbitrum/sdk'
+
+// get the `@arbitrum/sdk` ArbitrumNetwork object using the chain id of the Arbitrum One chain
+const childNetwork = await getArbitrumNetwork(42161)
+const ethBridger = new EthBridger(childNetwork)
+
+const ethDepositTxResponse = await ethBridger.deposit({
+  amount: utils.parseEther('23'),
+  parentSigner, // an ethers v5 signer connected to mainnet ethereum
+  childProvider, // an ethers v5 provider connected to Arbitrum One
+})
+
+const ethDepositTxReceipt = await ethDepositTxResponse.wait()
+```
+
+[Learn more in the Eth Deposit tutorial](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/eth-deposit)
+
+#### Example ETH Withdrawal from Arbitrum One
+
+```ts
+import { getArbitrumNetwork, EthBridger } from '@arbitrum/sdk'
+
+// get the `@arbitrum/sdk` ArbitrumNetwork object using the chain id of the Arbitrum One chain
+const childNetwork = await getArbitrumNetwork(42161)
+const ethBridger = new EthBridger(childNetwork)
+
+const withdrawTx = await ethBridger.withdraw({
+  amount: utils.parseEther('23'),
+  childSigner, // an ethers v5 signer connected to Arbitrum One
+  destinationAddress: childWallet.address,
+})
+const withdrawRec = await withdrawTx.wait()
+```
+
+[Learn more in the Eth Withdraw tutorial](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/eth-withdraw)
+
+### Networks
+
+Arbitrum SDK comes pre-configured for Mainnet and Sepolia, and their Arbitrum counterparts. Any other networks that are not pre-configured **must** be registered before being used.
+
+#### Configuring Network
+
+To interact with a custom [`ArbitrumNetwork`](./reference/dataEntities/networks), you can register it using the [`registerCustomArbitrumNetwork`](./reference/dataEntities/networks.md#registercustomarbitrumnetwork) function.
+
+```ts
+import { registerCustomArbitrumNetwork } from '@arbitrum/sdk'
+
+registerCustomArbitrumNetwork({
+  chainID: 123456,
+  name: 'Custom Arbitrum Network',
+})
+```
+
+### Cross chain messages
+
+When assets are moved by the Parent and Child cross chain messages are sent. The lifecycles of these messages are encapsulated in the classes [`ParentToChildMessage`](./reference/message/ParentToChildMessage) and [`ChildToParentMessage`](./reference/message/ParentToChildMessage). These objects are commonly created from the receipts of transactions that send cross chain messages. A cross chain message will eventually result in a transaction being executed on the destination chain, and these message classes provide the ability to wait for that finalizing transaction to occur.
+
+#### Redeem a Parent-to-Child Message
+
+```ts
+import {
+  ParentTransactionReceipt,
+  ParentToChildMessageStatus,
+} from '@arbitrum/sdk'
+
+const parentTxnReceipt = new ParentTransactionReceipt(
+  txnReceipt // ethers-js TransactionReceipt of an ethereum tx that triggered a Parent-to-Child message (say depositing a token via a bridge)
+)
+
+const parentToChildMessage = (
+  await parentTxnReceipt.getParentToChildMessages(
+    childSigner // connected ethers-js Wallet
+  )
+)[0]
+
+const res = await parentToChildMessage.waitForStatus()
+
+if (res.status === ParentToChildMessageStatus.Child) {
+  // Message wasn't auto-redeemed; redeem it now:
+  const response = await parentToChildMessage.redeem()
+  const receipt = await response.wait()
+} else if (res.status === ParentToChildMessageStatus.REDEEMED) {
+  // Message successfully redeemed
+}
+```
+
+[Learn more in the Redeem Failed Retryable Tickets tutorial](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/redeem-failed-retryable)
+
+### Inbox Tools
+
+As part of normal operation, the Arbitrum sequencer will send messages into the rollup chain. However, if the sequencer is unavailable and not posting batches, the inbox tools can be used to force the inclusion of transactions into the Arbitrum network.
+
+Here's how you can use the inbox tools to withdraw ether from Arbitrum One without waiting for the sequencer:
+
+```ts
+const childNetwork = await getArbitrumNetwork(await childWallet.getChainId())
+
+const inboxSdk = new InboxTools(parentWallet, childNetwork)
+const arbSys = ArbSys__factory.connect(ARB_SYS_ADDRESS, childProvider)
+const arbSysIface = arbSys.interface
+const childCalldata = arbSysIface.encodeFunctionData('withdrawEth', [
+  parentWallet.address,
+])
+
+const txChildRequest = {
+  data: childCalldata,
+  to: ARB_SYS_ADDRESS,
+  value: 1,
+}
+
+const childSignedTx = await inboxSdk.signChildTx(txChildRequest, childWallet)
+const childTxhash = ethers.utils.parseTransaction(childSignedTx).hash
+const resultsParent = await inboxSdk.sendChildSignedTx(childSignedTx)
+
+const inboxRec = await resultsParent.wait()
+```
+
+[Learn more in the Delayed Inbox tutorial](https://github.com/OffchainLabs/arbitrum-tutorials/tree/master/packages/delayedInbox-l2msg).
+
+### Utils
+
+- [`EventFetcher`](./reference/utils/eventFetcher) - A utility to provide typing for the fetching of events
+- [`MultiCaller`](./reference/utils/multicall#multicaller) - A utility for executing multiple calls as part of a single RPC request. This can be useful for reducing round trips.
+- [`constants`](./reference/dataEntities/constants) - A list of useful Arbitrum related constants
+
+## Development
+
+### Run Integration tests
+
+1. Copy the `.env-sample` file to `.env` and update the values with your own.
+1. First, make sure you have a [Nitro test node](https://github.com/Offchainlabs/nitro-testnode) running. Follow the instructions [here](https://docs.arbitrum.io/node-running/how-tos/local-dev-node).
+1. After the node has started up (that could take up to 20-30 mins), run `yarn gen:network`.
+1. Once done, finally run `yarn test:integration` to run the integration tests.
+
+Defaults to `Arbitrum Sepolia`, for custom network use `--network` flag.
+
+`Arbitrum Sepolia` expects env var `ARB_KEY` to be prefunded with at least 0.02 ETH, and env var `INFURA_KEY` to be set.
+(see `integration_test/config.ts`)

@@ -4,14 +4,6 @@
   "allowlist": [
     // Open Zepplin
     ////////////
-    // https://github.com/advisories/GHSA-88g8-f5mf-f5rj
-    // Improper Initialization in OpenZeppelin
-    // Initialiser can be re-entered. We've checked and aren't currently vulnerable.
-    "GHSA-88g8-f5mf-f5rj",
-    // https://github.com/advisories/GHSA-9c22-pwxw-p6hx
-    // Initializer reentrancy may lead to double initialization
-    // Initialiser can be re-entered. We've checked and aren't currently vulnerable.
-    "GHSA-9c22-pwxw-p6hx",
     // https://github.com/advisories/GHSA-4g63-c64m-25w9
     // OpenZeppelin Contracts's SignatureChecker may revert on invalid EIP-1271 signers
     // We dont use EIP-1271
@@ -60,30 +52,34 @@
     // from @arbitrum/nitro-contracts>@openzeppelin/contracts
     // We don't use ERC2771Context
     "GHSA-g4vp-m682-qqmp",
-    // https://github.com/advisories/GHSA-wf5p-g6vw-rhxx
-    // axios inadvertently reveals the confidential XSRF-TOKEN stored in cookies
-    // we don't use cookies with axios in the sdk
-    // from: @arbitrum/nitro-contracts>sol2uml>axios
-    // from: axios
-    "GHSA-wf5p-g6vw-rhxx",
     // https://github.com/advisories/GHSA-wprv-93r4-jj2p
     // OpenZeppelin Contracts using MerkleProof multiproofs may allow proving arbitrary leaves for specific trees
     // we don't use oz/merkle-trees anywhere
     // from @arbitrum/nitro-contracts>@offchainlabs/upgrade-executor>@openzeppelin/contracts-upgradeable
     // from @arbitrum/nitro-contracts>@offchainlabs/upgrade-executor>@openzeppelin/contracts
     "GHSA-wprv-93r4-jj2p",
+    // https://github.com/advisories/GHSA-699g-q6qh-q4v8
+    // OpenZeppelin Contracts and Contracts Upgradeable duplicated execution of subcalls in v4.9.4
+    // from: @offchainlabs/l1-l3-teleport-contracts>@openzeppelin/contracts
+    "GHSA-699g-q6qh-q4v8",
     // https://github.com/advisories/GHSA-9vx6-7xxf-x967
     // OpenZeppelin Contracts base64 encoding may read from potentially dirty memory
-    // from: @arbitrum/nitro-contracts>@offchainlabs/upgrade-executor>@openzeppelin/contracts-upgradeable
-    // from: @arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>@offchainlabs/upgrade-executor>@openzeppelin/contracts-upgradeable
+    // we don't use the base64 functions
     // from: @arbitrum/nitro-contracts>@openzeppelin/contracts-upgradeable
-    // from: @arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>@openzeppelin/contracts-upgradeable
     // from: @arbitrum/token-bridge-contracts>@openzeppelin/contracts-upgradeable
-    // from: @arbitrum/nitro-contracts>@offchainlabs/upgrade-executor>@openzeppelin/contracts
-    // from: @arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>@offchainlabs/upgrade-executor>@openzeppelin/contracts
     // from: @arbitrum/nitro-contracts>@openzeppelin/contracts
-    // from: @arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>@openzeppelin/contracts
     // from: @arbitrum/token-bridge-contracts>@openzeppelin/contracts
-    "GHSA-9vx6-7xxf-x967"
+    "GHSA-9vx6-7xxf-x967",
+    // https://github.com/advisories/GHSA-xq7p-g2vc-g82p
+    // Homograph attack allows Unicode lookalike characters to bypass validation.
+    // we don't use them in this repo, they are nested dependencies
+    // from: @arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>bs58check>bs58>base-x
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>bs58check>bs58>base-x
+    "GHSA-xq7p-g2vc-g82p",
+    // https://github.com/advisories/GHSA-cxrh-j4jr-qwg3
+    // undici Denial of Service attack via bad certificate data
+    // we only use hardhat in a test and we don't use undici in the sdk
+    // from: hardhat>undici
+    "GHSA-cxrh-j4jr-qwg3"
   ]
 }

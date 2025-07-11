@@ -1,0 +1,198 @@
+# Migrating from v3 to v4
+
+## Introduction
+
+`@arbitrum/sdk` v4 introduces significant changes to improve support Orbit chains from Offchain Labs. This guide outlines the breaking changes to know before migrating your existing v3 code to v4.
+
+## Major Changes Overview
+
+1. Terminology change from L1/L2 to parent/child
+2. Network types and functions updated
+3. Updates to `AssetBridger` and `Erc20Bridger` classes
+4. Changes to Message classes
+
+## Detailed Changes
+
+### 1. Terminology change from L1/L2 to parent/child
+
+Most instances of "L1" and "L2" have been replaced with "parent" and "child" respectively. This change reflects the more general parent-child relationship between chains in the Arbitrum ecosystem.
+
+- In most circumstances, when referring to a parent-child relationship between chains, the terms "parent" and "child" are used.
+- Though, when referring explicitly to "L1", "L2", or "L3", those specific terms are still used.
+
+### 2. Network types and functions updated
+
+- The `L1Network` is no longer required to be registered before bridging.
+- Only Arbitrum networks need to be registered.
+- Arbitrum networks are defined as Arbitrum One, Arbitrum testnets, and any Orbit chain.
+- If you need a full list of Arbitrum networks, you can use the new [`getArbitrumNetworks`](./reference/dataEntities/networks#getarbitrumnetworks) function.
+- To list all of the children of a network, use the new [`getChildrenForNetwork`](./reference/dataEntities/networks#getchildrenfornetwork) function.
+
+| v3 Name               | v4 Name                                                                                            |
+| --------------------- | -------------------------------------------------------------------------------------------------- |
+| `L2Network`           | [`ArbitrumNetwork`](./reference/dataEntities/networks#arbitrumnetwork)                             |
+| `getL2Network`        | [`getArbitrumNetwork`](./reference/dataEntities/networks#getarbitrumnetwork)                       |
+| `l2Networks`          | [`getArbitrumNetworks`](./reference/dataEntities/networks#getarbitrumnetworks)                     |
+| `addCustomNetwork`    | [`registerCustomArbitrumNetwork`](./reference/dataEntities/networks#registercustomarbitrumnetwork) |
+| `Network`             | *removed*                                                                                          |
+| `L1Network`           | *removed*                                                                                          |
+| `getL1Network`        | *removed*                                                                                          |
+| `getParentForNetwork` | *removed*                                                                                          |
+
+#### `ArbitrumNetwork` type
+
+`Network` type has been replaced with the [`ArbitrumNetwork`](./reference/dataEntities/networks#arbitrumnetwork) type and some properties have been removed or renamed.
+
+| v3 Name               | v4 Name         |
+| --------------------- | --------------- |
+| `chainID`             | `chainId`       |
+| `partnerChainID`      | `parentChainId` |
+| `explorerUrl`         | *removed*       |
+| `isArbitrum`          | *removed*       |
+| `partnerChainIDs`     | *removed*       |
+| `nitroGenesisBlock`   | *removed*       |
+| `nitroGenesisL1Block` | *removed*       |
+| `depositTimeout`      | *removed*       |
+| `blockTime`           | *removed*       |
+
+#### `TokenBridge` type
+
+The `TokenBridge` type within the[`ArbitrumNetwork`](./reference/dataEntities/networks#arbitrumnetwork) object has been updated.
+
+| v3 Name           | v4 Name               |
+| ----------------- | --------------------- |
+| `l1CustomGateway` | `parentCustomGateway` |
+| `l1ERC20Gateway`  | `parentErc20Gateway`  |
+| `l1GatewayRouter` | `parentGatewayRouter` |
+| `l1MultiCall`     | `parentMultiCall`     |
+| `l1ProxyAdmin`    | `parentProxyAdmin`    |
+| `l1Weth`          | `parentWeth`          |
+| `l1WethGateway`   | `parentWethGateway`   |
+| `l2CustomGateway` | `childCustomGateway`  |
+| `l2ERC20Gateway`  | `childErc20Gateway`   |
+| `l2GatewayRouter` | `childGatewayRouter`  |
+| `l2Multicall`     | `childMultiCall`      |
+| `l2ProxyAdmin`    | `childProxyAdmin`     |
+| `l2Weth`          | `childWeth`           |
+| `l2WethGateway`   | `childWethGateway`    |
+
+### 3. Updates to `AssetBridger` and `Erc20Bridger` classes
+
+#### [`AssetBridger`](./reference/assetBridger/assetBridger.md)  Class Methods
+
+The [`AssetBridger`](./reference/assetBridger/assetBridger.md) class methods and properties have been renamed to reflect the new parent-child terminology.
+
+| v3 Name          | v4 Name              |
+| ---------------- | -------------------- |
+| `l2Network`      | `childNetwork`       |
+| `checkL1Network` | `checkParentNetwork` |
+| `checkL2Network` | `checkChildNetwork`  |
+
+#### [`AssetBridger`](./reference/assetBridger/assetBridger.md)  Class Method Parameters
+
+The objects passed to the class methods of classes that inherit from [`AssetBridger`](./reference/assetBridger/assetBridger.md) ([`EthBridger`](./reference/assetBridger/ethBridger.md) and [`Erc20Bridger`](./reference/assetBridger/erc20Bridger.md)) have been renamed.
+
+| v3 Name          | v4 Name              |
+| ---------------- | -------------------- |
+| `erc20L1Address` | `erc20ParentAddress` |
+| `l1Provider`     | `parentProvider`     |
+| `l2Provider`     | `childProvider`      |
+| `l1Signer`       | `parentSigner`       |
+| `l2Signer`       | `childSigner`        |
+
+#### [`Erc20Bridger`](./reference/assetBridger/erc20Bridger.md) Class Methods
+
+| v3 Name                 | v4 Name                     |
+| ----------------------- | --------------------------- |
+| `getL1GatewayAddress`   | `getParentGatewayAddress`   |
+| `getL2GatewayAddress`   | `getChildGatewayAddress`    |
+| `getL2WithdrawalEvents` | `getWithdrawalEvents`       |
+| `getL1TokenContract`    | `getParentTokenContract`    |
+| `getL1ERC20Address`     | `getParentErc20Address`     |
+| `getL2TokenContract`    | `getChildTokenContract`     |
+| `getL2ERC20Address`     | `getChildErc20Address`      |
+| `l1TokenIsDisabled`     | `isDepositDisabled`         |
+| `l1Provider`            | `parentProvider`            |
+| `getL1GatewaySetEvents` | `getParentGatewaySetEvents` |
+| `getL2GatewaySetEvents` | `getChildGatewaySetEvents`  |
+
+#### [`Erc20L1L3Bridger`](./reference/assetBridger/l1l3Bridger.md) Class Methods
+
+| v3 Name             | v4 Name             |
+| ------------------- | ------------------- |
+| `getL2ERC20Address` | `getL2Erc20Address` |
+| `getL3ERC20Address` | `getL3Erc20Address` |
+
+### 4. Changes to Message classes
+
+Message classes have been renamed and their methods updated:
+
+| v3 Name                       | v4 Name                                   |
+| ----------------------------- | ----------------------------------------- |
+| `L1TransactionReceipt`        | `ParentTransactionReceipt`                |
+| `L1ContractTransaction`       | `ParentContractTransaction`               |
+| `L1ToL2Message`               | `ParentToChildMessage`                    |
+| `L1ToL2MessageWriter`         | `ParentToChildMessageWriter`              |
+| `L1ToL2MessageReader`         | `ParentToChildMessageReader`              |
+| `L1ToL2MessageReaderClassic`  | `ParentToChildMessageReaderClassic`       |
+| `L1ToL2MessageStatus`         | `ParentToChildMessageStatus`              |
+| `L1ToL2MessageGasEstimator`   | `ParentToChildMessageGasEstimator`        |
+| `L2TransactionReceipt`        | `ChildTransactionReceipt`                 |
+| `L2ContractTransaction`       | `ChildContractTransaction`                |
+| `L2ToL1Message`               | `ChildToParentMessage`                    |
+| `L2ToL1MessageWriter`         | `ChildToParentMessageWriter`              |
+| `L2ToL1MessageReader`         | `ChildToParentMessageReader`              |
+| `L2ToL1MessageStatus`         | `ChildToParentMessageStatus`              |
+| `EthDepositStatus`            | `EthDepositMessageStatus`                 |
+| `EthDepositMessageWaitResult` | `EthDepositMessageWaitForStatusResult`    |
+| `L1ToL2MessageWaitResult`     | `ParentToChildMessageWaitForStatusResult` |
+
+#### `ChildToParentMessageClassic`
+
+| v3 Name           | v4 Name                  |
+| ----------------- | ------------------------ |
+| `getL2ToL1Events` | `getChildToParentEvents` |
+
+#### `ChildToParentChainMessageNitro`
+
+| v3 Name           | v4 Name                  |
+| ----------------- | ------------------------ |
+| `getL2ToL1Events` | `getChildToParentEvents` |
+
+#### `ChildTransactionReceipt`
+
+| v3 Name             | v4 Name                    |
+| ------------------- | -------------------------- |
+| `getL2ToL1Events`   | `getChildToParentEvents`   |
+| `getL2ToL1Messages` | `getChildToParentMessages` |
+
+#### `ParentToChildMessage`
+
+| v3 Name            | v4 Name                   |
+| ------------------ | ------------------------- |
+| `EthDepositStatus` | `EthDepositMessageStatus` |
+
+#### `ParentToChildMessageStatus`
+
+| v3 Name                 | v4 Name                    |
+| ----------------------- | -------------------------- |
+| `FUNDS_DEPOSITED_ON_L2` | `FUNDS_DEPOSITED_ON_CHILD` |
+
+#### `ParentTransactionReceipt`
+
+| v3 Name                    | v4 Name                           |
+| -------------------------- | --------------------------------- |
+| `getL1ToL2MessagesClassic` | `getParentToChildMessagesClassic` |
+| `getL1ToL2Messages`        | `getParentToChildMessages`        |
+
+#### `ParentEthDepositTransactionReceipt`
+
+| v3 Name     | v4 Name                          |
+| ----------- | -------------------------------- |
+| `waitForL2` | `waitForChildTransactionReceipt` |
+
+#### `ParentContractCallTransactionReceipt`
+
+| v3 Name     | v4 Name                          |
+| ----------- | -------------------------------- |
+| `waitForL2` | `waitForChildTransactionReceipt` |
