@@ -322,6 +322,7 @@ export class L1ToL2MessageGasEstimator {
       // ethersjs currently doesnt throw for custom solidity errors, so we shouldn't end up here
       // however we try to catch and parse the error anyway in case ethersjs changes
       // behaviour and we dont pick up on it
+      console.log(err)
       retryable = RetryableDataTools.tryParseError(err as Error)
       if (!isDefined(retryable)) {
         throw new ArbSdkError('No retryable data found in error', err as Error)
