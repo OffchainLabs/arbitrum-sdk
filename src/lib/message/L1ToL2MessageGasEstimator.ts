@@ -325,7 +325,8 @@ export class L1ToL2MessageGasEstimator {
       // however we try to catch and parse the error anyway in case ethersjs changes
       // behaviour and we dont pick up on it
       console.log(222)
-      console.log(err)
+      console.log(JSON.stringify(err, null, 2))
+      console.log(333)
       retryable = RetryableDataTools.tryParseError(err as Error)
       if (!isDefined(retryable)) {
         throw new ArbSdkError('No retryable data found in error', err as Error)
