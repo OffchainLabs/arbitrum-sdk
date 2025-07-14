@@ -75,6 +75,7 @@ export class RetryableDataTools {
     if (this.isErrorData(ethersJsError)) {
       return ethersJsError.errorData
     } else {
+      console.log(JSON.stringify(ethersJsError, null, 2))
       const typedError = ethersJsError as {
         data?: string
         error?: {
