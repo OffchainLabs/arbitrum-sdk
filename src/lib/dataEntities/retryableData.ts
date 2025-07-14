@@ -118,6 +118,7 @@ export class RetryableDataTools {
   public static tryParseError(
     ethersJsErrorOrData: Error | { errorData: string } | string
   ): RetryableData | null {
+    console.log('tpe')
     const errorData =
       typeof ethersJsErrorOrData === 'string'
         ? ethersJsErrorOrData
