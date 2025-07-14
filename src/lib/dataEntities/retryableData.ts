@@ -72,10 +72,13 @@ export class RetryableDataTools {
   }
 
   private static tryGetErrorData(ethersJsError: Error | { errorData: string }) {
+    console.log('tged')
+    console.log(JSON.stringify(ethersJsError, null, 2))
     if (this.isErrorData(ethersJsError)) {
+      console.log('tged1')
       return ethersJsError.errorData
     } else {
-      console.log(JSON.stringify(ethersJsError, null, 2))
+      console.log('tged2')
       const typedError = ethersJsError as {
         data?: string
         error?: {
