@@ -83,7 +83,17 @@ export class RetryableDataTools {
             body?: string
             data?: string
           }
-          body?: string // there could be a json string here that contains the revert data
+
+          // there may be a json string at this key of the form:
+          // {
+          //   "error": {
+          //     "code": -32015,
+          //     "message": "...",
+          //     "data": "0x..."
+          //   }
+          // }
+          // nethermind may return revert data this way
+          body?: string
         }
       }
 
