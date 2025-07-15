@@ -98,9 +98,7 @@ export class RetryableDataTools {
       }
 
       try {
-        const possibleErrorBody = JSON.parse(
-          typedError.error?.body || ''
-        ) as {
+        const possibleErrorBody = JSON.parse(typedError.error?.body || '') as {
           error?: {
             code?: number
             message?: string
@@ -109,7 +107,8 @@ export class RetryableDataTools {
         }
 
         if (
-          possibleErrorBody.error?.code === -32015 && isHexString(possibleErrorBody.error.data)
+          possibleErrorBody.error?.code === -32015 &&
+          isHexString(possibleErrorBody.error.data)
         ) {
           return possibleErrorBody.error.data
         }
