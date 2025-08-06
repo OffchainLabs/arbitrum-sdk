@@ -1,6 +1,8 @@
 import { loadEnv } from '../src/lib/utils/env'
 import { execSync } from 'child_process'
 import * as fs from 'fs'
+import { L2Network } from '../../../dist'
+import { ArbitrumNetwork } from '../dist'
 
 loadEnv()
 
@@ -27,6 +29,10 @@ function getLocalNetworksFromContainer(which: 'l1l2' | 'l2l3'): any {
   throw new Error('nitro-testnode sequencer not found')
 }
 
+function isLegacyNetworkType(network: L2Network | ArbitrumNetwork): network is L2Network {
+  return 'partnerChainID' in network
+}
+
 async function main() {
   fs.rmSync('localNetwork.json', { force: true })
 
@@ -36,6 +42,10 @@ async function main() {
     // When running with L3 active, the container calls the L3 network L2 so we rename it here
     const { l2Network: l3Network } = getLocalNetworksFromContainer('l2l3')
     output.l3Network = l3Network
+  }
+
+  if (isLegacyNetworkType(output.l2Network) || (output.l3Network && isLegacyNetworkType(output.l3Network))) {
+    throw new Error('Legacy L2Network type detected. Please use the latest testnode version and token-bridge-contracts version 1.2.5 or above.')
   }
 
   fs.writeFileSync('localNetwork.json', JSON.stringify(output, null, 2))
