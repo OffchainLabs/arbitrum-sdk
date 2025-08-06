@@ -1,8 +1,7 @@
 import { loadEnv } from '../src/lib/utils/env'
 import { execSync } from 'child_process'
 import * as fs from 'fs'
-import { L2Network } from '../../../dist'
-import { ArbitrumNetwork } from '../dist'
+import { ArbitrumNetwork, L2Network } from '../src'
 
 loadEnv()
 
