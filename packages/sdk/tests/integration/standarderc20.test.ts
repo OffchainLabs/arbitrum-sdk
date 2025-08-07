@@ -254,6 +254,8 @@ describe('standard ERC20', () => {
         waitRes.message.retryableCreationId,
       ])
     )
+    console.log(waitRes.message.messageData.data)
+    process.exit(1)
 
     // force the redeem to fail by submitted just a bit under the required gas
     // so it is enough to pay for L1 + L2 intrinsic gas costs
