@@ -135,7 +135,7 @@ describe('Ether', async () => {
     expect(
       initialInboxBalance.add(ethToDeposit).eq(finalInboxBalance),
       'balance failed to update after eth deposit'
-    )
+    ).to.be.true
 
     const waitResult = await rec.waitForChildTransactionReceipt(
       childSigner.provider!
@@ -208,7 +208,7 @@ describe('Ether', async () => {
     expect(
       initialInboxBalance.add(ethToDeposit).eq(finalInboxBalance),
       'balance failed to update after eth deposit'
-    )
+    ).to.be.true
 
     const parentToChildMessages = await rec.getParentToChildMessages(
       childSigner.provider!
