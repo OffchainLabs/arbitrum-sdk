@@ -85,6 +85,7 @@ export const testSetup = async (): Promise<{
   inboxTools: InboxTools
   parentDeployer: Signer
   childDeployer: Signer
+  seed: Wallet
 }> => {
   const ethProvider = new JsonRpcProvider(config.ethUrl)
   const arbProvider = new JsonRpcProvider(config.arbUrl)
@@ -136,6 +137,7 @@ export const testSetup = async (): Promise<{
     inboxTools,
     parentDeployer,
     childDeployer,
+    seed,
   }
 }
 
