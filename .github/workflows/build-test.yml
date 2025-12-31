@@ -183,7 +183,7 @@ jobs:
       - name: Set up the local node
         uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
-          nitro-testnode-ref: release
+          nitro-testnode-ref: cb81aef3d596a22c6b1a9196f921f279fa81044f
           l3-node: ${{ matrix.orbit-test == '1' }}
           args: ${{ matrix.decimals == 16 && '--l3-fee-token --l3-fee-token-decimals 16' || matrix.decimals == 20 && '--l3-fee-token --l3-fee-token-decimals 20' || matrix.decimals == 18 && '--l3-fee-token' || '' }}
 
