@@ -4,20 +4,51 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Run Unit Tests",
+      "name": "Debug: Unit Tests",
       "runtimeExecutable": "yarn",
-      "runtimeVersion": "18",
-      "runtimeArgs": ["test:unit"],
-      "skipFiles": ["<node_internals>/**"]
+      "runtimeArgs": [
+        "test:unit",
+        "--runInBand" 
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": [
+        "<node_internals>/**",
+        "**/node_modules/**"
+      ],
+      "sourceMaps": true,
+      "smartStep": true,
+      "autoAttachChildProcesses": true
     },
     {
       "type": "node",
       "request": "launch",
-      "name": "Run Integration Tests",
+      "name": "Debug: Integration Tests",
       "runtimeExecutable": "yarn",
-      "runtimeVersion": "18",
-      "runtimeArgs": ["test:integration"],
-      "skipFiles": ["<node_internals>/**"]
+      "runtimeArgs": [
+        "test:integration",
+        "--runInBand"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "skipFiles": [
+        "<node_internals>/**",
+        "**/node_modules/**"
+      ],
+      "sourceMaps": true,
+      "smartStep": true,
+      "autoAttachChildProcesses": true
+    },
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "Attach to Process",
+      "port": 9229,
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
     }
   ]
 }
