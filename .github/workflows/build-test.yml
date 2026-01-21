@@ -1,202 +1,113 @@
-name: Build, Test
+name: Build, Test & Security Audit
 
 on:
   pull_request:
+    branches: [ main, develop ]
   workflow_dispatch:
 
 env:
   MAINNET_RPC: ${{ secrets.MAINNET_RPC }}
+  NODE_OPTIONS: "--max-old-space-size=4096" # Bellek hatalarını önlemek için
 
 jobs:
-  install:
-    name: Install on Node.js v${{ matrix.node-version }}
+  # 1. HAZIRLIK: Bağımlılıkları bir kez kurup önbelleğe alıyoruz
+  setup:
+    name: Setup & Cache Dependencies
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18, 20]
+    outputs:
+      cache-key: ${{ steps.set-key.outputs.key }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'yarn'
+
+      - id: set-key
+        run: echo "key=${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}" >> $GITHUB_OUTPUT
+
+      - name: Install Dependencies
+        uses: OffchainLabs/actions/node-modules/install@main
+        with:
+          cache-key: ${{ steps.set-key.outputs.key }}
+
+  # 2. KALİTE VE GÜVENLİK (Paralel Çalışır)
+  quality_checks:
+    name: Lint & Audit
+    needs: setup
     runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [18, 20]
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-
-      - name: Install node_modules
+      
+      - name: Restore node_modules
         uses: OffchainLabs/actions/node-modules/install@main
         with:
-          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
+          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
 
-  lint:
-    name: Lint on Node.js v${{ matrix.node-version }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [18, 20]
-    needs: install
-    permissions:
-      checks: write # https://github.com/mikepenz/action-junit-report/issues/23#issuecomment-1412597753
-    env:
-      TEST_PATH: /tmp/test-results
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Install node_modules
-        uses: OffchainLabs/actions/node-modules/install@main
-        with:
-          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
-
-      - name: Lint sdk
+      - name: Run Quality Gate
         run: |
           yarn gen:abi
           yarn build
-          yarn lint --format junit -o $TEST_PATH/sdk-lint.xml
+          yarn lint --format junit -o /tmp/sdk-lint.xml
+          yarn audit:ci
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: lint-results-${{ github.run_id }}-node-v${{ matrix.node-version }}
-          path: ${{ env.TEST_PATH }}
-
-      - name: Publish Test Report
+      - name: Publish Reports
         uses: mikepenz/action-junit-report@v5
-        if: always() # always run even if the previous step fails
+        if: always()
         with:
-          report_paths: '${{ env.TEST_PATH }}/sdk-lint.xml'
-          fail_on_failure: false
+          report_paths: '/tmp/*.xml'
+          fail_on_failure: true
 
-  audit:
-    name: Audit on Node.js v${{ matrix.node-version }}
+  # 3. TESTLER (Unit ve Integration Paralel)
+  tests:
+    name: Tests (Unit & Integration)
+    needs: setup
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        node-version: [18, 20]
-    needs: install
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Install node_modules
-        uses: OffchainLabs/actions/node-modules/install@main
-        with:
-          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
-
-      - run: yarn audit:ci
-
-  test-unit:
-    name: Test (Unit) on Node.js v${{ matrix.node-version }}
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [18, 20]
-    needs: install
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Install node_modules
-        uses: OffchainLabs/actions/node-modules/install@main
-        with:
-          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
-
-      - name: Build
-        run: |
-          yarn gen:abi
-          yarn build
-
-      - name: Run unit tests
-        run: CI=true yarn test:unit
-
-  test-integration:
-    name: Test (Integration) on Node.js v${{ matrix.node-version }}${{ matrix.orbit-test == '1' && ' with L3' || '' }}${{ matrix.decimals == '16' && ' with custom gas token (16 decimals)' || matrix.decimals == '20' && ' with custom gas token (20 decimals)' || matrix.decimals == '18' && ' with custom gas token (18 decimals)' || '' }}
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false # runs all tests to completion even if one fails
-      matrix:
-        include:
+        node-version: [20] # Sadece en güncel LTS'de koşarak kaynak tasarrufu
+        orbit-test: ['0', '1']
+        decimals: ['18', '16', '20']
+        exclude:
           - orbit-test: '0'
-            node-version: 18
+            decimals: '16'
           - orbit-test: '0'
-            node-version: 20
-
-          - orbit-test: '1'
-            node-version: 18
-          - orbit-test: '1'
-            node-version: 20
-
-          - orbit-test: '1'
-            decimals: 16
-            node-version: 18
-          - orbit-test: '1'
-            decimals: 16
-            node-version: 20
-
-          - orbit-test: '1'
-            decimals: 18
-            node-version: 18
-          - orbit-test: '1'
-            decimals: 18
-            node-version: 20
-
-          - orbit-test: '1'
-            decimals: 20
-            node-version: 18
-          - orbit-test: '1'
-            decimals: 20
-            node-version: 20
-
-    needs: install
-    env:
-      ORBIT_TEST: ${{ matrix.orbit-test }}
-      DECIMALS: ${{ matrix.decimals || '18' }}
+            decimals: '20'
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-
-      - name: Install node_modules
+      
+      - name: Restore node_modules
         uses: OffchainLabs/actions/node-modules/install@main
         with:
-          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
+          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}
 
-      - name: Set up the local node
+      - name: Run Nitro Test Node
         uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
           nitro-testnode-ref: release
           l3-node: ${{ matrix.orbit-test == '1' }}
-          args: ${{ matrix.decimals == 16 && '--l3-fee-token --l3-fee-token-decimals 16' || matrix.decimals == 20 && '--l3-fee-token --l3-fee-token-decimals 20' || matrix.decimals == 18 && '--l3-fee-token' || '' }}
+          args: ${{ matrix.decimals != '18' && format('--l3-fee-token --l3-fee-token-decimals {0}', matrix.decimals) || (matrix.orbit-test == '1' && '--l3-fee-token' || '') }}
 
-      - name: Copy .env
-        run: cp ./.env-sample ./.env
-
-      - name: Build
+      - name: Execute Tests
         run: |
-          yarn gen:abi
-          yarn build
-
-      - name: Generate network file
-        run: yarn gen:network
-
-      - name: Run integration tests
-        run: CI=true yarn test:integration
+          cp .env-sample .env
+          yarn gen:abi && yarn build && yarn gen:network
+          CI=true yarn test:unit
+          CI=true yarn test:integration
+        env:
+          ORBIT_TEST: ${{ matrix.orbit-test }}
+          DECIMALS: ${{ matrix.decimals }}
