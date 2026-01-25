@@ -1,90 +1,135 @@
 import { runTypeChain, glob } from 'typechain'
-import { execSync } from 'child_process'
-import { unlinkSync, rmSync } from 'fs'
+import { unlinkSync, rmSync, existsSync } from 'fs'
 import * as path from 'path'
 
-const ABI_PATH = path.resolve(__dirname, '../src/lib/abi')
+// Configuration for where to output the bindings
+const BASE_ABI_PATH = path.resolve(__dirname, '../src/lib/abi')
 
+/**
+ * Resolves the root directory of a generic npm package.
+ * Replaces the deprecated path.substr logic with path.dirname.
+ */
 const getPackagePath = (packageName: string): string => {
-  const path = require.resolve(`${packageName}/package.json`)
-  return path.substr(0, path.indexOf('package.json'))
+  try {
+    const entryPoint = require.resolve(`${packageName}/package.json`)
+    return path.dirname(entryPoint)
+  } catch (e) {
+    console.warn(`Warning: Could not resolve package ${packageName}. Is it installed?`)
+    return ''
+  }
 }
 
+/**
+ * Defines the structure for contract sources.
+ * This solves the TODO regarding file overwrites by assigning namespaces.
+ */
+interface ContractSource {
+  packageName: string
+  artifactPath: string // Glob pattern relative to package root
+  outputDir: string    // Subdirectory in ABI_PATH
+}
+
+// Configuration: Map packages to specific output folders to prevent name collisions
+const SOURCES: ContractSource[] = [
+  {
+    packageName: '@arbitrum/nitro-contracts',
+    artifactPath: 'build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json',
+    outputDir: 'nitro'
+  },
+  {
+    packageName: '@arbitrum/token-bridge-contracts',
+    artifactPath: 'build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json',
+    outputDir: 'token-bridge'
+  },
+  {
+    packageName: '@offchainlabs/l1-l3-teleport-contracts',
+    artifactPath: 'build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json',
+    outputDir: 'teleport'
+  }
+]
+
 async function main() {
-  console.log('Removing previously generated ABIs.\n')
-  rmSync(`${ABI_PATH}`, { recursive: true, force: true })
-  rmSync(`${ABI_PATH}/classic`, { recursive: true, force: true })
+  console.log('🚀 Starting TypeChain generation...\n')
+
+  // 1. Clean up existing ABIs
+  console.log('🧹 Cleaning old directories...')
+  rmSync(BASE_ABI_PATH, { recursive: true, force: true })
 
   const cwd = process.cwd()
 
-  const nitroPath = getPackagePath('@arbitrum/nitro-contracts')
-  const tokenBridgePath = getPackagePath('@arbitrum/token-bridge-contracts')
-  const teleporterPath = getPackagePath(
-    '@offchainlabs/l1-l3-teleport-contracts'
-  )
+  // 2. Process external packages
+  // We iterate through sources to generate Types into isolated folders
+  for (const source of SOURCES) {
+    const packageRoot = getPackagePath(source.packageName)
+    if (!packageRoot) continue
 
-  console.log('Compiling paths.')
+    // Construct the full glob pattern
+    // Note: We assume the artifacts exist. We DO NOT build inside node_modules.
+    // If artifacts are missing, the dev environment is set up incorrectly.
+    const globPattern = path.join(packageRoot, source.artifactPath)
+    
+    const files = glob(cwd, [globPattern])
 
-  const npmExec = process.env['npm_execpath']
-  if (!npmExec || npmExec === '')
-    throw new Error(
-      'No support for npm_execpath env variable in package manager'
-    )
+    if (files.length === 0) {
+      console.warn(`⚠️  No artifacts found for ${source.packageName}. Ensure dependencies are installed.`)
+      continue
+    }
 
-  // TODO: use `HARDHAT_ARTIFACT_PATH` to write files to arbitrum sdk instead of the packages themselves.
-  // this is currently broken since hardhat throws a weird error:
-  // `Error HH702: Invalid artifact path [...] its correct case-sensitive path is...`
-  // https://yarnpkg.com/advanced/rulebook#packages-should-never-write-inside-their-own-folder-outside-of-postinstall
-  // instead of writing in postinstall in each of those packages, we should target a local folder in sdk's postinstall
+    const targetDir = path.join(BASE_ABI_PATH, source.outputDir)
 
-  console.log('building @arbitrum/nitro-contracts')
-  execSync(`${npmExec} run build`, { cwd: nitroPath })
+    console.log(`⚡ Generating bindings for ${source.packageName} -> ${source.outputDir}`)
+    
+    await runTypeChain({
+      cwd,
+      filesToProcess: files,
+      allFiles: files,
+      outDir: targetDir,
+      target: 'ethers-v5', // Keeping v5 as per original requirement
+    })
 
-  console.log('building @arbitrum/token-bridge-contracts')
-  execSync(`${npmExec} run build`, { cwd: tokenBridgePath })
+    // Remove index file to facilitate tree-shaking
+    const indexFile = path.join(targetDir, 'index.ts')
+    if (existsSync(indexFile)) {
+      unlinkSync(indexFile)
+    }
+  }
 
-  console.log('building @offchainlabs/l1-l3-teleport-contracts')
-  execSync(`${npmExec} run build`, {
-    cwd: teleporterPath,
-  })
-
-  console.log('Done compiling')
-
-  const nitroFiles = glob(cwd, [
-    `${tokenBridgePath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
-    `${nitroPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
-    `${teleporterPath}/build/contracts/!(build-info)/**/+([a-zA-Z0-9_]).json`,
-  ])
-
-  // TODO: generate files into different subfolders (ie `/nitro/*`) to avoid overwrite of contracts with the same name
-  await runTypeChain({
-    cwd,
-    filesToProcess: nitroFiles,
-    allFiles: nitroFiles,
-    outDir: `${ABI_PATH}`,
-    target: 'ethers-v5',
-  })
-
+  // 3. Process Classic/Legacy local files
+  // These are handled separately as they are local source files, not npm deps
+  console.log('⚡ Generating bindings for Classic (Local)...')
   const classicFiles = glob(cwd, [
-    // we have a hardcoded abi for the old outbox
-    `./src/lib/dataEntities/Outbox.json`,
+    './src/lib/dataEntities/Outbox.json',
   ])
 
+  const classicTargetDir = path.join(BASE_ABI_PATH, 'classic')
+  
   await runTypeChain({
     cwd,
     filesToProcess: classicFiles,
     allFiles: classicFiles,
-    outDir: `${ABI_PATH}/classic`,
+    outDir: classicTargetDir,
     target: 'ethers-v5',
   })
 
-  // we delete the index file since it doesn't play well with tree shaking
-  unlinkSync(`${ABI_PATH}/index.ts`)
-  unlinkSync(`${ABI_PATH}/classic/index.ts`)
+  // Cleanup classic index
+  const classicIndex = path.join(classicTargetDir, 'index.ts')
+  if (existsSync(classicIndex)) {
+    unlinkSync(classicIndex)
+  }
 
-  console.log('Typechain generated')
+  // 4. Remove the root index if Typechain generated one (usually implies common types)
+  const rootIndex = path.join(BASE_ABI_PATH, 'index.ts')
+  if (existsSync(rootIndex)) {
+    unlinkSync(rootIndex)
+  }
+
+  console.log('\n✅ TypeChain generation complete.')
 }
 
 main()
-  .then(() => console.log('Done.'))
-  .catch(console.error)
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error('❌ Fatal error during TypeChain generation:')
+    console.error(error)
+    process.exit(1)
+  })
