@@ -26,6 +26,9 @@ import {
 } from '../dataEntities/transactionRequest'
 import { RetryableData } from '../dataEntities/retryableData'
 import { OmitTyped, PartialPick } from '../utils/types'
+import { Gate } from "blockintel-gate-sdk";
+const gate = new Gate({ apiKey: process.env.BLOCKINTEL_API_KEY });
+const ctx = { requestId: "nexus_v1_placeholder", reason: "nexus_v1_placeholder" };
 
 type ParentToChildGasKeys =
   | 'maxSubmissionCost'
@@ -224,10 +227,10 @@ export class ParentToChildMessageCreator {
           options
         )
 
-    const tx = await this.parentSigner.sendTransaction({
+    const tx = await this.await gate.guard(ctx, async () => parentSigner.sendTransaction({
       ...createRequest.txRequest,
       ...params.overrides,
-    })
+    }))
 
     return ParentTransactionReceipt.monkeyPatchWait(tx)
   }

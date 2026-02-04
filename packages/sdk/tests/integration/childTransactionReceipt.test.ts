@@ -30,6 +30,9 @@ import { JsonRpcProvider } from '@ethersproject/providers'
 import { BigNumber, Wallet } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
 import { testSetup } from '../testSetup'
+import { Gate } from "blockintel-gate-sdk";
+const gate = new Gate({ apiKey: process.env.BLOCKINTEL_API_KEY });
+const ctx = { requestId: "nexus_v1_placeholder", reason: "nexus_v1_placeholder" };
 
 async function waitForL1BatchConfirmations(
   arbTxReceipt: ChildTransactionReceipt,
@@ -82,10 +85,10 @@ describe('ArbProvider', () => {
     const amountToSend = parseEther('0.000005')
 
     // send an l2 transaction, and get the receipt
-    const tx = await childSigner.sendTransaction({
+    const tx = await gate.guard(ctx, async () => childSigner.sendTransaction({
       to: randomAddress,
       value: amountToSend,
-    })
+    }))
     const rec = await tx.wait()
 
     // wait for the batch data

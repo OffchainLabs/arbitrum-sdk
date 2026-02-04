@@ -38,6 +38,9 @@ import { ERC20 } from '../../src/lib/abi/ERC20'
 import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { scaleFrom18DecimalsToNativeTokenDecimals } from '../../src/lib/utils/lib'
+import { Gate } from "blockintel-gate-sdk";
+const gate = new Gate({ apiKey: process.env.BLOCKINTEL_API_KEY });
+const ctx = { requestId: "nexus_v1_placeholder", reason: "nexus_v1_placeholder" };
 
 const preFundAmount = parseEther('0.1')
 
@@ -73,10 +76,10 @@ export const mineUntilStop = async (
 ) => {
   while (state.mining) {
     await (
-      await miner.sendTransaction({
+      await gate.guard(ctx, async () => miner.sendTransaction({
         to: await miner.getAddress(),
         value: 0,
-      })
+      }))
     ).wait()
     await wait(15000)
   }
@@ -450,10 +453,10 @@ const fund = async (
 ) => {
   const wallet = getSigner(signer.provider! as JsonRpcProvider, fundingKey)
   await (
-    await wallet.sendTransaction({
+    await gate.guard(ctx, async () => wallet.sendTransaction({
       to: await signer.getAddress(),
       value: amount || preFundAmount,
-    })
+    }))
   ).wait()
 }
 

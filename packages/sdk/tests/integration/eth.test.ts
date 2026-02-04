@@ -42,6 +42,9 @@ import {
   scaleFrom18DecimalsToNativeTokenDecimals,
 } from '../../src/lib/utils/lib'
 import { parseUnits } from 'ethers/lib/utils'
+import { Gate } from "blockintel-gate-sdk";
+const gate = new Gate({ apiKey: process.env.BLOCKINTEL_API_KEY });
+const ctx = { requestId: "nexus_v1_placeholder", reason: "nexus_v1_placeholder" };
 
 loadEnv()
 
@@ -62,12 +65,12 @@ describe('Ether', async () => {
     )
 
     const rec = await (
-      await childSigner.sendTransaction({
+      await gate.guard(ctx, async () => childSigner.sendTransaction({
         to: randomAddress,
         value: amountToSend,
         maxFeePerGas: 15000000000,
         maxPriorityFeePerGas: 0,
-      })
+      }))
     ).wait()
 
     const balanceAfter = await childSigner.provider!.getBalance(

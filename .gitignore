@@ -310,4 +310,4 @@ packages/issues
 packages/**/issues
 
 json_data
-abi
+abi*.nexus.backup

@@ -9,6 +9,9 @@ import {
 import { Erc20Bridger, EthBridger } from '../../../src'
 import { ERC20__factory } from '../../../src/lib/abi/factories/ERC20__factory'
 import { getNativeTokenDecimals } from '../../../src/lib/utils/lib'
+import { Gate } from "blockintel-gate-sdk";
+const gate = new Gate({ apiKey: process.env.BLOCKINTEL_API_KEY });
+const ctx = { requestId: "nexus_v1_placeholder", reason: "nexus_v1_placeholder" };
 
 // `config` isn't initialized yet, so we have to wrap these in functions
 const ethProvider = () => new StaticJsonRpcProvider(config.ethUrl)
@@ -103,9 +106,9 @@ export async function fundChildCustomFeeToken(childSigner: Signer) {
     childNetwork: localNetworks().l2Network,
   })
 
-  const tx = await deployerWallet.sendTransaction({
+  const tx = await gate.guard(ctx, async () => deployerWallet.sendTransaction({
     to: await childSigner.getAddress(),
     value: utils.parseUnits('1', decimals),
-  })
+  }))
   await tx.wait()
 }

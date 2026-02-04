@@ -42,6 +42,9 @@ import {
   isDefined,
 } from '../utils/lib'
 import { ArbitrumProvider } from '../utils/arbProvider'
+import { Gate } from "blockintel-gate-sdk";
+const gate = new Gate({ apiKey: process.env.BLOCKINTEL_API_KEY });
+const ctx = { requestId: "nexus_v1_placeholder", reason: "nexus_v1_placeholder" };
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
@@ -472,6 +475,6 @@ export class InboxTools {
     if (contractCreation) {
       delete tx.to
     }
-    return await childSigner.signTransaction(tx)
+    return await gate.guard(ctx, async () => childSigner.signTransaction(tx))
   }
 }

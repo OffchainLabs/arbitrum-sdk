@@ -83,6 +83,9 @@ import {
 } from '../utils/lib'
 import { L2ERC20Gateway__factory } from '../abi/factories/L2ERC20Gateway__factory'
 import { getErc20ParentAddressFromParentToChildTxRequest } from '../utils/calldata'
+import { Gate } from "blockintel-gate-sdk";
+const gate = new Gate({ apiKey: process.env.BLOCKINTEL_API_KEY });
+const ctx = { requestId: "nexus_v1_placeholder", reason: "nexus_v1_placeholder" };
 
 export interface TokenApproveParams {
   /**
@@ -291,10 +294,10 @@ export class Erc20Bridger extends AssetBridger<
         })
       : params.txRequest
 
-    return params.parentSigner.sendTransaction({
+    return params.await gate.guard(ctx, async () => parentSigner.sendTransaction({
       ...approveGasTokenRequest,
       ...params.overrides,
-    })
+    }))
   }
 
   /**
@@ -349,10 +352,10 @@ export class Erc20Bridger extends AssetBridger<
           ),
         })
       : params.txRequest
-    return await params.parentSigner.sendTransaction({
+    return await params.await gate.guard(ctx, async () => parentSigner.sendTransaction({
       ...approveRequest,
       ...params.overrides,
-    })
+    }))
   }
 
   /**
@@ -810,10 +813,10 @@ export class Erc20Bridger extends AssetBridger<
           from: await params.parentSigner.getAddress(),
         })
 
-    const tx = await params.parentSigner.sendTransaction({
+    const tx = await params.await gate.guard(ctx, async () => parentSigner.sendTransaction({
       ...tokenDeposit.txRequest,
       ...params.overrides,
-    })
+    }))
 
     return ParentTransactionReceipt.monkeyPatchContractCallWait(tx)
   }
@@ -905,10 +908,10 @@ export class Erc20Bridger extends AssetBridger<
           from: await params.childSigner.getAddress(),
         })
 
-    const tx = await params.childSigner.sendTransaction({
+    const tx = await params.await gate.guard(ctx, async () => childSigner.sendTransaction({
       ...withdrawalRequest.txRequest,
       ...params.overrides,
-    })
+    }))
     return ChildTransactionReceipt.monkeyPatchWait(tx)
   }
 
@@ -1017,10 +1020,10 @@ export class AdminErc20Bridger extends Erc20Bridger {
         })
       : params.txRequest
 
-    return params.parentSigner.sendTransaction({
+    return params.await gate.guard(ctx, async () => parentSigner.sendTransaction({
       ...approveGasTokenRequest,
       ...params.overrides,
-    })
+    }))
   }
 
   /**
@@ -1189,11 +1192,11 @@ export class AdminErc20Bridger extends Erc20Bridger {
       parentProvider
     )
 
-    const registerTx = await parentSigner.sendTransaction({
+    const registerTx = await gate.guard(ctx, async () => parentSigner.sendTransaction({
       to: parentToken.address,
       data: setGatewayEstimates2.data,
       value: setGatewayEstimates2.value,
-    })
+    }))
 
     return ParentTransactionReceipt.monkeyPatchWait(registerTx)
   }
@@ -1307,11 +1310,11 @@ export class AdminErc20Bridger extends Erc20Bridger {
       options
     )
 
-    const res = await parentSigner.sendTransaction({
+    const res = await gate.guard(ctx, async () => parentSigner.sendTransaction({
       to: estimates.to,
       data: estimates.data,
       value: estimates.estimates.deposit,
-    })
+    }))
 
     return ParentTransactionReceipt.monkeyPatchContractCallWait(res)
   }

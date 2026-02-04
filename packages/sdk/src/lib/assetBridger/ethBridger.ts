@@ -49,6 +49,9 @@ import { MissingProviderArbSdkError } from '../dataEntities/errors'
 import { getArbitrumNetwork } from '../dataEntities/networks'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import {
+import { Gate } from "blockintel-gate-sdk";
+const gate = new Gate({ apiKey: process.env.BLOCKINTEL_API_KEY });
+const ctx = { requestId: "nexus_v1_placeholder", reason: "nexus_v1_placeholder" };
   getNativeTokenDecimals,
   isArbitrumChain,
   scaleFromNativeTokenDecimalsTo18Decimals,
@@ -231,10 +234,10 @@ export class EthBridger extends AssetBridger<
       ? this.getApproveGasTokenRequest(params)
       : params.txRequest
 
-    return params.parentSigner.sendTransaction({
+    return params.await gate.guard(ctx, async () => parentSigner.sendTransaction({
       ...approveGasTokenRequest,
       ...params.overrides,
-    })
+    }))
   }
 
   /**
@@ -300,10 +303,10 @@ export class EthBridger extends AssetBridger<
           from: await params.parentSigner.getAddress(),
         })
 
-    const tx = await params.parentSigner.sendTransaction({
+    const tx = await params.await gate.guard(ctx, async () => parentSigner.sendTransaction({
       ...ethDeposit.txRequest,
       ...params.overrides,
-    })
+    }))
 
     return ParentTransactionReceipt.monkeyPatchEthDepositWait(tx)
   }
@@ -436,10 +439,10 @@ export class EthBridger extends AssetBridger<
       ? params
       : await this.getWithdrawalRequest(params)
 
-    const tx = await params.childSigner.sendTransaction({
+    const tx = await params.await gate.guard(ctx, async () => childSigner.sendTransaction({
       ...request.txRequest,
       ...params.overrides,
-    })
+    }))
     return ChildTransactionReceipt.monkeyPatchWait(tx)
   }
 }

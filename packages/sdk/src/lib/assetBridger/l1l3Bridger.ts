@@ -53,6 +53,9 @@ import { ERC20__factory } from '../abi/factories/ERC20__factory'
 import { IL2ForwarderPredictor__factory } from '../abi/factories/IL2ForwarderPredictor__factory'
 import { IInbox__factory } from '../abi/factories/IInbox__factory'
 import { RetryableMessageParams } from '../dataEntities/message'
+import { Gate } from "blockintel-gate-sdk";
+const gate = new Gate({ apiKey: process.env.BLOCKINTEL_API_KEY });
+const ctx = { requestId: "nexus_v1_placeholder", reason: "nexus_v1_placeholder" };
 
 type PickedTransactionRequest = Required<
   Pick<TransactionRequest, 'to' | 'data' | 'value'>
@@ -668,10 +671,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         ? params.txRequest
         : await this.getApproveTokenRequest(params)
 
-    return params.l1Signer.sendTransaction({
+    return params.await gate.guard(ctx, async () => l1Signer.sendTransaction({
       ...approveRequest,
       ...params.overrides,
-    })
+    }))
   }
 
   /**
@@ -719,10 +722,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
             amount: params.amount,
           })
 
-    return params.l1Signer.sendTransaction({
+    return params.await gate.guard(ctx, async () => l1Signer.sendTransaction({
       ...approveRequest,
       ...params.overrides,
-    })
+    }))
   }
 
   /**
@@ -823,10 +826,10 @@ export class Erc20L1L3Bridger extends BaseL1L3Bridger {
         ? params.txRequest
         : (await this.getDepositRequest(params)).txRequest
 
-    const tx = await params.l1Signer.sendTransaction({
+    const tx = await params.await gate.guard(ctx, async () => l1Signer.sendTransaction({
       ...depositRequest,
       ...params.overrides,
-    })
+    }))
 
     return ParentTransactionReceipt.monkeyPatchContractCallWait(tx)
   }
@@ -1533,10 +1536,10 @@ export class EthL1L3Bridger extends BaseL1L3Bridger {
         ? params.txRequest
         : (await this.getDepositRequest(params)).txRequest
 
-    const tx = await params.l1Signer.sendTransaction({
+    const tx = await params.await gate.guard(ctx, async () => l1Signer.sendTransaction({
       ...depositRequest,
       ...params.overrides,
-    })
+    }))
 
     return ParentTransactionReceipt.monkeyPatchContractCallWait(tx)
   }
