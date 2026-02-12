@@ -186,7 +186,7 @@ export class ChildTransactionReceipt implements TransactionReceipt {
   /**
    * Gets the retryableTicket transaction responsible for executing this message if exists
    * @param childProvider 
-   * @returns RetryableTicket transaction hash, 0 if it does not exist
+   * @returns RetryableTicket transaction hash, null if it does not exist
    */
   public async getRetryableTicket(childProvider: providers.JsonRpcProvider) {
     const eventFetcher = new EventFetcher(childProvider)
@@ -199,7 +199,7 @@ export class ChildTransactionReceipt implements TransactionReceipt {
         address: ARB_RETRYABLE_TX_ADDRESS 
       }
     )
-    if (event.length == 0) return 0
+    if (event.length == 0) return null
     return event[0].transactionHash
   }
 
