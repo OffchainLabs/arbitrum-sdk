@@ -42,12 +42,16 @@ import { Inbox__factory } from '../abi/factories/Inbox__factory'
 import { InboxMessageDeliveredEvent } from '../abi/Inbox'
 import { InboxMessageKind } from '../dataEntities/message'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
+import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { MessageDeliveredEvent } from '../abi/Bridge'
 import { EventArgs, parseTypedLogs } from '../dataEntities/event'
 import { isDefined } from '../utils/lib'
 import { SubmitRetryableMessageDataParser } from './messageDataParser'
 import { getArbitrumNetwork } from '../dataEntities/networks'
-import { ARB1_NITRO_GENESIS_L1_BLOCK } from '../dataEntities/constants'
+import { ARB1_NITRO_GENESIS_L1_BLOCK, ARB_SYS_ADDRESS } from '../dataEntities/constants'
+import { providers } from 'ethers'
+import { EventFetcher } from '../utils/eventFetcher'
+import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 
 export interface ParentContractTransaction<
   TReceipt extends ParentTransactionReceipt = ParentTransactionReceipt
@@ -301,6 +305,42 @@ export class ParentTransactionReceipt implements TransactionReceipt {
       this.logs,
       'DepositInitiated'
     )
+  }
+  /**
+   * Returns the transaction hash that initiated the withdraw on the child chain
+   * @param parentProvider 
+   * @param childProvider 
+   * @returns Transaction hash, null if its not found
+   */
+  public async getChildWithdrawTransaction(
+    parentProvider: providers.JsonRpcProvider,
+    childProvider: providers.JsonRpcProvider
+  ) {
+    const logs = parseTypedLogs(
+      Outbox__factory,
+      this.logs,
+      'OutBoxTransactionExecuted'
+    )
+    if (logs.length == 0) return null
+    const withdrawIndex = logs[0].transactionIndex
+
+    const parentTransaction = await parentProvider.getTransaction(this.transactionHash)
+
+    const parsedTransaction = Outbox__factory.createInterface().parseTransaction(parentTransaction)
+    const L2TransactionBlock = parsedTransaction.args.L2Block.toHexString()
+
+    const eventFetcher = new EventFetcher(childProvider)
+    const events = await eventFetcher.getEvents(
+      ArbSys__factory,
+      t => t.filters.L2ToL1Transaction(null, null, null, withdrawIndex),
+      {
+        fromBlock: L2TransactionBlock,
+        toBlock: L2TransactionBlock,
+        address: ARB_SYS_ADDRESS
+      }
+    )
+    if (events.length == 0) return null
+    return events[0].transactionHash
   }
 
   /**

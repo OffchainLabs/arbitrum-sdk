@@ -32,13 +32,17 @@ import {
   ChildToParentTransactionEvent,
 } from './ChildToParentMessage'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
+import { Bridge__factory } from '../abi/factories/Bridge__factory'
+import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factory'
 import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
 import { ArbSdkError } from '../dataEntities/errors'
-import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
+import { ARB_RETRYABLE_TX_ADDRESS, NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { EventArgs, parseTypedLogs } from '../dataEntities/event'
 import { ArbitrumProvider } from '../utils/arbProvider'
+import { EventFetcher } from '../utils/eventFetcher'
+import { ParentEthDepositTransactionReceipt } from '@arbitrum/sdk'
 
 export interface ChildContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<ChildTransactionReceipt>
@@ -177,6 +181,120 @@ export class ChildTransactionReceipt implements TransactionReceipt {
     const res = await this.getBatchConfirmations(childProvider)
     // is there a batch with enough confirmations
     return res.toNumber() > confirmations
+  }
+
+  /**
+   * Gets the retryableTicket transaction responsible for executing this message if exists
+   * @param childProvider 
+   * @returns RetryableTicket transaction hash, 0 if it does not exist
+   */
+  public async getRetryableTicket(childProvider: providers.JsonRpcProvider) {
+    const eventFetcher = new EventFetcher(childProvider)
+    const event = await eventFetcher.getEvents(
+      ArbRetryableTx__factory,
+      t => t.filters.RedeemScheduled(null, this.transactionHash),
+      {
+        fromBlock: 0, 
+        toBlock: this.blockNumber,
+        address: ARB_RETRYABLE_TX_ADDRESS 
+      }
+    )
+    if (event.length == 0) return 0
+    return event[0].transactionHash
+  }
+
+/**
+ * Returns the transaction hash that initiated the RetryableTicket on the parent chain
+ * @param parentProvider 
+ * @param BridgeAddress on parent chain
+ * @returns transaction hash, null if it cannot be found/does not exist
+ */
+/*
+  I want to try and make it so it just knows which network your using, but that doesnt
+  seem to be the case since the info we have here does not contain a chainID, either way I think
+  im just overcomplicating it
+
+  I could not find a way to parse the transaction info using the SDK so im using ethers instead.
+*/
+  public async getParentRetryableCreation(
+    childProvider: providers.JsonRpcProvider,
+    parentProvider: providers.JsonRpcProvider,
+    BridgeAddress: string 
+  ) {
+    const retryableTransaction = await childProvider.getTransaction(this.transactionHash)
+    const requestID = Bridge__factory.createInterface().parseTransaction(retryableTransaction).args.requestID
+    
+    if (requestID == null) return null
+
+    const eventFetcher = new EventFetcher(parentProvider)
+    
+    const event = await eventFetcher.getEvents(
+      Bridge__factory,
+      t => t.filters.MessageDelivered(requestID),
+      {
+        fromBlock: 0,
+        toBlock: 'latest',
+        address: BridgeAddress
+      }
+    )
+    if (event.length == 0) return null
+    return event[0].transactionHash
+  }
+
+  /**
+   * Returns the transaction hash that initiated the EthDeposit on the parent chain
+   * @param childProvider 
+   * @param parentProvider 
+   * @param SequencerInboxAddress 
+   * @param bridgeAddress 
+   * @param searchRange how many blocks to search backwards from transactions batch, default 100
+   * @returns transaction hash, null if not found 
+   */
+  public async getEthDepositCreation(
+    childProvider: providers.JsonRpcProvider,
+    parentProvider: providers.JsonRpcProvider,
+    SequencerInboxAddress: string,
+    bridgeAddress: string,
+    searchRange?: number
+  ) {
+    if (searchRange == undefined) searchRange = 100
+    const batchNum = await this.getBatchNumber(childProvider)
+    const eventFetcher = new EventFetcher(parentProvider)
+    const event = await eventFetcher.getEvents(
+      SequencerInbox__factory,
+      t => t.filters.SequencerBatchDelivered(batchNum),
+      {
+        fromBlock: 0,
+        toBlock: 'latest',
+        address: SequencerInboxAddress
+      }
+    )
+    if (event.length == 0) {
+      return null
+    }
+    const batchBlock = event[0].blockNumber
+
+    const bridgeEvents = await eventFetcher.getEvents(
+      Bridge__factory,
+      t => t.filters.MessageDelivered(),
+      {
+        fromBlock: batchBlock - 100,
+        toBlock: batchBlock,
+        address: bridgeAddress
+      }
+    )
+    
+    for (let i = 0; i < bridgeEvents.length; i++) {
+      const ethDepositWrapped = new ParentEthDepositTransactionReceipt(
+        await parentProvider.getTransactionReceipt(bridgeEvents[i].transactionHash))
+      const logs = await ethDepositWrapped.getEthDeposits(childProvider)
+      if (logs.length != 0) {
+        if (logs[0].childTxHash == this.transactionHash) {
+          return ethDepositWrapped.transactionHash
+        }
+      }
+    }
+    return null
   }
 
   /**
