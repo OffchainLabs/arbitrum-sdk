@@ -255,7 +255,6 @@ export class ChildTransactionReceipt implements TransactionReceipt {
   /**
    * Given a child chain tx that is an ETH deposit (type 0x64),
    * trace back to the parent chain transaction that originated it.
-   * Only works for standard ETH deposits (not custom gas token chains).
    * @param childProvider JsonRpcProvider for the child chain (needed for getBatchNumber)
    * @param parentProvider Provider for the parent chain
    * @returns The parent chain transaction hash, or null if unable to trace
@@ -297,8 +296,7 @@ export class ChildTransactionReceipt implements TransactionReceipt {
     } else {
       const prevBatchEvents = await parentEventFetcher.getEvents(
         SequencerInbox__factory,
-        contract =>
-          contract.filters.SequencerBatchDelivered(batchNum.sub(1)),
+        contract => contract.filters.SequencerBatchDelivered(batchNum.sub(1)),
         {
           fromBlock: 0,
           toBlock: 'latest',

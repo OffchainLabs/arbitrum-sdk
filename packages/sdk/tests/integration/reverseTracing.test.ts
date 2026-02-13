@@ -2,7 +2,7 @@ import { expect } from 'chai'
 import { loadEnv } from '../../src/lib/utils/env'
 import { Wallet } from '@ethersproject/wallet'
 import { BigNumber } from '@ethersproject/bignumber'
-import { parseEther } from '@ethersproject/units'
+import { parseEther, parseUnits } from '@ethersproject/units'
 import { JsonRpcProvider } from '@ethersproject/providers'
 
 import {
@@ -17,9 +17,12 @@ import { ParentTransactionReceipt } from '../../src/lib/message/ParentTransactio
 import { ParentToChildMessageStatus } from '../../src/lib/message/ParentToChildMessage'
 import { ChildToParentMessageStatus } from '../../src/lib/dataEntities/message'
 import { testSetup } from '../testSetup'
-import { itOnlyWhenEth } from './custom-fee-token/mochaExtensions'
 import { getNativeTokenDecimals } from '../../src/lib/utils/lib'
-import { parseUnits } from 'ethers/lib/utils'
+import {
+  isArbitrumNetworkWithCustomFeeToken,
+  approveParentCustomFeeToken,
+  fundParentCustomFeeToken,
+} from './custom-fee-token/customFeeTokenTestHelpers'
 
 loadEnv()
 
@@ -28,71 +31,79 @@ describe('Reverse Tracing', async () => {
     await skipIfMainnet(this)
   })
 
-  itOnlyWhenEth(
-    'traces an ETH deposit child tx back to the parent tx',
-    async () => {
-      const { ethBridger, parentSigner, parentProvider, childChain, childSigner } =
-        await testSetup()
+  it('traces an ETH deposit child tx back to the parent tx', async () => {
+    const {
+      ethBridger,
+      parentSigner,
+      parentProvider,
+      childChain,
+      childSigner,
+    } = await testSetup()
+    const decimals = await getNativeTokenDecimals({
+      parentProvider,
+      childNetwork: childChain,
+    })
 
-      await fundParentSigner(parentSigner)
-
-      const amount = '0.0002'
-      const ethToDeposit = parseEther(amount)
-
-      // Deposit ETH from parent to child
-      const res = await ethBridger.deposit({
-        amount: ethToDeposit,
-        parentSigner: parentSigner,
-      })
-      const parentTxReceipt = await res.wait()
-      expect(parentTxReceipt.status).to.equal(1, 'eth deposit parent txn failed')
-
-      // Wait for child chain deposit to arrive
-      const waitResult = await parentTxReceipt.waitForChildTransactionReceipt(
-        childSigner.provider!
-      )
-      expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
-      expect(waitResult.childTxReceipt).to.exist
-
-      const childReceipt = new ChildTransactionReceipt(
-        waitResult.childTxReceipt!
-      )
-
-      // Mine blocks on both chains until the child tx is included in a batch
-      const miner1 = Wallet.createRandom().connect(parentSigner.provider!)
-      const miner2 = Wallet.createRandom().connect(childSigner.provider!)
-      await fundParentSigner(miner1, parseEther('0.1'))
-      await fundChildSigner(miner2, parseEther('0.1'))
-      const state = { mining: true }
-      mineUntilStop(miner1, state)
-      mineUntilStop(miner2, state)
-
-      // Wait for the batch containing this tx to be posted
-      const l2Provider = childSigner.provider! as JsonRpcProvider
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        await wait(300)
-        const batchNum = await childReceipt
-          .getBatchNumber(l2Provider)
-          .catch(() => BigNumber.from(0))
-        if (batchNum.gt(0)) break
-      }
-      state.mining = false
-
-      // Reverse trace: from child deposit tx back to parent tx
-      const tracedParentTxHash =
-        await childReceipt.getParentDepositTransactionHash(
-          l2Provider,
-          parentSigner.provider!
-        )
-
-      expect(tracedParentTxHash).to.not.be.null
-      expect(tracedParentTxHash).to.eq(
-        parentTxReceipt.transactionHash,
-        'traced parent tx hash does not match original deposit tx hash'
-      )
+    await fundParentSigner(parentSigner)
+    if (isArbitrumNetworkWithCustomFeeToken()) {
+      await fundParentCustomFeeToken(parentSigner)
+      await approveParentCustomFeeToken(parentSigner)
     }
-  )
+
+    const amount = '0.0002'
+    const ethToDeposit = parseUnits(amount, decimals)
+
+    // Deposit ETH from parent to child
+    const res = await ethBridger.deposit({
+      amount: ethToDeposit,
+      parentSigner: parentSigner,
+    })
+    const parentTxReceipt = await res.wait()
+    expect(parentTxReceipt.status).to.equal(1, 'eth deposit parent txn failed')
+
+    // Wait for child chain deposit to arrive
+    const waitResult = await parentTxReceipt.waitForChildTransactionReceipt(
+      childSigner.provider!
+    )
+    expect(waitResult.complete).to.eq(true, 'eth deposit not complete')
+    expect(waitResult.childTxReceipt).to.exist
+
+    const childReceipt = new ChildTransactionReceipt(waitResult.childTxReceipt!)
+
+    // Mine blocks on both chains until the child tx is included in a batch
+    const miner1 = Wallet.createRandom().connect(parentSigner.provider!)
+    const miner2 = Wallet.createRandom().connect(childSigner.provider!)
+    await fundParentSigner(miner1, parseEther('0.1'))
+    await fundChildSigner(miner2, parseEther('0.1'))
+    const state = { mining: true }
+    mineUntilStop(miner1, state)
+    mineUntilStop(miner2, state)
+
+    // Wait for the batch containing this tx to be posted
+    const l2Provider = childSigner.provider! as JsonRpcProvider
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      await wait(300)
+      const batchNum = await childReceipt
+        .getBatchNumber(l2Provider)
+        .catch(() => BigNumber.from(0))
+      if (batchNum.gt(0)) break
+    }
+    state.mining = false
+
+    // Reverse trace: from child deposit tx back to parent tx
+    const tracedParentTxHash =
+      await childReceipt.getParentDepositTransactionHash(
+        l2Provider,
+        parentSigner.provider!
+      )
+
+    expect(tracedParentTxHash).to.not.be.null
+    expect(tracedParentTxHash).to.eq(
+      parentTxReceipt.transactionHash,
+      'traced parent tx hash does not match original deposit tx hash'
+    )
+  })
 
   it('traces a retryable redeem child tx back to the parent tx', async () => {
     const {
@@ -108,6 +119,10 @@ describe('Reverse Tracing', async () => {
     })
 
     await fundParentSigner(parentSigner)
+    if (isArbitrumNetworkWithCustomFeeToken()) {
+      await fundParentCustomFeeToken(parentSigner)
+      await approveParentCustomFeeToken(parentSigner)
+    }
     const destWallet = Wallet.createRandom()
 
     const amount = '0.0002'
@@ -124,10 +139,12 @@ describe('Reverse Tracing', async () => {
     expect(parentTxReceipt.status).to.equal(1, 'eth deposit parent txn failed')
 
     // Wait for the retryable to be redeemed
-    const parentToChildMessages = await parentTxReceipt.getParentToChildMessages(
-      childSigner.provider!
+    const parentToChildMessages =
+      await parentTxReceipt.getParentToChildMessages(childSigner.provider!)
+    expect(parentToChildMessages.length).to.eq(
+      1,
+      'failed to find 1 parent-to-child message'
     )
-    expect(parentToChildMessages.length).to.eq(1, 'failed to find 1 parent-to-child message')
     const parentToChildMessage = parentToChildMessages[0]
 
     const retryableTicketResult = await parentToChildMessage.waitForStatus()
@@ -146,7 +163,10 @@ describe('Reverse Tracing', async () => {
     )
     const ticketRedeemEvents =
       childRetryableTxReceipt.getRedeemScheduledEvents()
-    expect(ticketRedeemEvents.length).to.eq(1, 'failed finding the redeem event')
+    expect(ticketRedeemEvents.length).to.eq(
+      1,
+      'failed finding the redeem event'
+    )
 
     const redeemTxHash = ticketRedeemEvents[0].retryTxHash
 
@@ -192,10 +212,14 @@ describe('Reverse Tracing', async () => {
       parentProvider,
       ethBridger,
     } = await testSetup()
+    const decimals = await getNativeTokenDecimals({
+      parentProvider,
+      childNetwork: childChain,
+    })
     await fundChildSigner(childSigner)
     await fundParentSigner(parentSigner)
 
-    const ethToWithdraw = parseEther('0.00000002')
+    const ethToWithdraw = parseUnits('0.00000002', decimals)
     const randomAddress = Wallet.createRandom().address
 
     // Initiate withdrawal on child chain
@@ -206,7 +230,10 @@ describe('Reverse Tracing', async () => {
       from: await childSigner.getAddress(),
     })
     const withdrawEthRec = await withdrawEthRes.wait()
-    expect(withdrawEthRec.status).to.equal(1, 'initiate eth withdraw txn failed')
+    expect(withdrawEthRec.status).to.equal(
+      1,
+      'initiate eth withdraw txn failed'
+    )
 
     const withdrawMessage = (
       await withdrawEthRec.getChildToParentMessages(parentSigner)

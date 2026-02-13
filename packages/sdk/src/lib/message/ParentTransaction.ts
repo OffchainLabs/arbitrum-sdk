@@ -347,8 +347,7 @@ export class ParentTransactionReceipt implements TransactionReceipt {
     const childEventFetcher = new EventFetcher(childProvider)
     const l2ToL1Events = await childEventFetcher.getEvents(
       ArbSys__factory,
-      contract =>
-        contract.filters.L2ToL1Tx(null, null, null, transactionIndex),
+      contract => contract.filters.L2ToL1Tx(null, null, null, transactionIndex),
       {
         fromBlock: l2Block.toNumber(),
         toBlock: l2Block.toNumber(),
