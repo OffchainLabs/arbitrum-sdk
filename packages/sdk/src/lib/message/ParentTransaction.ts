@@ -47,7 +47,13 @@ import { EventArgs, parseTypedLogs } from '../dataEntities/event'
 import { isDefined } from '../utils/lib'
 import { SubmitRetryableMessageDataParser } from './messageDataParser'
 import { getArbitrumNetwork } from '../dataEntities/networks'
-import { ARB1_NITRO_GENESIS_L1_BLOCK } from '../dataEntities/constants'
+import {
+  ARB1_NITRO_GENESIS_L1_BLOCK,
+  ARB_SYS_ADDRESS,
+} from '../dataEntities/constants'
+import { Outbox__factory } from '../abi/factories/Outbox__factory'
+import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
+import { EventFetcher } from '../utils/eventFetcher'
 
 export interface ParentContractTransaction<
   TReceipt extends ParentTransactionReceipt = ParentTransactionReceipt
@@ -301,6 +307,57 @@ export class ParentTransactionReceipt implements TransactionReceipt {
       this.logs,
       'DepositInitiated'
     )
+  }
+
+  /**
+   * Given a parent chain tx that executed a withdrawal (via Outbox.executeTransaction),
+   * trace back to the child chain transaction that initiated the withdrawal.
+   * @param childProvider Provider for the child chain
+   * @param parentProvider Provider for the parent chain
+   * @returns The child chain transaction hash, or null if unable to trace
+   */
+  public async getChildWithdrawTransactionHash(
+    childProvider: Provider,
+    parentProvider: Provider
+  ): Promise<string | null> {
+    // Step 1: Parse OutBoxTransactionExecuted from this tx's logs
+    const outboxEvents = parseTypedLogs(
+      Outbox__factory,
+      this.logs,
+      'OutBoxTransactionExecuted'
+    )
+    if (outboxEvents.length === 0) return null
+
+    const transactionIndex = outboxEvents[0].transactionIndex
+
+    // Step 2: Get l2Block from the tx calldata
+    const tx = await parentProvider.getTransaction(this.transactionHash)
+    if (!tx) return null
+
+    let l2Block: BigNumber
+    try {
+      const parsed = Outbox__factory.createInterface().parseTransaction(tx)
+      l2Block = parsed.args.l2Block
+    } catch {
+      // Not an executeTransaction call
+      return null
+    }
+
+    // Step 3: Query ArbSys.L2ToL1Tx on child chain at that exact block
+    const childEventFetcher = new EventFetcher(childProvider)
+    const l2ToL1Events = await childEventFetcher.getEvents(
+      ArbSys__factory,
+      contract =>
+        contract.filters.L2ToL1Tx(null, null, null, transactionIndex),
+      {
+        fromBlock: l2Block.toNumber(),
+        toBlock: l2Block.toNumber(),
+        address: ARB_SYS_ADDRESS,
+      }
+    )
+
+    if (l2ToL1Events.length === 0) return null
+    return l2ToL1Events[0].transactionHash
   }
 
   /**

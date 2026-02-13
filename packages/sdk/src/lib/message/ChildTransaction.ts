@@ -36,9 +36,17 @@ import { ArbRetryableTx__factory } from '../abi/factories/ArbRetryableTx__factor
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { RedeemScheduledEvent } from '../abi/ArbRetryableTx'
 import { ArbSdkError } from '../dataEntities/errors'
-import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
+import {
+  NODE_INTERFACE_ADDRESS,
+  ARB_RETRYABLE_TX_ADDRESS,
+} from '../dataEntities/constants'
 import { EventArgs, parseTypedLogs } from '../dataEntities/event'
 import { ArbitrumProvider } from '../utils/arbProvider'
+import { Bridge__factory } from '../abi/factories/Bridge__factory'
+import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factory'
+import { EventFetcher } from '../utils/eventFetcher'
+import { getArbitrumNetwork } from '../dataEntities/networks'
+import { EthDepositMessage } from './ParentToChildMessage'
 
 export interface ChildContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<ChildTransactionReceipt>
@@ -177,6 +185,165 @@ export class ChildTransactionReceipt implements TransactionReceipt {
     const res = await this.getBatchConfirmations(childProvider)
     // is there a batch with enough confirmations
     return res.toNumber() > confirmations
+  }
+
+  /**
+   * Given a child chain tx that is a retryable redeem or retryable ticket,
+   * trace back to the parent chain transaction that originated it.
+   * @param childProvider Provider for the child chain
+   * @param parentProvider Provider for the parent chain
+   * @returns The parent chain transaction hash, or null if unable to trace
+   */
+  public async getParentTransactionHash(
+    childProvider: providers.Provider,
+    parentProvider: providers.Provider
+  ): Promise<string | null> {
+    // Step 1: Find the retryable ticket hash
+    // Check if this tx is a redeem by querying RedeemScheduled events
+    // where retryTxHash (2nd indexed param) matches this tx hash
+    const childEventFetcher = new EventFetcher(childProvider)
+    const redeemScheduledEvents = await childEventFetcher.getEvents(
+      ArbRetryableTx__factory,
+      contract => contract.filters.RedeemScheduled(null, this.transactionHash),
+      {
+        fromBlock: 0,
+        toBlock: 'latest',
+        address: ARB_RETRYABLE_TX_ADDRESS,
+      }
+    )
+
+    let ticketId: string
+    if (redeemScheduledEvents.length > 0) {
+      // This is a redeemed message - get the ticketId
+      ticketId = redeemScheduledEvents[0].event.ticketId
+    } else {
+      // Assume this tx IS the retryable ticket
+      ticketId = this.transactionHash
+    }
+
+    // Step 2: Extract requestId from the retryable ticket tx data
+    const tx = await childProvider.getTransaction(ticketId)
+    if (!tx) return null
+
+    let requestId: string
+    try {
+      const parsed =
+        ArbRetryableTx__factory.createInterface().parseTransaction(tx)
+      requestId = parsed.args.requestId
+    } catch {
+      // Not a retryable ticket tx
+      return null
+    }
+
+    // Step 3: Find the parent chain tx via Bridge.MessageDelivered
+    const network = await getArbitrumNetwork(childProvider)
+    const parentEventFetcher = new EventFetcher(parentProvider)
+    const messageDeliveredEvents = await parentEventFetcher.getEvents(
+      Bridge__factory,
+      contract => contract.filters.MessageDelivered(BigNumber.from(requestId)),
+      {
+        fromBlock: 0,
+        toBlock: 'latest',
+        address: network.ethBridge.bridge,
+      }
+    )
+
+    if (messageDeliveredEvents.length === 0) return null
+    return messageDeliveredEvents[0].transactionHash
+  }
+
+  /**
+   * Given a child chain tx that is an ETH deposit (type 0x64),
+   * trace back to the parent chain transaction that originated it.
+   * Only works for standard ETH deposits (not custom gas token chains).
+   * @param childProvider JsonRpcProvider for the child chain (needed for getBatchNumber)
+   * @param parentProvider Provider for the parent chain
+   * @returns The parent chain transaction hash, or null if unable to trace
+   */
+  public async getParentDepositTransactionHash(
+    childProvider: providers.JsonRpcProvider,
+    parentProvider: providers.Provider
+  ): Promise<string | null> {
+    // Step 1: Get child tx details
+    const tx = await childProvider.getTransaction(this.transactionHash)
+    if (!tx) return null
+
+    const chainId = (await childProvider.getNetwork()).chainId
+
+    // Step 2: Get batch number and network config
+    const batchNum = await this.getBatchNumber(childProvider)
+    const network = await getArbitrumNetwork(childProvider)
+
+    // Step 3: Get delayed message range for this batch
+    const parentEventFetcher = new EventFetcher(parentProvider)
+
+    const currentBatchEvents = await parentEventFetcher.getEvents(
+      SequencerInbox__factory,
+      contract => contract.filters.SequencerBatchDelivered(batchNum),
+      {
+        fromBlock: 0,
+        toBlock: 'latest',
+        address: network.ethBridge.sequencerInbox,
+      }
+    )
+    if (currentBatchEvents.length === 0) return null
+
+    const afterDelayedMessagesRead =
+      currentBatchEvents[0].event.afterDelayedMessagesRead
+
+    let prevAfterDelayed: BigNumber
+    if (batchNum.eq(0)) {
+      prevAfterDelayed = BigNumber.from(0)
+    } else {
+      const prevBatchEvents = await parentEventFetcher.getEvents(
+        SequencerInbox__factory,
+        contract =>
+          contract.filters.SequencerBatchDelivered(batchNum.sub(1)),
+        {
+          fromBlock: 0,
+          toBlock: 'latest',
+          address: network.ethBridge.sequencerInbox,
+        }
+      )
+      if (prevBatchEvents.length === 0) return null
+      prevAfterDelayed = prevBatchEvents[0].event.afterDelayedMessagesRead
+    }
+
+    // Step 4: Local hash computation to find the messageNumber
+    let foundMessageNumber: BigNumber | null = null
+    for (
+      let i = prevAfterDelayed;
+      i.lt(afterDelayedMessagesRead);
+      i = i.add(1)
+    ) {
+      const hash = EthDepositMessage.calculateDepositTxId(
+        chainId,
+        i,
+        tx.from,
+        tx.to!,
+        tx.value
+      )
+      if (hash === this.transactionHash) {
+        foundMessageNumber = i
+        break
+      }
+    }
+
+    if (!foundMessageNumber) return null
+
+    // Step 5: Find parent tx via Bridge.MessageDelivered
+    const messageDeliveredEvents = await parentEventFetcher.getEvents(
+      Bridge__factory,
+      contract => contract.filters.MessageDelivered(foundMessageNumber!),
+      {
+        fromBlock: 0,
+        toBlock: 'latest',
+        address: network.ethBridge.bridge,
+      }
+    )
+
+    if (messageDeliveredEvents.length === 0) return null
+    return messageDeliveredEvents[0].transactionHash
   }
 
   /**
