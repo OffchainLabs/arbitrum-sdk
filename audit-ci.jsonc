@@ -76,10 +76,51 @@
     // from: @arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>bs58check>bs58>base-x
     // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>bs58check>bs58>base-x
     "GHSA-xq7p-g2vc-g82p",
-    // https://github.com/advisories/GHSA-cxrh-j4jr-qwg3
-    // undici Denial of Service attack via bad certificate data
-    // we only use hardhat in a test and we don't use undici in the sdk
+    // GHSA-cxrh-j4jr-qwg3 removed: undici bumped to 5.29.0 via resolution
+
+    // Crypto/contract package deep transitive dev dependencies
+    ////////////////////////////////////////////////////////////
+    // https://github.com/advisories/GHSA-52f5-9888-hmc6
+    // tmp allows arbitrary temp file write via symbolic link dir parameter
+    // Dev-only dependency in contract packages (patch-package, puppeteer); not used in SDK runtime
+    // from: @arbitrum/nitro-contracts>patch-package>tmp
+    // from: @offchainlabs/l1-l3-teleport-contracts>...>sol2uml>convert-svg-core>tmp
+    "GHSA-52f5-9888-hmc6",
+    // https://github.com/advisories/GHSA-v62p-rq8g-8h59
+    // pbkdf2 silently disregards Uint8Array input on Node.js <3.0.0
+    // Only affects Node.js <3.0.0 which this repo does not target; dev-only contract package dep
+    // from: @arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>pbkdf2
+    "GHSA-v62p-rq8g-8h59",
+    // https://github.com/advisories/GHSA-h7cp-r72f-jxh6
+    // pbkdf2 returns predictable output for non-normalized algos in browser polyfills
+    // Only affects browser polyfills; this SDK runs on Node.js and does not bundle crypto; dev-only contract package dep
+    // from: @arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>pbkdf2
+    "GHSA-h7cp-r72f-jxh6",
+    // https://github.com/advisories/GHSA-95m3-7q98-8xr5
+    // sha.js missing type checks leading to hash rewind
+    // Dev-only deep transitive dep in contract packages; SDK does not use sha.js directly
+    // from: @arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>create-hash>sha.js
+    "GHSA-95m3-7q98-8xr5",
+    // https://github.com/advisories/GHSA-cpq7-6gpm-g9rc
+    // cipher-base missing type checks allowing invalid input
+    // Dev-only deep transitive dep in contract packages; SDK does not use cipher-base directly
+    // from: @arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>create-hash>cipher-base
+    "GHSA-cpq7-6gpm-g9rc",
+    // https://github.com/advisories/GHSA-848j-6mx2-7j84
+    // elliptic uses a non-constant-time algorithm for ECDSA
+    // No patched version available; already pinned to latest (6.6.1); dev-only dependency
+    // from: ethers>@ethersproject/signing-key>elliptic
+    // from: @arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>secp256k1>elliptic
+    "GHSA-848j-6mx2-7j84",
+    // https://github.com/advisories/GHSA-g9mf-h72j-4rw9
+    // undici unbounded decompression chain in HTTP responses
+    // Fix requires undici >=6.23.0 but hardhat depends on undici 5.x; dev-only dependency
     // from: hardhat>undici
-    "GHSA-cxrh-j4jr-qwg3"
+    "GHSA-g9mf-h72j-4rw9",
+    // https://github.com/advisories/GHSA-43fc-jf86-j433
+    // axios DoS via __proto__ key in mergeConfig
+    // Fix requires axios >=1.13.5 but sol2uml depends on axios ^0.27.2; dev-only contract package dep
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>axios
+    "GHSA-43fc-jf86-j433"
   ]
 }
