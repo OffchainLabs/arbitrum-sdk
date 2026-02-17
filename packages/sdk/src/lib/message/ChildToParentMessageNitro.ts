@@ -321,6 +321,56 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
     return (rollup as BoldRollupUserLogic).getAssertion !== undefined
   }
 
+  /**
+   * Convert a parent chain block number to a child chain block range when the
+   * parent chain is itself an Arbitrum chain (i.e. the child is an Orbit / L3
+   * chain). If the parent is not an Arbitrum chain the original block number
+   * is returned unchanged.
+   */
+  private async getChildChainBlockRange(
+    parentBlock: BigNumber,
+    childProvider: Provider
+  ): Promise<{ fromBlock: BigNumber; toBlock: BigNumber }> {
+    if (!(await isArbitrumChain(this.parentProvider))) {
+      return { fromBlock: parentBlock, toBlock: parentBlock }
+    }
+
+    try {
+      const nodeInterface = NodeInterface__factory.connect(
+        NODE_INTERFACE_ADDRESS,
+        this.parentProvider
+      )
+      const childBlockRangeFromNode = await nodeInterface.l2BlockRangeForL1(
+        parentBlock
+      )
+      return {
+        fromBlock: childBlockRangeFromNode.firstBlock,
+        toBlock: childBlockRangeFromNode.lastBlock,
+      }
+    } catch {
+      // defaults to binary search
+      try {
+        const childBlockRange = await getBlockRangesForL1BlockWithCache({
+          parentProvider: this.parentProvider as JsonRpcProvider,
+          childProvider: childProvider as JsonRpcProvider,
+          forL1Block: parentBlock.toNumber(),
+        })
+        const startBlock = childBlockRange[0]
+        const endBlock = childBlockRange[1]
+        if (!startBlock || !endBlock) {
+          throw new Error()
+        }
+        return {
+          fromBlock: BigNumber.from(startBlock),
+          toBlock: BigNumber.from(endBlock),
+        }
+      } catch {
+        // fallback to the original block number
+        return { fromBlock: parentBlock, toBlock: parentBlock }
+      }
+    }
+  }
+
   private async getBlockFromAssertionId(
     rollup: RollupUserLogic | BoldRollupUserLogic,
     assertionId: BigNumber | string,
@@ -333,45 +383,9 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
           )
         ).createdAtBlock
       : (await (rollup as RollupUserLogic).getNode(assertionId)).createdAtBlock
-    let createdFromBlock = createdAtBlock
-    let createdToBlock = createdAtBlock
 
-    // If L1 is Arbitrum, then L2 is an Orbit chain.
-    if (await isArbitrumChain(this.parentProvider)) {
-      try {
-        const nodeInterface = NodeInterface__factory.connect(
-          NODE_INTERFACE_ADDRESS,
-          this.parentProvider
-        )
-
-        const l2BlockRangeFromNode = await nodeInterface.l2BlockRangeForL1(
-          createdAtBlock
-        )
-
-        createdFromBlock = l2BlockRangeFromNode.firstBlock
-        createdToBlock = l2BlockRangeFromNode.lastBlock
-      } catch {
-        // defaults to binary search
-        try {
-          const l2BlockRange = await getBlockRangesForL1BlockWithCache({
-            parentProvider: this.parentProvider as JsonRpcProvider,
-            childProvider: childProvider as JsonRpcProvider,
-            forL1Block: createdAtBlock.toNumber(),
-          })
-          const startBlock = l2BlockRange[0]
-          const endBlock = l2BlockRange[1]
-          if (!startBlock || !endBlock) {
-            throw new Error()
-          }
-          createdFromBlock = BigNumber.from(startBlock)
-          createdToBlock = BigNumber.from(endBlock)
-        } catch {
-          // fallback to the original method
-          createdFromBlock = createdAtBlock
-          createdToBlock = createdAtBlock
-        }
-      }
-    }
+    const { fromBlock: createdFromBlock, toBlock: createdToBlock } =
+      await this.getChildChainBlockRange(createdAtBlock, childProvider)
 
     // now get the block hash and sendroot for that node
     const eventFetcher = new EventFetcher(rollup.provider)
@@ -459,11 +473,17 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
           )
           const eventFetcher = new EventFetcher(rollup.provider)
 
+          const { fromBlock: queryFromBlock } =
+            await this.getChildChainBlockRange(
+              latestConfirmedAssertion.createdAtBlock,
+              childProvider
+            )
+
           const assertionCreatedEvents = await eventFetcher.getEvents(
             BoldRollupUserLogic__factory,
             t => t.filters.AssertionCreated(),
             {
-              fromBlock: latestConfirmedAssertion.createdAtBlock.toNumber(),
+              fromBlock: queryFromBlock.toNumber(),
               toBlock: 'latest',
               address: rollup.address,
             }
