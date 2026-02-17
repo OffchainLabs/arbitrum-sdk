@@ -323,19 +323,20 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
   }
 
   /**
-   * Convert an L1 block number to an L2 block range when the parent chain is
-   * an Arbitrum chain (i.e. the child is an Orbit / L3 chain). If the parent
-   * is not an Arbitrum chain the original block number is returned unchanged.
+   * Convert a parent chain block number to a child chain block range when the
+   * parent chain is itself an Arbitrum chain (i.e. the child is an Orbit / L3
+   * chain). If the parent is not an Arbitrum chain the original block number
+   * is returned unchanged.
    */
-  private async getL2BlockRange(
-    l1Block: BigNumber,
+  private async getChildChainBlockRange(
+    parentBlock: BigNumber,
     childProvider: Provider
   ): Promise<{ fromBlock: BigNumber; toBlock: BigNumber }> {
     if (this.parentIsArbitrumChain === undefined) {
       this.parentIsArbitrumChain = await isArbitrumChain(this.parentProvider)
     }
     if (!this.parentIsArbitrumChain) {
-      return { fromBlock: l1Block, toBlock: l1Block }
+      return { fromBlock: parentBlock, toBlock: parentBlock }
     }
 
     try {
@@ -343,23 +344,23 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
         NODE_INTERFACE_ADDRESS,
         this.parentProvider
       )
-      const l2BlockRangeFromNode = await nodeInterface.l2BlockRangeForL1(
-        l1Block
+      const childBlockRangeFromNode = await nodeInterface.l2BlockRangeForL1(
+        parentBlock
       )
       return {
-        fromBlock: l2BlockRangeFromNode.firstBlock,
-        toBlock: l2BlockRangeFromNode.lastBlock,
+        fromBlock: childBlockRangeFromNode.firstBlock,
+        toBlock: childBlockRangeFromNode.lastBlock,
       }
     } catch {
       // defaults to binary search
       try {
-        const l2BlockRange = await getBlockRangesForL1BlockWithCache({
+        const childBlockRange = await getBlockRangesForL1BlockWithCache({
           parentProvider: this.parentProvider as JsonRpcProvider,
           childProvider: childProvider as JsonRpcProvider,
-          forL1Block: l1Block.toNumber(),
+          forL1Block: parentBlock.toNumber(),
         })
-        const startBlock = l2BlockRange[0]
-        const endBlock = l2BlockRange[1]
+        const startBlock = childBlockRange[0]
+        const endBlock = childBlockRange[1]
         if (!startBlock || !endBlock) {
           throw new Error()
         }
@@ -369,7 +370,7 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
         }
       } catch {
         // fallback to the original block number
-        return { fromBlock: l1Block, toBlock: l1Block }
+        return { fromBlock: parentBlock, toBlock: parentBlock }
       }
     }
   }
@@ -388,7 +389,7 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
       : (await (rollup as RollupUserLogic).getNode(assertionId)).createdAtBlock
 
     const { fromBlock: createdFromBlock, toBlock: createdToBlock } =
-      await this.getL2BlockRange(createdAtBlock, childProvider)
+      await this.getChildChainBlockRange(createdAtBlock, childProvider)
 
     // now get the block hash and sendroot for that node
     const eventFetcher = new EventFetcher(rollup.provider)
@@ -476,10 +477,11 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
           )
           const eventFetcher = new EventFetcher(rollup.provider)
 
-          const { fromBlock: queryFromBlock } = await this.getL2BlockRange(
-            latestConfirmedAssertion.createdAtBlock,
-            childProvider
-          )
+          const { fromBlock: queryFromBlock } =
+            await this.getChildChainBlockRange(
+              latestConfirmedAssertion.createdAtBlock,
+              childProvider
+            )
 
           const assertionCreatedEvents = await eventFetcher.getEvents(
             BoldRollupUserLogic__factory,
