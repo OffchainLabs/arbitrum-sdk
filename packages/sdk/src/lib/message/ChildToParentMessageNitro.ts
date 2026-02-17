@@ -473,10 +473,11 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
           )
           const eventFetcher = new EventFetcher(rollup.provider)
 
-          const { fromBlock: queryFromBlock } = await this.getChildChainBlockRange(
-            latestConfirmedAssertion.createdAtBlock,
-            childProvider
-          )
+          const { fromBlock: queryFromBlock } =
+            await this.getChildChainBlockRange(
+              latestConfirmedAssertion.createdAtBlock,
+              childProvider
+            )
 
           const assertionCreatedEvents = await eventFetcher.getEvents(
             BoldRollupUserLogic__factory,
