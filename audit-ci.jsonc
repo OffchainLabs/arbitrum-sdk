@@ -76,7 +76,6 @@
     // from: @arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>bs58check>bs58>base-x
     // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>bs58check>bs58>base-x
     "GHSA-xq7p-g2vc-g82p",
-    // GHSA-cxrh-j4jr-qwg3 removed: undici bumped to 5.29.0 via resolution
 
     // Crypto/contract package deep transitive dev dependencies
     ////////////////////////////////////////////////////////////
