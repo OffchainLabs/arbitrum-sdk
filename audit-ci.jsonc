@@ -76,7 +76,6 @@
     // from: @arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>bs58check>bs58>base-x
     // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>bs58check>bs58>base-x
     "GHSA-xq7p-g2vc-g82p",
-    // GHSA-cxrh-j4jr-qwg3 removed: undici bumped to 5.29.0 via resolution
 
     // Crypto/contract package deep transitive dev dependencies
     ////////////////////////////////////////////////////////////
@@ -121,6 +120,11 @@
     // axios DoS via __proto__ key in mergeConfig
     // Fix requires axios >=1.13.5 but sol2uml depends on axios ^0.27.2; dev-only contract package dep
     // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>axios
-    "GHSA-43fc-jf86-j433"
+    "GHSA-43fc-jf86-j433",
+    // https://github.com/advisories/GHSA-2g4f-4pwh-qvx6
+    // ajv ReDoS when using $data option (CVE-2025-69873)
+    // Fix requires ajv >=8.18.0 but eslint 7.x depends on ajv 6.x/8.x; dev-only dependency
+    // from: eslint>ajv, eslint>@eslint/eslintrc>ajv, eslint>table>ajv
+    "GHSA-2g4f-4pwh-qvx6"
   ]
 }
