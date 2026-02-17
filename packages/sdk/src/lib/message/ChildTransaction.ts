@@ -19,7 +19,7 @@
 import { TransactionReceipt } from '@ethersproject/providers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Log } from '@ethersproject/abstract-provider'
-import { ContractTransaction, providers } from 'ethers'
+import { ContractTransaction, ethers, providers } from 'ethers'
 import {
   SignerProviderUtils,
   SignerOrProvider,
@@ -43,10 +43,8 @@ import {
 import { EventArgs, parseTypedLogs } from '../dataEntities/event'
 import { ArbitrumProvider } from '../utils/arbProvider'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
-import { SequencerInbox__factory } from '../abi/factories/SequencerInbox__factory'
 import { EventFetcher } from '../utils/eventFetcher'
 import { getArbitrumNetwork } from '../dataEntities/networks'
-import { EthDepositMessage } from './ParentToChildMessage'
 
 export interface ChildContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<ChildTransactionReceipt>
@@ -201,13 +199,14 @@ export class ChildTransactionReceipt implements TransactionReceipt {
     // Step 1: Find the retryable ticket hash
     // Check if this tx is a redeem by querying RedeemScheduled events
     // where retryTxHash (2nd indexed param) matches this tx hash
+    // The RedeemScheduled event is emitted in the same block as the redeem tx
     const childEventFetcher = new EventFetcher(childProvider)
     const redeemScheduledEvents = await childEventFetcher.getEvents(
       ArbRetryableTx__factory,
       contract => contract.filters.RedeemScheduled(null, this.transactionHash),
       {
-        fromBlock: 0,
-        toBlock: 'latest',
+        fromBlock: this.blockNumber,
+        toBlock: this.blockNumber,
         address: ARB_RETRYABLE_TX_ADDRESS,
       }
     )
@@ -236,14 +235,24 @@ export class ChildTransactionReceipt implements TransactionReceipt {
     }
 
     // Step 3: Find the parent chain tx via Bridge.MessageDelivered
-    const network = await getArbitrumNetwork(childProvider)
+    // Parallelize network lookup and L1 block number lookup
+    const nodeInterface = NodeInterface__factory.connect(
+      NODE_INTERFACE_ADDRESS,
+      childProvider
+    )
+    const [network, l1BlockNum] = await Promise.all([
+      getArbitrumNetwork(childProvider),
+      nodeInterface.blockL1Num(this.blockNumber),
+    ])
+    const l1Block = BigNumber.from(l1BlockNum).toNumber()
+
     const parentEventFetcher = new EventFetcher(parentProvider)
     const messageDeliveredEvents = await parentEventFetcher.getEvents(
       Bridge__factory,
       contract => contract.filters.MessageDelivered(BigNumber.from(requestId)),
       {
-        fromBlock: 0,
-        toBlock: 'latest',
+        fromBlock: Math.max(0, l1Block - 1000),
+        toBlock: l1Block,
         address: network.ethBridge.bridge,
       }
     )
@@ -263,79 +272,37 @@ export class ChildTransactionReceipt implements TransactionReceipt {
     childProvider: providers.JsonRpcProvider,
     parentProvider: providers.Provider
   ): Promise<string | null> {
-    // Step 1: Get child tx details
-    const tx = await childProvider.getTransaction(this.transactionHash)
-    if (!tx) return null
-
-    const chainId = (await childProvider.getNetwork()).chainId
-
-    // Step 2: Get batch number and network config
-    const batchNum = await this.getBatchNumber(childProvider)
-    const network = await getArbitrumNetwork(childProvider)
-
-    // Step 3: Get delayed message range for this batch
-    const parentEventFetcher = new EventFetcher(parentProvider)
-
-    const currentBatchEvents = await parentEventFetcher.getEvents(
-      SequencerInbox__factory,
-      contract => contract.filters.SequencerBatchDelivered(batchNum),
-      {
-        fromBlock: 0,
-        toBlock: 'latest',
-        address: network.ethBridge.sequencerInbox,
-      }
+    // Step 1: Get raw tx and verify it's an ArbitrumDepositTx (type 0x64)
+    const rawTx: string = await childProvider.send(
+      'eth_getRawTransactionByHash',
+      [this.transactionHash]
     )
-    if (currentBatchEvents.length === 0) return null
+    if (!rawTx || !rawTx.startsWith('0x64')) return null
 
-    const afterDelayedMessagesRead =
-      currentBatchEvents[0].event.afterDelayedMessagesRead
+    // Step 2: RLP decode the payload to extract the messageNumber
+    // Fields: [chainId, messageNumber (32 bytes), from, to, value]
+    const decoded = ethers.utils.RLP.decode('0x' + rawTx.slice(4))
+    const messageNumber = BigNumber.from(decoded[1])
 
-    let prevAfterDelayed: BigNumber
-    if (batchNum.eq(0)) {
-      prevAfterDelayed = BigNumber.from(0)
-    } else {
-      const prevBatchEvents = await parentEventFetcher.getEvents(
-        SequencerInbox__factory,
-        contract => contract.filters.SequencerBatchDelivered(batchNum.sub(1)),
-        {
-          fromBlock: 0,
-          toBlock: 'latest',
-          address: network.ethBridge.sequencerInbox,
-        }
-      )
-      if (prevBatchEvents.length === 0) return null
-      prevAfterDelayed = prevBatchEvents[0].event.afterDelayedMessagesRead
-    }
+    // Step 3: Get network config and L1 block number in parallel
+    const nodeInterface = NodeInterface__factory.connect(
+      NODE_INTERFACE_ADDRESS,
+      childProvider
+    )
+    const [network, l1BlockNum] = await Promise.all([
+      getArbitrumNetwork(childProvider),
+      nodeInterface.blockL1Num(this.blockNumber),
+    ])
+    const l1Block = BigNumber.from(l1BlockNum).toNumber()
 
-    // Step 4: Local hash computation to find the messageNumber
-    let foundMessageNumber: BigNumber | null = null
-    for (
-      let i = prevAfterDelayed;
-      i.lt(afterDelayedMessagesRead);
-      i = i.add(1)
-    ) {
-      const hash = EthDepositMessage.calculateDepositTxId(
-        chainId,
-        i,
-        tx.from,
-        tx.to!,
-        tx.value
-      )
-      if (hash === this.transactionHash) {
-        foundMessageNumber = i
-        break
-      }
-    }
-
-    if (!foundMessageNumber) return null
-
-    // Step 5: Find parent tx via Bridge.MessageDelivered
+    // Step 4: Find parent tx via Bridge.MessageDelivered with bounded range
+    const parentEventFetcher = new EventFetcher(parentProvider)
     const messageDeliveredEvents = await parentEventFetcher.getEvents(
       Bridge__factory,
-      contract => contract.filters.MessageDelivered(foundMessageNumber!),
+      contract => contract.filters.MessageDelivered(messageNumber),
       {
-        fromBlock: 0,
-        toBlock: 'latest',
+        fromBlock: Math.max(0, l1Block - 1000),
+        toBlock: l1Block,
         address: network.ethBridge.bridge,
       }
     )
