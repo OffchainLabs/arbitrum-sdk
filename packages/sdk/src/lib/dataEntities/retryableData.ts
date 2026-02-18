@@ -114,11 +114,16 @@ export class RetryableDataTools {
   public static tryParseError(
     ethersJsErrorOrData: Error | { errorData: string } | string
   ): RetryableData | null {
-    const errorData =
-      typeof ethersJsErrorOrData === 'string'
-        ? ethersJsErrorOrData
-        : this.tryGetErrorData(ethersJsErrorOrData)
-    if (!errorData) return null
-    return errorInterface.parseError(errorData).args as unknown as RetryableData
+    try {
+      const errorData =
+        typeof ethersJsErrorOrData === 'string'
+          ? ethersJsErrorOrData
+          : this.tryGetErrorData(ethersJsErrorOrData)
+      if (!errorData) return null
+      return errorInterface.parseError(errorData)
+        .args as unknown as RetryableData
+    } catch {
+      return null
+    }
   }
 }
