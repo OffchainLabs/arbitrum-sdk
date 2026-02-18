@@ -29,7 +29,7 @@
     "@typescript-eslint/eslint-plugin-tslint": "^5.27.1",
     "@typescript-eslint/parser": "^5.14.0",
     "audit-ci": "^6.6.1",
-    "axios": "^1.8.4",
+    "axios": "^1.13.5",
     "chai": "^4.2.0",
     "chalk": "^4.1.0",
     "dotenv": "^10.0.0",
@@ -56,7 +56,7 @@
     "lodash.pick": "https://github.com/lodash/lodash/archive/refs/tags/4.17.21.tar.gz",
     "**/@ethersproject/providers/ws": "7.5.10",
     "**/puppeteer/ws": "8.17.1",
-    "**/puppeteer/tar-fs": "2.1.2",
+    "**/puppeteer/tar-fs": "2.1.4",
     "**/hardhat/ws": "7.5.10",
     "**/hardhat/@sentry/node/cookie": "0.7.0",
     "**/follow-redirects": "1.15.6",
@@ -70,8 +70,17 @@
     "**/foreground-child/cross-spawn": "7.0.5",
     "**/istanbul-lib-processinfo/cross-spawn": "7.0.5",
     "**/istanbul-lib-instrument/@babel/core/@babel/helpers": "7.26.10",
-    "**/hardhat/undici": "5.28.5",
+    "**/hardhat/undici": "5.29.0",
     "**/chokidar/braces": "3.0.3",
-    "**/sol2uml/axios": "0.30.0"
+    "**/sol2uml/axios": "0.30.2",
+    "**/brace-expansion": "1.1.12",
+    "**/mocha/minimatch/brace-expansion": "2.0.2",
+    "**/convert-svg-core/glob/minimatch/brace-expansion": "2.0.2",
+    "**/eslint/js-yaml": "3.14.2",
+    "**/eslint/@eslint/eslintrc/js-yaml": "3.14.2",
+    "**/mocha/js-yaml": "4.1.1",
+    "**/diff": "5.2.2",
+    "**/form-data": "4.0.5",
+    "**/lodash": "4.17.23"
   }
 }
