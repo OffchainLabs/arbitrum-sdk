@@ -12,7 +12,7 @@
   },
   "engines": {
     "node": ">=v11",
-    "npm": "please-use-yarn",
+    "npm": ">=7",
     "yarn": ">= 1.0.0"
   },
   "bugs": {
