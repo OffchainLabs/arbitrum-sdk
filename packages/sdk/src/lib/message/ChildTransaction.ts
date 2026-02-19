@@ -19,7 +19,7 @@
 import { TransactionReceipt } from '@ethersproject/providers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Log } from '@ethersproject/abstract-provider'
-import { ContractTransaction, ethers, providers } from 'ethers'
+import { ContractTransaction, providers } from 'ethers'
 import {
   SignerProviderUtils,
   SignerOrProvider,
@@ -45,6 +45,7 @@ import { ArbitrumProvider } from '../utils/arbProvider'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
 import { EventFetcher } from '../utils/eventFetcher'
 import { getArbitrumNetwork } from '../dataEntities/networks'
+import { isArbitrumChain } from '../utils/lib'
 
 export interface ChildContractTransaction extends ContractTransaction {
   wait(confirmations?: number): Promise<ChildTransactionReceipt>
@@ -58,6 +59,8 @@ export interface RedeemTransaction extends ChildContractTransaction {
  * Extension of ethers-js TransactionReceipt, adding Arbitrum-specific functionality
  */
 export class ChildTransactionReceipt implements TransactionReceipt {
+  private static readonly PARENT_EVENT_QUERY_CHUNK_SIZE = 1000
+
   public readonly to: string
   public readonly from: string
   public readonly contractAddress: string
@@ -186,20 +189,131 @@ export class ChildTransactionReceipt implements TransactionReceipt {
   }
 
   /**
-   * Given a child chain tx that is a retryable redeem or retryable ticket,
-   * trace back to the parent chain transaction that originated it.
+   * Get the parent chain block range for querying events.
+   * For Arbitrum parent chains, maps base-layer block numbers to
+   * the corresponding parent chain block range.
+   */
+  private async getParentEventBlockRange(
+    childProvider: providers.Provider,
+    parentProvider: providers.Provider
+  ): Promise<{ fromBlock: number; toBlock: number }> {
+    const nodeInterface = NodeInterface__factory.connect(
+      NODE_INTERFACE_ADDRESS,
+      childProvider
+    )
+    const l1BlockNum = await nodeInterface.blockL1Num(this.blockNumber)
+    const l1Block = BigNumber.from(l1BlockNum).toNumber()
+
+    if (await isArbitrumChain(parentProvider)) {
+      const parentNodeInterface = NodeInterface__factory.connect(
+        NODE_INTERFACE_ADDRESS,
+        parentProvider
+      )
+      try {
+        const [upperRange, lowerRange] = await Promise.all([
+          parentNodeInterface.l2BlockRangeForL1(l1Block),
+          parentNodeInterface.l2BlockRangeForL1(Math.max(0, l1Block - 1000)),
+        ])
+        return {
+          fromBlock: lowerRange.firstBlock.toNumber(),
+          toBlock: upperRange.lastBlock.toNumber(),
+        }
+      } catch {
+        const latestBlock = await parentProvider.getBlockNumber()
+        return {
+          fromBlock: Math.max(0, latestBlock - 100000),
+          toBlock: latestBlock,
+        }
+      }
+    }
+
+    return {
+      fromBlock: Math.max(0, l1Block - 1000),
+      toBlock: l1Block,
+    }
+  }
+
+  /**
+   * Query Bridge.MessageDelivered in bounded chunks to avoid providers
+   * rejecting very large getLogs block ranges.
+   */
+  private async findMessageDeliveredTransactionHash(
+    parentEventFetcher: EventFetcher,
+    messageNumber: BigNumber,
+    bridgeAddress: string,
+    blockRange: { fromBlock: number; toBlock: number }
+  ): Promise<string | null> {
+    let chunkSize = ChildTransactionReceipt.PARENT_EVENT_QUERY_CHUNK_SIZE
+    let currentTo = blockRange.toBlock
+
+    while (currentTo >= blockRange.fromBlock) {
+      const currentFrom = Math.max(
+        blockRange.fromBlock,
+        currentTo - chunkSize + 1
+      )
+
+      try {
+        const events = await parentEventFetcher.getEvents(
+          Bridge__factory,
+          contract => contract.filters.MessageDelivered(messageNumber),
+          {
+            fromBlock: currentFrom,
+            toBlock: currentTo,
+            address: bridgeAddress,
+          }
+        )
+
+        if (events.length > 0) {
+          // getLogs returns ascending order; use the highest block in this chunk.
+          return events[events.length - 1].transactionHash
+        }
+
+        currentTo = currentFrom - 1
+      } catch (error) {
+        // Some providers cap block range size; retry same interval with smaller chunks.
+        if (chunkSize <= 1) throw error
+        chunkSize = Math.max(1, Math.floor(chunkSize / 2))
+      }
+    }
+
+    return null
+  }
+
+  /**
+   * Fetches the requestId (messageNumber) from a Nitro typed transaction
+   * using the standard eth_getTransactionByHash RPC method. Nitro nodes
+   * include a `requestId` field in the response for typed transactions
+   * (0x64 ETH deposits, 0x69 submit retryable). The requestId is the
+   * messageNumber zero-padded to 32 bytes.
+   *
+   * This approach works on Nitro-based Arbitrum chains
+   * without requiring the non-standard eth_getRawTransactionByHash method.
+   */
+  private static async getMessageNumber(
+    childProvider: providers.Provider,
+    txHash: string,
+    expectedType: string
+  ): Promise<BigNumber | null> {
+    const rpcProvider = childProvider as providers.JsonRpcProvider
+    if (typeof rpcProvider.send !== 'function') return null
+    const tx = await rpcProvider.send('eth_getTransactionByHash', [txHash])
+    if (!tx || tx.type !== expectedType) return null
+    if (!tx.requestId) return null
+    return BigNumber.from(tx.requestId)
+  }
+
+  /**
+   * Given a child chain tx that is a retryable redeem or retryable ticket
+   * creation, trace back to the parent chain transaction that originated it.
    * @param childProvider Provider for the child chain
    * @param parentProvider Provider for the parent chain
-   * @returns The parent chain transaction hash, or null if unable to trace
+   * @returns The parent chain transaction hash, or null if not traceable
    */
   public async getParentTransactionHash(
     childProvider: providers.Provider,
     parentProvider: providers.Provider
   ): Promise<string | null> {
-    // Step 1: Find the retryable ticket hash
-    // Check if this tx is a redeem by querying RedeemScheduled events
-    // where retryTxHash (2nd indexed param) matches this tx hash
-    // The RedeemScheduled event is emitted in the same block as the redeem tx
+    // If this is a redeem, find the ticket creation tx via RedeemScheduled
     const childEventFetcher = new EventFetcher(childProvider)
     const redeemScheduledEvents = await childEventFetcher.getEvents(
       ArbRetryableTx__factory,
@@ -211,108 +325,70 @@ export class ChildTransactionReceipt implements TransactionReceipt {
       }
     )
 
-    let ticketId: string
-    if (redeemScheduledEvents.length > 0) {
-      // This is a redeemed message - get the ticketId
-      ticketId = redeemScheduledEvents[0].event.ticketId
-    } else {
-      // Assume this tx IS the retryable ticket
-      ticketId = this.transactionHash
-    }
+    const ticketId =
+      redeemScheduledEvents.length > 0
+        ? redeemScheduledEvents[0].event.ticketId
+        : this.transactionHash
 
-    // Step 2: Extract requestId from the retryable ticket tx data
-    const tx = await childProvider.getTransaction(ticketId)
-    if (!tx) return null
-
-    let requestId: string
-    try {
-      const parsed =
-        ArbRetryableTx__factory.createInterface().parseTransaction(tx)
-      requestId = parsed.args.requestId
-    } catch {
-      // Not a retryable ticket tx
-      return null
-    }
-
-    // Step 3: Find the parent chain tx via Bridge.MessageDelivered
-    // Parallelize network lookup and L1 block number lookup
-    const nodeInterface = NodeInterface__factory.connect(
-      NODE_INTERFACE_ADDRESS,
-      childProvider
+    // Get the messageNumber from the ticket creation tx (type 0x69)
+    const messageNumber = await ChildTransactionReceipt.getMessageNumber(
+      childProvider,
+      ticketId,
+      '0x69'
     )
-    const [network, l1BlockNum] = await Promise.all([
+    if (!messageNumber) return null
+
+    // Query Bridge.MessageDelivered filtered by messageNumber
+    const [network, blockRange] = await Promise.all([
       getArbitrumNetwork(childProvider),
-      nodeInterface.blockL1Num(this.blockNumber),
+      this.getParentEventBlockRange(childProvider, parentProvider),
     ])
-    const l1Block = BigNumber.from(l1BlockNum).toNumber()
 
     const parentEventFetcher = new EventFetcher(parentProvider)
-    const messageDeliveredEvents = await parentEventFetcher.getEvents(
-      Bridge__factory,
-      contract => contract.filters.MessageDelivered(BigNumber.from(requestId)),
-      {
-        fromBlock: Math.max(0, l1Block - 1000),
-        toBlock: l1Block,
-        address: network.ethBridge.bridge,
-      }
+    return this.findMessageDeliveredTransactionHash(
+      parentEventFetcher,
+      messageNumber,
+      network.ethBridge.bridge,
+      blockRange
     )
-
-    if (messageDeliveredEvents.length === 0) return null
-    return messageDeliveredEvents[0].transactionHash
   }
 
   /**
    * Given a child chain tx that is an ETH deposit (type 0x64),
    * trace back to the parent chain transaction that originated it.
-   * @param childProvider JsonRpcProvider for the child chain (needed for getBatchNumber)
+   * @param childProvider Provider for the child chain
    * @param parentProvider Provider for the parent chain
-   * @returns The parent chain transaction hash, or null if unable to trace
+   * @returns The parent chain transaction hash, or null if not traceable
    */
   public async getParentDepositTransactionHash(
-    childProvider: providers.JsonRpcProvider,
+    childProvider: providers.Provider,
     parentProvider: providers.Provider
   ): Promise<string | null> {
-    // Step 1: Get raw tx and verify it's an ArbitrumDepositTx (type 0x64)
-    const rawTx: string = await childProvider.send(
-      'eth_getRawTransactionByHash',
-      [this.transactionHash]
+    // Get the messageNumber from the deposit tx (type 0x64)
+    const messageNumber = await ChildTransactionReceipt.getMessageNumber(
+      childProvider,
+      this.transactionHash,
+      '0x64'
     )
-    if (!rawTx || !rawTx.startsWith('0x64')) return null
+    if (!messageNumber) return null
 
-    // Step 2: RLP decode the payload to extract the messageNumber
-    // Fields: [chainId, messageNumber (32 bytes), from, to, value]
-    const decoded = ethers.utils.RLP.decode('0x' + rawTx.slice(4))
-    const messageNumber = BigNumber.from(decoded[1])
-
-    // Step 3: Get network config and L1 block number in parallel
-    const nodeInterface = NodeInterface__factory.connect(
-      NODE_INTERFACE_ADDRESS,
-      childProvider
-    )
-    const [network, l1BlockNum] = await Promise.all([
+    // Query Bridge.MessageDelivered filtered by messageNumber
+    const [network, blockRange] = await Promise.all([
       getArbitrumNetwork(childProvider),
-      nodeInterface.blockL1Num(this.blockNumber),
+      this.getParentEventBlockRange(childProvider, parentProvider),
     ])
-    const l1Block = BigNumber.from(l1BlockNum).toNumber()
 
-    // Step 4: Find parent tx via Bridge.MessageDelivered with bounded range
     const parentEventFetcher = new EventFetcher(parentProvider)
-    const messageDeliveredEvents = await parentEventFetcher.getEvents(
-      Bridge__factory,
-      contract => contract.filters.MessageDelivered(messageNumber),
-      {
-        fromBlock: Math.max(0, l1Block - 1000),
-        toBlock: l1Block,
-        address: network.ethBridge.bridge,
-      }
+    return this.findMessageDeliveredTransactionHash(
+      parentEventFetcher,
+      messageNumber,
+      network.ethBridge.bridge,
+      blockRange
     )
-
-    if (messageDeliveredEvents.length === 0) return null
-    return messageDeliveredEvents[0].transactionHash
   }
 
   /**
-   * Replaces the wait function with one that returns an L2TransactionReceipt
+   * Replaces the wait function with one that returns a ChildTransactionReceipt
    * @param contractTransaction
    * @returns
    */
@@ -321,10 +397,8 @@ export class ChildTransactionReceipt implements TransactionReceipt {
   ): ChildContractTransaction => {
     const wait = contractTransaction.wait
     contractTransaction.wait = async (_confirmations?: number) => {
-      // we ignore the confirmations for now since child chain transactions shouldn't re-org
-      // in future we should give users a more fine grained way to check the finality of
-      // an child chain transaction - check if a batch is on a parent chain, if an assertion has been made, and if
-      // it has been confirmed.
+      // Ignore confirmations because child chain transactions are not expected to re-org.
+      // Finality checks can use parent chain batch inclusion and assertion confirmation.
       const result = await wait()
       return new ChildTransactionReceipt(result)
     }
