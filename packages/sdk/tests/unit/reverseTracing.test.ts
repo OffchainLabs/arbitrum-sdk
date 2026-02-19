@@ -17,8 +17,7 @@ const RECEIPT_TX_HASH =
   '0x0000000000000000000000000000000000000000000000000000000000000def'
 const NODE_INTERFACE_ADDRESS = '0x00000000000000000000000000000000000000C8'
 const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
-const ARB_RETRYABLE_TX_ADDRESS =
-  '0x000000000000000000000000000000000000006E'
+const ARB_RETRYABLE_TX_ADDRESS = '0x000000000000000000000000000000000000006E'
 const ARB_ONE_BRIDGE = '0x8315177aB297bA92A06054cE80a67Ed4DBd7ed3a'
 
 // Function selectors used by provider.call dispatch
@@ -148,15 +147,15 @@ function mockChildProvider(
     getTransactionReceipt: async () => null,
     resolveName: async () => null,
     lookupAddress: async () => null,
-    on: () => {},
-    once: () => {},
+    on: () => undefined,
+    once: () => undefined,
     emit: () => false,
     listenerCount: () => 0,
     listeners: () => [],
-    off: () => {},
-    removeAllListeners: () => {},
-    addListener: () => {},
-    removeListener: () => {},
+    off: () => undefined,
+    removeAllListeners: () => undefined,
+    addListener: () => undefined,
+    removeListener: () => undefined,
   } as unknown as ethers.providers.JsonRpcProvider
 }
 
@@ -230,15 +229,15 @@ function mockParentProvider(
     getTransactionReceipt: async () => null,
     resolveName: async () => null,
     lookupAddress: async () => null,
-    on: () => {},
-    once: () => {},
+    on: () => undefined,
+    once: () => undefined,
     emit: () => false,
     listenerCount: () => 0,
     listeners: () => [],
-    off: () => {},
-    removeAllListeners: () => {},
-    addListener: () => {},
-    removeListener: () => {},
+    off: () => undefined,
+    removeAllListeners: () => undefined,
+    addListener: () => undefined,
+    removeListener: () => undefined,
   } as unknown as ethers.providers.Provider
 }
 
@@ -333,9 +332,7 @@ function makeRedeemScheduledLog(
   )
 }
 
-function makeOutboxExecutedLog(
-  transactionIndex: number
-): ethers.providers.Log {
+function makeOutboxExecutedLog(transactionIndex: number): ethers.providers.Log {
   const iface = Outbox__factory.createInterface()
   return encodeLog(iface, 'OutBoxTransactionExecuted', {
     to: ZERO_ADDR,
