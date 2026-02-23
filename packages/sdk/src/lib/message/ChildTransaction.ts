@@ -353,10 +353,25 @@ export class ChildTransactionReceipt implements TransactionReceipt {
     )
     if (!messageNumber) return null
 
+    // For delayed redeems, use the ticket creation block as the anchor for
+    // parent log range selection when available.
+    let ticketCreationReceipt: TransactionReceipt | null = null
+    if (ticketId !== this.transactionHash) {
+      ticketCreationReceipt = await childProvider
+        .getTransactionReceipt(ticketId)
+        .catch(() => null)
+    }
+
+    const blockRangePromise = ticketCreationReceipt
+      ? new ChildTransactionReceipt(
+          ticketCreationReceipt
+        ).getParentEventBlockRange(childProvider, parentProvider)
+      : this.getParentEventBlockRange(childProvider, parentProvider)
+
     // Query Bridge.MessageDelivered filtered by messageNumber
     const [network, blockRange] = await Promise.all([
       getArbitrumNetwork(childProvider),
-      this.getParentEventBlockRange(childProvider, parentProvider),
+      blockRangePromise,
     ])
 
     const parentEventFetcher = new EventFetcher(parentProvider)
