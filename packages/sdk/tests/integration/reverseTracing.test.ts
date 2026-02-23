@@ -2,7 +2,7 @@ import { expect } from 'chai'
 import { loadEnv } from '../../src/lib/utils/env'
 import { Wallet } from '@ethersproject/wallet'
 import { BigNumber } from '@ethersproject/bignumber'
-import { parseEther, parseUnits } from '@ethersproject/units'
+import { parseEther } from '@ethersproject/units'
 import { JsonRpcProvider } from '@ethersproject/providers'
 
 import {
@@ -17,7 +17,10 @@ import { ParentTransactionReceipt } from '../../src/lib/message/ParentTransactio
 import { ParentToChildMessageStatus } from '../../src/lib/message/ParentToChildMessage'
 import { ChildToParentMessageStatus } from '../../src/lib/dataEntities/message'
 import { testSetup } from '../testSetup'
-import { getNativeTokenDecimals } from '../../src/lib/utils/lib'
+import {
+  getNativeTokenDecimals,
+  scaleFrom18DecimalsToNativeTokenDecimals,
+} from '../../src/lib/utils/lib'
 import {
   isArbitrumNetworkWithCustomFeeToken,
   approveParentCustomFeeToken,
@@ -26,7 +29,7 @@ import {
 
 loadEnv()
 
-describe('Reverse Tracing', async () => {
+describe('Reverse Tracing', () => {
   beforeEach('skipIfMainnet', async function () {
     await skipIfMainnet(this)
   })
@@ -50,8 +53,10 @@ describe('Reverse Tracing', async () => {
       await approveParentCustomFeeToken(parentSigner)
     }
 
-    const amount = '0.0002'
-    const ethToDeposit = parseUnits(amount, decimals)
+    const ethToDeposit = scaleFrom18DecimalsToNativeTokenDecimals({
+      amount: parseEther('0.0002'),
+      decimals,
+    })
 
     // Deposit ETH from parent to child
     const res = await ethBridger.deposit({
@@ -81,15 +86,28 @@ describe('Reverse Tracing', async () => {
 
     // Wait for the batch containing this tx to be posted
     const l2Provider = childSigner.provider! as JsonRpcProvider
-    // eslint-disable-next-line no-constant-condition
-    while (true) {
-      await wait(300)
-      const batchNum = await childReceipt
-        .getBatchNumber(l2Provider)
-        .catch(() => BigNumber.from(0))
-      if (batchNum.gt(0)) break
+    const maxAttempts = 600 // ~3 minutes with 300ms delay
+    let batchFound = false
+    try {
+      for (let attempts = 0; attempts < maxAttempts; attempts++) {
+        await wait(300)
+        const batchNum = await childReceipt
+          .getBatchNumber(l2Provider)
+          .catch(() => BigNumber.from(0))
+        if (batchNum.gt(0)) {
+          batchFound = true
+          break
+        }
+      }
+    } finally {
+      state.mining = false
     }
-    state.mining = false
+
+    if (!batchFound) {
+      throw new Error(
+        'Timed out waiting for child transaction to be included in a batch'
+      )
+    }
 
     // Reverse trace: from child deposit tx back to parent tx
     const tracedParentTxHash =
@@ -125,8 +143,10 @@ describe('Reverse Tracing', async () => {
     }
     const destWallet = Wallet.createRandom()
 
-    const amount = '0.0002'
-    const ethToDeposit = parseUnits(amount, decimals)
+    const ethToDeposit = scaleFrom18DecimalsToNativeTokenDecimals({
+      amount: parseEther('0.0002'),
+      decimals,
+    })
 
     // depositTo creates a retryable ticket (not a simple ETH deposit)
     const res = await ethBridger.depositTo({
@@ -219,7 +239,10 @@ describe('Reverse Tracing', async () => {
     await fundChildSigner(childSigner)
     await fundParentSigner(parentSigner)
 
-    const ethToWithdraw = parseUnits('0.00000002', decimals)
+    const ethToWithdraw = scaleFrom18DecimalsToNativeTokenDecimals({
+      amount: parseEther('0.00000002'),
+      decimals,
+    })
     const randomAddress = Wallet.createRandom().address
 
     // Initiate withdrawal on child chain

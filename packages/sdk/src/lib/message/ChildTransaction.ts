@@ -60,6 +60,9 @@ export interface RedeemTransaction extends ChildContractTransaction {
  */
 export class ChildTransactionReceipt implements TransactionReceipt {
   private static readonly PARENT_EVENT_QUERY_CHUNK_SIZE = 1000
+  private static readonly PARENT_EVENT_LOOKBACK_BLOCKS =
+    ChildTransactionReceipt.PARENT_EVENT_QUERY_CHUNK_SIZE
+  private static readonly PARENT_EVENT_FALLBACK_LOOKBACK_BLOCKS = 100000
 
   public readonly to: string
   public readonly from: string
@@ -212,7 +215,12 @@ export class ChildTransactionReceipt implements TransactionReceipt {
       try {
         const [upperRange, lowerRange] = await Promise.all([
           parentNodeInterface.l2BlockRangeForL1(l1Block),
-          parentNodeInterface.l2BlockRangeForL1(Math.max(0, l1Block - 1000)),
+          parentNodeInterface.l2BlockRangeForL1(
+            Math.max(
+              0,
+              l1Block - ChildTransactionReceipt.PARENT_EVENT_LOOKBACK_BLOCKS
+            )
+          ),
         ])
         return {
           fromBlock: lowerRange.firstBlock.toNumber(),
@@ -221,14 +229,21 @@ export class ChildTransactionReceipt implements TransactionReceipt {
       } catch {
         const latestBlock = await parentProvider.getBlockNumber()
         return {
-          fromBlock: Math.max(0, latestBlock - 100000),
+          fromBlock: Math.max(
+            0,
+            latestBlock -
+              ChildTransactionReceipt.PARENT_EVENT_FALLBACK_LOOKBACK_BLOCKS
+          ),
           toBlock: latestBlock,
         }
       }
     }
 
     return {
-      fromBlock: Math.max(0, l1Block - 1000),
+      fromBlock: Math.max(
+        0,
+        l1Block - ChildTransactionReceipt.PARENT_EVENT_LOOKBACK_BLOCKS
+      ),
       toBlock: l1Block,
     }
   }
