@@ -40,6 +40,7 @@ import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { scaleFrom18DecimalsToNativeTokenDecimals } from '../../src/lib/utils/lib'
 
 const preFundAmount = parseEther('0.1')
+export const WITHDRAWAL_RETRY_DELAY_MS = 100
 
 export const prettyLog = (text: string): void => {
   console.log(chalk.blue(`    *** ${text}`))
@@ -168,7 +169,10 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   await Promise.race([
     mineUntilStop(miner1, state),
     mineUntilStop(miner2, state),
-    message.waitUntilReadyToExecute(params.childSigner.provider!),
+    message.waitUntilReadyToExecute(
+      params.childSigner.provider!,
+      WITHDRAWAL_RETRY_DELAY_MS
+    ),
   ])
   state.mining = false
 

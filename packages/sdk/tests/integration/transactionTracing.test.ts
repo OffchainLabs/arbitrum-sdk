@@ -11,6 +11,7 @@ import {
   mineUntilStop,
   skipIfMainnet,
   wait,
+  WITHDRAWAL_RETRY_DELAY_MS,
 } from './testHelpers'
 import { ChildTransactionReceipt } from '../../src/lib/message/ChildTransaction'
 import { ParentTransactionReceipt } from '../../src/lib/message/ParentTransaction'
@@ -272,7 +273,10 @@ describe('Reverse Tracing', () => {
     await Promise.race([
       mineUntilStop(miner1, state),
       mineUntilStop(miner2, state),
-      withdrawMessage.waitUntilReadyToExecute(childSigner.provider!),
+      withdrawMessage.waitUntilReadyToExecute(
+        childSigner.provider!,
+        WITHDRAWAL_RETRY_DELAY_MS
+      ),
     ])
     state.mining = false
 
