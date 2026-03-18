@@ -18,6 +18,7 @@
 
 import { expect } from 'chai'
 import { loadEnv } from '../../src/lib/utils/env'
+import { BigNumber } from '@ethersproject/bignumber'
 import { Wallet } from '@ethersproject/wallet'
 import { parseEther } from '@ethersproject/units'
 import { constants } from 'ethers'
@@ -27,6 +28,7 @@ import {
   fundChildSigner,
   mineUntilStop,
   skipIfMainnet,
+  waitForConfirmationEvent,
 } from './testHelpers'
 import { ChildToParentMessage } from '../../src/lib/message/ChildToParentMessage'
 import { ChildToParentMessageStatus } from '../../src/lib/dataEntities/message'
@@ -420,10 +422,15 @@ describe('Ether', async () => {
     await fundParentSigner(miner1, parseEther('1'))
     await fundChildSigner(miner2, parseEther('1'))
     const state = { mining: true }
+    const position = (withdrawEvents[0] as { position: BigNumber }).position
     await Promise.race([
       mineUntilStop(miner1, state),
       mineUntilStop(miner2, state),
-      withdrawMessage.waitUntilReadyToExecute(childSigner.provider!),
+      waitForConfirmationEvent(
+        position,
+        childSigner.provider!,
+        parentSigner.provider!
+      ),
     ])
     state.mining = false
 
