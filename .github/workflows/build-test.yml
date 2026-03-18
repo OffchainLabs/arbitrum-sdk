@@ -181,9 +181,9 @@ jobs:
           cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
       - name: Set up the local node
-        uses: OffchainLabs/arbitrum-testnode@v0.1.0
+        uses: OffchainLabs/arbitrum-testnode@v0.1.1
         with:
-          version: v0.1.0
+          version: v0.1.1
           l3-node: ${{ matrix.orbit-test == '1' }}
           fee-token-decimals: ${{ matrix.decimals }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
