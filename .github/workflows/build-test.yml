@@ -181,11 +181,12 @@ jobs:
           cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
       - name: Set up the local node
-        uses: OffchainLabs/actions/run-nitro-test-node@main
+        uses: OffchainLabs/arbitrum-testnode@v0.1.0
         with:
-          nitro-testnode-ref: release
+          version: v0.1.0
           l3-node: ${{ matrix.orbit-test == '1' }}
-          args: ${{ matrix.decimals == 16 && '--l3-fee-token --l3-fee-token-decimals 16' || matrix.decimals == 20 && '--l3-fee-token --l3-fee-token-decimals 20' || matrix.decimals == 18 && '--l3-fee-token' || '' }}
+          fee-token-decimals: ${{ matrix.decimals }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
@@ -195,8 +196,8 @@ jobs:
           yarn gen:abi
           yarn build
 
-      - name: Generate network file
-        run: yarn gen:network
+      - name: Copy network file
+        run: cp "$ARBITRUM_TESTNODE_LOCAL_NETWORK_PATH" packages/sdk/localNetwork.json
 
       - name: Run integration tests
         run: CI=true yarn test:integration
