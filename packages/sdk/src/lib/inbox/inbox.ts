@@ -90,6 +90,10 @@ export class InboxTools {
   ): Promise<Block> {
     const isParentChainArbitrum = await isArbitrumChain(this.parentProvider)
 
+    // For Arbitrum parent chains, blockNumber is an L1 block number.
+    // We map it to an L2 block number for getBlock, but recurse with the
+    // original L1 block number to avoid passing L2 numbers into l2BlockRangeForL1.
+    let l2BlockNumber = blockNumber
     if (isParentChainArbitrum) {
       const nodeInterface = NodeInterface__factory.connect(
         NODE_INTERFACE_ADDRESS,
@@ -97,7 +101,7 @@ export class InboxTools {
       )
 
       try {
-        blockNumber = (
+        l2BlockNumber = (
           await nodeInterface.l2BlockRangeForL1(blockNumber - 1)
         ).firstBlock.toNumber()
       } catch (e) {
@@ -116,11 +120,11 @@ export class InboxTools {
           throw e
         }
 
-        blockNumber = _blockNum
+        l2BlockNumber = _blockNum
       }
     }
 
-    const block = await this.parentProvider.getBlock(blockNumber)
+    const block = await this.parentProvider.getBlock(l2BlockNumber)
     const diff = block.timestamp - blockTimestamp
     if (diff < 0) return block
 
