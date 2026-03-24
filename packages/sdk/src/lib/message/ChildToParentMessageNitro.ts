@@ -194,11 +194,31 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
   protected outboxAddress?: string
   protected l1BatchNumber?: number
 
+  /**
+   * Optional maximum block range for parent chain log queries.
+   * When set, EventFetcher will automatically chunk queries that
+   * exceed this range. Useful for RPC providers with block range
+   * limits (e.g. free-tier nodes capped at 10,000 blocks).
+   *
+   * Set via {@link setMaxBlockRange} after construction.
+   */
+  protected parentChainMaxBlockRange?: number
+
   constructor(
     protected readonly parentProvider: Provider,
     event: EventArgs<ChildToParentTxEvent>
   ) {
     super(event)
+  }
+
+  /**
+   * Set the maximum block range for parent chain log queries.
+   * When set, large block range queries are automatically split into
+   * smaller chunks to work with RPC providers that have range limits.
+   * @param maxBlockRange Maximum number of blocks per getLogs query
+   */
+  public setMaxBlockRange(maxBlockRange: number): void {
+    this.parentChainMaxBlockRange = maxBlockRange
   }
 
   public async getOutboxProof(childProvider: Provider) {
@@ -388,7 +408,10 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
       await this.getChildChainBlockRange(createdAtBlock, childProvider)
 
     // now get the block hash and sendroot for that node
-    const eventFetcher = new EventFetcher(rollup.provider)
+    const eventFetcher = new EventFetcher(
+      rollup.provider,
+      this.parentChainMaxBlockRange
+    )
 
     const logs:
       | FetchedEvent<NodeCreatedEvent>[]
@@ -471,7 +494,10 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
           const latestConfirmedAssertion = await rollup.getAssertion(
             latestConfirmed
           )
-          const eventFetcher = new EventFetcher(rollup.provider)
+          const eventFetcher = new EventFetcher(
+            rollup.provider,
+            this.parentChainMaxBlockRange
+          )
 
           const { fromBlock: queryFromBlock } =
             await this.getChildChainBlockRange(
@@ -640,7 +666,10 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
       throw new ArbSdkError('ChildToParentMsg expected to be unconfirmed')
 
     const latestBlock = await this.parentProvider.getBlockNumber()
-    const eventFetcher = new EventFetcher(this.parentProvider)
+    const eventFetcher = new EventFetcher(
+      this.parentProvider,
+      this.parentChainMaxBlockRange
+    )
     let logs:
       | FetchedEvent<NodeCreatedEvent>[]
       | FetchedEvent<AssertionCreatedEvent>[]
