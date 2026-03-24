@@ -67,3 +67,52 @@ export enum ChildToParentMessageStatus {
    */
   EXECUTED,
 }
+
+export type WithdrawalPhase =
+  | 'UNCONFIRMED'
+  | 'BATCHED'
+  | 'ASSERTION_PENDING'
+  | 'CLAIMABLE'
+  | 'CLAIMED'
+
+export interface WithdrawalTimeEstimateOptions {
+  /**
+   * Override the current parent block number. Useful for simulations and tests.
+   */
+  parentBlockNumber?: number
+  /**
+   * Seconds per parent-chain block. Defaults to 12.
+   */
+  parentBlockTimeSeconds?: number
+  /**
+   * Number of recent assertion intervals to sample when estimating time until the
+   * next assertion. Defaults to 5.
+   */
+  assertionIntervalSampleSize?: number
+}
+
+export interface WithdrawalTimeEstimate {
+  phase: WithdrawalPhase
+  /**
+   * Exact remaining challenge-period time, when a covering assertion already exists.
+   */
+  remainingSeconds?: number
+  remainingBlocks?: number
+  /**
+   * Estimated remaining time when the withdrawal is batched but not yet covered by
+   * an assertion.
+   */
+  estimatedRemainingSeconds?: number
+  isEstimate: boolean
+  /**
+   * Assertion hash for BoLD chains, or node hash for Classic chains.
+   */
+  coveringAssertionHash?: string
+  assertionCreatedAtBlock?: number
+  assertionDeadlineBlock?: number
+  withdrawalBatch?: number
+  /**
+   * Nitro returns the withdrawal position. Classic returns the index in batch.
+   */
+  position: number
+}

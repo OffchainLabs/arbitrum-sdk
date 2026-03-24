@@ -27,20 +27,37 @@ import { BlockTag } from '@ethersproject/abstract-provider'
 
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
 import { Outbox__factory } from '../abi/classic/factories/Outbox__factory'
+import { RollupUserLogic__factory } from '../abi/factories/RollupUserLogic__factory'
 
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { L2ToL1TransactionEvent as ChildToParentTransactionEvent } from '../abi/ArbSys'
 import { ContractTransaction, Overrides } from 'ethers'
-import { EventFetcher } from '../utils/eventFetcher'
+import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import {
   SignerProviderUtils,
   SignerOrProvider,
 } from '../dataEntities/signerOrProvider'
-import { isDefined, wait } from '../utils/lib'
+import {
+  getBlockRangesForL1Block,
+  isArbitrumChain,
+  isDefined,
+  wait,
+} from '../utils/lib'
 import { ArbSdkError } from '../dataEntities/errors'
 import { EventArgs } from '../dataEntities/event'
-import { ChildToParentMessageStatus } from '../dataEntities/message'
+import {
+  ChildToParentMessageStatus,
+  WithdrawalTimeEstimate,
+  WithdrawalTimeEstimateOptions,
+} from '../dataEntities/message'
 import { getArbitrumNetwork } from '../dataEntities/networks'
+import {
+  NodeConfirmedEvent,
+  NodeCreatedEvent,
+  RollupUserLogic,
+} from '../abi/RollupUserLogic'
+import { ArbitrumProvider } from '../utils/arbProvider'
+import { JsonRpcProvider } from '@ethersproject/providers'
 
 export interface MessageBatchProofInfo {
   /**
@@ -100,6 +117,30 @@ export type ChildToParentMessageReaderOrWriterClassic<
 > = T extends Provider
   ? ChildToParentMessageReaderClassic
   : ChildToParentMessageWriterClassic
+
+const DEFAULT_ASSERTION_INTERVAL_SAMPLE_SIZE = 5
+const DEFAULT_PARENT_BLOCK_TIME_SECONDS = 12
+const DEFAULT_CLASSIC_ASSERTION_PADDING = 50
+
+interface ClassicAssertionLike {
+  nodeNum: BigNumber
+  hash: string
+  createdAtBlock: BigNumber
+  deadlineBlock: BigNumber
+  beforeBatch: BigNumber
+  afterBatch: BigNumber
+}
+
+function median(values: number[]): number | undefined {
+  if (values.length === 0) return undefined
+
+  const sorted = [...values].sort((a, b) => a - b)
+  const middle = Math.floor(sorted.length / 2)
+
+  return sorted.length % 2 === 0
+    ? Math.floor((sorted[middle - 1] + sorted[middle]) / 2)
+    : sorted[middle]
+}
 
 export class ChildToParentMessageClassic {
   /**
@@ -351,6 +392,306 @@ export class ChildToParentMessageReaderClassic extends ChildToParentMessageClass
         : ChildToParentMessageStatus.UNCONFIRMED
     } catch (e) {
       return ChildToParentMessageStatus.UNCONFIRMED
+    }
+  }
+
+  protected async getCurrentParentBlock(
+    childProvider: Provider,
+    options?: WithdrawalTimeEstimateOptions
+  ): Promise<BigNumber> {
+    if (options?.parentBlockNumber != undefined) {
+      return BigNumber.from(options.parentBlockNumber)
+    }
+
+    if (await isArbitrumChain(this.parentProvider)) {
+      const arbProvider = new ArbitrumProvider(
+        this.parentProvider as JsonRpcProvider
+      )
+      const latestBlock = await arbProvider.getBlock('latest')
+      return BigNumber.from(latestBlock.l1BlockNumber)
+    }
+
+    return BigNumber.from(
+      await this.parentProvider.getBlockNumber()
+    )
+  }
+
+  protected getParentBlockTimeSeconds(
+    options?: WithdrawalTimeEstimateOptions
+  ): number {
+    return options?.parentBlockTimeSeconds ?? DEFAULT_PARENT_BLOCK_TIME_SECONDS
+  }
+
+  protected getAssertionIntervalSampleSize(
+    options?: WithdrawalTimeEstimateOptions
+  ): number {
+    return Math.max(
+      1,
+      options?.assertionIntervalSampleSize ??
+        DEFAULT_ASSERTION_INTERVAL_SAMPLE_SIZE
+    )
+  }
+
+  protected async getQueryBlockRange(
+    forParentBlock: BigNumber,
+    toParentBlock?: BigNumber
+  ): Promise<{ fromBlock: number; toBlock: BlockTag }> {
+    if (!(await isArbitrumChain(this.parentProvider))) {
+      return {
+        fromBlock: forParentBlock.toNumber(),
+        toBlock: toParentBlock?.toNumber() ?? 'latest',
+      }
+    }
+
+    const startRange = await getBlockRangesForL1Block({
+      arbitrumProvider: this.parentProvider as JsonRpcProvider,
+      forL1Block: forParentBlock.toNumber(),
+    })
+
+    const startBlock = startRange[0] ?? 0
+
+    if (!toParentBlock) {
+      return {
+        fromBlock: startBlock,
+        toBlock: 'latest',
+      }
+    }
+
+    const endRange = await getBlockRangesForL1Block({
+      arbitrumProvider: this.parentProvider as JsonRpcProvider,
+      forL1Block: toParentBlock.toNumber(),
+    })
+
+    const endBlock = endRange[1] ?? endRange[0] ?? 'latest'
+
+    return {
+      fromBlock: startBlock,
+      toBlock: endBlock,
+    }
+  }
+
+  protected async getRollup(childProvider: Provider): Promise<RollupUserLogic> {
+    const childChain = await getArbitrumNetwork(childProvider)
+    return RollupUserLogic__factory.connect(
+      childChain.ethBridge.rollup,
+      this.parentProvider
+    )
+  }
+
+  protected getAssertionFromLog(
+    log: FetchedEvent<NodeCreatedEvent>,
+    confirmPeriodBlocks: BigNumber
+  ): ClassicAssertionLike {
+    return {
+      nodeNum: log.event.nodeNum,
+      hash: log.event.nodeHash,
+      createdAtBlock: BigNumber.from(log.blockNumber),
+      deadlineBlock: BigNumber.from(log.blockNumber).add(confirmPeriodBlocks),
+      beforeBatch: log.event.assertion.beforeState.globalState.u64Vals[0],
+      afterBatch: log.event.assertion.afterState.globalState.u64Vals[0],
+    }
+  }
+
+  protected async getNodeCreatedLogById(
+    rollup: RollupUserLogic,
+    nodeNum: BigNumber
+  ): Promise<FetchedEvent<NodeCreatedEvent>> {
+    const node = await rollup.getNode(nodeNum)
+    const eventFetcher = new EventFetcher(rollup.provider)
+    const range = await this.getQueryBlockRange(node.createdAtBlock, node.createdAtBlock)
+    const logs = await eventFetcher.getEvents(
+      RollupUserLogic__factory,
+      t => t.filters.NodeCreated(nodeNum),
+      {
+        ...range,
+        address: rollup.address,
+      }
+    )
+
+    if (logs.length !== 1) {
+      throw new ArbSdkError(
+        `Unexpected number of NodeCreated events for node ${nodeNum.toString()}.`
+      )
+    }
+
+    return logs[0]
+  }
+
+  protected async getNodeCreatedLogs(
+    rollup: RollupUserLogic,
+    toParentBlock?: BigNumber
+  ): Promise<FetchedEvent<NodeCreatedEvent>[]> {
+    const eventFetcher = new EventFetcher(rollup.provider)
+    const range = await this.getQueryBlockRange(BigNumber.from(0), toParentBlock)
+
+    return (
+      await eventFetcher.getEvents(
+        RollupUserLogic__factory,
+        t => t.filters.NodeCreated(),
+        {
+          ...range,
+          address: rollup.address,
+        }
+      )
+    ).sort((a, b) => a.event.nodeNum.toNumber() - b.event.nodeNum.toNumber())
+  }
+
+  protected async getLatestConfirmedNode(
+    rollup: RollupUserLogic,
+    confirmPeriodBlocks: BigNumber,
+    currentParentBlock: BigNumber,
+    useHistoricalBlock: boolean
+  ): Promise<ClassicAssertionLike | undefined> {
+    if (!useHistoricalBlock) {
+      const latestConfirmedNodeNum = await rollup.latestConfirmed()
+      const latestConfirmedLog = await this.getNodeCreatedLogById(
+        rollup,
+        latestConfirmedNodeNum
+      )
+      return this.getAssertionFromLog(latestConfirmedLog, confirmPeriodBlocks)
+    }
+
+    const eventFetcher = new EventFetcher(rollup.provider)
+    const confirmedLogs = await eventFetcher.getEvents(
+      RollupUserLogic__factory,
+      t => t.filters.NodeConfirmed(),
+      {
+        ...(await this.getQueryBlockRange(BigNumber.from(0), currentParentBlock)),
+        address: rollup.address,
+      }
+    )
+
+    const latestConfirmedLog = confirmedLogs[confirmedLogs.length - 1]
+    if (!latestConfirmedLog) return undefined
+
+    const latestCreatedLog = await this.getNodeCreatedLogById(
+      rollup,
+      (latestConfirmedLog as FetchedEvent<NodeConfirmedEvent>).event.nodeNum
+    )
+
+    return this.getAssertionFromLog(latestCreatedLog, confirmPeriodBlocks)
+  }
+
+  protected async getCoveringNode(
+    rollup: RollupUserLogic,
+    confirmPeriodBlocks: BigNumber,
+    currentParentBlock: BigNumber
+  ): Promise<ClassicAssertionLike | undefined> {
+    const nodeLogs = await this.getNodeCreatedLogs(rollup, currentParentBlock)
+
+    return nodeLogs
+      .map(log => this.getAssertionFromLog(log, confirmPeriodBlocks))
+      .find(node => node.afterBatch.gte(this.batchNumber))
+  }
+
+  protected async getHistoricalNodeInfo(
+    rollup: RollupUserLogic,
+    currentParentBlock: BigNumber,
+    sampleSize: number
+  ): Promise<{ intervals: number[]; latestCreatedAtBlock?: number }> {
+    const nodeLogs = await this.getNodeCreatedLogs(rollup, currentParentBlock)
+    const recentLogs = nodeLogs.slice(-(sampleSize + 1))
+    const intervals: number[] = []
+
+    for (let i = 1; i < recentLogs.length; i++) {
+      intervals.push(recentLogs[i].blockNumber - recentLogs[i - 1].blockNumber)
+    }
+
+    return {
+      intervals,
+      latestCreatedAtBlock: recentLogs[recentLogs.length - 1]?.blockNumber,
+    }
+  }
+
+  public async getWithdrawalTimeEstimate(
+    childProvider: Provider,
+    options?: WithdrawalTimeEstimateOptions
+  ): Promise<WithdrawalTimeEstimate> {
+    const position = this.indexInBatch.toNumber()
+
+    if (await this.hasExecuted(childProvider)) {
+      return {
+        phase: 'CLAIMED',
+        isEstimate: false,
+        position,
+        withdrawalBatch: this.batchNumber.toNumber(),
+      }
+    }
+
+    const currentParentBlock = await this.getCurrentParentBlock(
+      childProvider,
+      options
+    )
+    const rollup = await this.getRollup(childProvider)
+    const confirmPeriodBlocks = await rollup.confirmPeriodBlocks()
+    const useHistoricalBlock = options?.parentBlockNumber != undefined
+
+    const [coveringNode, latestConfirmedNode] = await Promise.all([
+      this.getCoveringNode(rollup, confirmPeriodBlocks, currentParentBlock),
+      this.getLatestConfirmedNode(
+        rollup,
+        confirmPeriodBlocks,
+        currentParentBlock,
+        useHistoricalBlock
+      ),
+    ])
+
+    if (!coveringNode) {
+      const { intervals, latestCreatedAtBlock } = await this.getHistoricalNodeInfo(
+        rollup,
+        currentParentBlock,
+        this.getAssertionIntervalSampleSize(options)
+      )
+      const medianInterval = median(intervals)
+      const estimatedBlocksUntilNext =
+        medianInterval == undefined || latestCreatedAtBlock == undefined
+          ? DEFAULT_CLASSIC_ASSERTION_PADDING
+          : Math.max(
+              0,
+              medianInterval -
+                (currentParentBlock.toNumber() - latestCreatedAtBlock)
+            )
+
+      return {
+        phase: 'BATCHED',
+        estimatedRemainingSeconds:
+          (estimatedBlocksUntilNext + confirmPeriodBlocks.toNumber()) *
+          this.getParentBlockTimeSeconds(options),
+        isEstimate: true,
+        position,
+        withdrawalBatch: this.batchNumber.toNumber(),
+      }
+    }
+
+    const estimate: WithdrawalTimeEstimate = {
+      phase: 'ASSERTION_PENDING',
+      isEstimate: false,
+      position,
+      withdrawalBatch: this.batchNumber.toNumber(),
+      coveringAssertionHash: coveringNode.hash,
+      assertionCreatedAtBlock: coveringNode.createdAtBlock.toNumber(),
+      assertionDeadlineBlock: coveringNode.deadlineBlock.toNumber(),
+    }
+
+    if (
+      latestConfirmedNode &&
+      latestConfirmedNode.afterBatch.gte(this.batchNumber)
+    ) {
+      return {
+        ...estimate,
+        phase: 'CLAIMABLE',
+      }
+    }
+
+    const remainingBlocks = coveringNode.deadlineBlock.lte(currentParentBlock)
+      ? BigNumber.from(0)
+      : coveringNode.deadlineBlock.sub(currentParentBlock)
+
+    return {
+      ...estimate,
+      remainingBlocks: remainingBlocks.toNumber(),
+      remainingSeconds:
+        remainingBlocks.toNumber() * this.getParentBlockTimeSeconds(options),
     }
   }
 

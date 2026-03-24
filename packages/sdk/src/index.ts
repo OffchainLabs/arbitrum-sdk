@@ -84,6 +84,9 @@ export { ArbitrumProvider } from './lib/utils/arbProvider'
 export * as constants from './lib/dataEntities/constants'
 export {
   ChildToParentMessageStatus,
+  WithdrawalPhase,
+  WithdrawalTimeEstimate,
+  WithdrawalTimeEstimateOptions,
   RetryableMessageParams,
 } from './lib/dataEntities/message'
 export {

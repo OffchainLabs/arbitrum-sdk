@@ -34,7 +34,11 @@ import {
 } from '../abi/ArbSys'
 import { isDefined } from '../utils/lib'
 import { EventArgs } from '../dataEntities/event'
-import { ChildToParentMessageStatus } from '../dataEntities/message'
+import {
+  ChildToParentMessageStatus,
+  WithdrawalTimeEstimate,
+  WithdrawalTimeEstimateOptions,
+} from '../dataEntities/message'
 import {
   getArbitrumNetwork,
   getNitroGenesisBlock,
@@ -262,6 +266,23 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
         childProvider,
         retryDelay
       )
+  }
+
+  /**
+   * Returns a structured withdrawal-time estimate with explicit lifecycle phases.
+   */
+  public async getWithdrawalTimeEstimate(
+    childProvider: Provider,
+    options?: WithdrawalTimeEstimateOptions
+  ): Promise<WithdrawalTimeEstimate> {
+    if (this.nitroReader) {
+      return this.nitroReader.getWithdrawalTimeEstimate(childProvider, options)
+    }
+
+    return this.classicReader!.getWithdrawalTimeEstimate(
+      childProvider,
+      options
+    )
   }
 
   /**

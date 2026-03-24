@@ -26,7 +26,11 @@ import { parseEther } from 'ethers/lib/utils'
 import { config, getSigner, testSetup } from '../testSetup'
 
 import { Signer, Wallet } from 'ethers'
-import { Erc20Bridger, ChildToParentMessageStatus } from '../../src'
+import {
+  Erc20Bridger,
+  ChildToParentMessageStatus,
+  WithdrawalTimeEstimate,
+} from '../../src'
 import { ParentToChildMessageStatus } from '../../src/lib/message/ParentToChildMessage'
 import {
   ArbitrumNetwork,
@@ -82,6 +86,61 @@ export const mineUntilStop = async (
   }
 }
 
+export const expectValidWithdrawalTimeEstimate = (
+  estimate: WithdrawalTimeEstimate
+) => {
+  expect(estimate.position, 'missing withdrawal position').to.be.a('number')
+
+  switch (estimate.phase) {
+    case 'UNCONFIRMED':
+      expect(estimate.isEstimate, 'unconfirmed estimate flag').to.equal(false)
+      break
+    case 'BATCHED':
+      expect(estimate.isEstimate, 'batched estimate flag').to.equal(true)
+      expect(
+        estimate.estimatedRemainingSeconds,
+        'missing batched estimate'
+      ).to.be.a('number')
+      expect(estimate.withdrawalBatch, 'missing withdrawal batch').to.be.a(
+        'number'
+      )
+      break
+    case 'ASSERTION_PENDING':
+      expect(estimate.isEstimate, 'pending estimate flag').to.equal(false)
+      expect(estimate.remainingBlocks, 'missing remaining blocks').to.be.a(
+        'number'
+      )
+      expect(estimate.remainingSeconds, 'missing remaining seconds').to.be.a(
+        'number'
+      )
+      expect(
+        estimate.coveringAssertionHash,
+        'missing covering assertion hash'
+      ).to.be.a('string')
+      expect(
+        estimate.assertionDeadlineBlock,
+        'missing assertion deadline'
+      ).to.be.a('number')
+      break
+    case 'CLAIMABLE':
+      expect(estimate.isEstimate, 'claimable estimate flag').to.equal(false)
+      expect(
+        estimate.coveringAssertionHash,
+        'missing claimable assertion hash'
+      ).to.be.a('string')
+      expect(
+        estimate.assertionDeadlineBlock,
+        'missing claimable deadline'
+      ).to.be.a('number')
+      break
+    case 'CLAIMED':
+      expect(estimate.isEstimate, 'claimed estimate flag').to.equal(false)
+      break
+    default:
+      expect.fail(`Unexpected withdrawal estimate phase: ${estimate.phase}`)
+  }
+}
+
 /**
  * Withdraws a token and tests that it occurred correctly
  * @param params
@@ -110,6 +169,17 @@ export const withdrawToken = async (params: WithdrawalParams) => {
     await withdrawRec.getChildToParentMessages(params.parentSigner)
   )[0]
   expect(message, 'withdraw message not found').to.exist
+
+  const initialEstimate = await message.getWithdrawalTimeEstimate(
+    params.childSigner.provider! as JsonRpcProvider
+  )
+  expectValidWithdrawalTimeEstimate(initialEstimate)
+  expect(
+    ['UNCONFIRMED', 'BATCHED', 'ASSERTION_PENDING', 'CLAIMABLE'].includes(
+      initialEstimate.phase
+    ),
+    `unexpected initial withdrawal estimate phase ${initialEstimate.phase}`
+  ).to.equal(true)
 
   const messageStatus = await message.status(params.childSigner.provider!)
   expect(messageStatus, `invalid withdraw status`).to.eq(
@@ -177,6 +247,14 @@ export const withdrawToken = async (params: WithdrawalParams) => {
     'confirmed status'
   ).to.eq(ChildToParentMessageStatus.CONFIRMED)
 
+  const claimableEstimate = await message.getWithdrawalTimeEstimate(
+    params.childSigner.provider! as JsonRpcProvider
+  )
+  expectValidWithdrawalTimeEstimate(claimableEstimate)
+  expect(claimableEstimate.phase, 'claimable withdrawal estimate').to.equal(
+    'CLAIMABLE'
+  )
+
   const execTx = await message.execute(params.childSigner.provider!)
   const execRec = await execTx.wait()
 
@@ -189,6 +267,14 @@ export const withdrawToken = async (params: WithdrawalParams) => {
     await message.status(params.childSigner.provider!),
     'executed status'
   ).to.eq(ChildToParentMessageStatus.EXECUTED)
+
+  const claimedEstimate = await message.getWithdrawalTimeEstimate(
+    params.childSigner.provider! as JsonRpcProvider
+  )
+  expectValidWithdrawalTimeEstimate(claimedEstimate)
+  expect(claimedEstimate.phase, 'claimed withdrawal estimate').to.equal(
+    'CLAIMED'
+  )
 
   const balAfter = await params.parentToken.balanceOf(
     await params.parentSigner.getAddress()

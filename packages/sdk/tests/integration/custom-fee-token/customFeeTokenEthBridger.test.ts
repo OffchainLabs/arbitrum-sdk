@@ -24,6 +24,7 @@ import { parseEther, parseUnits } from '@ethersproject/units'
 
 import {
   fundParentSigner as fundParentSignerEther,
+  expectValidWithdrawalTimeEstimate,
   mineUntilStop,
   skipIfMainnet,
   wait,
@@ -248,6 +249,17 @@ describeOnlyWhenCustomGasToken(
         `custom fee token withdraw status returned ${messageStatus}`
       ).to.be.eq(ChildToParentMessageStatus.UNCONFIRMED)
 
+      const initialEstimate = await message.getWithdrawalTimeEstimate(
+        childProvider
+      )
+      expectValidWithdrawalTimeEstimate(initialEstimate)
+      expect(
+        ['UNCONFIRMED', 'BATCHED', 'ASSERTION_PENDING', 'CLAIMABLE'].includes(
+          initialEstimate.phase
+        ),
+        `unexpected initial withdrawal estimate phase ${initialEstimate.phase}`
+      ).to.equal(true)
+
       // run a miner whilst withdrawing
       const miner1 = Wallet.createRandom().connect(parentProvider)
       const miner2 = Wallet.createRandom().connect(childProvider)
@@ -265,6 +277,14 @@ describeOnlyWhenCustomGasToken(
         //
         .to.eq(ChildToParentMessageStatus.CONFIRMED)
 
+      const claimableEstimate = await message.getWithdrawalTimeEstimate(
+        childProvider
+      )
+      expectValidWithdrawalTimeEstimate(claimableEstimate)
+      expect(claimableEstimate.phase, 'claimable withdrawal estimate').to.equal(
+        'CLAIMABLE'
+      )
+
       const execTx = await message.execute(childProvider)
       const execTxReceipt = await execTx.wait()
 
@@ -276,6 +296,14 @@ describeOnlyWhenCustomGasToken(
       expect(await message.status(childProvider), 'executed status')
         //
         .to.eq(ChildToParentMessageStatus.EXECUTED)
+
+      const claimedEstimate = await message.getWithdrawalTimeEstimate(
+        childProvider
+      )
+      expectValidWithdrawalTimeEstimate(claimedEstimate)
+      expect(claimedEstimate.phase, 'claimed withdrawal estimate').to.equal(
+        'CLAIMED'
+      )
 
       expect(
         // balance in the bridge after the withdrawal

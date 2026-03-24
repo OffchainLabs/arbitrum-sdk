@@ -26,6 +26,7 @@ import {
   fundParentSigner,
   fundChildSigner,
   mineUntilStop,
+  expectValidWithdrawalTimeEstimate,
   skipIfMainnet,
 } from './testHelpers'
 import { ChildToParentMessage } from '../../src/lib/message/ChildToParentMessage'
@@ -405,6 +406,17 @@ describe('Ether', async () => {
       `eth withdraw status returned ${messageStatus}`
     ).to.be.eq(ChildToParentMessageStatus.UNCONFIRMED)
 
+    const initialEstimate = await withdrawMessage.getWithdrawalTimeEstimate(
+      childSigner.provider!
+    )
+    expectValidWithdrawalTimeEstimate(initialEstimate)
+    expect(
+      ['UNCONFIRMED', 'BATCHED', 'ASSERTION_PENDING', 'CLAIMABLE'].includes(
+        initialEstimate.phase
+      ),
+      `unexpected initial withdrawal estimate phase ${initialEstimate.phase}`
+    ).to.equal(true)
+
     // CHRIS: TODO: comment this back in when fixed in nitro
     // const actualFinalBalance = await childSigner.getBalance()
     // const expectedFinalBalance = initialBalance
@@ -432,6 +444,14 @@ describe('Ether', async () => {
       'confirmed status'
     ).to.eq(ChildToParentMessageStatus.CONFIRMED)
 
+    const claimableEstimate = await withdrawMessage.getWithdrawalTimeEstimate(
+      childSigner.provider!
+    )
+    expectValidWithdrawalTimeEstimate(claimableEstimate)
+    expect(claimableEstimate.phase, 'claimable withdrawal estimate').to.equal(
+      'CLAIMABLE'
+    )
+
     const execTx = await withdrawMessage.execute(childSigner.provider!)
     const execRec = await execTx.wait()
 
@@ -444,6 +464,14 @@ describe('Ether', async () => {
       await withdrawMessage.status(childSigner.provider!),
       'executed status'
     ).to.eq(ChildToParentMessageStatus.EXECUTED)
+
+    const claimedEstimate = await withdrawMessage.getWithdrawalTimeEstimate(
+      childSigner.provider!
+    )
+    expectValidWithdrawalTimeEstimate(claimedEstimate)
+    expect(claimedEstimate.phase, 'claimed withdrawal estimate').to.equal(
+      'CLAIMED'
+    )
 
     const decimals = await getNativeTokenDecimals({
       parentProvider,
