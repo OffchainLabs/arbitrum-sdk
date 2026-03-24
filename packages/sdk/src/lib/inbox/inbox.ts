@@ -215,7 +215,7 @@ export class InboxTools {
           sequencerInbox.interface.decodeFunctionResult(
             'maxTimeVariation',
             returnData
-          )[0],
+          ),
       },
       multicall.getBlockNumberInput(),
       multicall.getCurrentBlockTimestampInput(),
@@ -378,10 +378,23 @@ export class InboxTools {
     if (!eventInfo) return null
     const block = await this.parentProvider.getBlock(eventInfo.blockHash)
 
+    // When the parent chain is an Arbitrum chain, block.number in Solidity
+    // returns the L1 block number (not the Arb block number). We need to pass
+    // the L1 block number that corresponds to the event's Arb block.
+    let l1BlockNumber: number = eventInfo.blockNumber
+    const isParentChainArbitrum = await isArbitrumChain(this.parentProvider)
+    if (isParentChainArbitrum) {
+      const arbProvider = new ArbitrumProvider(
+        this.parentProvider as JsonRpcProvider
+      )
+      const arbBlock = await arbProvider.getBlock(eventInfo.blockNumber)
+      l1BlockNumber = arbBlock.l1BlockNumber
+    }
+
     return await sequencerInbox.functions.forceInclusion(
       eventInfo.event.messageIndex.add(1),
       eventInfo.event.kind,
-      [eventInfo.blockNumber, block.timestamp],
+      [l1BlockNumber, block.timestamp],
       eventInfo.event.baseFeeL1,
       eventInfo.event.sender,
       eventInfo.event.messageDataHash,
