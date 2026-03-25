@@ -134,6 +134,7 @@ jobs:
 
     needs: install
     env:
+      NODE_OPTIONS: --no-experimental-strip-types
       ORBIT_TEST: ${{ matrix.orbit-test }}
       DECIMALS: ${{ matrix.decimals || '18' }}
     steps:
