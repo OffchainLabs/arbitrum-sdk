@@ -111,11 +111,6 @@
     // from: ethers>@ethersproject/signing-key>elliptic
     // from: @arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>secp256k1>elliptic
     "GHSA-848j-6mx2-7j84",
-    // https://github.com/advisories/GHSA-g9mf-h72j-4rw9
-    // undici unbounded decompression chain in HTTP responses
-    // Fix requires undici >=6.23.0 but hardhat depends on undici 5.x; dev-only dependency
-    // from: hardhat>undici
-    "GHSA-g9mf-h72j-4rw9",
     // https://github.com/advisories/GHSA-43fc-jf86-j433
     // axios DoS via __proto__ key in mergeConfig
     // Fix requires axios >=1.13.5 but sol2uml depends on axios ^0.27.2; dev-only contract package dep
@@ -127,14 +122,19 @@
     // from: eslint>ajv, eslint>@eslint/eslintrc>ajv, eslint>table>ajv
     "GHSA-2g4f-4pwh-qvx6",
 
-    // hardhat transitive dependencies (dev-only)
-    ////////////////////////////////////////////////////////////
+    // ethers transitive dependencies (dev-only)
     // https://github.com/advisories/GHSA-378v-28hj-76wf
     // bn.js infinite loop vulnerability
     // Affects bn.js >=5.0.0 <5.2.3; yarn 1 cannot selectively resolve 5.x without also changing 4.x (elliptic)
     // from: ethers>@ethersproject/bignumber>bn.js
     "GHSA-378v-28hj-76wf",
 
+    // hardhat transitive dependencies (dev-only)
+    // https://github.com/advisories/GHSA-g9mf-h72j-4rw9
+    // undici unbounded decompression chain in HTTP responses
+    // Fix requires undici >=6.23.0 but hardhat depends on undici 5.x; dev-only dependency
+    // from: hardhat>undici
+    "GHSA-g9mf-h72j-4rw9",
     // https://github.com/advisories/GHSA-2mjp-6q6p-2qxm
     // undici HTTP Request/Response Smuggling
     // Fix requires undici >=7.8.0 but hardhat depends on undici 5.x; dev-only
