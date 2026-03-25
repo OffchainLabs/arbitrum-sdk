@@ -81,6 +81,9 @@
     "**/mocha/js-yaml": "4.1.1",
     "**/diff": "5.2.2",
     "**/form-data": "4.0.5",
-    "**/lodash": "4.17.23"
+    "**/lodash": "4.17.23",
+    "**/minimatch": "3.1.5",
+    "**/immutable": "4.3.8",
+    "**/flatted": "3.4.2"
   }
 }

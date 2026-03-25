@@ -23,7 +23,7 @@
     "dist/**/*"
   ],
   "scripts": {
-    "audit:ci": "audit-ci --config ./audit-ci.jsonc",
+    "audit:ci": "yarn --cwd ../.. audit:ci",
     "prepare": "yarn run gen:abi",
     "gen:abi": "ts-node ./scripts/genAbi.ts",
     "gen:network": "ts-node ./scripts/genNetwork.ts",
