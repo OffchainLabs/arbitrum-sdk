@@ -129,24 +129,12 @@
 
     // hardhat transitive dependencies (dev-only)
     ////////////////////////////////////////////////////////////
-    // https://github.com/advisories/GHSA-3ppc-4f35-3m26
-    // minimatch ReDoS via repeated wildcards with non-matching literal
-    // Fix requires minimatch >=3.1.3 but hardhat>mocha>glob depends on minimatch 3.x; dev-only
-    // from: hardhat>mocha>glob>minimatch
-    "GHSA-3ppc-4f35-3m26",
-    // https://github.com/advisories/GHSA-7r86-cg39-jmmj
-    // minimatch ReDoS: matchOne() combinatorial backtracking via multiple non-adjacent GLOBSTAR segments
-    // from: hardhat>mocha>glob>minimatch
-    "GHSA-7r86-cg39-jmmj",
-    // https://github.com/advisories/GHSA-23c5-xmqv-rm74
-    // minimatch ReDoS: nested *() extglobs generate catastrophically backtracking regular expressions
-    // from: hardhat>mocha>glob>minimatch
-    "GHSA-23c5-xmqv-rm74",
-    // https://github.com/advisories/GHSA-5c6j-r48x-rmvq
-    // serialize-javascript RCE via RegExp.flags and Date.prototype.toISOString()
-    // Fix requires serialize-javascript >=6.0.3 but hardhat>mocha depends on 6.0.0; dev-only
-    // from: hardhat>mocha>serialize-javascript
-    "GHSA-5c6j-r48x-rmvq",
+    // https://github.com/advisories/GHSA-378v-28hj-76wf
+    // bn.js infinite loop vulnerability
+    // Affects bn.js >=5.0.0 <5.2.3; yarn 1 cannot selectively resolve 5.x without also changing 4.x (elliptic)
+    // from: ethers>@ethersproject/bignumber>bn.js
+    "GHSA-378v-28hj-76wf",
+
     // https://github.com/advisories/GHSA-2mjp-6q6p-2qxm
     // undici HTTP Request/Response Smuggling
     // Fix requires undici >=7.8.0 but hardhat depends on undici 5.x; dev-only
@@ -163,31 +151,6 @@
     // https://github.com/advisories/GHSA-4992-7rv2-5pvq
     // undici CRLF injection via `upgrade` option
     // from: hardhat>undici
-    "GHSA-4992-7rv2-5pvq",
-    // https://github.com/advisories/GHSA-wf6x-7x77-mvgw
-    // immutable.js prototype pollution via parse()
-    // Fix requires immutable >=4.3.8 but hardhat depends on immutable 4.x; dev-only
-    // from: hardhat>immutable
-    "GHSA-wf6x-7x77-mvgw",
-
-    // eslint transitive dependencies (dev-only)
-    ////////////////////////////////////////////////////////////
-    // https://github.com/advisories/GHSA-25h7-pfq9-p65f
-    // flatted unbounded recursion DoS in parse() revive phase
-    // Fix requires flatted >=3.3.3 but eslint>file-entry-cache>flat-cache depends on flatted 3.x; dev-only
-    // from: eslint>file-entry-cache>flat-cache>flatted
-    "GHSA-25h7-pfq9-p65f",
-    // https://github.com/advisories/GHSA-rf6f-7fwh-wjgh
-    // flatted prototype pollution via parse()
-    // from: eslint>file-entry-cache>flat-cache>flatted
-    "GHSA-rf6f-7fwh-wjgh",
-
-    // ethers transitive dependencies
-    ////////////////////////////////////////////////////////////
-    // https://github.com/advisories/GHSA-378v-28hj-76wf
-    // bn.js infinite loop vulnerability
-    // No patched version available for bn.js 4.x; deep transitive dep in ethers v5
-    // from: ethers>@ethersproject/signing-key>elliptic>bn.js
-    "GHSA-378v-28hj-76wf"
+    "GHSA-4992-7rv2-5pvq"
   ]
 }
