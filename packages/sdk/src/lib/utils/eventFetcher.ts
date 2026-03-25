@@ -16,11 +16,14 @@
 /* eslint-env node */
 'use strict'
 
-import { Provider, BlockTag, Filter } from '@ethersproject/abstract-provider'
+import { Provider, BlockTag, Filter, Log } from '@ethersproject/abstract-provider'
 import { Contract, Event } from '@ethersproject/contracts'
 import { constants } from 'ethers'
 import { TypedEvent, TypedEventFilter } from '../abi/common'
 import { EventArgs, TypeChainContractFactory } from '../dataEntities/event'
+
+const DEFAULT_MAX_BLOCK_RANGE = 10_000
+const MIN_CHUNK_SIZE = 500
 
 export type FetchedEvent<TEvent extends Event> = {
   event: EventArgs<TEvent>
@@ -42,21 +45,10 @@ export type FetchedEvent<TEvent extends Event> = {
 type TEventOf<T> = T extends TypedEventFilter<infer TEvent> ? TEvent : never
 
 /**
- * Fetches and parses blockchain logs, with optional chunked querying
- * for RPC providers that limit block ranges.
+ * Fetches and parses blockchain logs
  */
 export class EventFetcher {
-  /**
-   * @param provider The provider to fetch logs from
-   * @param maxBlockRange Optional maximum block range per query. When set,
-   *   queries spanning more than this many blocks are automatically split
-   *   into sequential chunks. Useful for RPC providers with block range limits
-   *   (e.g. free-tier nodes that cap at 10,000 blocks).
-   */
-  public constructor(
-    public readonly provider: Provider,
-    public readonly maxBlockRange?: number
-  ) {}
+  public constructor(public readonly provider: Provider) {}
 
   /**
    * Fetch logs and parse logs
@@ -109,51 +101,87 @@ export class EventFetcher {
       }) as FetchedEvent<TEventOf<TEventFilter>>[]
   }
 
+  private async resolveBlockTag(
+    blockTag: BlockTag | undefined
+  ): Promise<number | null> {
+    if (typeof blockTag === 'number') {
+      if (blockTag >= 0) return blockTag
+
+      const latestBlock = await this.provider.getBlockNumber()
+      return Math.max(latestBlock + blockTag, 0)
+    }
+    if (blockTag === 'earliest') return 0
+    if (typeof blockTag === 'string' && blockTag.startsWith('0x')) {
+      const parsed = parseInt(blockTag, 16)
+      return isNaN(parsed) ? null : parsed
+    }
+    // 'latest', 'pending', 'safe', 'finalized', undefined
+    const block = await this.provider.getBlock(blockTag ?? 'latest')
+    return block?.number ?? null
+  }
+
   private async getLogsWithChunking(
     filter: Filter
-  ): Promise<import('@ethersproject/abstract-provider').Log[]> {
-    if (!this.maxBlockRange) {
-      return this.provider.getLogs(filter)
+  ): Promise<Log[]> {
+    try {
+      return await this.provider.getLogs(filter)
+    } catch (error) {
+      const fromBlock = await this.resolveBlockTag(filter.fromBlock)
+      const toBlock = await this.resolveBlockTag(filter.toBlock)
+
+      if (fromBlock === null || toBlock === null) {
+        throw error
+      }
+
+      const initialChunkSize = Math.min(
+        DEFAULT_MAX_BLOCK_RANGE,
+        toBlock - fromBlock + 1
+      )
+
+      if (initialChunkSize <= 0) {
+        throw error
+      }
+
+      return this.fetchLogsInRange(filter, fromBlock, toBlock, initialChunkSize)
     }
+  }
 
-    const fromBlock =
-      typeof filter.fromBlock === 'number'
-        ? filter.fromBlock
-        : typeof filter.fromBlock === 'string' && filter.fromBlock !== 'latest'
-          ? parseInt(filter.fromBlock, 16)
-          : null
+  private async fetchLogsInRange(
+    filter: Filter,
+    fromBlock: number,
+    toBlock: number,
+    chunkSize: number
+  ): Promise<Log[]> {
+    const allLogs: Log[] = []
+    let start = fromBlock
 
-    let toBlock: number | null = null
-    if (typeof filter.toBlock === 'number') {
-      toBlock = filter.toBlock
-    } else if (filter.toBlock === 'latest' || filter.toBlock === undefined) {
-      toBlock = await this.provider.getBlockNumber()
-    } else if (typeof filter.toBlock === 'string') {
-      toBlock = parseInt(filter.toBlock, 16)
-    }
+    while (start <= toBlock) {
+      if (start > fromBlock) {
+        await new Promise(r => setTimeout(r, 100))
+      }
 
-    if (fromBlock === null || toBlock === null) {
-      return this.provider.getLogs(filter)
-    }
-
-    const range = toBlock - fromBlock
-    if (range <= this.maxBlockRange) {
-      return this.provider.getLogs(filter)
-    }
-
-    const allLogs: import('@ethersproject/abstract-provider').Log[] = []
-    for (
-      let start = fromBlock;
-      start <= toBlock;
-      start += this.maxBlockRange + 1
-    ) {
-      const end = Math.min(start + this.maxBlockRange, toBlock)
-      const chunkLogs = await this.provider.getLogs({
-        ...filter,
-        fromBlock: start,
-        toBlock: end,
-      })
-      allLogs.push(...chunkLogs)
+      const end = Math.min(start + chunkSize - 1, toBlock)
+      try {
+        const chunkLogs = await this.provider.getLogs({
+          ...filter,
+          fromBlock: start,
+          toBlock: end,
+        })
+        allLogs.push(...chunkLogs)
+      } catch (error) {
+        if (chunkSize > MIN_CHUNK_SIZE) {
+          const retryLogs = await this.fetchLogsInRange(
+            filter,
+            start,
+            end,
+            Math.floor(chunkSize / 2)
+          )
+          allLogs.push(...retryLogs)
+        } else {
+          throw error
+        }
+      }
+      start = end + 1
     }
 
     return allLogs
