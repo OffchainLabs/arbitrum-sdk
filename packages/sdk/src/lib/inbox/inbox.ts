@@ -19,7 +19,7 @@
 import { Signer } from '@ethersproject/abstract-signer'
 import { Block, Provider } from '@ethersproject/abstract-provider'
 import { BigNumber, ContractTransaction, ethers, Overrides } from 'ethers'
-import { TransactionRequest, JsonRpcProvider } from '@ethersproject/providers'
+import { TransactionRequest } from '@ethersproject/providers'
 
 import { Bridge } from '../abi/Bridge'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
@@ -37,11 +37,11 @@ import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { InboxMessageKind } from '../dataEntities/message'
 import {
-  getBlockRangesForL1Block,
+  getFirstArbBlockForL1Block,
+  getL1BlockNumberOfArbBlock,
   isArbitrumChain,
   isDefined,
 } from '../utils/lib'
-import { ArbitrumProvider } from '../utils/arbProvider'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
@@ -90,39 +90,9 @@ export class InboxTools {
   ): Promise<Block> {
     const isParentChainArbitrum = await isArbitrumChain(this.parentProvider)
 
-    // For Arbitrum parent chains, blockNumber is an L1 block number.
-    // We map it to an L2 block number for getBlock, but recurse with the
-    // original L1 block number to avoid passing L2 numbers into l2BlockRangeForL1.
-    let l2BlockNumber = blockNumber
-    if (isParentChainArbitrum) {
-      const nodeInterface = NodeInterface__factory.connect(
-        NODE_INTERFACE_ADDRESS,
-        this.parentProvider
-      )
-
-      try {
-        l2BlockNumber = (
-          await nodeInterface.l2BlockRangeForL1(blockNumber - 1)
-        ).firstBlock.toNumber()
-      } catch (e) {
-        // l2BlockRangeForL1 reverts if no L2 block exist with the given L1 block number,
-        // since l1 block is updated in batch sometimes block can be skipped even when there are activities
-        // alternatively we use binary search to get the nearest block
-        const _blockNum = (
-          await getBlockRangesForL1Block({
-            arbitrumProvider: this.parentProvider as JsonRpcProvider,
-            forL1Block: blockNumber - 1,
-            allowGreater: true,
-          })
-        )[0]
-
-        if (!_blockNum) {
-          throw e
-        }
-
-        l2BlockNumber = _blockNum
-      }
-    }
+    const l2BlockNumber = isParentChainArbitrum
+      ? await getFirstArbBlockForL1Block(this.parentProvider, blockNumber - 1)
+      : blockNumber
 
     const block = await this.parentProvider.getBlock(l2BlockNumber)
     const diff = block.timestamp - blockTimestamp
@@ -198,11 +168,10 @@ export class InboxTools {
     const isParentChainArbitrum = await isArbitrumChain(this.parentProvider)
 
     if (isParentChainArbitrum) {
-      const arbProvider = new ArbitrumProvider(
-        this.parentProvider as JsonRpcProvider
+      currentL1BlockNumber = await getL1BlockNumberOfArbBlock(
+        this.parentProvider,
+        'latest'
       )
-      const currentArbBlock = await arbProvider.getBlock('latest')
-      currentL1BlockNumber = currentArbBlock.l1BlockNumber
     }
 
     const multicall = await MultiCaller.fromProvider(this.parentProvider)
@@ -384,17 +353,12 @@ export class InboxTools {
     if (!eventInfo) return null
     const block = await this.parentProvider.getBlock(eventInfo.blockHash)
 
-    // When the parent chain is an Arbitrum chain, block.number in Solidity
-    // returns the L1 block number (not the Arb block number). We need to pass
-    // the L1 block number that corresponds to the event's Arb block.
     let l1BlockNumber: number = eventInfo.blockNumber
-    const isParentChainArbitrum = await isArbitrumChain(this.parentProvider)
-    if (isParentChainArbitrum) {
-      const arbProvider = new ArbitrumProvider(
-        this.parentProvider as JsonRpcProvider
+    if (await isArbitrumChain(this.parentProvider)) {
+      l1BlockNumber = await getL1BlockNumberOfArbBlock(
+        this.parentProvider,
+        eventInfo.blockNumber
       )
-      const arbBlock = await arbProvider.getBlock(eventInfo.blockNumber)
-      l1BlockNumber = arbBlock.l1BlockNumber
     }
 
     return await sequencerInbox.functions.forceInclusion(
