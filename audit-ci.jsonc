@@ -122,6 +122,15 @@
     // from: eslint>ajv, eslint>@eslint/eslintrc>ajv, eslint>table>ajv
     "GHSA-2g4f-4pwh-qvx6",
 
+    // mocha / hardhat transitive dependencies (dev-only)
+    // https://github.com/advisories/GHSA-5c6j-r48x-rmvq
+    // serialize-javascript RCE via RegExp.flags / Date.prototype.toISOString
+    // Fix requires serialize-javascript >=7.0.3, but all 7.x releases require Node >=20
+    // This repo still tests/supports Node 18 in CI, and the affected package is only used via mocha in dev tooling
+    // from: mocha>serialize-javascript
+    // from: hardhat>mocha>serialize-javascript
+    "GHSA-5c6j-r48x-rmvq",
+
     // ethers transitive dependencies (dev-only)
     // https://github.com/advisories/GHSA-378v-28hj-76wf
     // bn.js infinite loop vulnerability
