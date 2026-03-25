@@ -9,11 +9,8 @@ env:
 
 jobs:
   install:
-    name: Install on Node.js v${{ matrix.node-version }}
+    name: Install on Node.js v24
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [24, 26]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,7 +18,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 24
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
@@ -29,11 +26,8 @@ jobs:
           cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
   lint:
-    name: Lint on Node.js v${{ matrix.node-version }}
+    name: Lint on Node.js v24
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [24, 26]
     needs: install
     permissions:
       checks: write # https://github.com/mikepenz/action-junit-report/issues/23#issuecomment-1412597753
@@ -46,7 +40,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 24
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
@@ -62,7 +56,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: lint-results-${{ github.run_id }}-node-v${{ matrix.node-version }}
+          name: lint-results-${{ github.run_id }}-node-v24
           path: ${{ env.TEST_PATH }}
 
       - name: Publish Test Report
@@ -73,11 +67,8 @@ jobs:
           fail_on_failure: false
 
   audit:
-    name: Audit on Node.js v${{ matrix.node-version }}
+    name: Audit on Node.js v24
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [24, 26]
     needs: install
     steps:
       - name: Checkout
@@ -86,7 +77,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 24
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
@@ -96,11 +87,8 @@ jobs:
       - run: yarn audit:ci
 
   test-unit:
-    name: Test (Unit) on Node.js v${{ matrix.node-version }}
+    name: Test (Unit) on Node.js v24
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        node-version: [24, 26]
     needs: install
     steps:
       - name: Checkout
@@ -109,7 +97,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 24
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main
@@ -125,42 +113,24 @@ jobs:
         run: CI=true yarn test:unit
 
   test-integration:
-    name: Test (Integration) on Node.js v${{ matrix.node-version }}${{ matrix.orbit-test == '1' && ' with L3' || '' }}${{ matrix.decimals == '16' && ' with custom gas token (16 decimals)' || matrix.decimals == '20' && ' with custom gas token (20 decimals)' || matrix.decimals == '18' && ' with custom gas token (18 decimals)' || '' }}
+    name: Test (Integration) on Node.js v24${{ matrix.orbit-test == '1' && ' with L3' || '' }}${{ matrix.decimals == '16' && ' with custom gas token (16 decimals)' || matrix.decimals == '20' && ' with custom gas token (20 decimals)' || matrix.decimals == '18' && ' with custom gas token (18 decimals)' || '' }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false # runs all tests to completion even if one fails
       matrix:
         include:
           - orbit-test: '0'
-            node-version: 24
-          - orbit-test: '0'
-            node-version: 26
 
           - orbit-test: '1'
-            node-version: 24
-          - orbit-test: '1'
-            node-version: 26
 
           - orbit-test: '1'
             decimals: 16
-            node-version: 24
-          - orbit-test: '1'
-            decimals: 16
-            node-version: 26
 
           - orbit-test: '1'
             decimals: 18
-            node-version: 24
-          - orbit-test: '1'
-            decimals: 18
-            node-version: 26
 
           - orbit-test: '1'
             decimals: 20
-            node-version: 24
-          - orbit-test: '1'
-            decimals: 20
-            node-version: 26
 
     needs: install
     env:
@@ -173,7 +143,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: ${{ matrix.node-version }}
+          node-version: 24
 
       - name: Install node_modules
         uses: OffchainLabs/actions/node-modules/install@main

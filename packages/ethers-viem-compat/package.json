@@ -11,7 +11,7 @@
     "url": "git+https://github.com/offchainlabs/arbitrum-sdk.git"
   },
   "engines": {
-    "node": ">=24",
+    "node": ">=v11",
     "npm": "please-use-yarn",
     "yarn": ">= 1.0.0"
   },
