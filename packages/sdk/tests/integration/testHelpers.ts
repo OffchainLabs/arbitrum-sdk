@@ -72,6 +72,18 @@ interface WithdrawalParams {
   gatewayType: GatewayType
 }
 
+const FAST_MINER_INTERVAL_MS = 50
+const WITHDRAWAL_READY_POLL_INTERVAL_MS = 250
+
+interface ReadyToExecuteMessage {
+  waitUntilReadyToExecute(
+    childProvider: Provider,
+    retryDelay?: number
+  ): Promise<
+    ChildToParentMessageStatus.EXECUTED | ChildToParentMessageStatus.CONFIRMED
+  >
+}
+
 export const mineUntilStop = async (
   miner: Signer,
   state: { mining: boolean }
@@ -83,7 +95,7 @@ export const mineUntilStop = async (
         value: 0,
       })
     ).wait()
-    await wait(1000)
+    await wait(FAST_MINER_INTERVAL_MS)
   }
 }
 
@@ -96,7 +108,7 @@ export const waitForConfirmationEvent = async (
   position: BigNumber,
   childProvider: Provider,
   parentProvider: Provider
-): Promise<void> => {
+): Promise<{ promise: Promise<void>; cleanup: () => void }> => {
   const childChain = await getArbitrumNetwork(childProvider)
   const bridge = Bridge__factory.connect(
     childChain.ethBridge.bridge,
@@ -121,13 +133,26 @@ export const waitForConfirmationEvent = async (
     ? BoldRollupUserLogic__factory.connect(rollupAddr, parentProvider)
     : undefined
 
-  return new Promise<void>((resolve, reject) => {
-    const cleanup = () => {
-      if (boldRollup) {
-        boldRollup.removeAllListeners('AssertionConfirmed')
-      } else {
-        classicRollup.removeAllListeners('NodeConfirmed')
-      }
+  let cleanedUp = false
+  const cleanup = () => {
+    if (cleanedUp) return
+    cleanedUp = true
+    if (boldRollup) {
+      boldRollup.removeAllListeners('AssertionConfirmed')
+    } else {
+      classicRollup.removeAllListeners('NodeConfirmed')
+    }
+  }
+
+  const promise = new Promise<void>((resolve, reject) => {
+    const resolveReady = () => {
+      cleanup()
+      resolve()
+    }
+
+    const rejectReady = (err: unknown) => {
+      cleanup()
+      reject(err)
     }
 
     const checkBlock = async (blockHash: string) => {
@@ -138,12 +163,10 @@ export const waitForConfirmationEvent = async (
           blockHash === zeroHash ? 0 : blockHash
         )
         if (BigNumber.from(childBlock.sendCount).gt(position)) {
-          cleanup()
-          resolve()
+          resolveReady()
         }
       } catch (err) {
-        cleanup()
-        reject(err)
+        rejectReady(err)
       }
     }
 
@@ -151,18 +174,42 @@ export const waitForConfirmationEvent = async (
       boldRollup.on(
         'AssertionConfirmed',
         (_assertionHash: string, blockHash: string) => {
-          checkBlock(blockHash)
+          void checkBlock(blockHash)
         }
       )
     } else {
       classicRollup.on(
         'NodeConfirmed',
         (_nodeNum: BigNumber, blockHash: string) => {
-          checkBlock(blockHash)
+          void checkBlock(blockHash)
         }
       )
     }
   })
+
+  return { promise, cleanup }
+}
+
+export const waitForReadyToExecuteFast = async (
+  message: ReadyToExecuteMessage,
+  position: BigNumber,
+  childProvider: Provider,
+  parentProvider: Provider
+): Promise<void> => {
+  const { promise: confirmationEventPromise, cleanup } =
+    await waitForConfirmationEvent(position, childProvider, parentProvider)
+
+  try {
+    await Promise.race([
+      confirmationEventPromise,
+      message.waitUntilReadyToExecute(
+        childProvider,
+        WITHDRAWAL_READY_POLL_INTERVAL_MS
+      ),
+    ])
+  } finally {
+    cleanup()
+  }
 }
 
 /**
@@ -253,7 +300,8 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   await Promise.race([
     mineUntilStop(miner1, state),
     mineUntilStop(miner2, state),
-    waitForConfirmationEvent(
+    waitForReadyToExecuteFast(
+      message,
       position,
       params.childSigner.provider!,
       params.parentSigner.provider!

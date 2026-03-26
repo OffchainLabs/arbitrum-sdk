@@ -181,12 +181,13 @@ jobs:
           cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
       - name: Set up the local node
-        uses: OffchainLabs/arbitrum-testnode@v0.1.1
+        uses: OffchainLabs/arbitrum-testnode@dl/ci-runtime-fast-snapshot
         with:
-          version: v0.1.1
+          version: dl-ci-fast-1
           l3-node: ${{ matrix.orbit-test == '1' }}
           fee-token-decimals: ${{ matrix.decimals }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          network-config-path: packages/sdk/localNetwork.json
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
@@ -195,9 +196,6 @@ jobs:
         run: |
           yarn gen:abi
           yarn build
-
-      - name: Copy network file
-        run: cp "$ARBITRUM_TESTNODE_LOCAL_NETWORK_PATH" packages/sdk/localNetwork.json
 
       - name: Run integration tests
         run: CI=true yarn test:integration

@@ -28,7 +28,7 @@ import {
   mineUntilStop,
   skipIfMainnet,
   wait,
-  waitForConfirmationEvent,
+  waitForReadyToExecuteFast,
 } from '../testHelpers'
 
 import { describeOnlyWhenCustomGasToken } from './mochaExtensions'
@@ -259,7 +259,8 @@ describeOnlyWhenCustomGasToken(
       await Promise.race([
         mineUntilStop(miner1, state),
         mineUntilStop(miner2, state),
-        waitForConfirmationEvent(
+        waitForReadyToExecuteFast(
+          message,
           (withdrawalEvents[0] as { position: BigNumber }).position,
           childProvider,
           parentProvider
