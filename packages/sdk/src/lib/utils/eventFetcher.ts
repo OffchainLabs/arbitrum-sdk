@@ -16,7 +16,12 @@
 /* eslint-env node */
 'use strict'
 
-import { Provider, BlockTag, Filter, Log } from '@ethersproject/abstract-provider'
+import {
+  Provider,
+  BlockTag,
+  Filter,
+  Log,
+} from '@ethersproject/abstract-provider'
 import { Contract, Event } from '@ethersproject/contracts'
 import { constants } from 'ethers'
 import { TypedEvent, TypedEventFilter } from '../abi/common'
@@ -120,9 +125,7 @@ export class EventFetcher {
     return block?.number ?? null
   }
 
-  private async getLogsWithChunking(
-    filter: Filter
-  ): Promise<Log[]> {
+  private async getLogsWithChunking(filter: Filter): Promise<Log[]> {
     try {
       return await this.provider.getLogs(filter)
     } catch (error) {
