@@ -90,11 +90,11 @@ export class InboxTools {
   ): Promise<Block> {
     const isParentChainArbitrum = await isArbitrumChain(this.parentProvider)
 
-    const l2BlockNumber = isParentChainArbitrum
+    const parentChainBlockNumber = isParentChainArbitrum
       ? await getFirstArbBlockForL1Block(this.parentProvider, blockNumber - 1)
       : blockNumber
 
-    const block = await this.parentProvider.getBlock(l2BlockNumber)
+    const block = await this.parentProvider.getBlock(parentChainBlockNumber)
     const diff = block.timestamp - blockTimestamp
     if (diff < 0) return block
 
