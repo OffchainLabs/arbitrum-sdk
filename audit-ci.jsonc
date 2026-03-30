@@ -137,14 +137,6 @@
     // from: hardhat>mocha>serialize-javascript
     "GHSA-qj8w-gfj5-8c6v",
 
-    // vitest transitive dependencies (dev-only)
-    // https://github.com/advisories/GHSA-67mh-4wv8-2f99
-    // esbuild dev server allows cross-origin requests due to permissive CORS
-    // Only affects esbuild's serve feature; we don't use esbuild's dev server; dev-only vitest dep
-    // from: vitest>vite>esbuild
-    // from: vitest>vite-node>vite>esbuild
-    "GHSA-67mh-4wv8-2f99",
-
     // ethers transitive dependencies (dev-only)
     // https://github.com/advisories/GHSA-378v-28hj-76wf
     // bn.js infinite loop vulnerability
