@@ -90,6 +90,7 @@
     "**/minimatch": "3.1.5",
     "**/immutable": "4.3.8",
     "**/flatted": "3.4.2",
-    "**/patch-package/yaml": "1.10.3"
+    "**/patch-package/yaml": "1.10.3",
+    "**/vitest/vite": "5.4.21"
   }
 }
