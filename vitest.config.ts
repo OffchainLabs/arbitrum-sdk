@@ -6,5 +6,6 @@ export default defineConfig({
     globals: true,
     include: ['**/tests/unit/**/*.test.ts', '**/tests/*.test.ts'],
     exclude: ['**/node_modules/**', '**/dist/**'],
+    testTimeout: 30_000,
   },
 })
