@@ -50,7 +50,7 @@
     "typechain": "7.0.0",
     "typescript": "^5.7.2",
     "viem": "^2.0.0",
-    "vitest": "^3.2.4",
+    "vitest": "^2.1.9",
     "yargs": "^17.3.1"
   },
   "resolutions": {
@@ -91,6 +91,6 @@
     "**/immutable": "4.3.8",
     "**/flatted": "3.4.2",
     "**/patch-package/yaml": "1.10.3",
-    "**/vitest/vite": "5.4.21"
+    "**/vite": "5.4.21"
   }
 }
