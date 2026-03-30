@@ -50,7 +50,7 @@
     "typechain": "7.0.0",
     "typescript": "^5.7.2",
     "viem": "^2.0.0",
-    "vitest": "4.1.1",
+    "vitest": "^3.2.4",
     "yargs": "^17.3.1"
   },
   "resolutions": {
