@@ -19,7 +19,7 @@
 import { Signer } from '@ethersproject/abstract-signer'
 import { Block, Provider } from '@ethersproject/abstract-provider'
 import { BigNumber, ContractTransaction, ethers, Overrides } from 'ethers'
-import { TransactionRequest, JsonRpcProvider } from '@ethersproject/providers'
+import { TransactionRequest } from '@ethersproject/providers'
 
 import { Bridge } from '../abi/Bridge'
 import { Bridge__factory } from '../abi/factories/Bridge__factory'
@@ -37,11 +37,11 @@ import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { NODE_INTERFACE_ADDRESS } from '../dataEntities/constants'
 import { InboxMessageKind } from '../dataEntities/message'
 import {
-  getBlockRangesForL1Block,
+  getFirstArbBlockForL1Block,
+  getL1BlockNumberOfArbBlock,
   isArbitrumChain,
   isDefined,
 } from '../utils/lib'
-import { ArbitrumProvider } from '../utils/arbProvider'
 
 type ForceInclusionParams = FetchedEvent<MessageDeliveredEvent> & {
   delayedAcc: string
@@ -90,37 +90,11 @@ export class InboxTools {
   ): Promise<Block> {
     const isParentChainArbitrum = await isArbitrumChain(this.parentProvider)
 
-    if (isParentChainArbitrum) {
-      const nodeInterface = NodeInterface__factory.connect(
-        NODE_INTERFACE_ADDRESS,
-        this.parentProvider
-      )
+    const parentChainBlockNumber = isParentChainArbitrum
+      ? await getFirstArbBlockForL1Block(this.parentProvider, blockNumber - 1)
+      : blockNumber
 
-      try {
-        blockNumber = (
-          await nodeInterface.l2BlockRangeForL1(blockNumber - 1)
-        ).firstBlock.toNumber()
-      } catch (e) {
-        // l2BlockRangeForL1 reverts if no L2 block exist with the given L1 block number,
-        // since l1 block is updated in batch sometimes block can be skipped even when there are activities
-        // alternatively we use binary search to get the nearest block
-        const _blockNum = (
-          await getBlockRangesForL1Block({
-            arbitrumProvider: this.parentProvider as JsonRpcProvider,
-            forL1Block: blockNumber - 1,
-            allowGreater: true,
-          })
-        )[0]
-
-        if (!_blockNum) {
-          throw e
-        }
-
-        blockNumber = _blockNum
-      }
-    }
-
-    const block = await this.parentProvider.getBlock(blockNumber)
+    const block = await this.parentProvider.getBlock(parentChainBlockNumber)
     const diff = block.timestamp - blockTimestamp
     if (diff < 0) return block
 
@@ -194,11 +168,10 @@ export class InboxTools {
     const isParentChainArbitrum = await isArbitrumChain(this.parentProvider)
 
     if (isParentChainArbitrum) {
-      const arbProvider = new ArbitrumProvider(
-        this.parentProvider as JsonRpcProvider
+      currentL1BlockNumber = await getL1BlockNumberOfArbBlock(
+        this.parentProvider,
+        'latest'
       )
-      const currentArbBlock = await arbProvider.getBlock('latest')
-      currentL1BlockNumber = currentArbBlock.l1BlockNumber
     }
 
     const multicall = await MultiCaller.fromProvider(this.parentProvider)
@@ -215,7 +188,9 @@ export class InboxTools {
           sequencerInbox.interface.decodeFunctionResult(
             'maxTimeVariation',
             returnData
-          )[0],
+          ) as unknown as Awaited<
+            ReturnType<SequencerInbox['maxTimeVariation']>
+          >,
       },
       multicall.getBlockNumberInput(),
       multicall.getCurrentBlockTimestampInput(),
@@ -378,10 +353,18 @@ export class InboxTools {
     if (!eventInfo) return null
     const block = await this.parentProvider.getBlock(eventInfo.blockHash)
 
+    let l1BlockNumber: number = eventInfo.blockNumber
+    if (await isArbitrumChain(this.parentProvider)) {
+      l1BlockNumber = await getL1BlockNumberOfArbBlock(
+        this.parentProvider,
+        eventInfo.blockNumber
+      )
+    }
+
     return await sequencerInbox.functions.forceInclusion(
       eventInfo.event.messageIndex.add(1),
       eventInfo.event.kind,
-      [eventInfo.blockNumber, block.timestamp],
+      [l1BlockNumber, block.timestamp],
       eventInfo.event.baseFeeL1,
       eventInfo.event.sender,
       eventInfo.event.messageDataHash,
