@@ -130,6 +130,12 @@
     // from: mocha>serialize-javascript
     // from: hardhat>mocha>serialize-javascript
     "GHSA-5c6j-r48x-rmvq",
+    // https://github.com/advisories/GHSA-qj8w-gfj5-8c6v
+    // serialize-javascript CPU exhaustion DoS via crafted array-like objects
+    // Fix requires serialize-javascript >=7.0.5, but all 7.x releases require Node >=20; dev-only mocha dep
+    // from: mocha>serialize-javascript
+    // from: hardhat>mocha>serialize-javascript
+    "GHSA-qj8w-gfj5-8c6v",
 
     // ethers transitive dependencies (dev-only)
     // https://github.com/advisories/GHSA-378v-28hj-76wf
