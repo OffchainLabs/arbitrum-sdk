@@ -4,7 +4,11 @@ import { TransactionReceipt, JsonRpcProvider } from '@ethersproject/providers'
 import { ArbSdkError } from '../dataEntities/errors'
 import { ArbitrumProvider } from './arbProvider'
 import { ArbSys__factory } from '../abi/factories/ArbSys__factory'
-import { ARB_SYS_ADDRESS } from '../dataEntities/constants'
+import {
+  ARB_SYS_ADDRESS,
+  NODE_INTERFACE_ADDRESS,
+} from '../dataEntities/constants'
+import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 import { ArbitrumNetwork, getNitroGenesisBlock } from '../dataEntities/networks'
 import { ERC20__factory } from '../abi/factories/ERC20__factory'
 
@@ -66,6 +70,47 @@ export const isArbitrumChain = async (provider: Provider): Promise<boolean> => {
     return false
   }
   return true
+}
+
+/**
+ * Get the L1 block number for a given block on an Arbitrum chain.
+ */
+export async function getL1BlockNumberOfArbBlock(
+  provider: Provider,
+  blockNumber: number | 'latest'
+): Promise<number> {
+  const arbProvider = new ArbitrumProvider(provider as JsonRpcProvider)
+  const arbBlock = await arbProvider.getBlock(blockNumber)
+  return arbBlock.l1BlockNumber
+}
+
+/**
+ * Get the first Arbitrum block number that corresponds to a given L1 block.
+ * Falls back to binary search if l2BlockRangeForL1 reverts.
+ */
+export async function getFirstArbBlockForL1Block(
+  provider: Provider,
+  l1BlockNumber: number
+): Promise<number> {
+  const nodeInterface = NodeInterface__factory.connect(
+    NODE_INTERFACE_ADDRESS,
+    provider
+  )
+  try {
+    return (
+      await nodeInterface.l2BlockRangeForL1(l1BlockNumber)
+    ).firstBlock.toNumber()
+  } catch (e) {
+    const blockNum = (
+      await getBlockRangesForL1Block({
+        arbitrumProvider: provider as JsonRpcProvider,
+        forL1Block: l1BlockNumber,
+        allowGreater: true,
+      })
+    )[0]
+    if (!blockNum) throw e
+    return blockNum
+  }
 }
 
 type GetFirstBlockForL1BlockProps = {
