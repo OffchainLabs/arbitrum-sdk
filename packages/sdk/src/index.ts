@@ -79,10 +79,7 @@ export {
   mapL2NetworkTokenBridgeToTokenBridge,
 } from './lib/dataEntities/networks'
 export { InboxTools } from './lib/inbox/inbox'
-export {
-  EventFetcher,
-  DEFAULT_MAX_BLOCK_RANGE,
-} from './lib/utils/eventFetcher'
+export { EventFetcher, DEFAULT_MAX_BLOCK_RANGE } from './lib/utils/eventFetcher'
 export { ArbitrumProvider } from './lib/utils/arbProvider'
 export * as constants from './lib/dataEntities/constants'
 export {
