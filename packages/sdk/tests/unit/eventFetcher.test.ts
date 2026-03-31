@@ -250,6 +250,65 @@ describe('EventFetcher chunking', () => {
     ])
   })
 
+  it('uses custom maxBlockRange set via static setter', async () => {
+    EventFetcher.setMaxBlockRange(2000)
+    try {
+      const { providerMock, provider } = createProvider(5000)
+      const fetcher = new EventFetcher(provider)
+
+      when(
+        providerMock.getLogs(
+          deepEqual({
+            topics: [TEST_TOPIC],
+            address: undefined,
+            fromBlock: 0,
+            toBlock: 5000,
+          })
+        )
+      ).thenReject(new Error('rate limited'))
+
+      await fetcher.getEvents(contractFactory as any, topicGenerator as any, {
+        fromBlock: 0,
+        toBlock: 5000,
+      })
+
+      // With maxBlockRange=2000, chunks should be [0-1999], [2000-3999], [4000-5000]
+      verify(providerMock.getLogs(anything())).times(4) // 1 initial + 3 chunks
+      verify(
+        providerMock.getLogs(
+          deepEqual({
+            topics: [TEST_TOPIC],
+            address: undefined,
+            fromBlock: 0,
+            toBlock: 1999,
+          })
+        )
+      ).once()
+      verify(
+        providerMock.getLogs(
+          deepEqual({
+            topics: [TEST_TOPIC],
+            address: undefined,
+            fromBlock: 2000,
+            toBlock: 3999,
+          })
+        )
+      ).once()
+      verify(
+        providerMock.getLogs(
+          deepEqual({
+            topics: [TEST_TOPIC],
+            address: undefined,
+            fromBlock: 4000,
+            toBlock: 5000,
+          })
+        )
+      ).once()
+    } finally {
+      EventFetcher.setMaxBlockRange(10_000)
+    }
+  })
+
   it('rethrows once naive retries reach MIN_CHUNK_SIZE', async () => {
     const { providerMock, provider } = createProvider()
 

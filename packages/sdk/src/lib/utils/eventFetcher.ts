@@ -27,7 +27,7 @@ import { constants } from 'ethers'
 import { TypedEvent, TypedEventFilter } from '../abi/common'
 import { EventArgs, TypeChainContractFactory } from '../dataEntities/event'
 
-const DEFAULT_MAX_BLOCK_RANGE = 10_000
+export const DEFAULT_MAX_BLOCK_RANGE = 10_000
 const MIN_CHUNK_SIZE = 500
 
 export type FetchedEvent<TEvent extends Event> = {
@@ -53,6 +53,16 @@ type TEventOf<T> = T extends TypedEventFilter<infer TEvent> ? TEvent : never
  * Fetches and parses blockchain logs
  */
 export class EventFetcher {
+  private static maxBlockRange: number = DEFAULT_MAX_BLOCK_RANGE
+
+  /**
+   * Set the maximum block range used by all EventFetcher instances
+   * when chunking log queries after an initial failure.
+   */
+  public static setMaxBlockRange(maxBlockRange: number): void {
+    EventFetcher.maxBlockRange = maxBlockRange
+  }
+
   public constructor(public readonly provider: Provider) {}
 
   /**
@@ -137,7 +147,7 @@ export class EventFetcher {
       }
 
       const initialChunkSize = Math.min(
-        DEFAULT_MAX_BLOCK_RANGE,
+        EventFetcher.maxBlockRange,
         toBlock - fromBlock + 1
       )
 
