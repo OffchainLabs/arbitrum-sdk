@@ -377,14 +377,14 @@ describe('L1 to L3 Bridging', () => {
 
     itOnlyWhenCustomGasToken(
       'should properly get l2 and l1 fee token addresses',
-      async function () {
+      async function (context) {
         const decimals = await getNativeTokenDecimals({
           parentProvider: l1Signer.provider!,
           childNetwork: l3Network,
         })
 
         if (decimals !== 18) {
-          this.skip()
+          context.skip()
         }
 
         if (l1l3Bridger.l2GasTokenAddress === undefined) {
@@ -407,14 +407,14 @@ describe('L1 to L3 Bridging', () => {
 
     itOnlyWhenCustomGasToken(
       'should throw getting l1 gas token address when it is unavailable',
-      async function () {
+      async function (context) {
         const decimals = await getNativeTokenDecimals({
           parentProvider: l1Signer.provider!,
           childNetwork: l3Network,
         })
 
         if (decimals !== 18) {
-          this.skip()
+          context.skip()
         }
 
         const networkCopy = JSON.parse(
@@ -435,14 +435,14 @@ describe('L1 to L3 Bridging', () => {
 
     itOnlyWhenCustomGasToken(
       'should throw when the fee token does not use 18 decimals on L1 or L2',
-      async function () {
+      async function (context) {
         const decimals = await getNativeTokenDecimals({
           parentProvider: l1Signer.provider!,
           childNetwork: l3Network,
         })
 
         if (decimals !== 18) {
-          this.skip()
+          context.skip()
         }
 
         const hackedL1Provider = new ethers.providers.JsonRpcProvider(
@@ -932,14 +932,14 @@ describe('L1 to L3 Bridging', () => {
       expect(l3Balance.eq(amount)).toBe(true)
     }
 
-    it('happy path non fee token or standard', async function () {
+    it('happy path non fee token or standard', async function (context) {
       const decimals = await getNativeTokenDecimals({
         parentProvider: l1Signer.provider!,
         childNetwork: l3Network,
       })
 
       if (decimals !== 18) {
-        this.skip()
+        context.skip()
       }
 
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
@@ -955,14 +955,14 @@ describe('L1 to L3 Bridging', () => {
       await testHappyPathNonFeeOrStandard(depositParams)
     })
 
-    it('happy path weth', async function () {
+    it('happy path weth', async function (context) {
       const decimals = await getNativeTokenDecimals({
         parentProvider: l1Signer.provider!,
         childNetwork: l3Network,
       })
 
       if (decimals !== 18) {
-        this.skip()
+        context.skip()
       }
 
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
@@ -994,14 +994,14 @@ describe('L1 to L3 Bridging', () => {
       await testHappyPathNonFeeOrStandard(depositParams)
     })
 
-    itOnlyWhenCustomGasToken('happy path OnlyCustomFee', async function () {
+    itOnlyWhenCustomGasToken('happy path OnlyCustomFee', async function (context) {
       const decimals = await getNativeTokenDecimals({
         parentProvider: l1Signer.provider!,
         childNetwork: l3Network,
       })
 
       if (decimals !== 18) {
-        this.skip()
+        context.skip()
       }
 
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
