@@ -994,59 +994,62 @@ describe('L1 to L3 Bridging', () => {
       await testHappyPathNonFeeOrStandard(depositParams)
     })
 
-    itOnlyWhenCustomGasToken('happy path OnlyCustomFee', async function (context) {
-      const decimals = await getNativeTokenDecimals({
-        parentProvider: l1Signer.provider!,
-        childNetwork: l3Network,
-      })
+    itOnlyWhenCustomGasToken(
+      'happy path OnlyCustomFee',
+      async function (context) {
+        const decimals = await getNativeTokenDecimals({
+          parentProvider: l1Signer.provider!,
+          childNetwork: l3Network,
+        })
 
-      if (decimals !== 18) {
-        context.skip()
-      }
+        if (decimals !== 18) {
+          context.skip()
+        }
 
-      const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
-      const l1FeeToken = (await l1l3Bridger.getGasTokenOnL1(
-        l1Signer.provider!,
-        l2Signer.provider!
-      ))!
+        const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
+        const l1FeeToken = (await l1l3Bridger.getGasTokenOnL1(
+          l1Signer.provider!,
+          l2Signer.provider!
+        ))!
 
-      const depositParams: Erc20L1L3DepositRequestParams = {
-        erc20L1Address: l1FeeToken,
-        destinationAddress: l3Recipient,
-        amount: ethers.utils.parseEther('0.1'),
-        l2Provider: l2Signer.provider!,
-        l3Provider,
-      }
-
-      const depositTxRequest = await l1l3Bridger.getDepositRequest({
-        ...depositParams,
-        l1Signer,
-      })
-
-      await (
-        await l1l3Bridger.approveToken({ ...depositParams, l1Signer })
-      ).wait()
-
-      const depositTx = await l1l3Bridger.deposit({
-        l1Signer,
-        txRequest: depositTxRequest.txRequest,
-      })
-
-      const depositReceipt = await depositTx.wait()
-
-      // poll status
-      await poll(async () => {
-        const status = await l1l3Bridger.getDepositStatus({
-          txHash: depositReceipt.transactionHash,
-          l1Provider: l1Signer.provider!,
+        const depositParams: Erc20L1L3DepositRequestParams = {
+          erc20L1Address: l1FeeToken,
+          destinationAddress: l3Recipient,
+          amount: ethers.utils.parseEther('0.1'),
           l2Provider: l2Signer.provider!,
           l3Provider,
-        })
-        return status.completed
-      }, 1000)
+        }
 
-      // todo make this check better
-      expect((await l3Provider.getBalance(l3Recipient)).gt('0')).toBe(true)
-    })
+        const depositTxRequest = await l1l3Bridger.getDepositRequest({
+          ...depositParams,
+          l1Signer,
+        })
+
+        await (
+          await l1l3Bridger.approveToken({ ...depositParams, l1Signer })
+        ).wait()
+
+        const depositTx = await l1l3Bridger.deposit({
+          l1Signer,
+          txRequest: depositTxRequest.txRequest,
+        })
+
+        const depositReceipt = await depositTx.wait()
+
+        // poll status
+        await poll(async () => {
+          const status = await l1l3Bridger.getDepositStatus({
+            txHash: depositReceipt.transactionHash,
+            l1Provider: l1Signer.provider!,
+            l2Provider: l2Signer.provider!,
+            l3Provider,
+          })
+          return status.completed
+        }, 1000)
+
+        // todo make this check better
+        expect((await l3Provider.getBalance(l3Recipient)).gt('0')).toBe(true)
+      }
+    )
   })
 })
