@@ -30,7 +30,7 @@ import {
 } from './custom-fee-token/customFeeTokenTestHelpers'
 
 describe('ParentToChildMessageCreator', () => {
-  beforeEach('skipIfMainnet', async function () {
+  beforeEach(async function () {
     await skipIfMainnet(this)
   })
 

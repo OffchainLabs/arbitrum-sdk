@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { describe, it, expect, before, beforeEach } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import { Wallet, utils, constants } from 'ethers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
@@ -54,7 +54,7 @@ const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
 describe('standard ERC20', () => {
-  beforeEach('skipIfMainnet', async function () {
+  beforeEach(async function () {
     await skipIfMainnet(this)
   })
 
@@ -63,7 +63,7 @@ describe('standard ERC20', () => {
     parentToken: TestERC20
   }
 
-  before('init', async () => {
+  beforeAll(async () => {
     const setup = await testSetup()
     await fundParentSigner(setup.parentSigner)
     await fundChildSigner(setup.childSigner)

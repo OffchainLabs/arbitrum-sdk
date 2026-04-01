@@ -34,7 +34,7 @@ import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { describeOnlyWhenEth } from './custom-fee-token/mochaExtensions'
 
 describeOnlyWhenEth('WETH', async () => {
-  beforeEach('skipIfMainnet', async function () {
+  beforeEach(async function () {
     await skipIfMainnet(this)
   })
 

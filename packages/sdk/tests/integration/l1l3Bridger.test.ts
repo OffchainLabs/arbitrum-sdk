@@ -18,7 +18,7 @@ import {
   EthL1L3Bridger,
   Erc20L1L3DepositRequestParams,
 } from '../../src/lib/assetBridger/l1l3Bridger'
-import { describe, it, expect, before } from 'vitest'
+import { describe, it, expect, beforeAll } from 'vitest'
 import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { Deferrable } from 'ethers/lib/utils'
@@ -210,7 +210,7 @@ describe('L1 to L3 Bridging', () => {
   }
 
   // setup for all test cases
-  before(async function () {
+  beforeAll(async function () {
     await skipIfMainnet(this)
 
     const setup = await testSetup()
@@ -355,7 +355,7 @@ describe('L1 to L3 Bridging', () => {
     let l1l3Bridger: Erc20L1L3Bridger
 
     // deploy teleporter contracts and mock token
-    before(async function () {
+    beforeAll(async function () {
       const { l2ContractsDeployer, l1Teleporter } =
         await deployTeleportContracts(l1Signer, l2Signer)
 

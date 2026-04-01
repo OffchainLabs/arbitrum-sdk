@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { describe, it, expect, before, beforeEach } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 
 import { BigNumber } from '@ethersproject/bignumber'
 import { Logger, LogLevel } from '@ethersproject/logger'
@@ -90,7 +90,7 @@ describe('Inbox tools', () => {
 
   let forkBlockNumber: number
   let forkProviderUrl: string
-  before(async () => {
+  beforeAll(async () => {
     const { l1Provider } = await setup()
     forkBlockNumber = await l1Provider.getBlockNumber()
     forkProviderUrl = 'http://localhost:8545'

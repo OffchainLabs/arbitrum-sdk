@@ -46,7 +46,7 @@ import { parseUnits } from 'ethers/lib/utils'
 loadEnv()
 
 describe('Ether', async () => {
-  beforeEach('skipIfMainnet', async function () {
+  beforeEach(async function () {
     await skipIfMainnet(this)
   })
 

@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { describe, it, expect, before, beforeEach } from 'vitest'
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest'
 import { Signer, Wallet, constants, utils } from 'ethers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { Logger, LogLevel } from '@ethersproject/logger'
@@ -52,7 +52,7 @@ const depositAmount = BigNumber.from(100)
 const withdrawalAmount = BigNumber.from(10)
 
 describe('Custom ERC20', () => {
-  beforeEach('skipIfMainnet', async function () {
+  beforeEach(async function () {
     await skipIfMainnet(this)
   })
 
@@ -65,7 +65,7 @@ describe('Custom ERC20', () => {
     parentCustomToken: TestCustomTokenL1 | TestOrbitCustomTokenL1
   }
 
-  before('init', async () => {
+  beforeAll(async () => {
     testState = {
       ...(await testSetup()),
       parentCustomToken: {} as any,

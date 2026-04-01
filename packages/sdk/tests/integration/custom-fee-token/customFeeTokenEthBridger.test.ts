@@ -46,7 +46,7 @@ describeOnlyWhenCustomGasToken(
       approveParentCustomFeeToken,
     } = await import('./customFeeTokenTestHelpers')
 
-    beforeEach('skipIfMainnet', async function () {
+    beforeEach(async function () {
       await skipIfMainnet(this)
     })
 

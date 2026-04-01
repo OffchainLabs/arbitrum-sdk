@@ -36,7 +36,7 @@ import {
 } from '../../src/lib/utils/lib'
 
 describe('RevertData', () => {
-  beforeEach('skipIfMainnet', async function () {
+  beforeEach(async function () {
     await skipIfMainnet(this)
   })
 

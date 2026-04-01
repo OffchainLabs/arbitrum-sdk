@@ -25,7 +25,7 @@ import {
 } from '../../src/lib/dataEntities/networks'
 import { testSetup } from '../testSetup'
 import { greeter } from './helper/greeter'
-import { describe, it, before, expect } from 'vitest'
+import { describe, it, beforeAll, expect } from 'vitest'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 
 const sendSignedTx = async (testState: any, info?: any) => {
@@ -54,7 +54,7 @@ describe('Send signedTx to child chain using inbox', async () => {
     childChain: ArbitrumNetwork
   }
 
-  before('init', async () => {
+  beforeAll(async () => {
     testState = await testSetup()
   })
 

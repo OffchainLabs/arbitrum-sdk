@@ -60,7 +60,7 @@ async function waitForL1BatchConfirmations(
 }
 
 describe('ArbProvider', () => {
-  beforeEach('skipIfMainnet', async function () {
+  beforeEach(async function () {
     await skipIfMainnet(this)
   })
 
