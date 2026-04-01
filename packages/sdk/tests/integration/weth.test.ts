@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { expect } from 'chai'
+import { it, beforeEach, expect } from 'vitest'
 import { parseEther } from '@ethersproject/units'
 import { AeWETH__factory } from '../../src/lib/abi/factories/AeWETH__factory'
 import {
@@ -56,7 +56,7 @@ describeOnlyWhenEth('WETH', async () => {
     expect(
       (await childWETH.balanceOf(await childSigner.getAddress())).toString(),
       'start balance weth'
-    ).to.eq('0')
+    ).toBe('0')
 
     const parentWETH = AeWETH__factory.connect(parentWethAddress, parentSigner)
     const res = await parentWETH.deposit({
@@ -77,14 +77,14 @@ describeOnlyWhenEth('WETH', async () => {
       parentWethAddress,
       childSigner.provider!
     )
-    expect(childWethGateway, 'child weth gateway').to.eq(
+    expect(childWethGateway, 'child weth gateway').toBe(
       childChain.tokenBridge.childWethGateway
     )
     const childToken = erc20Bridger.getChildTokenContract(
       childSigner.provider!,
       childChain.tokenBridge.childWeth
     )
-    expect(childToken.address, 'child weth').to.eq(
+    expect(childToken.address, 'child weth').toBe(
       childChain.tokenBridge.childWeth
     )
 
@@ -97,7 +97,7 @@ describeOnlyWhenEth('WETH', async () => {
     ).wait()
     const afterBalance = await childSigner.provider!.getBalance(randomAddr)
 
-    expect(afterBalance.toString(), 'balance after').to.eq(
+    expect(afterBalance.toString(), 'balance after').toBe(
       wethToDeposit.toString()
     )
   })
@@ -119,7 +119,7 @@ describeOnlyWhenEth('WETH', async () => {
       value: wethToWrap,
     })
     const rec = await res.wait()
-    expect(rec.status).to.equal(1, 'deposit txn failed')
+    expect(rec.status, 'deposit txn failed').toBe(1)
 
     await withdrawToken({
       amount: wethToWithdraw,

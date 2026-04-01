@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { expect } from 'chai'
+import { describe, it, expect, before, beforeEach } from 'vitest'
 
 import { BigNumber } from '@ethersproject/bignumber'
 import { Logger, LogLevel } from '@ethersproject/logger'
@@ -132,12 +132,12 @@ describe('Inbox tools', () => {
 
     const forceInclusionTx = await inboxTools.forceInclude()
 
-    expect(forceInclusionTx, 'Null force inclusion').to.not.be.null
+    expect(forceInclusionTx, 'Null force inclusion').not.toBeNull()
     await forceInclusionTx!.wait()
 
     const messagesReadAfter = await sequencerInbox.totalDelayedMessagesRead()
 
-    expect(messagesReadAfter.toNumber(), 'Message not read').to.eq(
+    expect(messagesReadAfter.toNumber(), 'Message not read').toBe(
       startInboxLength.add(1).toNumber()
     )
   })
@@ -178,11 +178,11 @@ describe('Inbox tools', () => {
     const inboxTools = new InboxTools(l1Signer, l2Network)
     const forceInclusionTx = await inboxTools.forceInclude()
 
-    expect(forceInclusionTx, 'Null force inclusion').to.not.be.null
+    expect(forceInclusionTx, 'Null force inclusion').not.toBeNull()
     await forceInclusionTx!.wait()
 
     const messagesReadAfter = await sequencerInbox.totalDelayedMessagesRead()
-    expect(messagesReadAfter.toNumber(), 'Message not read').to.eq(
+    expect(messagesReadAfter.toNumber(), 'Message not read').toBe(
       startInboxLength.add(2).toNumber()
     )
   })
@@ -229,7 +229,7 @@ describe('Inbox tools', () => {
     await mineBlocks(6600, block.timestamp)
 
     const event = await inboxTools.getForceIncludableEvent()
-    expect(event?.event.messageDataHash, 'Invalid message hash.').to.eq(
+    expect(event?.event.messageDataHash, 'Invalid message hash.').toBe(
       messageDataHash
     )
   })
@@ -239,7 +239,7 @@ describe('Inbox tools', () => {
     const inboxTools = new InboxTools(l1Signer, l2Network)
 
     const event = await inboxTools.getForceIncludableEvent()
-    expect(event, 'Event not null').to.be.null
+    expect(event, 'Event not null').toBeNull()
   })
 
   const mineBlocks = async (

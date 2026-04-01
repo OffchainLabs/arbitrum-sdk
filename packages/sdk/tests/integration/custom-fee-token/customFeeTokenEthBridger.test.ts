@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { expect } from 'chai'
+import { it, expect, beforeEach } from 'vitest'
 import { ethers, constants, Wallet } from 'ethers'
 import { loadEnv } from '../../../src/lib/utils/env'
 
@@ -78,9 +78,8 @@ describeOnlyWhenCustomGasToken(
         ethBridger.childNetwork.ethBridge.inbox
       )
 
-      expect(allowance.toString()).to.equal(
-        amount.toString(),
-        'allowance incorrect'
+      expect(allowance.toString(), 'allowance incorrect').toBe(
+        amount.toString()
       )
     })
 
@@ -102,9 +101,8 @@ describeOnlyWhenCustomGasToken(
         ethBridger.childNetwork.ethBridge.inbox
       )
 
-      expect(allowance.toString()).to.equal(
-        constants.MaxUint256.toString(),
-        'allowance incorrect'
+      expect(allowance.toString(), 'allowance incorrect').toBe(
+        constants.MaxUint256.toString()
       )
     })
 
@@ -132,15 +130,15 @@ describeOnlyWhenCustomGasToken(
         parentSigner,
       })
       const depositTxReceipt = await depositTx.wait()
-      expect(depositTxReceipt.status).to.equal(1, 'deposit tx failed')
+      expect(depositTxReceipt.status, 'deposit tx failed').toBe(1)
 
       expect(
         // balance in the bridge after the deposit
-        (await nativeTokenContract.balanceOf(bridge)).toString()
-      ).to.equal(
-        // balance in the bridge after the deposit should equal to the initial balance in the bridge + the amount deposited
-        initialBalanceBridge.add(amount).toString(),
+        (await nativeTokenContract.balanceOf(bridge)).toString(),
         'incorrect balance in bridge after deposit'
+      ).toBe(
+        // balance in the bridge after the deposit should equal to the initial balance in the bridge + the amount deposited
+        initialBalanceBridge.add(amount).toString()
       )
 
       // wait for minting on L2
@@ -150,21 +148,20 @@ describeOnlyWhenCustomGasToken(
       const depositMessages = await depositTxReceipt.getEthDeposits(
         childProvider
       )
-      expect(depositMessages.length).to.equal(
-        1,
-        'failed to find deposit message'
+      expect(depositMessages.length, 'failed to find deposit message').toBe(
+        1
       )
       const [depositMessage] = depositMessages
-      expect(depositMessage.value.toString()).to.equal(amount.toString())
-      expect(depositMessage.to).to.equal(await childSigner.getAddress())
+      expect(depositMessage.value.toString()).toBe(amount.toString())
+      expect(depositMessage.to).toBe(await childSigner.getAddress())
 
       expect(
         // balance in the depositor account after the deposit
-        (await childSigner.getBalance()).toString()
-      ).to.equal(
-        // balance in the depositor account after the deposit should equal to the initial balance in the depositor account + the amount deposited
-        initialBalanceDepositor.add(amount).toString(),
+        (await childSigner.getBalance()).toString(),
         'incorrect balance in depositor account after deposit'
+      ).toBe(
+        // balance in the depositor account after the deposit should equal to the initial balance in the depositor account + the amount deposited
+        initialBalanceDepositor.add(amount).toString()
       )
     })
 
@@ -215,18 +212,17 @@ describeOnlyWhenCustomGasToken(
       })
       const withdrawalTxReceipt = await withdrawalTx.wait()
 
-      expect(withdrawalTxReceipt.status).to.equal(
-        1,
-        'initiate withdrawal tx failed'
+      expect(withdrawalTxReceipt.status, 'initiate withdrawal tx failed').toBe(
+        1
       )
 
       const messages = await withdrawalTxReceipt.getChildToParentMessages(
         parentSigner
       )
-      expect(messages.length).to.equal(
-        1,
+      expect(
+        messages.length,
         'custom fee token withdraw getWithdrawalsInL2Transaction query came back empty'
-      )
+      ).toBe(1)
 
       const withdrawalEvents =
         await ChildToParentMessage.getChildToParentEvents(
@@ -236,17 +232,17 @@ describeOnlyWhenCustomGasToken(
           destinationAddress
         )
 
-      expect(withdrawalEvents.length).to.equal(
-        1,
+      expect(
+        withdrawalEvents.length,
         'custom fee token withdraw getL2ToL1EventData failed'
-      )
+      ).toBe(1)
 
       const [message] = messages
       const messageStatus = await message.status(childProvider)
       expect(
         messageStatus,
         `custom fee token withdraw status returned ${messageStatus}`
-      ).to.be.eq(ChildToParentMessageStatus.UNCONFIRMED)
+      ).toBe(ChildToParentMessageStatus.UNCONFIRMED)
 
       // run a miner whilst withdrawing
       const miner1 = Wallet.createRandom().connect(parentProvider)
@@ -263,7 +259,7 @@ describeOnlyWhenCustomGasToken(
 
       expect(await message.status(childProvider), 'confirmed status')
         //
-        .to.eq(ChildToParentMessageStatus.CONFIRMED)
+        .toBe(ChildToParentMessageStatus.CONFIRMED)
 
       const execTx = await message.execute(childProvider)
       const execTxReceipt = await execTx.wait()
@@ -271,28 +267,28 @@ describeOnlyWhenCustomGasToken(
       expect(
         execTxReceipt.gasUsed.toNumber(),
         'gas used greater than estimate'
-      ).to.be.lessThan(l1GasEstimate.toNumber())
+      ).toBeLessThan(l1GasEstimate.toNumber())
 
       expect(await message.status(childProvider), 'executed status')
         //
-        .to.eq(ChildToParentMessageStatus.EXECUTED)
+        .toBe(ChildToParentMessageStatus.EXECUTED)
 
       expect(
         // balance in the bridge after the withdrawal
-        (await nativeTokenContract.balanceOf(bridge)).toString()
-      ).to.equal(
-        // balance in the bridge after the withdrawal should equal to the initial balance in the bridge - the amount withdrawn
-        initialBalanceBridge.sub(amount).toString(),
+        (await nativeTokenContract.balanceOf(bridge)).toString(),
         'incorrect balance in bridge after withdrawal'
+      ).toBe(
+        // balance in the bridge after the withdrawal should equal to the initial balance in the bridge - the amount withdrawn
+        initialBalanceBridge.sub(amount).toString()
       )
 
       expect(
         // balance in the destination after the withdrawal
-        (await nativeTokenContract.balanceOf(destinationAddress)).toString()
-      ).to.equal(
-        // balance in the destination after the withdrawal should equal to the initial balance in the destination + the amount withdrawn
-        initialBalanceDestination.add(amount).toString(),
+        (await nativeTokenContract.balanceOf(destinationAddress)).toString(),
         'incorrect balance in destination after withdrawal'
+      ).toBe(
+        // balance in the destination after the withdrawal should equal to the initial balance in the destination + the amount withdrawn
+        initialBalanceDestination.add(amount).toString()
       )
     })
   }

@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { expect } from 'chai'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { providers, utils } from 'ethers'
 import { fundParentSigner, skipIfMainnet } from './testHelpers'
 import { testSetup } from '../testSetup'
@@ -78,12 +78,12 @@ describe('ParentToChildMessageCreator', () => {
     // Getting the ParentToChildMessage
     const parentToChildMessages =
       await parentSubmissionTxReceipt.getParentToChildMessages(arbProvider)
-    expect(parentToChildMessages.length).to.eq(1)
+    expect(parentToChildMessages.length).toBe(1)
     const parentToChildMessage = parentToChildMessages[0]
 
     // And waiting for it to be redeemed
     const retryableTicketResult = await parentToChildMessage.waitForStatus()
-    expect(retryableTicketResult.status).to.eq(
+    expect(retryableTicketResult.status).toBe(
       ParentToChildMessageStatus.REDEEMED
     )
 
@@ -95,7 +95,7 @@ describe('ParentToChildMessageCreator', () => {
     expect(
       initialChildChainBalance.add(testAmount).lt(finalChildChainBalance),
       'Child chain balance not updated'
-    ).to.be.true
+    ).toBe(true)
   })
 
   it('allows the creation of Retryable Tickets sending a request', async () => {
@@ -147,12 +147,12 @@ describe('ParentToChildMessageCreator', () => {
     // Getting the ParentToChildMessage
     const parentToChildMessages =
       await parentSubmissionTxReceipt.getParentToChildMessages(arbProvider)
-    expect(parentToChildMessages.length).to.eq(1)
+    expect(parentToChildMessages.length).toBe(1)
     const parentToChildMessage = parentToChildMessages[0]
 
     // And waiting for it to be redeemed
     const retryableTicketResult = await parentToChildMessage.waitForStatus()
-    expect(retryableTicketResult.status).to.eq(
+    expect(retryableTicketResult.status).toBe(
       ParentToChildMessageStatus.REDEEMED
     )
 
@@ -164,6 +164,6 @@ describe('ParentToChildMessageCreator', () => {
     expect(
       initialChildChainBalance.add(testAmount).lt(finalChildChainBalance),
       'Child chain balance not updated'
-    ).to.be.true
+    ).toBe(true)
   })
 })

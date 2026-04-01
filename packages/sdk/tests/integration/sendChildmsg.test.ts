@@ -25,7 +25,7 @@ import {
 } from '../../src/lib/dataEntities/networks'
 import { testSetup } from '../testSetup'
 import { greeter } from './helper/greeter'
-import { expect } from 'chai'
+import { describe, it, before, expect } from 'vitest'
 import { AdminErc20Bridger } from '../../src/lib/assetBridger/erc20Bridger'
 
 const sendSignedTx = async (testState: any, info?: any) => {
@@ -74,21 +74,21 @@ describe('Send signedTx to child chain using inbox', async () => {
       contractCreationData
     )
     const parentStatus = parentTransactionReceipt?.status
-    expect(parentStatus).to.equal(1, 'parent txn failed')
+    expect(parentStatus, 'parent txn failed').toBe(1)
     const childTx = ethers.utils.parseTransaction(signedMsg)
     const childTxhash = childTx.hash!
     const childTxReceipt = await childDeployer.provider!.waitForTransaction(
       childTxhash
     )
     const childStatus = childTxReceipt.status
-    expect(childStatus).to.equal(1, 'child txn failed')
+    expect(childStatus, 'child txn failed').toBe(1)
     const contractAddress = ethers.ContractFactory.getContractAddress({
       from: childTx.from!,
       nonce: childTx.nonce,
     })
     const greeterImp = Greeter.attach(contractAddress)
     const greetResult = await greeterImp.greet()
-    expect(greetResult).to.equal('hello world', 'contract returns not expected')
+    expect(greetResult, 'contract returns not expected').toBe('hello world')
   })
 
   it('should confirm the same tx on child chain', async () => {
@@ -100,13 +100,13 @@ describe('Send signedTx to child chain using inbox', async () => {
     const { signedMsg, parentTransactionReceipt: parentTransactionReceipt } =
       await sendSignedTx(testState, info)
     const parentStatus = parentTransactionReceipt?.status
-    expect(parentStatus).to.equal(1)
+    expect(parentStatus).toBe(1)
     const childTxhash = ethers.utils.parseTransaction(signedMsg).hash!
     const childTxReceipt = await childDeployer.provider!.waitForTransaction(
       childTxhash
     )
     const childStatus = childTxReceipt.status
-    expect(childStatus).to.equal(1)
+    expect(childStatus).toBe(1)
   })
 
   it('send two tx share the same nonce but with different gas price, should confirm the one which gas price higher than child base price', async () => {
@@ -122,7 +122,7 @@ describe('Send signedTx to child chain using inbox', async () => {
     }
     const lowFeeTx = await sendSignedTx(testState, lowFeeInfo)
     const lowFeeParentStatus = lowFeeTx.parentTransactionReceipt?.status
-    expect(lowFeeParentStatus).to.equal(1)
+    expect(lowFeeParentStatus).toBe(1)
     const info = {
       data: '0x12',
       to: await childDeployer.getAddress(),
@@ -130,7 +130,7 @@ describe('Send signedTx to child chain using inbox', async () => {
     }
     const enoughFeeTx = await sendSignedTx(testState, info)
     const enoughFeeParentStatus = enoughFeeTx.parentTransactionReceipt?.status
-    expect(enoughFeeParentStatus).to.equal(1)
+    expect(enoughFeeParentStatus).toBe(1)
     const childLowFeeTxhash = ethers.utils.parseTransaction(lowFeeTx.signedMsg)
       .hash!
     const childEnoughFeeTxhash = ethers.utils.parseTransaction(
@@ -140,10 +140,10 @@ describe('Send signedTx to child chain using inbox', async () => {
     const childTEnoughFeeReceipt =
       await childDeployer.provider!.waitForTransaction(childEnoughFeeTxhash)
     const childStatus = childTEnoughFeeReceipt.status
-    expect(childStatus).to.equal(1)
+    expect(childStatus).toBe(1)
     const res = await childDeployer.provider?.getTransactionReceipt(
       childLowFeeTxhash
     )
-    expect(res).to.be.null
+    expect(res).toBeNull()
   })
 })

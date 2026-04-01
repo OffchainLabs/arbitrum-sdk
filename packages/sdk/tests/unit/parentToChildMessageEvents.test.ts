@@ -1,7 +1,7 @@
 import { ParentTransactionReceipt } from './../../src/lib/message/ParentTransaction'
 import { BigNumber, constants, providers } from 'ethers'
 import { JsonRpcProvider } from '@ethersproject/providers'
-import { expect } from 'chai'
+import { describe, it, expect } from 'vitest'
 
 describe('ParentToChildMessage events', () => {
   it('does call for nitro events', async () => {
@@ -160,8 +160,8 @@ describe('ParentToChildMessage events', () => {
       )
     } catch (err) {
       // This call should throw an error
-      expect(err).to.be.an('error')
-      expect((err as Error).message).to.be.eq(
+      expect(err).toBeInstanceOf(Error)
+      expect((err as Error).message).toBe(
         "This method is only for classic transactions. Use 'getParentToChildMessages' for nitro transactions."
       )
     } finally {
@@ -169,7 +169,7 @@ describe('ParentToChildMessage events', () => {
       expect(
         txReceipt,
         'Classic method was successful using a nitro transaction.'
-      ).to.be.undefined
+      ).toBeUndefined()
     }
 
     const isClassic = await parentTxnReceipt.isClassic(arbProvider)
@@ -177,56 +177,55 @@ describe('ParentToChildMessage events', () => {
       await parentTxnReceipt.getParentToChildMessages(arbProvider)
     )[0]
 
-    expect(isClassic, 'incorrect tx type returned by isClassic call').to.be
-      .false
-    expect(msg.chainId, 'incorrect chain id').to.be.eq(42161)
-    expect(msg.sender, 'incorrect sender').to.be.eq(
+    expect(isClassic, 'incorrect tx type returned by isClassic call').toBe(false)
+    expect(msg.chainId, 'incorrect chain id').toBe(42161)
+    expect(msg.sender, 'incorrect sender').toBe(
       '0xeA3123E9d9911199a6711321d1277285e6d4F3EC'
     )
     expect(
       msg.messageNumber.eq(BigNumber.from('0x504c')),
       'incorrect message number'
-    ).to.be.true
+    ).toBe(true)
     expect(
       msg.parentBaseFee.eq(BigNumber.from('0x05e0fc4c58')),
       'incorrect parent chain base fee'
-    ).to.be.true
+    ).toBe(true)
     expect(
       msg.messageData.destAddress,
       'incorrect dest address on messageData'
-    ).to.be.eq('0x6c411aD3E74De3E7Bd422b94A27770f5B86C623B')
+    ).toBe('0x6c411aD3E74De3E7Bd422b94A27770f5B86C623B')
     expect(
       msg.messageData.l2CallValue.eq(BigNumber.from('0x0853a0d2313c0000')),
       'incorrect child chain call value on messageData'
-    ).to.be.true
+    ).toBe(true)
     expect(
       msg.messageData.l1Value.eq(BigNumber.from('0x0854e8ab1802ca80')),
       'incorrect parent chain value on messageData'
-    ).to.be.true
+    ).toBe(true)
     expect(
       msg.messageData.maxSubmissionFee.eq(BigNumber.from('0x01270f6740d880')),
       'incorrect max submission fee on messageData'
-    ).to.be.true
+    ).toBe(true)
     expect(
       msg.messageData.excessFeeRefundAddress,
       'incorrect excess fee refund address'
-    ).to.be.eq('0xa2e06c19EE14255889f0Ec0cA37f6D0778D06754')
+    ).toBe('0xa2e06c19EE14255889f0Ec0cA37f6D0778D06754')
     expect(
       msg.messageData.callValueRefundAddress,
       'incorrect call value refund address'
-    ).to.be.eq('0xa2e06c19EE14255889f0Ec0cA37f6D0778D06754')
+    ).toBe('0xa2e06c19EE14255889f0Ec0cA37f6D0778D06754')
     expect(
       msg.messageData.gasLimit.eq(BigNumber.from('0x01d566')),
       'incorrect gas limit on messageData'
-    ).to.be.true
+    ).toBe(true)
     expect(
       msg.messageData.maxFeePerGas.eq(BigNumber.from('0x11e1a300')),
       'incorrect max fee per gas on messageData'
-    ).to.be.true
-    expect(msg.messageData.data, 'incorrect data on messageData').to.be.eq(
+    ).toBe(true)
+    expect(msg.messageData.data, 'incorrect data on messageData').toBe(
       '0x2e567b36000000000000000000000000c02aaa39b223fe8d0a0e5c4f27ead9083c756cc2000000000000000000000000a2e06c19ee14255889f0ec0ca37f6d0778d06754000000000000000000000000a2e06c19ee14255889f0ec0ca37f6d0778d067540000000000000000000000000000000000000000000000000853a0d2313c000000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
     )
-    expect(msg.retryableCreationId, 'incorrect retryable creation id').to.be.eq(
+    expect(msg.retryableCreationId, 'incorrect retryable creation id').toBe(
       '0x8ba13904639c7444d8578cc582a230b8501c9f0f7903f5069d276fdd3a7dea44'
     )
   })
@@ -298,8 +297,8 @@ describe('ParentToChildMessage events', () => {
       txReceipt = await parentTxnReceipt.getParentToChildMessages(arbProvider)
     } catch (err) {
       // This call should throw an error
-      expect(err).to.be.an('error')
-      expect((err as Error).message).to.be.eq(
+      expect(err).toBeInstanceOf(Error)
+      expect((err as Error).message).toBe(
         "This method is only for nitro transactions. Use 'getParentToChildMessagesClassic' for classic transactions."
       )
     } finally {
@@ -307,7 +306,7 @@ describe('ParentToChildMessage events', () => {
       expect(
         txReceipt,
         'Nitro method was successful using a classic transaction.'
-      ).to.be.undefined
+      ).toBeUndefined()
     }
 
     const isClassic = await parentTxnReceipt.isClassic(arbProvider)
@@ -316,19 +315,19 @@ describe('ParentToChildMessage events', () => {
     )[0]
     const status = await msg.status()
 
-    expect(isClassic, 'incorrect tx type returned by isClassic call').to.be.true
-    expect(status, 'invalid message status').to.be.eq(5)
+    expect(isClassic, 'incorrect tx type returned by isClassic call').toBe(true)
+    expect(status, 'invalid message status').toBe(5)
     expect(
       msg.messageNumber.eq(BigNumber.from('0x064371')),
       'incorrect message number'
-    ).to.be.true
-    expect(msg.retryableCreationId, 'incorrect retryable creation id').to.be.eq(
+    ).toBe(true)
+    expect(msg.retryableCreationId, 'incorrect retryable creation id').toBe(
       '0xc88b1821af42b8281bbf645173e287e4ec50ef96907f5211dc7069e09af20720'
     )
-    expect(msg.autoRedeemId, 'incorrect auto redeem id').to.be.eq(
+    expect(msg.autoRedeemId, 'incorrect auto redeem id').toBe(
       '0x38c5c31151344c7a1433a849bbc80472786ebe911630255a6e25d6a2efd39526'
     )
-    expect(msg.childTxHash, 'incorrect child chain tx hash').to.be.eq(
+    expect(msg.childTxHash, 'incorrect child chain tx hash').toBe(
       '0xf91e7d2e7526927e915a2357360a3f1108dce0f9c7fa88a7492669adf5c1e53b'
     )
   })

@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { expect } from 'chai'
+import { describe, it, expect, before, beforeEach } from 'vitest'
 import { Wallet, utils, constants } from 'ethers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
@@ -91,9 +91,8 @@ describe('standard ERC20', () => {
         gatewayAddress
       )
 
-      expect(initialAllowance.toString()).to.eq(
-        constants.Zero.toString(),
-        'initial allowance is not empty'
+      expect(initialAllowance.toString(), 'initial allowance is not empty').toBe(
+        constants.Zero.toString()
       )
 
       const tx = await erc20Bridger.approveGasToken({
@@ -107,9 +106,8 @@ describe('standard ERC20', () => {
         gatewayAddress
       )
 
-      expect(finalAllowance.toString()).to.eq(
-        constants.MaxUint256.toString(),
-        'initial allowance is not empty'
+      expect(finalAllowance.toString(), 'initial allowance is not empty').toBe(
+        constants.MaxUint256.toString()
       )
     }
   )
@@ -143,12 +141,12 @@ describe('standard ERC20', () => {
     const redeemRec = await manualRedeem.wait()
     const blockHash = redeemRec.blockHash
 
-    expect(retryRec.blockHash, 'redeemed in same block').to.eq(blockHash)
-    expect(retryRec.to, 'redeemed in same block').to.eq(
+    expect(retryRec.blockHash, 'redeemed in same block').toBe(blockHash)
+    expect(retryRec.to, 'redeemed in same block').toBe(
       testState.childChain.tokenBridge.childErc20Gateway
     )
-    expect(retryRec.status, 'tx didnt fail').to.eq(expectedStatus)
-    expect(await message.status(), 'message status').to.eq(
+    expect(retryRec.status, 'tx didnt fail').toBe(expectedStatus)
+    expect(await message.status(), 'message status').toBe(
       expectedStatus === 0
         ? ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
         : ParentToChildMessageStatus.REDEEMED
@@ -214,12 +212,12 @@ describe('standard ERC20', () => {
       throw new Error('Missing retryable creation.')
     const l2Receipt = new ChildTransactionReceipt(retryableCreation)
     const redeemsScheduled = l2Receipt.getRedeemScheduledEvents()
-    expect(redeemsScheduled.length, 'Unexpected redeem length').to.eq(1)
+    expect(redeemsScheduled.length, 'Unexpected redeem length').toBe(1)
     const retryReceipt =
       await testState.childSigner.provider!.getTransactionReceipt(
         redeemsScheduled[0].retryTxHash
       )
-    expect(isDefined(retryReceipt), 'Retry should not exist').to.be.false
+    expect(isDefined(retryReceipt), 'Retry should not exist').toBe(false)
 
     // manual redeem succeeds
     await redeemAndTest(waitRes.message, 1)
@@ -275,7 +273,7 @@ describe('standard ERC20', () => {
     const l2BalanceStart = await l2Token.balanceOf(
       await testState.childSigner.getAddress()
     )
-    expect(l2BalanceStart.toString(), 'l2 balance start').to.eq(
+    expect(l2BalanceStart.toString(), 'l2 balance start').toBe(
       l2BalanceStart.toString()
     )
 

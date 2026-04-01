@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { expect } from 'chai'
+import { describe, it, beforeEach, expect } from 'vitest'
 
 import {
   fundParentSigner,
@@ -109,7 +109,7 @@ describe('ArbProvider', () => {
           60_000
         )
 
-        expect(l1BatchConfirmations, 'missing confirmations').to.be.gt(0)
+        expect(l1BatchConfirmations, 'missing confirmations').toBeGreaterThan(0)
 
         if (l1BatchConfirmations > 8) {
           break

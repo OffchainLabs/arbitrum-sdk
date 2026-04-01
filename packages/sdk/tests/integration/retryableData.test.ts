@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { assert, expect } from 'chai'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { BigNumber } from '@ethersproject/bignumber'
 import { hexlify } from '@ethersproject/bytes'
 import { TestERC20__factory } from '../../src/lib/abi/factories/TestERC20__factory'
@@ -122,31 +122,31 @@ describe('RevertData', () => {
         )
       }
 
-      assert.fail(`Expected ${func} to fail`)
+      expect.fail(`Expected ${func} to fail`)
     } catch (err) {
       const typedErr = err as Error
       const parsed = RetryableDataTools.tryParseError(typedErr)
       if (!parsed) throw err
-      expect(parsed.callValueRefundAddress, 'callValueRefundAddress').to.eq(
+      expect(parsed.callValueRefundAddress, 'callValueRefundAddress').toBe(
         callValueRefundAddress
       )
-      expect(parsed.data, 'data').to.eq(data)
-      expect(parsed.deposit.toString(), 'deposit').to.eq(value.toString())
-      expect(parsed.excessFeeRefundAddress, 'excessFeeRefundAddress').to.eq(
+      expect(parsed.data, 'data').toBe(data)
+      expect(parsed.deposit.toString(), 'deposit').toBe(value.toString())
+      expect(parsed.excessFeeRefundAddress, 'excessFeeRefundAddress').toBe(
         excessFeeRefundAddress
       )
-      expect(parsed.from, 'from').to.eq(await parentSigner.getAddress())
-      expect(parsed.gasLimit.toString(), 'gasLimit').to.eq(gasLimit.toString())
-      expect(parsed.l2CallValue.toString(), 'l2CallValue').to.eq(
+      expect(parsed.from, 'from').toBe(await parentSigner.getAddress())
+      expect(parsed.gasLimit.toString(), 'gasLimit').toBe(gasLimit.toString())
+      expect(parsed.l2CallValue.toString(), 'l2CallValue').toBe(
         l2CallValue.toString()
       )
-      expect(parsed.maxFeePerGas.toString(), 'maxFeePerGas').to.eq(
+      expect(parsed.maxFeePerGas.toString(), 'maxFeePerGas').toBe(
         maxFeePerGas.toString()
       )
-      expect(parsed.maxSubmissionCost.toString(), 'maxSubmissionCost').to.eq(
+      expect(parsed.maxSubmissionCost.toString(), 'maxSubmissionCost').toBe(
         maxSubmissionCost.toString()
       )
-      expect(parsed.to, 'to').to.eq(to)
+      expect(parsed.to, 'to').toBe(to)
     }
   }
 
@@ -219,39 +219,39 @@ describe('RevertData', () => {
         parentSigner,
         childProvider: childSigner.provider!,
       })
-      assert.fail('Expected estimateGas to fail')
+      expect.fail('Expected estimateGas to fail')
     } catch (err) {
       const typedErr = err as Error
       const parsed = RetryableDataTools.tryParseError(typedErr)
       if (!parsed) throw err
 
-      expect(parsed.callValueRefundAddress, 'callValueRefundAddress').to.eq(
+      expect(parsed.callValueRefundAddress, 'callValueRefundAddress').toBe(
         depositParams.retryableData.callValueRefundAddress
       )
-      expect(parsed.data, 'data').to.eq(depositParams.retryableData.data)
-      expect(parsed.deposit.toString(), 'deposit').to.eq(
+      expect(parsed.data, 'data').toBe(depositParams.retryableData.data)
+      expect(parsed.deposit.toString(), 'deposit').toBe(
         isArbitrumNetworkWithCustomFeeToken()
           ? depositParams.retryableData.deposit.toString()
           : depositParams.txRequest.value.toString()
       )
-      expect(parsed.excessFeeRefundAddress, 'excessFeeRefundAddress').to.eq(
+      expect(parsed.excessFeeRefundAddress, 'excessFeeRefundAddress').toBe(
         depositParams.retryableData.excessFeeRefundAddress
       )
-      expect(parsed.from, 'from').to.eq(depositParams.retryableData.from)
-      expect(parsed.gasLimit.toString(), 'gasLimit').to.eq(
+      expect(parsed.from, 'from').toBe(depositParams.retryableData.from)
+      expect(parsed.gasLimit.toString(), 'gasLimit').toBe(
         depositParams.retryableData.gasLimit.toString()
       )
 
-      expect(parsed.l2CallValue.toString(), 'l2CallValue').to.eq(
+      expect(parsed.l2CallValue.toString(), 'l2CallValue').toBe(
         depositParams.retryableData.l2CallValue.toString()
       )
-      expect(parsed.maxFeePerGas.toString(), 'maxFeePerGas').to.eq(
+      expect(parsed.maxFeePerGas.toString(), 'maxFeePerGas').toBe(
         depositParams.retryableData.maxFeePerGas.toString()
       )
-      expect(parsed.maxSubmissionCost.toString(), 'maxSubmissionCost').to.eq(
+      expect(parsed.maxSubmissionCost.toString(), 'maxSubmissionCost').toBe(
         depositParams.retryableData.maxSubmissionCost.toString()
       )
-      expect(parsed.to).to.eq(depositParams.retryableData.to)
+      expect(parsed.to).toBe(depositParams.retryableData.to)
     }
   })
 })
