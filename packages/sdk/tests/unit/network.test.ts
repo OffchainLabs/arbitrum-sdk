@@ -112,9 +112,7 @@ describe('Networks', async () => {
         await getArbitrumNetwork(chainId)
       } catch (err) {
         expect(err).toBeInstanceOf(Error)
-        expect((err as Error).message).toBe(
-          `Unrecognized network ${chainId}.`
-        )
+        expect((err as Error).message).toBe(`Unrecognized network ${chainId}.`)
       }
     })
   })

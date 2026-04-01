@@ -148,9 +148,7 @@ describeOnlyWhenCustomGasToken(
       const depositMessages = await depositTxReceipt.getEthDeposits(
         childProvider
       )
-      expect(depositMessages.length, 'failed to find deposit message').toBe(
-        1
-      )
+      expect(depositMessages.length, 'failed to find deposit message').toBe(1)
       const [depositMessage] = depositMessages
       expect(depositMessage.value.toString()).toBe(amount.toString())
       expect(depositMessage.to).toBe(await childSigner.getAddress())

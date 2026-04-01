@@ -148,9 +148,10 @@ describe('Ether', async () => {
     )
     const parentToChildMessage = parentToChildMessages[0]
 
-    expect(parentToChildMessages.length, 'failed to find 1 parent-to-child message').toBe(
-      1
-    )
+    expect(
+      parentToChildMessages.length,
+      'failed to find 1 parent-to-child message'
+    ).toBe(1)
     expect(parentToChildMessage.to, 'message inputs value error').toBe(
       walletAddress
     )
@@ -211,14 +212,16 @@ describe('Ether', async () => {
     const parentToChildMessages = await rec.getParentToChildMessages(
       childSigner.provider!
     )
-    expect(parentToChildMessages.length, 'failed to find 1 parent-to-child message').toBe(
-      1
-    )
+    expect(
+      parentToChildMessages.length,
+      'failed to find 1 parent-to-child message'
+    ).toBe(1)
     const parentToChildMessage = parentToChildMessages[0]
 
-    expect(parentToChildMessage.messageData.destAddress, 'message inputs value error').toBe(
-      destWallet.address
-    )
+    expect(
+      parentToChildMessage.messageData.destAddress,
+      'message inputs value error'
+    ).toBe(destWallet.address)
     expect(
       parentToChildMessage.messageData.l2CallValue.toString(),
       'message inputs value error'
@@ -241,9 +244,7 @@ describe('Ether', async () => {
     )
     const ticketRedeemEvents =
       childRetryableTxReceipt.getRedeemScheduledEvents()
-    expect(ticketRedeemEvents.length, 'failed finding the redeem event').toBe(
-      1
-    )
+    expect(ticketRedeemEvents.length, 'failed finding the redeem event').toBe(1)
     expect(ticketRedeemEvents[0].retryTxHash).toBeTruthy()
     expect(ticketRedeemEvents[0].retryTxHash).not.toBeNull()
 
@@ -289,17 +290,19 @@ describe('Ether', async () => {
     const parentToChildMessages = await rec.getParentToChildMessages(
       childSigner.provider!
     )
-    expect(parentToChildMessages.length, 'failed to find 1 parent-to-child message').toBe(
-      1
-    )
+    expect(
+      parentToChildMessages.length,
+      'failed to find 1 parent-to-child message'
+    ).toBe(1)
     const parentToChildMessageReader = parentToChildMessages[0]
 
     const retryableTicketResult =
       await parentToChildMessageReader.waitForStatus()
 
-    expect(retryableTicketResult.status, 'unexpected status, expected auto-redeem to fail').toBe(
-      ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
-    )
+    expect(
+      retryableTicketResult.status,
+      'unexpected status, expected auto-redeem to fail'
+    ).toBe(ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD)
 
     let testWalletChildEthBalance = await childSigner.provider!.getBalance(
       destWallet.address
@@ -366,9 +369,7 @@ describe('Ether', async () => {
 
     const withdrawEthRec = await withdrawEthRes.wait()
 
-    expect(withdrawEthRec.status, 'initiate eth withdraw txn failed').toBe(
-      1
-    )
+    expect(withdrawEthRec.status, 'initiate eth withdraw txn failed').toBe(1)
 
     const withdrawMessage = (
       await withdrawEthRec.getChildToParentMessages(parentSigner)
@@ -385,15 +386,15 @@ describe('Ether', async () => {
       randomAddress
     )
 
-    expect(withdrawEvents.length, 'eth withdraw getL2ToL1EventData failed').toBe(
-      1
-    )
+    expect(
+      withdrawEvents.length,
+      'eth withdraw getL2ToL1EventData failed'
+    ).toBe(1)
 
     const messageStatus = await withdrawMessage.status(childSigner.provider!)
-    expect(
-      messageStatus,
-      `eth withdraw status returned ${messageStatus}`
-    ).toBe(ChildToParentMessageStatus.UNCONFIRMED)
+    expect(messageStatus, `eth withdraw status returned ${messageStatus}`).toBe(
+      ChildToParentMessageStatus.UNCONFIRMED
+    )
 
     // CHRIS: TODO: comment this back in when fixed in nitro
     // const actualFinalBalance = await childSigner.getBalance()

@@ -34,7 +34,7 @@
     "watch": "tsc --watch",
     "test": "vitest run --config ../../vitest.config.ts",
     "test:fork": "SHOULD_FORK=1 hardhat test tests/fork/*.test.ts",
-    "test:integration": "vitest run --config ../../vitest.config.ts tests/integration --test-timeout 30000000 --bail",
+    "test:integration": "vitest run --config ../../vitest.config.ts tests/integration --test-timeout 30000000 --bail 1",
     "test:unit": "vitest run --config ../../vitest.config.ts tests/unit",
     "lint": "eslint .",
     "format": "prettier './**/*.{js,json,md,ts,yml}' '!./src/lib/abi' --write && yarn run lint --fix",

@@ -56,9 +56,7 @@ describe('sanity checks (read-only)', async () => {
     expect(l1BeaconProxyHash).toBe(l2BeaconProxyHash)
 
     const l1GatewayCounterParty = await l1Gateway.counterpartGateway()
-    expect(l1GatewayCounterParty).toBe(
-      childChain.tokenBridge.childErc20Gateway
-    )
+    expect(l1GatewayCounterParty).toBe(childChain.tokenBridge.childErc20Gateway)
 
     const l2GatewayCounterParty = await l2Gateway.counterpartGateway()
     expect(l2GatewayCounterParty).toBe(

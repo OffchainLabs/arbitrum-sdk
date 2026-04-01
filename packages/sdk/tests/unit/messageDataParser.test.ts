@@ -67,14 +67,8 @@ describe('SubmitRetryableMessageDataParser', () => {
     expect(res.excessFeeRefundAddress).toBe(
       '0xf71946496600e1e1d47b8A77EB2f109Fd82dc86a'
     )
-    expect(
-      res.gasLimit.eq(BigNumber.from(0)),
-      'incorrect gas limit'
-    ).toBe(true)
-    expect(
-      res.l1Value.eq(parseEther('30.01')),
-      'incorrect l1 value'
-    ).toBe(true)
+    expect(res.gasLimit.eq(BigNumber.from(0)), 'incorrect gas limit').toBe(true)
+    expect(res.l1Value.eq(parseEther('30.01')), 'incorrect l1 value').toBe(true)
     expect(
       res.l2CallValue.eq(BigNumber.from(0)),
       'incorrect l2 call value'

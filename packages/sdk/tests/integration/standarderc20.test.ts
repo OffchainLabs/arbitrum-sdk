@@ -91,9 +91,10 @@ describe('standard ERC20', () => {
         gatewayAddress
       )
 
-      expect(initialAllowance.toString(), 'initial allowance is not empty').toBe(
-        constants.Zero.toString()
-      )
+      expect(
+        initialAllowance.toString(),
+        'initial allowance is not empty'
+      ).toBe(constants.Zero.toString())
 
       const tx = await erc20Bridger.approveGasToken({
         parentSigner,

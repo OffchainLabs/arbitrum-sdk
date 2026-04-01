@@ -276,8 +276,10 @@ export const depositToken = async ({
     senderAddress,
     expectedParentGatewayAddress
   )
-  expect(allowance.eq(Erc20Bridger.MAX_APPROVAL), 'set token allowance failed')
-    .toBe(true)
+  expect(
+    allowance.eq(Erc20Bridger.MAX_APPROVAL),
+    'set token allowance failed'
+  ).toBe(true)
 
   if (isArbitrumNetworkWithCustomFeeToken()) {
     await (
@@ -415,9 +417,10 @@ export const depositToken = async ({
     childErc20Addr,
     childSigner.provider!
   )
-  expect(parentErc20Addr, 'getERC20L1Address/getERC20L2Address failed with proper token address').toBe(
-    parentTokenAddress
-  )
+  expect(
+    parentErc20Addr,
+    'getERC20L1Address/getERC20L2Address failed with proper token address'
+  ).toBe(parentTokenAddress)
 
   const tokenBalOnChildAfter = await childToken.balanceOf(
     destinationAddress || senderAddress
