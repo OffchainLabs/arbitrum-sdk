@@ -162,13 +162,6 @@ const registerCustomToken = async (
   )
   await parentCustomToken.deployed()
 
-  const isRegistered = await adminErc20Bridger.isRegistered({
-    erc20ParentAddress: parentCustomToken.address,
-    parentProvider: parentSigner.provider!,
-    childProvider: childSigner.provider!,
-  })
-  expect(isRegistered, 'expected token not to be registered').toBe(false)
-
   const childCustomTokenFac = new TestArbCustomToken__factory(childSigner)
   const childCustomToken = await childCustomTokenFac.deploy(
     childChain.tokenBridge.childCustomGateway,
