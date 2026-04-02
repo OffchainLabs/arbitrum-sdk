@@ -12,6 +12,7 @@ import { BridgeAbi } from '../../src/abi/Bridge'
 import { InboxAbi } from '../../src/abi/Inbox'
 import { ArbRetryableTxAbi } from '../../src/abi/ArbRetryableTx'
 import { ARB_RETRYABLE_TX_ADDRESS } from '../../src/constants'
+import { ContractCallError } from '../../src/errors'
 import type { ArbitrumProvider } from '../../src/interfaces/provider'
 import type {
   ArbitrumLog,
@@ -348,6 +349,333 @@ describe('ParentToChildMessageReader status', () => {
     if (result.status === ParentToChildMessageStatus.REDEEMED) {
       expect(result.childTxReceipt.transactionHash).toBe(retryTxHash)
     }
+  })
+})
+
+describe('ParentToChildMessageReader getSuccessfulRedeem block scanning', () => {
+  it('finds manual redeem when auto-redeem failed and ticket no longer exists', async () => {
+    // Scenario: auto-redeem failed (status=0), ticket expired,
+    // but there was a successful manual redeem in between
+    const redeemTopic = encodeEventTopic(ArbRetryableTxAbi, 'RedeemScheduled')
+    const manualRetryTxHash = '0x' + 'dd'.repeat(32)
+    const autoRedeemTxHash = '0x' + 'cd'.repeat(32)
+
+    // Build the reader first to get the actual retryableCreationId
+    const readerParams = {
+      chainId: 42161,
+      sender: '0xeA3123E9d9911199a6711321d1277285e6d4F3EC',
+      messageNumber: 0x504cn,
+      parentBaseFee: 0x05e0fc4c58n,
+      messageData: {
+        destAddress: '0x6c411aD3E74De3E7Bd422b94A27770f5B86C623B',
+        l2CallValue: 0x0853a0d2313c0000n,
+        l1Value: 0x0854e8ab1802ca80n,
+        maxSubmissionFee: 0x01270f6740d880n,
+        excessFeeRefundAddress: '0xa2e06c19EE14255889f0Ec0cA37f6D0778D06754',
+        callValueRefundAddress: '0xa2e06c19EE14255889f0Ec0cA37f6D0778D06754',
+        gasLimit: 0x01d566n,
+        maxFeePerGas: 0x11e1a300n,
+        data: '0x',
+      },
+    }
+
+    // Create a temporary reader to get the retryableCreationId
+    const tempReader = new ParentToChildMessageReader(
+      createMockProvider(),
+      readerParams.chainId,
+      readerParams.sender,
+      readerParams.messageNumber,
+      readerParams.parentBaseFee,
+      readerParams.messageData
+    )
+    const ticketId = tempReader.retryableCreationId
+
+    const autoRedeemLog: ArbitrumLog = {
+      address: ARB_RETRYABLE_TX_ADDRESS,
+      topics: [
+        redeemTopic,
+        ticketId,
+        autoRedeemTxHash,
+        '0x0000000000000000000000000000000000000000000000000000000000000000', // sequenceNum=0
+      ],
+      data:
+        '0x' +
+        '0000000000000000000000000000000000000000000000000000000000002710' +
+        '000000000000000000000000a2e06c19ee14255889f0ec0ca37f6d0778d06754' +
+        '00000000000000000000000000000000000000000000000000038d7ea4c68000' +
+        '00000000000000000000000000000000000000000000000000005af3107a4000',
+      blockNumber: 50000100,
+      blockHash: '0x' + 'ee'.repeat(32),
+      transactionHash: '0x' + 'ff'.repeat(32),
+      transactionIndex: 0,
+      logIndex: 2,
+      removed: false,
+    }
+
+    const creationReceipt: ArbitrumTransactionReceipt = {
+      to: null,
+      from: '0xeA3123E9d9911199a6711321d1277285e6d4F3EC',
+      contractAddress: null,
+      transactionHash: '0x' + 'ff'.repeat(32),
+      transactionIndex: 0,
+      blockHash: '0x' + 'ee'.repeat(32),
+      blockNumber: 50000100,
+      status: 1,
+      logs: [autoRedeemLog],
+      gasUsed: 21000n,
+      effectiveGasPrice: 1000000000n,
+      cumulativeGasUsed: 21000n,
+    }
+
+    // Failed auto-redeem receipt (status=0)
+    const failedAutoRedeemReceipt: ArbitrumTransactionReceipt = {
+      to: null,
+      from: '0xeA3123E9d9911199a6711321d1277285e6d4F3EC',
+      contractAddress: null,
+      transactionHash: autoRedeemTxHash,
+      transactionIndex: 0,
+      blockHash: '0x' + '11'.repeat(32),
+      blockNumber: 50000101,
+      status: 0, // failed
+      logs: [],
+      gasUsed: 21000n,
+      effectiveGasPrice: 1000000000n,
+      cumulativeGasUsed: 21000n,
+    }
+
+    // Successful manual redeem receipt
+    const manualRedeemReceipt: ArbitrumTransactionReceipt = {
+      to: null,
+      from: '0xa2e06c19EE14255889f0Ec0cA37f6D0778D06754',
+      contractAddress: null,
+      transactionHash: manualRetryTxHash,
+      transactionIndex: 0,
+      blockHash: '0x' + '22'.repeat(32),
+      blockNumber: 50001000,
+      status: 1, // success
+      logs: [],
+      gasUsed: 21000n,
+      effectiveGasPrice: 1000000000n,
+      cumulativeGasUsed: 21000n,
+    }
+
+    // RedeemScheduled event log from getLogs (the manual redeem)
+    const manualRedeemLog: ArbitrumLog = {
+      address: ARB_RETRYABLE_TX_ADDRESS,
+      topics: [
+        redeemTopic,
+        ticketId, // matches the retryableCreationId computed from the reader params
+        manualRetryTxHash,
+        '0x0000000000000000000000000000000000000000000000000000000000000001', // sequenceNum=1
+      ],
+      data:
+        '0x' +
+        '0000000000000000000000000000000000000000000000000000000000002710' +
+        '000000000000000000000000a2e06c19ee14255889f0ec0ca37f6d0778d06754' +
+        '00000000000000000000000000000000000000000000000000038d7ea4c68000' +
+        '00000000000000000000000000000000000000000000000000005af3107a4000',
+      blockNumber: 50001000,
+      blockHash: '0x' + '22'.repeat(32),
+      transactionHash: '0x' + '33'.repeat(32),
+      transactionIndex: 0,
+      logIndex: 0,
+      removed: false,
+    }
+
+    // Mock getTransactionReceipt:
+    //  1st call: creation receipt
+    //  2nd call: failed auto-redeem receipt
+    //  3rd call: successful manual redeem receipt
+    const getTransactionReceipt = vi
+      .fn()
+      .mockResolvedValueOnce(creationReceipt) // getRetryableCreationReceipt
+      .mockResolvedValueOnce(failedAutoRedeemReceipt) // getAutoRedeemAttempt
+      .mockResolvedValueOnce(manualRedeemReceipt) // manual redeem lookup
+
+    // Mock call for getTimeout -> reverts (ticket doesn't exist anymore)
+    const callMock = vi.fn().mockRejectedValue(
+      new ContractCallError('NoTicketWithID', { isCallException: true })
+    )
+
+    // Mock getBlock for the creation receipt block
+    const getBlock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        hash: '0x' + 'ee'.repeat(32),
+        parentHash: '0x' + '00'.repeat(32),
+        number: 50000100,
+        timestamp: 1000000,
+        nonce: '0x0',
+        difficulty: 0n,
+        gasLimit: 0n,
+        gasUsed: 0n,
+        miner: '0x' + '00'.repeat(20),
+        baseFeePerGas: null,
+        transactions: [],
+      })
+      .mockResolvedValueOnce({
+        hash: '0x' + '44'.repeat(32),
+        parentHash: '0x' + '00'.repeat(32),
+        number: 50001100,
+        timestamp: 1000000 + 86400, // 1 day later - within 7 day window
+        nonce: '0x0',
+        difficulty: 0n,
+        gasLimit: 0n,
+        gasUsed: 0n,
+        miner: '0x' + '00'.repeat(20),
+        baseFeePerGas: null,
+        transactions: [],
+      })
+
+    const mockProvider = createMockProvider({
+      getTransactionReceipt,
+      call: callMock,
+      getBlock,
+      getBlockNumber: vi.fn().mockResolvedValue(50001100),
+      getLogs: vi.fn().mockResolvedValue([manualRedeemLog]),
+    })
+
+    const reader = new ParentToChildMessageReader(
+      mockProvider,
+      readerParams.chainId,
+      readerParams.sender,
+      readerParams.messageNumber,
+      readerParams.parentBaseFee,
+      readerParams.messageData
+    )
+
+    const result = await reader.getSuccessfulRedeem()
+    expect(result.status).toBe(ParentToChildMessageStatus.REDEEMED)
+    if (result.status === ParentToChildMessageStatus.REDEEMED) {
+      expect(result.childTxReceipt.transactionHash).toBe(manualRetryTxHash)
+    }
+  })
+
+  it('returns EXPIRED when retryable expired with no successful redeem', async () => {
+    const redeemTopic = encodeEventTopic(ArbRetryableTxAbi, 'RedeemScheduled')
+    const autoRedeemTxHash = '0x' + 'cd'.repeat(32)
+
+    const autoRedeemLog: ArbitrumLog = {
+      address: ARB_RETRYABLE_TX_ADDRESS,
+      topics: [
+        redeemTopic,
+        '0x' + 'ab'.repeat(32),
+        autoRedeemTxHash,
+        '0x0000000000000000000000000000000000000000000000000000000000000000',
+      ],
+      data:
+        '0x' +
+        '0000000000000000000000000000000000000000000000000000000000002710' +
+        '000000000000000000000000a2e06c19ee14255889f0ec0ca37f6d0778d06754' +
+        '00000000000000000000000000000000000000000000000000038d7ea4c68000' +
+        '00000000000000000000000000000000000000000000000000005af3107a4000',
+      blockNumber: 50000100,
+      blockHash: '0x' + 'ee'.repeat(32),
+      transactionHash: '0x' + 'ff'.repeat(32),
+      transactionIndex: 0,
+      logIndex: 2,
+      removed: false,
+    }
+
+    const creationReceipt: ArbitrumTransactionReceipt = {
+      to: null,
+      from: '0xeA3123E9d9911199a6711321d1277285e6d4F3EC',
+      contractAddress: null,
+      transactionHash: '0x' + 'ff'.repeat(32),
+      transactionIndex: 0,
+      blockHash: '0x' + 'ee'.repeat(32),
+      blockNumber: 50000100,
+      status: 1,
+      logs: [autoRedeemLog],
+      gasUsed: 21000n,
+      effectiveGasPrice: 1000000000n,
+      cumulativeGasUsed: 21000n,
+    }
+
+    const failedAutoRedeemReceipt: ArbitrumTransactionReceipt = {
+      to: null,
+      from: '0xeA3123E9d9911199a6711321d1277285e6d4F3EC',
+      contractAddress: null,
+      transactionHash: autoRedeemTxHash,
+      transactionIndex: 0,
+      blockHash: '0x' + '11'.repeat(32),
+      blockNumber: 50000101,
+      status: 0,
+      logs: [],
+      gasUsed: 21000n,
+      effectiveGasPrice: 1000000000n,
+      cumulativeGasUsed: 21000n,
+    }
+
+    const getTransactionReceipt = vi
+      .fn()
+      .mockResolvedValueOnce(creationReceipt)
+      .mockResolvedValueOnce(failedAutoRedeemReceipt)
+
+    const callMock = vi.fn().mockRejectedValue(
+      new ContractCallError('NoTicketWithID', { isCallException: true })
+    )
+
+    // Creation block timestamp = 1000000, timeout = 1000000 + 7*24*60*60 = 1604800
+    // End block timestamp = 1604801 (past timeout)
+    const getBlock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        hash: '0x' + 'ee'.repeat(32),
+        parentHash: '0x' + '00'.repeat(32),
+        number: 50000100,
+        timestamp: 1000000,
+        nonce: '0x0',
+        difficulty: 0n,
+        gasLimit: 0n,
+        gasUsed: 0n,
+        miner: '0x' + '00'.repeat(20),
+        baseFeePerGas: null,
+        transactions: [],
+      })
+      .mockResolvedValueOnce({
+        hash: '0x' + '55'.repeat(32),
+        parentHash: '0x' + '00'.repeat(32),
+        number: 50100000,
+        timestamp: 1000000 + 7 * 24 * 60 * 60 + 1, // past 7-day timeout
+        nonce: '0x0',
+        difficulty: 0n,
+        gasLimit: 0n,
+        gasUsed: 0n,
+        miner: '0x' + '00'.repeat(20),
+        baseFeePerGas: null,
+        transactions: [],
+      })
+
+    const mockProvider = createMockProvider({
+      getTransactionReceipt,
+      call: callMock,
+      getBlock,
+      getBlockNumber: vi.fn().mockResolvedValue(50100000),
+      getLogs: vi.fn().mockResolvedValue([]), // no manual redeems found
+    })
+
+    const reader = new ParentToChildMessageReader(
+      mockProvider,
+      42161,
+      '0xeA3123E9d9911199a6711321d1277285e6d4F3EC',
+      0x504cn,
+      0x05e0fc4c58n,
+      {
+        destAddress: '0x6c411aD3E74De3E7Bd422b94A27770f5B86C623B',
+        l2CallValue: 0x0853a0d2313c0000n,
+        l1Value: 0x0854e8ab1802ca80n,
+        maxSubmissionFee: 0x01270f6740d880n,
+        excessFeeRefundAddress: '0xa2e06c19EE14255889f0Ec0cA37f6D0778D06754',
+        callValueRefundAddress: '0xa2e06c19EE14255889f0Ec0cA37f6D0778D06754',
+        gasLimit: 0x01d566n,
+        maxFeePerGas: 0x11e1a300n,
+        data: '0x',
+      }
+    )
+
+    const result = await reader.getSuccessfulRedeem()
+    expect(result.status).toBe(ParentToChildMessageStatus.EXPIRED)
   })
 })
 

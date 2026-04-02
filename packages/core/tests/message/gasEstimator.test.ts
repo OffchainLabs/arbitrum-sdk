@@ -4,6 +4,7 @@ import {
   estimateMaxFeePerGas,
   estimateRetryableTicketGasLimit,
   estimateAll,
+  populateFunctionParams,
 } from '../../src/message/gasEstimator'
 import { getArbitrumNetwork } from '../../src/networks'
 import type { ArbitrumProvider } from '../../src/interfaces/provider'
@@ -249,6 +250,221 @@ describe('Gas Estimator', () => {
 
       // Should use the min because estimated (100) < min (275000)
       expect(result.gasLimit).toBe(275000n)
+    })
+  })
+
+  describe('populateFunctionParams', () => {
+    // ABI to encode a RetryableData error as if it were a function call
+    // (same parameter shape, so the selector matches)
+    const retryableErrorAbi = [
+      {
+        type: 'function',
+        name: 'RetryableData',
+        inputs: [
+          { name: 'from', type: 'address' },
+          { name: 'to', type: 'address' },
+          { name: 'l2CallValue', type: 'uint256' },
+          { name: 'deposit', type: 'uint256' },
+          { name: 'maxSubmissionCost', type: 'uint256' },
+          { name: 'excessFeeRefundAddress', type: 'address' },
+          { name: 'callValueRefundAddress', type: 'address' },
+          { name: 'gasLimit', type: 'uint256' },
+          { name: 'maxFeePerGas', type: 'uint256' },
+          { name: 'data', type: 'bytes' },
+        ],
+        outputs: [],
+        stateMutability: 'view',
+      },
+    ] as const
+
+    const sampleFrom = '0x1111111111111111111111111111111111111111'
+    const sampleTo = '0x2222222222222222222222222222222222222222'
+    const routerAddress = '0x72Ce9c846789fdB6fC1f34aC4AD25Dd9ef7031ef'
+
+    it('performs two-pass gas estimation: dummy call -> parse revert -> estimate -> real call', async () => {
+      // Build a mock RetryableData revert payload
+      const retryableDataHex = encodeFunctionData(
+        retryableErrorAbi as unknown as readonly unknown[],
+        'RetryableData',
+        [
+          sampleFrom,
+          sampleTo,
+          0n, // l2CallValue
+          2000000n, // deposit
+          300000n, // maxSubmissionCost
+          sampleFrom, // excessFeeRefundAddress
+          sampleFrom, // callValueRefundAddress
+          500000n, // gasLimit
+          100000000n, // maxFeePerGas
+          '0xdeadbeef', // data
+        ]
+      )
+
+      const submissionFee = 10000n
+
+      // Parent provider: first call returns RetryableData revert, subsequent calls return submission fee
+      const parentCallMock = vi.fn().mockImplementation(() => {
+        // Return the retryable data hex (simulating the revert data being returned as the response)
+        return Promise.resolve(retryableDataHex)
+      })
+
+      // For submission fee, we also use call on the parent
+      // We need to differentiate: first call is the dummy tx call, second is the inbox call
+      let callCount = 0
+      parentCallMock.mockImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          // First call: dummy tx call returning retryable data
+          return Promise.resolve(retryableDataHex)
+        }
+        // Subsequent calls: submission fee from inbox
+        return Promise.resolve('0x' + submissionFee.toString(16).padStart(64, '0'))
+      })
+
+      const parentProvider = createMockProvider({
+        call: parentCallMock,
+      })
+
+      const childProvider = createMockProvider({
+        getFeeData: vi.fn().mockResolvedValue({
+          gasPrice: 1000000000n, // 1 gwei
+          maxFeePerGas: null,
+          maxPriorityFeePerGas: null,
+        }),
+        estimateGas: vi.fn().mockResolvedValue(100000n),
+      })
+
+      // dataFunc: takes gas params and returns a tx request
+      let dataFuncCallCount = 0
+      const dataFunc = vi.fn().mockImplementation(
+        (params: { gasLimit: bigint; maxFeePerGas: bigint; maxSubmissionCost: bigint }) => {
+          dataFuncCallCount++
+          return {
+            to: routerAddress,
+            data: '0x' + 'ab'.repeat(32),
+            value: params.gasLimit * params.maxFeePerGas + params.maxSubmissionCost,
+            from: sampleFrom,
+          }
+        }
+      )
+
+      const result = await populateFunctionParams(
+        dataFunc,
+        parentProvider,
+        childProvider,
+        network
+      )
+
+      // dataFunc should have been called twice: once with dummy params, once with real params
+      expect(dataFunc).toHaveBeenCalledTimes(2)
+
+      // First call should use error-triggering params
+      const firstCallArgs = dataFunc.mock.calls[0][0]
+      expect(firstCallArgs.gasLimit).toBe(1n)
+      expect(firstCallArgs.maxFeePerGas).toBe(1n)
+
+      // Second call should use real estimated params
+      const secondCallArgs = dataFunc.mock.calls[1][0]
+      expect(secondCallArgs.gasLimit).toBeTypeOf('bigint')
+      expect(secondCallArgs.maxFeePerGas).toBeTypeOf('bigint')
+      expect(secondCallArgs.maxSubmissionCost).toBeTypeOf('bigint')
+
+      // Result should have estimates, retryable data, and final tx data
+      expect(result.estimates).toBeDefined()
+      expect(result.estimates.gasLimit).toBeTypeOf('bigint')
+      expect(result.estimates.maxFeePerGas).toBeTypeOf('bigint')
+      expect(result.estimates.maxSubmissionCost).toBeTypeOf('bigint')
+      expect(result.estimates.deposit).toBeTypeOf('bigint')
+      expect(result.retryable).toBeDefined()
+      expect(result.retryable.from.toLowerCase()).toBe(sampleFrom.toLowerCase())
+      expect(result.data).toBeDefined()
+      expect(result.to).toBe(routerAddress)
+      expect(result.value).toBeTypeOf('bigint')
+    })
+
+    it('parses retryable data from error when call throws', async () => {
+      const retryableDataHex = encodeFunctionData(
+        retryableErrorAbi as unknown as readonly unknown[],
+        'RetryableData',
+        [
+          sampleFrom,
+          sampleTo,
+          0n,
+          2000000n,
+          300000n,
+          sampleFrom,
+          sampleFrom,
+          500000n,
+          100000000n,
+          '0x',
+        ]
+      )
+
+      const submissionFee = 10000n
+
+      let callCount = 0
+      const parentCallMock = vi.fn().mockImplementation(() => {
+        callCount++
+        if (callCount === 1) {
+          // First call throws with retryable data as data property
+          const err = new Error('execution reverted') as Error & { data?: string }
+          err.data = retryableDataHex
+          return Promise.reject(err)
+        }
+        return Promise.resolve('0x' + submissionFee.toString(16).padStart(64, '0'))
+      })
+
+      const parentProvider = createMockProvider({
+        call: parentCallMock,
+      })
+
+      const childProvider = createMockProvider({
+        getFeeData: vi.fn().mockResolvedValue({
+          gasPrice: 1000000000n,
+          maxFeePerGas: null,
+          maxPriorityFeePerGas: null,
+        }),
+        estimateGas: vi.fn().mockResolvedValue(100000n),
+      })
+
+      const dataFunc = vi.fn().mockImplementation(
+        (params: { gasLimit: bigint; maxFeePerGas: bigint; maxSubmissionCost: bigint }) => ({
+          to: routerAddress,
+          data: '0x' + 'ab'.repeat(32),
+          value: params.gasLimit * params.maxFeePerGas + params.maxSubmissionCost,
+          from: sampleFrom,
+        })
+      )
+
+      const result = await populateFunctionParams(
+        dataFunc,
+        parentProvider,
+        childProvider,
+        network
+      )
+
+      expect(result.retryable).toBeDefined()
+      expect(result.retryable.from.toLowerCase()).toBe(sampleFrom.toLowerCase())
+      expect(result.estimates).toBeDefined()
+    })
+
+    it('throws when no retryable data can be parsed', async () => {
+      const parentProvider = createMockProvider({
+        call: vi.fn().mockResolvedValue('0xdeadbeef'),
+      })
+
+      const childProvider = createMockProvider()
+
+      const dataFunc = vi.fn().mockImplementation(() => ({
+        to: routerAddress,
+        data: '0xdeadbeef',
+        value: 0n,
+        from: sampleFrom,
+      }))
+
+      await expect(
+        populateFunctionParams(dataFunc, parentProvider, childProvider, network)
+      ).rejects.toThrow()
     })
   })
 })

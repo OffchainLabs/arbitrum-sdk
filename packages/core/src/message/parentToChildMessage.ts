@@ -17,9 +17,10 @@ import { SubmitRetryableMessageDataParser } from './messageDataParser'
 import { getMessageEvents } from './parentTransaction'
 import { getRedeemScheduledEvents } from '../events/parsing'
 import { ArbitrumContract } from '../contracts/Contract'
+import { EventFetcher } from '../utils/eventFetcher'
 import { ArbRetryableTxAbi } from '../abi/ArbRetryableTx'
 import { ARB_RETRYABLE_TX_ADDRESS, SEVEN_DAYS_IN_SECONDS } from '../constants'
-import { ArbSdkError } from '../errors'
+import { ArbSdkError, ContractCallError } from '../errors'
 import { isDefined } from '../utils/lib'
 
 /**
@@ -112,6 +113,10 @@ export class ParentToChildMessageReader {
 
   /**
    * Receipt for the successful child chain transaction created by this message.
+   *
+   * Full implementation that scans blocks for RedeemScheduled events
+   * across the ticket's full lifetime, including handling LifetimeExtended events.
+   *
    * @returns The status and optionally the childTxReceipt for redeemed messages.
    */
   public async getSuccessfulRedeem(): Promise<ParentToChildMessageWaitForStatusResult> {
@@ -141,12 +146,125 @@ export class ParentToChildMessageReader {
       }
     }
 
-    // Retryable doesn't exist and wasn't auto-redeemed: search for manual redeem
-    // For simplicity in the core library, we look for RedeemScheduled events
-    // in the creation receipt block range. A full search across the entire
-    // lifetime would need the EventFetcher + block iteration from the SDK.
-    // For now, if the auto redeem didn't succeed and the ticket no longer exists,
-    // we report EXPIRED.
+    // Retryable doesn't exist and wasn't auto-redeemed successfully.
+    // Scan blocks from creation to timeout for manual RedeemScheduled events.
+    return this.scanForManualRedeem(creationReceipt)
+  }
+
+  /**
+   * Scan blocks from creation through the ticket's lifetime looking for
+   * a successful manual redeem. Handles LifetimeExtended events that push
+   * out the timeout window.
+   *
+   * Follows the same algorithm as the old SDK's getSuccessfulRedeem.
+   */
+  private async scanForManualRedeem(
+    creationReceipt: ArbitrumTransactionReceipt
+  ): Promise<ParentToChildMessageWaitForStatusResult> {
+    const eventFetcher = new EventFetcher(this.childProvider)
+
+    let increment = 1000
+    let fromBlock = await this.childProvider.getBlock(creationReceipt.blockNumber)
+    if (!fromBlock) {
+      return { status: ParentToChildMessageStatus.EXPIRED }
+    }
+
+    let timeout = fromBlock.timestamp + SEVEN_DAYS_IN_SECONDS
+    const queriedRange: { from: number; to: number }[] = []
+    const maxBlock = await this.childProvider.getBlockNumber()
+
+    while (fromBlock.number < maxBlock) {
+      const toBlockNumber = Math.min(fromBlock.number + increment, maxBlock)
+      const outerBlockRange = { from: fromBlock.number, to: toBlockNumber }
+      queriedRange.push(outerBlockRange)
+
+      // Search for RedeemScheduled events in this block range
+      const redeemEvents = await eventFetcher.getEvents(
+        ArbRetryableTxAbi,
+        'RedeemScheduled',
+        {
+          fromBlock: outerBlockRange.from,
+          toBlock: outerBlockRange.to,
+          address: ARB_RETRYABLE_TX_ADDRESS,
+        }
+      )
+
+      // Filter events for this specific retryable ticket
+      const relevantRedeemEvents = redeemEvents.filter(
+        e => (e.args.ticketId as string) === this.retryableCreationId
+      )
+
+      // Check if any of these redeems were successful
+      const receipts = await Promise.all(
+        relevantRedeemEvents.map(e =>
+          this.childProvider.getTransactionReceipt(e.args.retryTxHash as string)
+        )
+      )
+      const successfulRedeems = receipts.filter(
+        r => isDefined(r) && r.status === 1
+      ) as ArbitrumTransactionReceipt[]
+
+      if (successfulRedeems.length > 1) {
+        throw new ArbSdkError(
+          `Unexpected number of successful redeems. Expected only one redeem for ticket ${this.retryableCreationId}, but found ${successfulRedeems.length}.`
+        )
+      }
+      if (successfulRedeems.length === 1) {
+        return {
+          childTxReceipt: successfulRedeems[0],
+          status: ParentToChildMessageStatus.REDEEMED,
+        }
+      }
+
+      const toBlock = await this.childProvider.getBlock(toBlockNumber)
+      if (!toBlock) break
+
+      if (toBlock.timestamp > timeout) {
+        // Check for LifetimeExtended events in the queried ranges
+        while (queriedRange.length > 0) {
+          const blockRange = queriedRange.shift()!
+          const keepaliveEvents = await eventFetcher.getEvents(
+            ArbRetryableTxAbi,
+            'LifetimeExtended',
+            {
+              fromBlock: blockRange.from,
+              toBlock: blockRange.to,
+              address: ARB_RETRYABLE_TX_ADDRESS,
+            }
+          )
+
+          // Filter for this ticket's keepalive events
+          const relevantKeepalives = keepaliveEvents.filter(
+            e => (e.args.ticketId as string) === this.retryableCreationId
+          )
+
+          if (relevantKeepalives.length > 0) {
+            // Update timeout to the latest extended timeout
+            const newTimeouts = relevantKeepalives.map(
+              e => Number(e.args.newTimeout as bigint)
+            )
+            timeout = Math.max(...newTimeouts)
+            break
+          }
+        }
+
+        // If still past timeout after checking keepalives, the ticket expired
+        if (toBlock.timestamp > timeout) break
+
+        // Clear queried ranges except the last one (may contain more keepalives)
+        while (queriedRange.length > 1) queriedRange.shift()
+      }
+
+      // Adjust increment to cover approximately 1 day per query
+      const processedSeconds = toBlock.timestamp - fromBlock.timestamp
+      if (processedSeconds !== 0) {
+        increment = Math.ceil((increment * 86400) / processedSeconds)
+      }
+
+      fromBlock = toBlock
+    }
+
+    // If we searched the entire lifetime without finding a redeem, it expired
     return { status: ParentToChildMessageStatus.EXPIRED }
   }
 
@@ -167,9 +285,12 @@ export class ParentToChildMessageReader {
       const latestBlock = await this.childProvider.getBlock('latest')
       if (!latestBlock) return false
       return BigInt(latestBlock.timestamp) <= timeoutTimestamp
-    } catch {
+    } catch (err) {
       // NoTicketWithID error means ticket doesn't exist
-      return false
+      if (err instanceof ContractCallError && err.isCallException) {
+        return false
+      }
+      throw err
     }
   }
 

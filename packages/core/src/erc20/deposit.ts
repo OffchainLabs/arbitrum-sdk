@@ -15,6 +15,7 @@ import {
 } from '../networks'
 import type { TransactionRequestData } from '../interfaces/types'
 import { getParentGatewayAddress } from './gateway'
+import { isWethGateway } from './wethDetection'
 import {
   estimateAll,
   type GasOverrides,
@@ -234,8 +235,13 @@ export async function getErc20DepositRequest(
     }
   }
 
+  // The WETH gateway is the only deposit that requires callvalue in the child
+  // user-tx (i.e., the recently un-wrapped ETH). Check if this is a WETH deposit
+  // and include the callvalue for the gas estimate query if so.
+  const isWeth = await isWethGateway(parentGatewayAddress, parentProvider)
+  const l2CallValue = isWeth ? amount : 0n
+
   // Estimate gas for the retryable
-  // We pass empty data '0x' for L2 call since ERC20 deposits don't execute on L2
   const estimates = await estimateAll(
     parentProvider,
     childProvider,
@@ -243,7 +249,7 @@ export async function getErc20DepositRequest(
     {
       from,
       to: destinationAddress,
-      l2CallValue: 0n,
+      l2CallValue,
       excessFeeRefundAddress,
       callValueRefundAddress,
       data: '0x',

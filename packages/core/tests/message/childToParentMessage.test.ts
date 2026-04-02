@@ -9,6 +9,9 @@ import { ChildToParentMessageStatus } from '../../src/message/types'
 import { encodeEventTopic, encodeFunctionData } from '../../src/encoding/abi'
 import { ArbSysAbi } from '../../src/abi/ArbSys'
 import { OutboxAbi } from '../../src/abi/Outbox'
+import { RollupUserLogicAbi } from '../../src/abi/RollupUserLogic'
+import { NodeInterfaceAbi } from '../../src/abi/NodeInterface'
+import { ContractCallError } from '../../src/errors'
 import type { ArbitrumProvider } from '../../src/interfaces/provider'
 import type {
   ArbitrumLog,
@@ -184,7 +187,7 @@ describe('ChildToParentMessageReader status', () => {
     expect(status).toBe(ChildToParentMessageStatus.EXECUTED)
   })
 
-  it('returns UNCONFIRMED when Outbox.isSpent returns false', async () => {
+  it('returns UNCONFIRMED when Outbox.isSpent returns false and no childProvider given', async () => {
     // ABI-encoded `false`
     const falseEncoded =
       '0x0000000000000000000000000000000000000000000000000000000000000000'
@@ -208,6 +211,191 @@ describe('ChildToParentMessageReader status', () => {
     const reader = new ChildToParentMessageReader(mockProvider, event)
     const status = await reader.status(testNetwork)
     expect(status).toBe(ChildToParentMessageStatus.UNCONFIRMED)
+  })
+
+  it('returns CONFIRMED when rollup sendCount > event position and not spent', async () => {
+    const blockHash = '0x' + 'ab'.repeat(32)
+    const sendRoot = '0x' + 'cd'.repeat(32)
+
+    // Build the call mock that handles multiple contract calls
+    const callMock = vi.fn()
+    callMock.mockImplementation(async (request: { to: string; data: string }) => {
+      const data = request.data
+
+      // Outbox.isSpent selector (0x5a129efe)
+      if (data.startsWith('0x5a129efe')) {
+        // Not spent -> false
+        return '0x0000000000000000000000000000000000000000000000000000000000000000'
+      }
+      // extraChallengeTimeBlocks selector (0x771b2f97) -> classic rollup
+      if (data.startsWith('0x771b2f97')) {
+        return '0x0000000000000000000000000000000000000000000000000000000000000064'
+      }
+      // latestConfirmed selector (0x65f7f80d)
+      if (data.startsWith('0x65f7f80d')) {
+        return '0x0000000000000000000000000000000000000000000000000000000000000005'
+      }
+      // getNode selector (0x92c8134c)
+      if (data.startsWith('0x92c8134c')) {
+        return (
+          '0x' +
+          '00'.repeat(32) + // stateHash
+          '00'.repeat(32) + // challengeHash
+          '00'.repeat(32) + // confirmData
+          '0000000000000000000000000000000000000000000000000000000000000001' + // prevNum
+          '00000000000000000000000000000000000000000000000000000000000003e8' + // deadlineBlock
+          '00'.repeat(32) +
+          '00'.repeat(32) +
+          '00'.repeat(32) +
+          '00'.repeat(32) +
+          '00'.repeat(32) +
+          '00000000000000000000000000000000000000000000000000000000000003e8' + // createdAtBlock = 1000
+          '00'.repeat(32) // nodeHash
+        )
+      }
+      return '0x'
+    })
+
+    // NodeCreated event log
+    const nodeCreatedTopic = encodeEventTopic(RollupUserLogicAbi, 'NodeCreated')
+    const parentProvider = createMockProvider({
+      call: callMock,
+      getLogs: vi.fn().mockResolvedValue([
+        {
+          address: testNetwork.ethBridge.rollup,
+          topics: [
+            nodeCreatedTopic,
+            '0x0000000000000000000000000000000000000000000000000000000000000005',
+            '0x' + '00'.repeat(32),
+            '0x' + '00'.repeat(32),
+          ],
+          data:
+            '0x' +
+            '00'.repeat(32) + // executionHash
+            '00'.repeat(32) + '00'.repeat(32) + // beforeState bytes32Vals
+            '00'.repeat(32) + '00'.repeat(32) + // beforeState u64Vals
+            '00'.repeat(32) + // beforeState machineStatus
+            blockHash.slice(2) + sendRoot.slice(2) + // afterState bytes32Vals
+            '00'.repeat(32) + '00'.repeat(32) + // afterState u64Vals
+            '00'.repeat(32) + // afterState machineStatus
+            '00'.repeat(32) + // numBlocks
+            '00'.repeat(32) + '00'.repeat(32) + '00'.repeat(32), // remaining
+          blockNumber: 1000,
+          blockHash: '0x' + 'ff'.repeat(32),
+          transactionHash: '0x' + 'ee'.repeat(32),
+          transactionIndex: 0,
+          logIndex: 0,
+          removed: false,
+        },
+      ]),
+    })
+
+    // Child provider returns block with sendCount > event.position (0x42 = 66)
+    const childProvider = createMockProvider({
+      getBlock: vi.fn().mockResolvedValue({
+        hash: blockHash,
+        parentHash: '0x' + '00'.repeat(32),
+        number: 50000,
+        timestamp: 1000000,
+        nonce: '0x0',
+        difficulty: 0n,
+        gasLimit: 0n,
+        gasUsed: 0n,
+        miner: '0x' + '00'.repeat(20),
+        baseFeePerGas: null,
+        transactions: [],
+        sendRoot: sendRoot,
+        sendCount: '0x100', // 256 > 66
+      }),
+    })
+
+    const event: ChildToParentEventData = {
+      caller: '0xB2e06c19eE14255889f0eC0ca37F6d0778D06754',
+      destination: '0xa2e06c19EE14255889f0Ec0cA37f6D0778D06754',
+      hash: 0x1234n,
+      position: 0x42n,
+      arbBlockNum: 0xabcdefn,
+      ethBlockNum: 0xfedcban,
+      timestamp: 0x63ffffffn,
+      callvalue: 1000000000000000000n,
+      data: '0xdeadbeef',
+    }
+
+    const reader = new ChildToParentMessageReader(parentProvider, event)
+    const status = await reader.status(testNetwork, childProvider)
+    expect(status).toBe(ChildToParentMessageStatus.CONFIRMED)
+  })
+
+  it('returns EXECUTED when Outbox.isSpent is true even with childProvider', async () => {
+    const callMock = vi.fn()
+    callMock.mockImplementation(async (request: { to: string; data: string }) => {
+      // Outbox.isSpent -> true
+      if (request.data.startsWith('0x5a129efe')) {
+        return '0x0000000000000000000000000000000000000000000000000000000000000001'
+      }
+      return '0x'
+    })
+
+    const parentProvider = createMockProvider({ call: callMock })
+    const childProvider = createMockProvider()
+
+    const event: ChildToParentEventData = {
+      caller: '0xB2e06c19eE14255889f0eC0ca37F6d0778D06754',
+      destination: '0xa2e06c19EE14255889f0Ec0cA37f6D0778D06754',
+      hash: 0x1234n,
+      position: 0x42n,
+      arbBlockNum: 0xabcdefn,
+      ethBlockNum: 0xfedcban,
+      timestamp: 0x63ffffffn,
+      callvalue: 1000000000000000000n,
+      data: '0xdeadbeef',
+    }
+
+    const reader = new ChildToParentMessageReader(parentProvider, event)
+    const status = await reader.status(testNetwork, childProvider)
+    expect(status).toBe(ChildToParentMessageStatus.EXECUTED)
+  })
+})
+
+describe('ChildToParentMessageReader getOutboxProof', () => {
+  it('calls NodeInterface.constructOutboxProof and returns proof array', async () => {
+    const proofHash1 = '0x' + 'aa'.repeat(32)
+    const proofHash2 = '0x' + 'bb'.repeat(32)
+
+    const event: ChildToParentEventData = {
+      caller: '0xB2e06c19eE14255889f0eC0ca37F6d0778D06754',
+      destination: '0xa2e06c19EE14255889f0Ec0cA37f6D0778D06754',
+      hash: 0x1234n,
+      position: 0x42n,
+      arbBlockNum: 0xabcdefn,
+      ethBlockNum: 0xfedcban,
+      timestamp: 0x63ffffffn,
+      callvalue: 1000000000000000000n,
+      data: '0xdeadbeef',
+    }
+
+    // Mock child provider that returns constructOutboxProof result
+    // The function returns (bytes32 send, bytes32 root, bytes32[] proof)
+    // We need to encode: send (bytes32), root (bytes32), proof (dynamic bytes32 array)
+    const constructOutboxProofResult =
+      '0x' +
+      '00'.repeat(32) + // send
+      '00'.repeat(32) + // root
+      '0000000000000000000000000000000000000000000000000000000000000060' + // offset to proof array
+      '0000000000000000000000000000000000000000000000000000000000000002' + // proof length = 2
+      proofHash1.slice(2) + // proof[0]
+      proofHash2.slice(2) // proof[1]
+
+    const childProvider = createMockProvider({
+      call: vi.fn().mockResolvedValue(constructOutboxProofResult),
+    })
+
+    const parentProvider = createMockProvider()
+    const reader = new ChildToParentMessageReader(parentProvider, event)
+    const proof = await reader.getOutboxProof(childProvider, 256n)
+    expect(proof).toHaveLength(2)
+    expect(proof[0]).toBe(proofHash1)
+    expect(proof[1]).toBe(proofHash2)
   })
 })
 

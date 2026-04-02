@@ -10,6 +10,10 @@ import { NodeInterfaceAbi } from '../abi/NodeInterface'
 import { NODE_INTERFACE_ADDRESS } from '../constants'
 import type { ArbitrumProvider } from '../interfaces/provider'
 import type { ArbitrumNetwork } from '../networks'
+import { RetryableDataTools } from '../retryableData'
+import type { RetryableData } from '../retryableData'
+import { ArbSdkError } from '../errors'
+import { isDefined } from '../utils/lib'
 
 /**
  * Per-field override options for gas estimation.
@@ -214,5 +218,136 @@ export async function estimateAll(
     maxSubmissionCost: maxSubmissionCostResult,
     maxFeePerGas: maxFeePerGasResult,
     deposit,
+  }
+}
+
+/**
+ * Gas parameters passed to the dataFunc callback.
+ */
+export interface PopulateFunctionGasParams {
+  gasLimit: bigint
+  maxFeePerGas: bigint
+  maxSubmissionCost: bigint
+}
+
+/**
+ * Transaction request returned by the dataFunc callback.
+ */
+export interface PopulateFunctionTxRequest {
+  to: string
+  data: string
+  value: bigint
+  from: string
+}
+
+/**
+ * Result of populateFunctionParams.
+ */
+export interface PopulateFunctionResult {
+  /** Final gas estimates */
+  estimates: GasEstimateResult
+  /** Parsed retryable data from the error-triggering call */
+  retryable: RetryableData
+  /** Final calldata with real gas params */
+  data: string
+  /** Target contract address */
+  to: string
+  /** Value to send with the transaction */
+  value: bigint
+}
+
+/**
+ * Two-pass gas estimation for Parent->Child messages.
+ *
+ * Pattern:
+ * 1. Call `dataFunc` with dummy gas params (gasLimit=1, maxFeePerGas=1) to
+ *    produce a transaction that will trigger a RetryableData revert.
+ * 2. Execute the transaction via eth_call on the parent chain.
+ *    Parse the RetryableData from the revert (or the response).
+ * 3. Use the parsed retryable data to estimate real gas parameters.
+ * 4. Call `dataFunc` again with the real gas parameters.
+ * 5. Return the final transaction data and gas estimates.
+ *
+ * @param dataFunc - Function that takes gas params and returns a tx request.
+ *   Called twice: once with dummy params to trigger revert, once with real params.
+ * @param parentProvider - Provider for the parent chain
+ * @param childProvider - Provider for the child chain
+ * @param network - The Arbitrum network configuration
+ * @param gasOverrides - Optional gas overrides
+ */
+export async function populateFunctionParams(
+  dataFunc: (params: PopulateFunctionGasParams) => PopulateFunctionTxRequest,
+  parentProvider: ArbitrumProvider,
+  childProvider: ArbitrumProvider,
+  network: ArbitrumNetwork,
+  gasOverrides?: GasOverrides
+): Promise<PopulateFunctionResult> {
+  // Step 1: Call dataFunc with error-triggering dummy params
+  const {
+    data: nullData,
+    to,
+    value,
+    from,
+  } = dataFunc({
+    gasLimit: RetryableDataTools.ErrorTriggeringParams.gasLimit,
+    maxFeePerGas: RetryableDataTools.ErrorTriggeringParams.maxFeePerGas,
+    maxSubmissionCost: 1n,
+  })
+
+  // Step 2: Execute the call to trigger a RetryableData revert
+  let retryable: RetryableData | null
+  try {
+    const res = await parentProvider.call({
+      to,
+      data: nullData,
+    })
+    retryable = RetryableDataTools.tryParseError(res)
+    if (!isDefined(retryable)) {
+      throw new ArbSdkError(`No retryable data found in response: ${res}`)
+    }
+  } catch (err) {
+    // Try to parse retryable data from the error
+    retryable = RetryableDataTools.tryParseError(err as Error)
+    if (!isDefined(retryable)) {
+      throw new ArbSdkError(
+        'No retryable data found in error',
+        err as Error
+      )
+    }
+  }
+
+  // Step 3: Estimate real gas parameters using the parsed retryable data
+  const estimates = await estimateAll(
+    parentProvider,
+    childProvider,
+    network,
+    {
+      from: retryable.from,
+      to: retryable.to,
+      data: retryable.data,
+      l2CallValue: retryable.l2CallValue,
+      excessFeeRefundAddress: retryable.excessFeeRefundAddress,
+      callValueRefundAddress: retryable.callValueRefundAddress,
+    },
+    gasOverrides
+  )
+
+  // Step 4: Call dataFunc again with real gas parameters
+  const {
+    data: realData,
+    to: realTo,
+    value: realValue,
+  } = dataFunc({
+    gasLimit: estimates.gasLimit,
+    maxFeePerGas: estimates.maxFeePerGas,
+    maxSubmissionCost: estimates.maxSubmissionCost,
+  })
+
+  return {
+    estimates,
+    retryable,
+    data: realData,
+    to: realTo,
+    value: realValue,
   }
 }

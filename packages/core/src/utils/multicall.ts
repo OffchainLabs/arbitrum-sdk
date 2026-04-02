@@ -7,8 +7,22 @@
 import type { ArbitrumProvider } from '../interfaces/provider'
 import { ArbitrumContract } from '../contracts/Contract'
 import { Multicall2Abi } from '../abi/Multicall2'
+import { ERC20Abi } from '../abi/ERC20'
 import { getMulticallAddress } from '../networks'
 import { encodeFunctionData, decodeFunctionResult } from '../encoding/abi'
+import { isHexString, hexDataLength } from '../encoding/hex'
+
+/**
+ * Token metadata returned by getTokenData.
+ */
+export interface TokenData {
+  /** Token name (undefined if the call failed) */
+  name?: string
+  /** Token symbol (undefined if the call failed) */
+  symbol?: string
+  /** Token decimals (undefined if the call failed) */
+  decimals?: number
+}
 
 /**
  * Input to the multicall aggregator.
@@ -91,6 +105,90 @@ export class MultiCaller {
           returnData
         )[0] as bigint,
     }
+  }
+
+  /**
+   * Batch-read token metadata (name, symbol, decimals) for multiple ERC-20 addresses.
+   *
+   * Handles tokens that return bytes32 for name/symbol (e.g. Maker MKR)
+   * by parsing the bytes32 as UTF-8 and stripping null bytes.
+   *
+   * @param tokenAddresses - Array of ERC-20 token addresses to query
+   * @returns Array of token data objects with name, symbol, and decimals
+   */
+  public async getTokenData(
+    tokenAddresses: string[]
+  ): Promise<TokenData[]> {
+    const isBytes32Data = (data: string) =>
+      isHexString(data) && hexDataLength(data) === 32
+
+    /**
+     * Parse a bytes32 value as a UTF-8 string, stripping null bytes.
+     */
+    const parseBytes32String = (hex: string): string => {
+      const clean = hex.startsWith('0x') ? hex.slice(2) : hex
+      // Take only the first 64 hex chars (32 bytes)
+      const bytes32 = clean.slice(0, 64)
+      let str = ''
+      for (let i = 0; i < bytes32.length; i += 2) {
+        const byte = parseInt(bytes32.slice(i, i + 2), 16)
+        if (byte === 0) break
+        str += String.fromCharCode(byte)
+      }
+      return str
+    }
+
+    const input: CallInput<unknown>[] = []
+
+    for (const addr of tokenAddresses) {
+      // name
+      input.push({
+        targetAddr: addr,
+        encoder: () => encodeFunctionData(ERC20Abi, 'name', []),
+        decoder: (returnData: string) => {
+          if (isBytes32Data(returnData)) {
+            return parseBytes32String(returnData)
+          }
+          return decodeFunctionResult(ERC20Abi, 'name', returnData)[0] as string
+        },
+      })
+
+      // symbol
+      input.push({
+        targetAddr: addr,
+        encoder: () => encodeFunctionData(ERC20Abi, 'symbol', []),
+        decoder: (returnData: string) => {
+          if (isBytes32Data(returnData)) {
+            return parseBytes32String(returnData)
+          }
+          return decodeFunctionResult(ERC20Abi, 'symbol', returnData)[0] as string
+        },
+      })
+
+      // decimals
+      input.push({
+        targetAddr: addr,
+        encoder: () => encodeFunctionData(ERC20Abi, 'decimals', []),
+        decoder: (returnData: string) =>
+          Number(
+            decodeFunctionResult(ERC20Abi, 'decimals', returnData)[0] as bigint
+          ),
+      })
+    }
+
+    const results = await this.multiCall(input)
+
+    const tokens: TokenData[] = []
+    let i = 0
+    for (const _addr of tokenAddresses) {
+      tokens.push({
+        name: results[i++] as string | undefined,
+        symbol: results[i++] as string | undefined,
+        decimals: results[i++] as number | undefined,
+      })
+    }
+
+    return tokens
   }
 
   /**

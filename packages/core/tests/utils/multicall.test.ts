@@ -283,4 +283,158 @@ describe('MultiCaller', () => {
       })
     })
   })
+
+  describe('getTokenData', () => {
+    /**
+     * Helper: encode a string as an ABI-encoded string return value.
+     * ABI string return: offset(32) + length(32) + padded-data
+     */
+    function encodeStringReturn(str: string): string {
+      const hexChars = Array.from(str)
+        .map(c => c.charCodeAt(0).toString(16).padStart(2, '0'))
+        .join('')
+      const byteLen = hexChars.length / 2
+      const paddedData = hexChars.padEnd(Math.ceil(hexChars.length / 64) * 64, '0')
+      return (
+        '0x' +
+        // offset to string data (32 bytes)
+        '0000000000000000000000000000000000000000000000000000000000000020' +
+        // string length
+        BigInt(byteLen).toString(16).padStart(64, '0') +
+        // string data (padded)
+        paddedData
+      )
+    }
+
+    /**
+     * Helper: encode a bytes32 value (for tokens like MKR that return bytes32 for name/symbol).
+     */
+    function encodeBytes32Return(str: string): string {
+      const hexChars = Array.from(str)
+        .map(c => c.charCodeAt(0).toString(16).padStart(2, '0'))
+        .join('')
+      return '0x' + hexChars.padEnd(64, '0')
+    }
+
+    /**
+     * Helper: encode a uint8/uint256 decimals return.
+     */
+    function encodeDecimalsReturn(decimals: number): string {
+      return '0x' + BigInt(decimals).toString(16).padStart(64, '0')
+    }
+
+    it('returns name, symbol, and decimals for standard ERC-20 tokens', async () => {
+      // For each token: 3 calls (name, symbol, decimals) = 3 results
+      const nameReturn = encodeStringReturn('Dai Stablecoin')
+      const symbolReturn = encodeStringReturn('DAI')
+      const decimalsReturn = encodeDecimalsReturn(18)
+
+      const mockReturnHex = encodeTryAggregateResult([
+        { success: true, returnData: nameReturn },
+        { success: true, returnData: symbolReturn },
+        { success: true, returnData: decimalsReturn },
+      ])
+
+      const provider = createMockProvider({
+        call: vi.fn().mockResolvedValue(mockReturnHex),
+      })
+
+      const mc = new MultiCaller(provider, MULTICALL_ADDRESS)
+      const result = await mc.getTokenData([
+        '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+      ])
+
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe('Dai Stablecoin')
+      expect(result[0].symbol).toBe('DAI')
+      expect(result[0].decimals).toBe(18)
+    })
+
+    it('handles bytes32 name/symbol (like Maker MKR)', async () => {
+      const nameReturn = encodeBytes32Return('Maker')
+      const symbolReturn = encodeBytes32Return('MKR')
+      const decimalsReturn = encodeDecimalsReturn(18)
+
+      const mockReturnHex = encodeTryAggregateResult([
+        { success: true, returnData: nameReturn },
+        { success: true, returnData: symbolReturn },
+        { success: true, returnData: decimalsReturn },
+      ])
+
+      const provider = createMockProvider({
+        call: vi.fn().mockResolvedValue(mockReturnHex),
+      })
+
+      const mc = new MultiCaller(provider, MULTICALL_ADDRESS)
+      const result = await mc.getTokenData([
+        '0x9f8F72aA9304c8B593d555F12eF6589cC3A579A2',
+      ])
+
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe('Maker')
+      expect(result[0].symbol).toBe('MKR')
+      expect(result[0].decimals).toBe(18)
+    })
+
+    it('handles multiple tokens', async () => {
+      const daiName = encodeStringReturn('Dai Stablecoin')
+      const daiSymbol = encodeStringReturn('DAI')
+      const daiDecimals = encodeDecimalsReturn(18)
+      const usdcName = encodeStringReturn('USD Coin')
+      const usdcSymbol = encodeStringReturn('USDC')
+      const usdcDecimals = encodeDecimalsReturn(6)
+
+      const mockReturnHex = encodeTryAggregateResult([
+        { success: true, returnData: daiName },
+        { success: true, returnData: daiSymbol },
+        { success: true, returnData: daiDecimals },
+        { success: true, returnData: usdcName },
+        { success: true, returnData: usdcSymbol },
+        { success: true, returnData: usdcDecimals },
+      ])
+
+      const provider = createMockProvider({
+        call: vi.fn().mockResolvedValue(mockReturnHex),
+      })
+
+      const mc = new MultiCaller(provider, MULTICALL_ADDRESS)
+      const result = await mc.getTokenData([
+        '0x6B175474E89094C44Da98b954EedeAC495271d0F',
+        '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+      ])
+
+      expect(result).toHaveLength(2)
+      expect(result[0].name).toBe('Dai Stablecoin')
+      expect(result[0].symbol).toBe('DAI')
+      expect(result[0].decimals).toBe(18)
+      expect(result[1].name).toBe('USD Coin')
+      expect(result[1].symbol).toBe('USDC')
+      expect(result[1].decimals).toBe(6)
+    })
+
+    it('returns undefined for failed calls', async () => {
+      const nameReturn = encodeStringReturn('Test Token')
+      const decimalsReturn = encodeDecimalsReturn(18)
+
+      const mockReturnHex = encodeTryAggregateResult([
+        { success: true, returnData: nameReturn },
+        { success: false, returnData: '0x' }, // symbol call failed
+        { success: true, returnData: decimalsReturn },
+      ])
+
+      const provider = createMockProvider({
+        call: vi.fn().mockResolvedValue(mockReturnHex),
+      })
+
+      const mc = new MultiCaller(provider, MULTICALL_ADDRESS)
+      const result = await mc.getTokenData([
+        '0x0000000000000000000000000000000000000001',
+      ])
+
+      expect(result).toHaveLength(1)
+      expect(result[0].name).toBe('Test Token')
+      expect(result[0].symbol).toBeUndefined()
+      expect(result[0].decimals).toBe(18)
+    })
+  })
 })

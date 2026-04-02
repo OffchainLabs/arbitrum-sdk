@@ -120,6 +120,12 @@ export {
   scaleFromNativeTokenDecimalsTo18Decimals,
 } from './utils/lib'
 
+// Address alias utilities
+export { applyAlias, undoAlias } from './utils/addressAlias'
+
+// Calldata decode utility
+export { getErc20ParentAddressFromParentToChildTxRequest } from './utils/calldata'
+
 // Utility types
 export type {
   OmitTyped,
@@ -192,6 +198,10 @@ export {
 } from './message/childToParentMessage'
 export type { ChildToParentEventData } from './message/childToParentMessage'
 
+// Rollup utilities (BOLD detection, assertion queries)
+export { isBold, getSendProps } from './message/rollupUtils'
+export type { SendProps } from './message/rollupUtils'
+
 // Child transaction receipt event parsing
 // (getChildToParentEvents and getRedeemScheduledEvents are already
 // exported above from './events/parsing')
@@ -227,6 +237,12 @@ export {
   getParentErc20Address,
 } from './erc20/gateway'
 
+// WETH detection
+export { isWethGateway } from './erc20/wethDetection'
+
+// Network discovery from rollup contract
+export { getArbitrumNetworkInformationFromRollup } from './networks/fromRollup'
+
 // Admin functions
 export {
   getRegisterCustomTokenRequest,
@@ -239,7 +255,7 @@ export type {
 
 // Multicall
 export { MultiCaller } from './utils/multicall'
-export type { CallInput } from './utils/multicall'
+export type { CallInput, TokenData } from './utils/multicall'
 
 // Inbox / force inclusion
 export {
@@ -254,12 +270,16 @@ export {
   estimateRetryableTicketGasLimit,
   estimateMaxFeePerGas,
   estimateAll,
+  populateFunctionParams,
 } from './message/gasEstimator'
 export type {
   PercentIncrease,
   GasOverrides,
   RetryableTicketGasParams,
   GasEstimateResult,
+  PopulateFunctionGasParams,
+  PopulateFunctionTxRequest,
+  PopulateFunctionResult,
 } from './message/gasEstimator'
 
 // ABIs — raw `as const` arrays for all contracts used by the SDK
