@@ -14,6 +14,10 @@ import {
   resetNetworksToDefault,
   assertArbitrumNetworkHasTokenBridge,
   isArbitrumNetworkNativeTokenEther,
+  getNitroGenesisBlock,
+  getMulticallAddress,
+  mapL2NetworkTokenBridgeToTokenBridge,
+  mapL2NetworkToArbitrumNetwork,
   type ArbitrumNetwork,
 } from '@arbitrum/core'
 import { wrapProvider, type Ethers5Provider } from './adapter'
@@ -28,6 +32,10 @@ export {
   resetNetworksToDefault,
   assertArbitrumNetworkHasTokenBridge,
   isArbitrumNetworkNativeTokenEther,
+  getNitroGenesisBlock,
+  getMulticallAddress,
+  mapL2NetworkTokenBridgeToTokenBridge,
+  mapL2NetworkToArbitrumNetwork,
 }
 
 export type { ArbitrumNetwork, EthBridge, TokenBridge, Teleporter } from '@arbitrum/core'

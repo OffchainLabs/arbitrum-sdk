@@ -205,11 +205,14 @@ export function wrapProvider(provider: Ethers6Provider): ArbitrumProvider {
       data: string
       blockTag?: BlockTag
     }): Promise<string> {
-      const tx: Record<string, unknown> = { to: request.to, data: request.data }
-      if (request.blockTag !== undefined) {
-        tx.blockTag = request.blockTag
+      const tx: { to: string; data: string; blockTag?: number | string } = {
+        to: request.to,
+        data: request.data,
       }
-      return provider.call(tx)
+      if (request.blockTag !== undefined) {
+        tx.blockTag = toBlockTag(request.blockTag)
+      }
+      return provider.call(tx as { to: string; data: string })
     },
 
     async estimateGas(request: {

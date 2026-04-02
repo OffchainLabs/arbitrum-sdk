@@ -2,11 +2,30 @@
   "name": "@arbitrum/core",
   "version": "0.1.0",
   "description": "Provider-agnostic core library for Arbitrum SDK",
-  "private": true,
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/OffchainLabs/arbitrum-sdk.git",
+    "directory": "packages/core"
+  },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./abi": {
+      "types": "./dist/abi/index.d.ts",
+      "import": "./dist/abi/index.js",
+      "require": "./dist/abi/index.js"
+    }
+  },
+  "files": ["dist", "package.json", "README.md", "LICENSE"],
   "scripts": {
     "build": "tsc",
+    "test": "vitest run",
     "test:unit": "vitest run",
     "lint": "echo 'lint not configured yet'",
     "format": "echo 'format not configured yet'"

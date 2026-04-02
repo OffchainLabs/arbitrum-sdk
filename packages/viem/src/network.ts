@@ -11,6 +11,12 @@ import {
   isParentNetwork as coreIsParentNetwork,
   registerCustomArbitrumNetwork as coreRegisterCustomArbitrumNetwork,
   resetNetworksToDefault as coreResetNetworksToDefault,
+  assertArbitrumNetworkHasTokenBridge,
+  isArbitrumNetworkNativeTokenEther,
+  getNitroGenesisBlock,
+  getMulticallAddress,
+  mapL2NetworkTokenBridgeToTokenBridge,
+  mapL2NetworkToArbitrumNetwork,
 } from '@arbitrum/core'
 import type { ArbitrumNetwork } from '@arbitrum/core'
 import { wrapPublicClient, type ViemPublicClient } from './adapter'
@@ -73,4 +79,13 @@ export async function getArbitrumNetworkFromProvider(
   return coreGetArbitrumNetwork(chainId)
 }
 
-export type { ArbitrumNetwork }
+export {
+  assertArbitrumNetworkHasTokenBridge,
+  isArbitrumNetworkNativeTokenEther,
+  getNitroGenesisBlock,
+  getMulticallAddress,
+  mapL2NetworkTokenBridgeToTokenBridge,
+  mapL2NetworkToArbitrumNetwork,
+}
+
+export type { ArbitrumNetwork, EthBridge, TokenBridge, Teleporter } from '@arbitrum/core'

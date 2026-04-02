@@ -12,6 +12,10 @@ import {
   getCancelRetryableRequest as coreGetCancelRetryableRequest,
   getKeepAliveRequest as coreGetKeepAliveRequest,
   getExecuteRequest as coreGetExecuteRequest,
+  getEthDeposits as coreGetEthDeposits,
+  EthDepositMessage,
+  getMessageEvents,
+  getTokenDepositEvents,
 } from '@arbitrum/core'
 import type {
   ArbitrumTransactionReceipt,
@@ -20,6 +24,7 @@ import type {
   ChildToParentEventData,
   ParentToChildMessageReader,
   ChildToParentMessageReader,
+  MessageEventPair,
 } from '@arbitrum/core'
 import { wrapPublicClient, type ViemPublicClient } from './adapter'
 
@@ -98,5 +103,23 @@ export function getExecuteRequest(
   return coreGetExecuteRequest(event, proof, network)
 }
 
-// Re-export types users need
-export type { ParentToChildMessageReader, ChildToParentMessageReader, ChildToParentEventData }
+/**
+ * Extract EthDepositMessage instances from a parent chain transaction receipt.
+ * Accepts a viem PublicClient for the child chain.
+ */
+export function getEthDeposits(
+  receipt: ArbitrumTransactionReceipt,
+  childProvider: ViemPublicClient,
+  network: ArbitrumNetwork
+): EthDepositMessage[] {
+  return coreGetEthDeposits(receipt, wrapPublicClient(childProvider), network)
+}
+
+// Re-export provider-agnostic functions and types
+export { EthDepositMessage, getMessageEvents, getTokenDepositEvents }
+export type {
+  ParentToChildMessageReader,
+  ChildToParentMessageReader,
+  ChildToParentEventData,
+  MessageEventPair,
+}

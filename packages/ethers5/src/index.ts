@@ -80,6 +80,10 @@ export {
   assertArbitrumNetworkHasTokenBridge,
   isArbitrumNetworkNativeTokenEther,
   getArbitrumNetworkFromProvider,
+  getNitroGenesisBlock,
+  getMulticallAddress,
+  mapL2NetworkTokenBridgeToTokenBridge,
+  mapL2NetworkToArbitrumNetwork,
 } from './network'
 export type {
   ArbitrumNetwork,
@@ -98,6 +102,27 @@ export type {
   GetSetGatewaysRequestParams,
 } from './admin'
 
+// Inbox / force inclusion
+export {
+  getForceIncludableEvent,
+  getForceIncludeRequest,
+} from './inbox'
+
+// Gas estimation (wrapped with ethers v5 provider)
+export {
+  estimateSubmissionFee,
+  estimateRetryableTicketGasLimit,
+  estimateMaxFeePerGas,
+  estimateAll,
+  populateFunctionParams,
+} from './gas'
+
+// WETH detection
+export { isWethGateway } from './weth'
+
+// Network discovery from rollup
+export { getArbitrumNetworkInformationFromRollup } from './fromRollup'
+
 // Core types (re-export for convenience so users don't need @arbitrum/core)
 export type {
   TransactionRequestData,
@@ -108,28 +133,109 @@ export type {
   BlockTag,
   LogFilter,
   CallRequest,
+  ForceInclusionParams,
+  GasOverrides,
+  GasEstimateResult,
+  PercentIncrease,
+  RetryableTicketGasParams,
+  PopulateFunctionGasParams,
+  PopulateFunctionTxRequest,
+  PopulateFunctionResult,
+  ArbitrumNetworkInformationFromRollup,
+  L2Network,
+  L2NetworkTokenBridge,
+  ParentToChildTransactionRequest,
+  ChildToParentTransactionRequest,
+  EventFetcherFilter,
+  SubmitRetryableIdParams,
+  DepositTxIdParams,
+  ParsedEventLog,
+  WriteOptions,
+  ReadOptions,
+  RetryableData,
+  CallInput,
+  TokenData,
+  SendProps,
+  OmitTyped,
+  PartialPick,
+  RequiredPick,
+  Prettify,
+  RlpInput,
 } from '@arbitrum/core'
 
 // Retryable data
+export { RetryableDataTools } from '@arbitrum/core'
+
+// Retryable ID computation
+export { calculateSubmitRetryableId, calculateDepositTxId } from '@arbitrum/core'
+
+// Message data parser
+export { SubmitRetryableMessageDataParser } from '@arbitrum/core'
+
+// Address alias utilities
+export { applyAlias, undoAlias } from '@arbitrum/core'
+
+// Calldata utilities
+export { getErc20ParentAddressFromParentToChildTxRequest } from '@arbitrum/core'
+
+// Event fetching and parsing
+export { EventFetcher } from '@arbitrum/core'
 export {
-  RetryableDataTools,
-} from '@arbitrum/core'
-export type {
-  RetryableData,
+  getMessageDeliveredEvents,
+  getInboxMessageDeliveredEvents,
+  getChildToParentEvents,
+  getRedeemScheduledEvents,
 } from '@arbitrum/core'
 
-// Gas estimation
+// MultiCaller
+export { MultiCaller } from '@arbitrum/core'
+
+// Rollup utilities
+export { isBold, getSendProps } from '@arbitrum/core'
+
+// Utility functions
 export {
-  estimateSubmissionFee,
-  estimateRetryableTicketGasLimit,
-  estimateMaxFeePerGas,
-  estimateAll,
+  isDefined,
+  scaleFrom18DecimalsToNativeTokenDecimals,
+  scaleFromNativeTokenDecimalsTo18Decimals,
 } from '@arbitrum/core'
-export type {
-  PercentIncrease,
-  GasOverrides,
-  RetryableTicketGasParams,
-  GasEstimateResult,
+
+// Transaction request helpers
+export {
+  isParentToChildTransactionRequest,
+  isChildToParentTransactionRequest,
+} from '@arbitrum/core'
+
+// Encoding utilities
+export {
+  hexToBytes,
+  bytesToHex,
+  concat,
+  zeroPad,
+  padLeft,
+  stripZeros,
+  hexDataLength,
+  isHexString,
+} from '@arbitrum/core'
+export { keccak256 } from '@arbitrum/core'
+export { getAddress, isAddress } from '@arbitrum/core'
+export { rlpEncode } from '@arbitrum/core'
+export {
+  encodeFunctionData,
+  decodeFunctionResult,
+  encodeEventTopic,
+  decodeEventLog,
+  getFunctionSelector,
+  getFunctionSignature,
+} from '@arbitrum/core'
+
+// Contract class
+export { ArbitrumContract } from '@arbitrum/core'
+
+// Errors
+export {
+  ArbSdkError,
+  MissingProviderArbSdkError,
 } from '@arbitrum/core'
 
 // Constants
@@ -141,11 +247,47 @@ export {
   ARB_OWNER_PUBLIC,
   ARB_GAS_INFO,
   ARB_STATISTICS,
+  ARB_MINIMUM_BLOCK_TIME_IN_SECONDS,
+  ADDRESS_ALIAS_OFFSET,
+  DISABLED_GATEWAY,
+  CUSTOM_TOKEN_IS_ENABLED,
+  SEVEN_DAYS_IN_SECONDS,
+  DEFAULT_DEPOSIT_TIMEOUT,
+  ARB1_NITRO_GENESIS_L1_BLOCK,
+  ARB1_NITRO_GENESIS_L2_BLOCK,
   ADDRESS_ZERO,
 } from '@arbitrum/core'
 
-// Errors
+// ABIs
 export {
-  ArbSdkError,
-  MissingProviderArbSdkError,
+  ArbAddressTableAbi,
+  ArbRetryableTxAbi,
+  ArbSysAbi,
+  BoldRollupUserLogicAbi,
+  BridgeAbi,
+  ERC20Abi,
+  ERC20InboxAbi,
+  IArbTokenAbi,
+  ICustomTokenAbi,
+  IERC20Abi,
+  IERC20BridgeAbi,
+  IInboxAbi,
+  IL1TeleporterAbi,
+  IL2ForwarderFactoryAbi,
+  IL2ForwarderPredictorAbi,
+  InboxAbi,
+  L1ERC20GatewayAbi,
+  L1GatewayRouterAbi,
+  L1WethGatewayAbi,
+  L2ArbitrumGatewayAbi,
+  L2ERC20GatewayAbi,
+  L2GatewayRouterAbi,
+  L2GatewayTokenAbi,
+  Multicall2Abi,
+  NodeInterfaceAbi,
+  OutboxAbi,
+  OutboxClassicAbi,
+  RollupAdminLogicAbi,
+  RollupUserLogicAbi,
+  SequencerInboxAbi,
 } from '@arbitrum/core'
