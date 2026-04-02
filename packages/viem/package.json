@@ -1,0 +1,24 @@
+{
+  "name": "@arbitrum/viem",
+  "version": "0.1.0",
+  "description": "Viem adapter for Arbitrum SDK - use viem types directly",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test:unit": "vitest run",
+    "lint": "echo 'lint not configured yet'",
+    "format": "echo 'format not configured yet'"
+  },
+  "dependencies": {
+    "@arbitrum/core": "0.1.0"
+  },
+  "peerDependencies": {
+    "viem": "^2.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "viem": "^2.0.0",
+    "vitest": "^4.1.1"
+  }
+}

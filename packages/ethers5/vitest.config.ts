@@ -1,10 +1,16 @@
 import { defineConfig } from 'vitest/config'
+import path from 'path'
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@arbitrum/core': path.resolve(__dirname, '../core/src/index.ts'),
+    },
+  },
   test: {
     environment: 'node',
     globals: true,
-    include: ['**/tests/unit/**/*.test.ts', '**/tests/*.test.ts', '**/tests/**/*.test.ts'],
+    include: ['tests/**/*.test.ts'],
     exclude: ['**/node_modules/**', '**/dist/**'],
     testTimeout: 30_000,
   },

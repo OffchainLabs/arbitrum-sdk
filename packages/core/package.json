@@ -1,0 +1,23 @@
+{
+  "name": "@arbitrum/core",
+  "version": "0.1.0",
+  "description": "Provider-agnostic core library for Arbitrum SDK",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test:unit": "vitest run",
+    "lint": "echo 'lint not configured yet'",
+    "format": "echo 'format not configured yet'"
+  },
+  "dependencies": {
+    "abitype": "^1.0.8",
+    "@noble/hashes": "^1.7.1",
+    "async-mutex": "^0.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.1"
+  }
+}

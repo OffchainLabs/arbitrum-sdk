@@ -1,0 +1,24 @@
+{
+  "name": "@arbitrum/ethers5",
+  "version": "0.1.0",
+  "description": "Ethers v5 adapter for Arbitrum SDK - use ethers v5 types directly",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test:unit": "vitest run",
+    "lint": "echo 'lint not configured yet'",
+    "format": "echo 'format not configured yet'"
+  },
+  "dependencies": {
+    "@arbitrum/core": "0.1.0"
+  },
+  "peerDependencies": {
+    "ethers": "^5.7.0"
+  },
+  "devDependencies": {
+    "ethers": "^5.7.0",
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.1"
+  }
+}
