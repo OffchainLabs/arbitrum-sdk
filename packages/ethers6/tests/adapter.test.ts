@@ -260,6 +260,29 @@ describe('wrapProvider', () => {
     expect(result).toBe('0xcallresult')
   })
 
+  it('call passes blockTag to ethers6 provider', async () => {
+    const mock = createMockProvider()
+    const callSpy = vi.fn().mockResolvedValue('0xresult')
+    mock.call = callSpy
+    const wrapped = wrapProvider(mock as any)
+    await wrapped.call({ to: '0xto', data: '0xcalldata', blockTag: 42 })
+    // ethers6 call should receive blockTag in the tx object
+    expect(callSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ to: '0xto', data: '0xcalldata', blockTag: 42 })
+    )
+  })
+
+  it('call passes string blockTag to ethers6 provider', async () => {
+    const mock = createMockProvider()
+    const callSpy = vi.fn().mockResolvedValue('0xresult')
+    mock.call = callSpy
+    const wrapped = wrapProvider(mock as any)
+    await wrapped.call({ to: '0xto', data: '0xcalldata', blockTag: 'safe' })
+    expect(callSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ to: '0xto', data: '0xcalldata', blockTag: 'safe' })
+    )
+  })
+
   it('getCode returns hex string', async () => {
     const wrapped = wrapProvider(createMockProvider() as any)
     const code = await wrapped.getCode('0xaddr')

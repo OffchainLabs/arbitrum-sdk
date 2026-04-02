@@ -268,8 +268,14 @@ export function wrapPublicClient(client: ViemPublicClient): ArbitrumProvider {
       return client.getBalance(params)
     },
 
-    async getCode(address: string, _blockTag?: BlockTag): Promise<string> {
-      const code = await client.getCode({ address })
+    async getCode(address: string, blockTag?: BlockTag): Promise<string> {
+      const params: Record<string, unknown> = { address }
+      if (typeof blockTag === 'number') {
+        params.blockNumber = BigInt(blockTag)
+      } else if (typeof blockTag === 'string') {
+        params.blockTag = blockTag
+      }
+      const code = await client.getCode(params as any)
       return code ?? '0x'
     },
 

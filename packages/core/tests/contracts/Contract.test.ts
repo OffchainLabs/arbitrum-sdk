@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { ArbitrumContract } from '../../src/contracts/Contract'
 import { encodeFunctionData } from '../../src/encoding/abi'
+import { ContractCallError } from '../../src/errors'
 import type { ArbitrumProvider } from '../../src/interfaces/provider'
 
 /**
@@ -339,6 +340,140 @@ describe('ArbitrumContract', () => {
 
       expect(atNew).not.toBe(contract)
       expect(atNew.address).toBe(newAddress)
+    })
+  })
+
+  describe('read error handling', () => {
+    it('throws ContractCallError when provider.call() throws', async () => {
+      const provider = createMockProvider({
+        call: vi.fn().mockRejectedValue(new Error('execution reverted')),
+      })
+
+      const contract = new ArbitrumContract(ERC20_ABI, CONTRACT_ADDRESS, provider)
+      await expect(
+        contract.read('balanceOf', [USER_ADDRESS])
+      ).rejects.toThrow(ContractCallError)
+    })
+
+    it('ContractCallError has isCallException true for reverts', async () => {
+      const provider = createMockProvider({
+        call: vi.fn().mockRejectedValue(new Error('execution reverted')),
+      })
+
+      const contract = new ArbitrumContract(ERC20_ABI, CONTRACT_ADDRESS, provider)
+      try {
+        await contract.read('balanceOf', [USER_ADDRESS])
+        expect.fail('should have thrown')
+      } catch (e) {
+        expect(e).toBeInstanceOf(ContractCallError)
+        expect((e as ContractCallError).isCallException).toBe(true)
+      }
+    })
+
+    it('ContractCallError wraps the inner error', async () => {
+      const innerError = new Error('underlying network error')
+      const provider = createMockProvider({
+        call: vi.fn().mockRejectedValue(innerError),
+      })
+
+      const contract = new ArbitrumContract(ERC20_ABI, CONTRACT_ADDRESS, provider)
+      try {
+        await contract.read('balanceOf', [USER_ADDRESS])
+        expect.fail('should have thrown')
+      } catch (e) {
+        expect(e).toBeInstanceOf(ContractCallError)
+        expect((e as ContractCallError).inner).toBe(innerError)
+      }
+    })
+
+    it('throws ContractCallError when provider.call() returns "0x"', async () => {
+      const provider = createMockProvider({
+        call: vi.fn().mockResolvedValue('0x'),
+      })
+
+      const contract = new ArbitrumContract(ERC20_ABI, CONTRACT_ADDRESS, provider)
+      await expect(
+        contract.read('balanceOf', [USER_ADDRESS])
+      ).rejects.toThrow(ContractCallError)
+    })
+
+    it('the "0x" error has descriptive message', async () => {
+      const provider = createMockProvider({
+        call: vi.fn().mockResolvedValue('0x'),
+      })
+
+      const contract = new ArbitrumContract(ERC20_ABI, CONTRACT_ADDRESS, provider)
+      try {
+        await contract.read('balanceOf', [USER_ADDRESS])
+        expect.fail('should have thrown')
+      } catch (e) {
+        expect(e).toBeInstanceOf(ContractCallError)
+        expect((e as ContractCallError).message).toMatch(/empty/)
+        expect((e as ContractCallError).isCallException).toBe(true)
+      }
+    })
+
+    it('throws ContractCallError when result is truncated / cannot be decoded', async () => {
+      const provider = createMockProvider({
+        // Too short to be a valid uint256 response (should be 66 chars for a single uint256)
+        call: vi.fn().mockResolvedValue('0xdeadbeef'),
+      })
+
+      const contract = new ArbitrumContract(ERC20_ABI, CONTRACT_ADDRESS, provider)
+      await expect(
+        contract.read('balanceOf', [USER_ADDRESS])
+      ).rejects.toThrow(ContractCallError)
+    })
+  })
+
+  describe('estimateGas', () => {
+    it('calls provider.estimateGas with correct params', async () => {
+      const provider = createMockProvider({
+        estimateGas: vi.fn().mockResolvedValue(50000n),
+      })
+
+      const contract = new ArbitrumContract(ERC20_ABI, CONTRACT_ADDRESS, provider)
+      const gas = await contract.estimateGas('transfer', [
+        '0x0000000000000000000000000000000000000002',
+        1000n,
+      ])
+
+      expect(gas).toBe(50000n)
+      expect(provider.estimateGas).toHaveBeenCalledWith({
+        to: CONTRACT_ADDRESS,
+        data: expect.stringMatching(/^0xa9059cbb/),
+      })
+    })
+
+    it('passes from and value options', async () => {
+      const provider = createMockProvider({
+        estimateGas: vi.fn().mockResolvedValue(60000n),
+      })
+
+      const contract = new ArbitrumContract(ERC20_ABI, CONTRACT_ADDRESS, provider)
+      const gas = await contract.estimateGas(
+        'transfer',
+        ['0x0000000000000000000000000000000000000002', 1000n],
+        { from: USER_ADDRESS, value: 500n }
+      )
+
+      expect(gas).toBe(60000n)
+      expect(provider.estimateGas).toHaveBeenCalledWith({
+        to: CONTRACT_ADDRESS,
+        data: expect.stringMatching(/^0xa9059cbb/),
+        from: USER_ADDRESS,
+        value: 500n,
+      })
+    })
+
+    it('throws if no provider is set', async () => {
+      const contract = new ArbitrumContract(ERC20_ABI, CONTRACT_ADDRESS)
+      await expect(
+        contract.estimateGas('transfer', [
+          '0x0000000000000000000000000000000000000002',
+          1000n,
+        ])
+      ).rejects.toThrow('requires a provider')
     })
   })
 

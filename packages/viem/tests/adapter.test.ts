@@ -302,6 +302,28 @@ describe('wrapPublicClient', () => {
       const result = await provider.getCode('0xeoa')
       expect(result).toBe('0x')
     })
+
+    it('passes numeric blockTag to client.getCode', async () => {
+      const mock = createMockViemClient()
+      mock.getCode.mockResolvedValue('0x6080604052')
+      const provider = wrapPublicClient(mock as any)
+      await provider.getCode('0xcontract', 100)
+      expect(mock.getCode).toHaveBeenCalledWith({
+        address: '0xcontract',
+        blockNumber: 100n,
+      })
+    })
+
+    it('passes string blockTag to client.getCode', async () => {
+      const mock = createMockViemClient()
+      mock.getCode.mockResolvedValue('0x6080604052')
+      const provider = wrapPublicClient(mock as any)
+      await provider.getCode('0xcontract', 'safe')
+      expect(mock.getCode).toHaveBeenCalledWith({
+        address: '0xcontract',
+        blockTag: 'safe',
+      })
+    })
   })
 
   describe('getStorageAt', () => {

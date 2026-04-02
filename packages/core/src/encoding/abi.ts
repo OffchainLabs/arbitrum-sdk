@@ -117,26 +117,23 @@ function functionSelector(name: string, inputs: readonly AbiParameter[]): string
 }
 
 /**
- * Convert an ASCII string to its hex representation.
+ * Convert a string to its hex representation using UTF-8 encoding.
  */
 function stringToHex(str: string): string {
+  const bytes = new TextEncoder().encode(str)
   let hex = '0x'
-  for (let i = 0; i < str.length; i++) {
-    hex += str.charCodeAt(i).toString(16).padStart(2, '0')
+  for (let i = 0; i < bytes.length; i++) {
+    hex += bytes[i].toString(16).padStart(2, '0')
   }
   return hex
 }
 
 /**
- * Convert a hex string to an ASCII string.
+ * Convert a hex string to a string using UTF-8 decoding.
  */
 function hexToString(hex: string): string {
   const bytes = hexToBytes(hex)
-  let str = ''
-  for (let i = 0; i < bytes.length; i++) {
-    str += String.fromCharCode(bytes[i])
-  }
-  return str
+  return new TextDecoder().decode(bytes)
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -161,7 +158,16 @@ function encodeValue(
 
   // address
   if (type === 'address') {
-    const addr = (value as string).toLowerCase().replace('0x', '')
+    const raw = value as string
+    if (
+      typeof raw !== 'string' ||
+      !raw.startsWith('0x') ||
+      raw.length !== 42 ||
+      !/^[0-9a-fA-F]{40}$/.test(raw.slice(2))
+    ) {
+      throw new Error(`Invalid address: ${raw}`)
+    }
+    const addr = raw.toLowerCase().replace('0x', '')
     return { head: addr.padStart(64, '0'), tail: '' }
   }
 
@@ -408,6 +414,13 @@ function decodeValue(
 ): { value: unknown; consumed: number } {
   const word = data.substring(offset * 2, offset * 2 + 64)
 
+  // Guard against truncated data
+  if (word.length < 64) {
+    throw new Error(
+      `ABI decode: data too short (expected 32 bytes at offset ${offset}, got ${word.length / 2} bytes)`
+    )
+  }
+
   if (type === 'bool') {
     return { value: BigInt('0x' + word) !== 0n, consumed: WORD }
   }
@@ -537,15 +550,30 @@ function decodeValue(
 
 /**
  * Find a function in the ABI by name.
+ * When multiple overloads share the same name, disambiguate by argument count.
  */
-function findFunction(abi: Abi, name: string): AbiFunction {
-  const fn = abi.find(
+function findFunction(abi: Abi, name: string, argsLength?: number): AbiFunction {
+  const matches = abi.filter(
     (item: AbiItem) => item.type === 'function' && (item as AbiFunction).name === name
-  ) as AbiFunction | undefined
-  if (!fn) {
+  ) as AbiFunction[]
+
+  if (matches.length === 0) {
     throw new Error(`Function "${name}" not found in ABI`)
   }
-  return fn
+
+  // If there's only one match or no arg count hint, return the first match
+  if (matches.length === 1 || argsLength === undefined) {
+    return matches[0]
+  }
+
+  // Disambiguate by arg count
+  const byArgCount = matches.filter(fn => fn.inputs.length === argsLength)
+  if (byArgCount.length > 0) {
+    return byArgCount[0]
+  }
+
+  // Fallback to the first match
+  return matches[0]
 }
 
 /**
@@ -570,7 +598,7 @@ export function encodeFunctionData(
   functionName: string,
   args: unknown[]
 ): string {
-  const fn = findFunction(abi, functionName)
+  const fn = findFunction(abi, functionName, args.length)
   const selector = functionSelector(fn.name, fn.inputs)
 
   if (fn.inputs.length === 0) {

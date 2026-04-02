@@ -25,6 +25,7 @@ import {
   encodeEventTopic,
   decodeEventLog,
 } from '../encoding/abi'
+import { ContractCallError } from '../errors'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Abi = readonly any[]
@@ -123,8 +124,76 @@ export class ArbitrumContract<TAbi extends Abi = Abi> {
       callRequest.blockTag = options.blockTag
     }
 
-    const result = await this.provider.call(callRequest)
-    return decodeFunctionResult(this.abi, functionName, result)
+    let result: string
+    try {
+      result = await this.provider.call(callRequest)
+    } catch (err) {
+      throw new ContractCallError(
+        `Call to ${functionName} on ${this.address} failed: ${(err as Error).message}`,
+        {
+          isCallException: true,
+          inner: err as Error,
+        }
+      )
+    }
+
+    if (result === '0x' || result === '0x0' || result === '') {
+      throw new ContractCallError(
+        `Call to ${functionName} on ${this.address} returned empty response`,
+        {
+          isCallException: true,
+          revertData: result,
+        }
+      )
+    }
+
+    try {
+      return decodeFunctionResult(this.abi, functionName, result)
+    } catch (err) {
+      throw new ContractCallError(
+        `Failed to decode result from ${functionName} on ${this.address}: ${(err as Error).message}`,
+        {
+          isCallException: true,
+          revertData: result,
+          inner: err as Error,
+        }
+      )
+    }
+  }
+
+  /**
+   * Estimate gas for a function call.
+   * Requires a provider (set via constructor or connect()).
+   */
+  async estimateGas(
+    functionName: string,
+    args: unknown[],
+    options?: WriteOptions
+  ): Promise<bigint> {
+    if (!this.provider) {
+      throw new Error(
+        'ArbitrumContract.estimateGas() requires a provider. Use connect() first.'
+      )
+    }
+
+    const data = this.encodeFunctionData(functionName, args)
+    const request: {
+      to: string
+      data: string
+      from?: string
+      value?: bigint
+    } = {
+      to: this.address,
+      data,
+    }
+    if (options?.from !== undefined) {
+      request.from = options.from
+    }
+    if (options?.value !== undefined) {
+      request.value = options.value
+    }
+
+    return this.provider.estimateGas(request)
   }
 
   /**

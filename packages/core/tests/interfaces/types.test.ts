@@ -107,6 +107,47 @@ describe('Core types', () => {
     expect(typeof block.gasLimit).toBe('bigint')
   })
 
+  it('ArbitrumBlock accepts optional Arbitrum-specific fields', () => {
+    const block: ArbitrumBlock = {
+      hash: '0xabc',
+      parentHash: '0xdef',
+      number: 100,
+      timestamp: 1700000000,
+      nonce: '0x0',
+      difficulty: 0n,
+      gasLimit: 30000000n,
+      gasUsed: 15000000n,
+      miner: '0x0000000000000000000000000000000000000000',
+      baseFeePerGas: 1000000000n,
+      transactions: [],
+      sendRoot: '0x' + 'ab'.repeat(32),
+      sendCount: 42n,
+      l1BlockNumber: 19000000,
+    }
+    expect(block.sendRoot).toBe('0x' + 'ab'.repeat(32))
+    expect(block.sendCount).toBe(42n)
+    expect(block.l1BlockNumber).toBe(19000000)
+  })
+
+  it('ArbitrumBlock Arbitrum-specific fields are optional', () => {
+    const block: ArbitrumBlock = {
+      hash: '0xabc',
+      parentHash: '0xdef',
+      number: 100,
+      timestamp: 1700000000,
+      nonce: '0x0',
+      difficulty: 0n,
+      gasLimit: 30000000n,
+      gasUsed: 15000000n,
+      miner: '0x0000000000000000000000000000000000000000',
+      baseFeePerGas: 1000000000n,
+      transactions: [],
+    }
+    expect(block.sendRoot).toBeUndefined()
+    expect(block.sendCount).toBeUndefined()
+    expect(block.l1BlockNumber).toBeUndefined()
+  })
+
   it('FeeData has all fields', () => {
     const fee: FeeData = {
       gasPrice: 1000000000n,

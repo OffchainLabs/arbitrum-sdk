@@ -24,3 +24,23 @@ export class MissingProviderArbSdkError extends ArbSdkError {
     )
   }
 }
+
+/**
+ * Thrown when a contract call (eth_call) fails.
+ * Wraps adapter-specific errors into a consistent type that core can handle.
+ */
+export class ContractCallError extends ArbSdkError {
+  /** True if the error is a call exception (revert, out of gas, etc.) */
+  public readonly isCallException: boolean
+  /** The revert data returned by the contract, if available */
+  public readonly revertData?: string
+
+  constructor(
+    message: string,
+    options: { isCallException: boolean; revertData?: string; inner?: Error }
+  ) {
+    super(message, options.inner)
+    this.isCallException = options.isCallException
+    this.revertData = options.revertData
+  }
+}
