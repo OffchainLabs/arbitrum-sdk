@@ -2,11 +2,11 @@
   "private": true,
   "scripts": {
     "audit:ci": "audit-ci --config ./audit-ci.jsonc",
-    "build": "yarn workspace @arbitrum/sdk build",
+    "build": "yarn workspace @arbitrum/core build && yarn workspace @arbitrum/ethers5 build && yarn workspace @arbitrum/ethers6 build && yarn workspace @arbitrum/viem build && yarn workspace @arbitrum/sdk build",
     "lint": "yarn workspaces run lint",
     "format": "yarn workspaces run format",
-    "test:unit": "yarn workspaces run test:unit",
-    "test:integration": "yarn workspace @arbitrum/sdk test:integration",
+    "test:unit": "yarn workspace @arbitrum/core test:unit && yarn workspace @arbitrum/ethers5 test:unit && yarn workspace @arbitrum/ethers6 test:unit && yarn workspace @arbitrum/viem test:unit",
+    "test:integration": "yarn workspace @arbitrum/ethers5 test:integration && yarn workspace @arbitrum/ethers6 test:integration && yarn workspace @arbitrum/viem test:integration",
     "gen:abi": "yarn workspace @arbitrum/sdk gen:abi",
     "gen:network": "yarn workspace @arbitrum/sdk gen:network"
   },

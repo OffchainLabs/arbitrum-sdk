@@ -210,7 +210,7 @@ describe('getSendProps', () => {
         transactions: [],
         // Arbitrum-specific: sendRoot and sendCount
         sendRoot: sendRoot,
-        sendCount: '0x100', // 256 in hex — larger than position 0x42
+        sendCount: 256n, // larger than position 0x42n
       }),
     })
 
@@ -334,7 +334,7 @@ describe('getSendProps', () => {
         baseFeePerGas: null,
         transactions: [],
         sendRoot: sendRoot,
-        sendCount: '0x10', // 16 — smaller than position 0x42 = 66
+        sendCount: 16n, // smaller than position 0x42n = 66
       }),
     })
 

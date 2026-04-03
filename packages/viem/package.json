@@ -22,6 +22,7 @@
     "build": "tsc",
     "test": "vitest run",
     "test:unit": "vitest run",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "lint": "echo 'lint not configured yet'",
     "format": "echo 'format not configured yet'"
   },

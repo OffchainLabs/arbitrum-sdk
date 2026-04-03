@@ -1,0 +1,562 @@
+/**
+ * ERC-20 bridging test scenarios -- defined ONCE, run by every adapter.
+ *
+ * Ported from packages/sdk/tests/integration/standarderc20.test.ts.
+ * Uses the TestHarness interface for signing/sending and the
+ * provider-agnostic core functions for all bridging logic.
+ */
+import { describe, it, expect } from 'vitest'
+import type { TestHarness, TestConfig } from '../harness'
+import {
+  getApproveTokenRequest,
+  getErc20DepositRequest,
+  getErc20WithdrawalRequest,
+  getParentGatewayAddress,
+  getChildGatewayAddress,
+  getChildErc20Address,
+  getParentErc20Address,
+  getParentToChildMessages,
+  getChildToParentMessages,
+  getRedeemRequest,
+  getExecuteRequest,
+  getSendProps,
+  ParentToChildMessageStatus,
+  ChildToParentMessageStatus,
+  assertArbitrumNetworkHasTokenBridge,
+  ArbitrumContract,
+  ERC20Abi,
+  getChildToParentEvents,
+  type ArbitrumNetwork,
+} from '../../../src'
+
+/**
+ * TestERC20 bytecode from @arbitrum/token-bridge-contracts.
+ *
+ * This is a simple ERC20 with a mint() function that mints 50_000_000 tokens
+ * to msg.sender. The contract is named "IntArbTestToken" (IARB), 18 decimals.
+ */
+const TEST_ERC20_BYTECODE =
+  '0x60806040523480156200001157600080fd5b50600054610100900460ff1615808015620000335750600054600160ff909116105b8062000063575062000050306200017860201b620005f91760201c565b15801562000063575060005460ff166001145b620000bb5760405162461bcd60e51b815260206004820152602e602482015260008051602062001ad383398151915260448201526d191e481a5b9a5d1a585b1a5e995960921b60648201526084015b60405180910390fd5b6000805460ff191660011790558015620000df576000805461ff0019166101001790555b801562000115576000805461ff00191690556040516001815260008051602062001b138339815191529060200160405180910390a15b50620001726040518060400160405280600f81526020016e24b73a20b9312a32b9ba2a37b5b2b760891b8152506040518060400160405280600481526020016324a0a92160e11b81525060126200018760201b620006081760201c565b6200061a565b6001600160a01b03163b151590565b600054610100900460ff1615808015620001a85750600054600160ff909116105b80620001d85750620001c5306200017860201b620005f91760201c565b158015620001d8575060005460ff166001145b6200022c5760405162461bcd60e51b815260206004820152602e602482015260008051602062001ad383398151915260448201526d191e481a5b9a5d1a585b1a5e995960921b6064820152608401620000b2565b6000805460ff19166001179055801562000250576000805461ff0019166101001790555b6200025b84620002b2565b6200026784846200033c565b6038805460ff191660ff84161790558015620002ac576000805461ff00191690556040516001815260008051602062001b138339815191529060200160405180910390a15b50505050565b600054610100900460ff166200030e5760405162461bcd60e51b815260206004820152602b602482015260008051602062001af383398151915260448201526a6e697469616c697a696e6760a81b6064820152608401620000b2565b6200033981604051806040016040528060018152602001603160f81b815250620003a860201b60201c565b50565b600054610100900460ff16620003985760405162461bcd60e51b815260206004820152602b602482015260008051602062001af383398151915260448201526a6e697469616c697a696e6760a81b6064820152608401620000b2565b620003a482826200041e565b5050565b600054610100900460ff16620004045760405162461bcd60e51b815260206004820152602b602482015260008051602062001af383398151915260448201526a6e697469616c697a696e6760a81b6064820152608401620000b2565b815160209283012081519190920120606591909155606655565b600054610100900460ff166200047a5760405162461bcd60e51b815260206004820152602b602482015260008051602062001af383398151915260448201526a6e697469616c697a696e6760a81b6064820152608401620000b2565b60366200048883826200054e565b5060376200049782826200054e565b50506038805460ff1916601217905550565b634e487b7160e01b600052604160045260246000fd5b600181811c90821680620004d457607f821691505b602082108103620004f557634e487b7160e01b600052602260045260246000fd5b50919050565b601f8211156200054957600081815260208120601f850160051c81016020861015620005245750805b601f850160051c820191505b81811015620005455782815560010162000530565b5050505b505050565b81516001600160401b038111156200056a576200056a620004a9565b62000582816200057b8454620004bf565b84620004fb565b602080601f831160018114620005ba5760008415620005a15750858301515b600019600386901b1c1916600185901b17855562000545565b600085815260208120601f198616915b82811015620005eb57888601518255948401946001909101908401620005ca565b50858210156200060a5787850151600019600388901b60f8161c191681555b5050505050600190811b01905550565b6114a9806200062a6000396000f3fe608060405234801561001057600080fd5b50600436106100e05760003560e01c80634000aea0116100875780634000aea01461018557806370a08231146101985780637ecebe00146101c157806395d89b41146101d4578063a457c2d7146101dc578063a9059cbb146101ef578063d505accf14610202578063dd62ed3e1461021557600080fd5b806306fdde03146100e5578063095ea7b3146101035780631249c58b1461012657806318160ddd1461013057806323b872dd14610142578063313ce567146101555780633644e5151461016a5780633950935114610172575b600080fd5b6100ed610228565b6040516100fa9190611020565b60405180910390f35b610116610111366004611056565b6102ba565b60405190151581526020016100fa565b61012e6102d4565b005b6035545b6040519081526020016100fa565b610116610150366004611080565b6102e4565b60385460405160ff90911681526020016100fa565b610134610308565b610116610180366004611056565b610317565b6101166101933660046110d2565b610339565b6101346101a636600461119d565b6001600160a01b031660009081526033602052604090205490565b6101346101cf36600461119d565b6103af565b6100ed6103cd565b6101166101ea366004611056565b6103dc565b6101166101fd366004611056565b61045c565b61012e6102103660046111b8565b61046a565b61013461022336600461122b565b6105ce565b6060603680546102379061125e565b80601f01602080910402602001604051908101604052809291908181526020018280546102639061125e565b80156102b05780601f10610285576101008083540402835291602001916102b0565b820191906000526020600020905b81548152906001019060200180831161029357829003601f168201915b5050505050905090565b6000336102c881858561073d565b60019150505b92915050565b6102e2336302faf080610861565b565b6000336102f2858285610923565b6102fd858585610997565b506001949350505050565b6000610312610b42565b905090565b6000336102c881858561032a83836105ce565b6103349190611292565b61073d565b6000610345848461045c565b50836001600160a01b0316336001600160a01b03167fe19260aff97b920c7df27010903aeb9c8d2be5d310a2c67824cf3f15396e4c16858560405161038b9291906112b3565b60405180910390a3833b156103a5576103a5848484610bbd565b5060019392505050565b6001600160a01b0381166000908152609960205260408120546102ce565b6060603780546102379061125e565b600033816103ea82866105ce565b90508381101561044f5760405162461bcd60e51b815260206004820152602560248201527f45524332303a2064656372656173656420616c6c6f77616e63652062656c6f77604482015264207a65726f60d81b60648201526084015b60405180910390fd5b6102fd828686840361073d565b6000336102c8818585610997565b834211156104ba5760405162461bcd60e51b815260206004820152601d60248201527f45524332305065726d69743a206578706972656420646561646c696e650000006044820152606401610446565b60007f6e71edae12b1b97f4d1f60370fef10105fa2faae0126114a169c64845d6126c98888886104e98c610c27565b6040805160208101969096526001600160a01b0394851690860152929091166060840152608083015260a082015260c0810186905260e001604051602081830303815290604052805190602001209050600061054482610c4f565b9050600061055482878787610c9d565b9050896001600160a01b0316816001600160a01b0316146105b75760405162461bcd60e51b815260206004820152601e60248201527f45524332305065726d69743a20696e76616c6964207369676e617475726500006044820152606401610446565b6105c28a8a8a61073d565b50505050505050505050565b6001600160a01b03918216600090815260346020908152604080832093909416825291909152205490565b6001600160a01b03163b151590565b600054610100900460ff16158080156106285750600054600160ff909116105b806106495750610637306105f9565b158015610649575060005460ff166001145b6106ac5760405162461bcd60e51b815260206004820152602e60248201527f496e697469616c697a61626c653a20636f6e747261637420697320616c72656160448201526d191e481a5b9a5d1a585b1a5e995960921b6064820152608401610446565b6000805460ff1916600117905580156106cf576000805461ff0019166101001790555b6106d884610cc5565b6106e28484610d12565b6038805460ff191660ff84161790558015610737576000805461ff0019169055604051600181527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb38474024989060200160405180910390a15b50505050565b6001600160a01b03831661079f5760405162461bcd60e51b8152602060048201526024808201527f45524332303a20617070726f76652066726f6d20746865207a65726f206164646044820152637265737360e01b6064820152608401610446565b6001600160a01b0382166108005760405162461bcd60e51b815260206004820152602260248201527f45524332303a20617070726f766520746f20746865207a65726f206164647265604482015261737360f01b6064820152608401610446565b6001600160a01b0383811660008181526034602090815260408083209487168084529482529182902085905590518481527f8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925910160405180910390a3505050565b6001600160a01b0382166108b75760405162461bcd60e51b815260206004820152601f60248201527f45524332303a206d696e7420746f20746865207a65726f2061646472657373006044820152606401610446565b80603560008282546108c99190611292565b90915550506001600160a01b0382166000818152603360209081526040808320805486019055518481527fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef910160405180910390a35b5050565b600061092f84846105ce565b90506000198114610737578181101561098a5760405162461bcd60e51b815260206004820152601d60248201527f45524332303a20696e73756666696369656e7420616c6c6f77616e63650000006044820152606401610446565b610737848484840361073d565b6001600160a01b0383166109fb5760405162461bcd60e51b815260206004820152602560248201527f45524332303a207472616e736665722066726f6d20746865207a65726f206164604482015264647265737360d81b6064820152608401610446565b6001600160a01b038216610a5d5760405162461bcd60e51b815260206004820152602360248201527f45524332303a207472616e7366657220746f20746865207a65726f206164647260448201526265737360e81b6064820152608401610446565b6001600160a01b03831660009081526033602052604090205481811015610ad55760405162461bcd60e51b815260206004820152602660248201527f45524332303a207472616e7366657220616d6f756e7420657863656564732062604482015265616c616e636560d01b6064820152608401610446565b6001600160a01b0380851660008181526033602052604080822086860390559286168082529083902080548601905591517fddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef90610b359086815260200190565b60405180910390a3610737565b60006103127f8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f610b7160655490565b6066546040805160208101859052908101839052606081018290524660808201523060a082015260009060c0016040516020818303038152906040528051906020012090509392505050565b604051635260769b60e11b815283906001600160a01b0382169063a4c0ed3690610bef903390879087906004016112d4565b600060405180830381600087803b158015610c0957600080fd5b505af1158015610c1d573d6000803e3d6000fd5b5050505050505050565b6001600160a01b03811660009081526099602052604090208054600181018255905b50919050565b60006102ce610c5c610b42565b8360405161190160f01b6020820152602281018390526042810182905260009060620160405160208183030381529060405280519060200120905092915050565b6000806000610cae87878787610d48565b91509150610cbb81610e02565b5095945050505050565b600054610100900460ff16610cec5760405162461bcd60e51b815260040161044690611304565b610d0f81604051806040016040528060018152602001603160f81b815250610f47565b50565b600054610100900460ff16610d395760405162461bcd60e51b815260040161044690611304565b61091f8282610f88565b505050565b6000806fa2a8918ca85bafe22016d0b997e4df60600160ff1b03831115610d755750600090506003610df9565b6040805160008082526020820180845289905260ff881692820192909252606081018690526080810185905260019060a0016020604051602081039080840390855afa158015610dc9573d6000803e3d6000fd5b5050604051601f1901519150506001600160a01b038116610df257600060019250925050610df9565b9150600090505b94509492505050565b6000816004811115610e1657610e1661134f565b03610e1e5750565b6001816004811115610e3257610e3261134f565b03610e7a5760405162461bcd60e51b815260206004820152601860248201527745434453413a20696e76616c6964207369676e617475726560401b6044820152606401610446565b6002816004811115610e8e57610e8e61134f565b03610edb5760405162461bcd60e51b815260206004820152601f60248201527f45434453413a20696e76616c6964207369676e6174757265206c656e677468006044820152606401610446565b6003816004811115610eef57610eef61134f565b03610d0f5760405162461bcd60e51b815260206004820152602260248201527f45434453413a20696e76616c6964207369676e6174757265202773272076616c604482015261756560f01b6064820152608401610446565b600054610100900460ff16610f6e5760405162461bcd60e51b815260040161044690611304565b815160209283012081519190920120606591909155606655565b600054610100900460ff16610faf5760405162461bcd60e51b815260040161044690611304565b6036610fbb83826113b3565b506037610fc882826113b3565b50506038805460ff1916601217905550565b6000815180845260005b8181101561100057602081850181015186830182015201610fe4565b506000602082860101526020601f19601f83011685010191505092915050565b6020815260006110336020830184610fda565b9392505050565b80356001600160a01b038116811461105157600080fd5b919050565b6000806040838503121561106957600080fd5b6110728361103a565b946020939093013593505050565b60008060006060848603121561109557600080fd5b61109e8461103a565b92506110ac6020850161103a565b9150604084013590509250925092565b634e487b7160e01b600052604160045260246000fd5b6000806000606084860312156110e757600080fd5b6110f08461103a565b925060208401359150604084013567ffffffffffffffff8082111561111457600080fd5b818601915086601f83011261112857600080fd5b81358181111561113a5761113a6110bc565b604051601f8201601f19908116603f01168101908382118183101715611162576111626110bc565b8160405282815289602084870101111561117b57600080fd5b8260208601602083013760006020848301015280955050505050509250925092565b6000602082840312156111af57600080fd5b6110338261103a565b600080600080600080600060e0888a0312156111d357600080fd5b6111dc8861103a565b96506111ea6020890161103a565b95506040880135945060608801359350608088013560ff8116811461120e57600080fd5b9699959850939692959460a0840135945060c09093013592915050565b6000806040838503121561123e57600080fd5b6112478361103a565b91506112556020840161103a565b90509250929050565b600181811c9082168061127257607f821691505b602082108103610c4957634e487b7160e01b600052602260045260246000fd5b808201808211156102ce57634e487b7160e01b600052601160045260246000fd5b8281526040602082015260006112cc6040830184610fda565b949350505050565b60018060a01b03841681528260208201526060604082015260006112fb6060830184610fda565b95945050505050565b6020808252602b908201527f496e697469616c697a61626c653a20636f6e7472616374206973206e6f74206960408201526a6e697469616c697a696e6760a81b606082015260800190565b634e487b7160e01b600052602160045260246000fd5b601f821115610d4357600081815260208120601f850160051c8101602086101561138c5750805b601f850160051c820191505b818110156113ab57828155600101611398565b505050505050565b815167ffffffffffffffff8111156113cd576113cd6110bc565b6113e1816113db845461125e565b84611365565b602080601f83116001811461141657600084156113fe5750858301515b600019600386901b1c1916600185901b1785556113ab565b600085815260208120601f198616915b8281101561144557888601518255948401946001909101908401611426565b50858210156114635787850151600019600388901b60f8161c191681555b5050505050600190811b0190555056fea2646970667358221220d48eb6504470e32cbcdc9cba63e648c48b2c82f405db2297aa6b06d83647d0a664736f6c63430008100033496e697469616c697a61626c653a20636f6e747261637420697320616c726561496e697469616c697a61626c653a20636f6e7472616374206973206e6f7420697f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498'
+
+/** Minimal ABI for TestERC20 (has mint() with no args that mints 50_000_000 tokens). */
+const TestERC20Abi = [
+  ...ERC20Abi,
+  {
+    inputs: [],
+    name: 'mint',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+] as const
+
+/** Amount used for ERC-20 deposits */
+const DEPOSIT_AMOUNT = 100n
+
+/** Amount used for ERC-20 withdrawals */
+const WITHDRAWAL_AMOUNT = 10n
+
+/** Amount to fund test wallets with from the funnelKey */
+const FUND_AMOUNT = 100_000_000_000_000_000n // 0.1 ETH
+
+/** Delay between mining attempts (ms) */
+const MINE_INTERVAL_MS = 500
+
+/** Wait helper */
+function wait(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**
+ * Fund a wallet with ETH from the funnel key.
+ */
+async function fundWallet(
+  harness: TestHarness,
+  rpcUrl: string,
+  funnelKey: string,
+  toAddress: string,
+  amount: bigint = FUND_AMOUNT
+): Promise<void> {
+  await harness.sendEth(funnelKey, rpcUrl, toAddress, amount)
+}
+
+/**
+ * Get the parent and child RPC URLs and the active network
+ * based on whether this is an orbit test.
+ */
+function getNetworkContext(config: TestConfig): {
+  parentRpcUrl: string
+  childRpcUrl: string
+  network: ArbitrumNetwork
+} {
+  if (config.isOrbitTest && config.l3Network) {
+    return {
+      parentRpcUrl: config.l2RpcUrl,
+      childRpcUrl: config.l3RpcUrl,
+      network: config.l3Network,
+    }
+  }
+  return {
+    parentRpcUrl: config.l1RpcUrl,
+    childRpcUrl: config.l2RpcUrl,
+    network: config.l2Network,
+  }
+}
+
+/**
+ * Read the ERC-20 balance of an address using the ArbitrumContract helper.
+ */
+async function getTokenBalance(
+  harness: TestHarness,
+  rpcUrl: string,
+  tokenAddress: string,
+  account: string
+): Promise<bigint> {
+  const provider = harness.createProvider(rpcUrl)
+  const token = new ArbitrumContract(ERC20Abi, tokenAddress).connect(provider)
+  const [balance] = await token.read('balanceOf', [account])
+  return balance as bigint
+}
+
+/**
+ * Deploy a TestERC20 token and mint tokens to the deployer.
+ */
+async function deployAndMintTestToken(
+  harness: TestHarness,
+  rpcUrl: string,
+  privateKey: string
+): Promise<string> {
+  const { address } = await harness.deployContract(
+    privateKey,
+    rpcUrl,
+    TEST_ERC20_BYTECODE
+  )
+
+  // Mint tokens (mints 50_000_000 to msg.sender)
+  const mintContract = new ArbitrumContract(TestERC20Abi, address)
+  const mintTx = mintContract.encodeWrite('mint', [])
+  await harness.sendTransaction(privateKey, rpcUrl, mintTx)
+
+  return address
+}
+
+/**
+ * Mine blocks by sending self-transfers on a given chain.
+ */
+async function mineUntilStop(
+  harness: TestHarness,
+  rpcUrl: string,
+  key: string,
+  state: { mining: boolean }
+): Promise<void> {
+  const addr = harness.getAddress(key)
+  while (state.mining) {
+    try {
+      await harness.sendEth(key, rpcUrl, addr, 0n)
+    } catch {
+      // ignore transient failures
+    }
+    await wait(MINE_INTERVAL_MS)
+  }
+}
+
+/**
+ * Register all ERC-20 bridging test scenarios.
+ */
+export function erc20Scenarios(
+  harness: TestHarness,
+  config: TestConfig
+): void {
+  const { parentRpcUrl, childRpcUrl, network } = getNetworkContext(config)
+
+  describe('Standard ERC-20 Bridging', () => {
+    // Shared state: token address deployed once, used by all tests
+    let parentTokenAddress: string
+
+    // Deploy token once before all tests
+    // Using a self-executing setup tracked by a promise to avoid
+    // beforeAll issues across adapters.
+    let setupDone: Promise<void>
+    const ensureSetup = () => {
+      if (!setupDone) {
+        setupDone = (async () => {
+          parentTokenAddress = await deployAndMintTestToken(
+            harness,
+            parentRpcUrl,
+            config.funnelKey
+          )
+        })()
+      }
+      return setupDone
+    }
+
+    // ---------------------------------------------------------------
+    // Test 2.1: approves custom gas token for gateway (skip on ETH-native)
+    // ---------------------------------------------------------------
+    it('approves custom gas token for gateway', async () => {
+      if (config.isEthNative) {
+        // This test only applies to custom gas token chains
+        return
+      }
+
+      // TODO: Implement custom gas token approval for ERC-20 gateway
+      // The core package does not yet have getApproveGasTokenForErc20DepositRequest().
+      // This needs the gateway-specific gas token approval (not the inbox one).
+      return
+    })
+
+    // ---------------------------------------------------------------
+    // Test 2.2: deposits ERC-20 (standard gateway, auto-redeem)
+    // ---------------------------------------------------------------
+    it('deposits ERC-20', async () => {
+      await ensureSetup()
+
+      assertArbitrumNetworkHasTokenBridge(network)
+
+      const testAddr = harness.getAddress(config.funnelKey)
+      const parentProvider = harness.createProvider(parentRpcUrl)
+      const childProvider = harness.createProvider(childRpcUrl)
+
+      // Step 1: Approve the token for the gateway
+      const approveTx = await getApproveTokenRequest({
+        network,
+        erc20ParentAddress: parentTokenAddress,
+        from: testAddr,
+        parentProvider,
+      })
+      const approveReceipt = await harness.sendTransaction(
+        config.funnelKey,
+        parentRpcUrl,
+        approveTx
+      )
+      expect(approveReceipt.status).toBe(1)
+
+      // Verify the gateway is the standard ERC-20 gateway
+      const parentGateway = await getParentGatewayAddress(
+        parentTokenAddress,
+        parentProvider,
+        network
+      )
+      expect(parentGateway.toLowerCase()).toBe(
+        network.tokenBridge.parentErc20Gateway.toLowerCase()
+      )
+
+      // Step 2: Build and send the deposit request.
+      // Use a higher submission fee buffer to account for base fee changes
+      // between estimation and sending (testnode timing issue).
+      const depositTx = await getErc20DepositRequest({
+        network,
+        erc20ParentAddress: parentTokenAddress,
+        amount: DEPOSIT_AMOUNT,
+        from: testAddr,
+        parentProvider,
+        childProvider,
+        retryableGasOverrides: {
+          maxSubmissionFee: { percentIncrease: 500n },
+        },
+      })
+      const depositReceipt = await harness.sendTransaction(
+        config.funnelKey,
+        parentRpcUrl,
+        depositTx
+      )
+      expect(depositReceipt.status).toBe(1)
+
+      // Step 3: Get parent-to-child messages and wait for auto-redeem
+      const messages = getParentToChildMessages(
+        depositReceipt,
+        childProvider,
+        network
+      )
+      expect(messages.length).toBe(1)
+
+      const message = messages[0]
+      const result = await message.waitForStatus(120_000)
+      expect(result.status).toBe(ParentToChildMessageStatus.REDEEMED)
+
+      // Step 4: Verify the child token balance
+      const childErc20Addr = await getChildErc20Address(
+        parentTokenAddress,
+        parentProvider,
+        network
+      )
+      const childBalance = await getTokenBalance(
+        harness,
+        childRpcUrl,
+        childErc20Addr,
+        testAddr
+      )
+      expect(childBalance).toBe(DEPOSIT_AMOUNT)
+
+      // Step 5: Verify gateway resolution
+      const childGateway = await getChildGatewayAddress(
+        parentTokenAddress,
+        childProvider,
+        network
+      )
+      expect(childGateway.toLowerCase()).toBe(
+        network.tokenBridge.childErc20Gateway.toLowerCase()
+      )
+
+      // Step 6: Verify reverse address lookup
+      const parentErc20Addr = await getParentErc20Address(
+        childErc20Addr,
+        childProvider,
+        network
+      )
+      expect(parentErc20Addr.toLowerCase()).toBe(
+        parentTokenAddress.toLowerCase()
+      )
+    })
+
+    // ---------------------------------------------------------------
+    // Test 2.3: deposit with no funds, manual redeem
+    // ---------------------------------------------------------------
+    it.skip('deposit with no funds, manual redeem', async () => {
+      // TODO: Port from old SDK. Requires deposit with gasLimit=0, maxFeePerGas=0
+      // to force auto-redeem failure, then manual redeem via getRedeemRequest.
+    })
+
+    // ---------------------------------------------------------------
+    // Test 2.4: deposit with low funds, manual redeem
+    // ---------------------------------------------------------------
+    it.skip('deposit with low funds, manual redeem', async () => {
+      // TODO: Port from old SDK. Requires deposit with gasLimit=5, maxFeePerGas=5
+      // to force auto-redeem failure, then manual redeem.
+    })
+
+    // ---------------------------------------------------------------
+    // Test 2.5: deposit with low gas limit only, manual redeem
+    // ---------------------------------------------------------------
+    it.skip('deposit with low gas limit only, manual redeem succeeds', async () => {
+      // TODO: Port from old SDK. Deposit with gasLimit=21000 to produce a
+      // RedeemScheduled event but no actual retry receipt, then manual redeem.
+    })
+
+    // ---------------------------------------------------------------
+    // Test 2.6: deposit low funds, first redeem fails, second succeeds
+    // ---------------------------------------------------------------
+    it.skip('deposit with low funds, fails first redeem, succeeds second', async () => {
+      // TODO: Port from old SDK. Deposit with low gas, first redeem with
+      // insufficient gas fails (status 0), second redeem succeeds.
+    })
+
+    // ---------------------------------------------------------------
+    // Test 2.7: withdraws ERC-20 (full lifecycle)
+    // ---------------------------------------------------------------
+    it(
+      'withdraws ERC-20',
+      { timeout: 300_000 },
+      async () => {
+        await ensureSetup()
+
+        assertArbitrumNetworkHasTokenBridge(network)
+
+        const testAddr = harness.getAddress(config.funnelKey)
+        const parentProvider = harness.createProvider(parentRpcUrl)
+        const childProvider = harness.createProvider(childRpcUrl)
+
+        // Verify we have tokens on the child chain from the deposit test.
+        // If deposit didn't run first, we need to deposit first.
+        const childErc20Addr = await getChildErc20Address(
+          parentTokenAddress,
+          parentProvider,
+          network
+        )
+
+        let childBalanceBefore = await getTokenBalance(
+          harness,
+          childRpcUrl,
+          childErc20Addr,
+          testAddr
+        )
+
+        // If no child balance, do a deposit first
+        if (childBalanceBefore === 0n) {
+          // Approve and deposit
+          const approveTx = await getApproveTokenRequest({
+            network,
+            erc20ParentAddress: parentTokenAddress,
+            from: testAddr,
+            parentProvider,
+          })
+          await harness.sendTransaction(
+            config.funnelKey,
+            parentRpcUrl,
+            approveTx
+          )
+
+          const depositTx = await getErc20DepositRequest({
+            network,
+            erc20ParentAddress: parentTokenAddress,
+            amount: DEPOSIT_AMOUNT,
+            from: testAddr,
+            parentProvider,
+            childProvider,
+            retryableGasOverrides: {
+              maxSubmissionFee: { percentIncrease: 500n },
+            },
+          })
+          const depositReceipt = await harness.sendTransaction(
+            config.funnelKey,
+            parentRpcUrl,
+            depositTx
+          )
+
+          const messages = getParentToChildMessages(
+            depositReceipt,
+            childProvider,
+            network
+          )
+          await messages[0].waitForStatus(120_000)
+
+          childBalanceBefore = await getTokenBalance(
+            harness,
+            childRpcUrl,
+            childErc20Addr,
+            testAddr
+          )
+        }
+
+        expect(childBalanceBefore).toBeGreaterThan(0n)
+
+        // Build and send the withdrawal on the child chain
+        const withdrawTx = getErc20WithdrawalRequest({
+          network,
+          erc20ParentAddress: parentTokenAddress,
+          amount: WITHDRAWAL_AMOUNT,
+          destinationAddress: testAddr,
+          from: testAddr,
+        })
+
+        const withdrawReceipt = await harness.sendTransaction(
+          config.funnelKey,
+          childRpcUrl,
+          withdrawTx
+        )
+        expect(withdrawReceipt.status).toBe(1)
+
+        // Verify child balance decreased
+        const childBalanceAfter = await getTokenBalance(
+          harness,
+          childRpcUrl,
+          childErc20Addr,
+          testAddr
+        )
+        expect(childBalanceAfter).toBe(childBalanceBefore - WITHDRAWAL_AMOUNT)
+
+        // Get child-to-parent messages
+        const withdrawMessages = getChildToParentMessages(
+          withdrawReceipt,
+          parentProvider,
+          network
+        )
+        expect(withdrawMessages.length).toBeGreaterThanOrEqual(1)
+
+        const withdrawMessage = withdrawMessages[0]
+        expect(withdrawMessage).toBeDefined()
+
+        // Verify the L2ToL1Tx events
+        const withdrawEvents = getChildToParentEvents(withdrawReceipt)
+        expect(withdrawEvents.length).toBe(1)
+
+        // Check initial status is UNCONFIRMED
+        const initialStatus = await withdrawMessage.status(
+          network,
+          childProvider
+        )
+        expect(initialStatus).toBe(ChildToParentMessageStatus.UNCONFIRMED)
+
+        // Get parent token balance before execution
+        const parentBalanceBefore = await getTokenBalance(
+          harness,
+          parentRpcUrl,
+          parentTokenAddress,
+          testAddr
+        )
+
+        // Mine blocks on both chains while waiting for assertion confirmation
+        const state = { mining: true }
+        await Promise.race([
+          mineUntilStop(harness, parentRpcUrl, config.funnelKey, state),
+          mineUntilStop(harness, childRpcUrl, config.funnelKey, state),
+          withdrawMessage.waitUntilReadyToExecute(
+            network,
+            childProvider,
+            500
+          ),
+        ])
+        state.mining = false
+
+        // Verify status is now CONFIRMED
+        const confirmedStatus = await withdrawMessage.status(
+          network,
+          childProvider
+        )
+        expect(confirmedStatus).toBe(ChildToParentMessageStatus.CONFIRMED)
+
+        // Get the outbox proof
+        const { sendRootSize } = await getSendProps(
+          parentProvider,
+          childProvider,
+          withdrawMessage.event,
+          network
+        )
+        expect(sendRootSize).toBeDefined()
+
+        const proof = await withdrawMessage.getOutboxProof(
+          childProvider,
+          sendRootSize!
+        )
+
+        // Build and send the execute request on the parent chain
+        const executeTx = getExecuteRequest(
+          withdrawMessage.event,
+          proof,
+          network
+        )
+
+        const executeReceipt = await harness.sendTransaction(
+          config.funnelKey,
+          parentRpcUrl,
+          executeTx
+        )
+        expect(executeReceipt.status).toBe(1)
+
+        // Verify status is now EXECUTED
+        const executedStatus = await withdrawMessage.status(
+          network,
+          childProvider
+        )
+        expect(executedStatus).toBe(ChildToParentMessageStatus.EXECUTED)
+
+        // Verify the parent chain received the tokens
+        const parentBalanceAfter = await getTokenBalance(
+          harness,
+          parentRpcUrl,
+          parentTokenAddress,
+          testAddr
+        )
+        expect(parentBalanceAfter).toBe(
+          parentBalanceBefore + WITHDRAWAL_AMOUNT
+        )
+      }
+    )
+
+    // ---------------------------------------------------------------
+    // Test 2.8: deposits ERC-20 with extra ETH
+    // ---------------------------------------------------------------
+    it.skip('deposits ERC-20 with extra ETH', async () => {
+      // TODO: Port from old SDK. Deposit with ethDepositAmount to batch
+      // a token deposit and an ETH deposit in a single retryable.
+    })
+
+    // ---------------------------------------------------------------
+    // Test 2.9: deposits ERC-20 with extra ETH to specific address
+    // ---------------------------------------------------------------
+    it.skip('deposits ERC-20 with extra ETH to specific address', async () => {
+      // TODO: Port from old SDK. Same as 2.8 but with destinationAddress
+      // set to a random wallet.
+    })
+  })
+}
