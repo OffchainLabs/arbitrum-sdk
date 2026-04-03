@@ -29,6 +29,8 @@ export interface Ethers6Provider {
   getNetwork(): Promise<{ chainId: bigint }>
   getBlockNumber(): Promise<number>
   getBlock(blockTag: number | string): Promise<Ethers6Block | null>
+  /** Raw JSON-RPC send (available on JsonRpcProvider) */
+  send?(method: string, params: unknown[]): Promise<unknown>
   getTransactionReceipt(txHash: string): Promise<Ethers6Receipt | null>
   call(tx: { to: string; data: string }): Promise<string>
   estimateGas(tx: {
@@ -177,7 +179,7 @@ export function wrapProvider(provider: Ethers6Provider): ArbitrumProvider {
     async getBlock(blockTag: BlockTag): Promise<ArbitrumBlock | null> {
       const block = await provider.getBlock(toBlockTag(blockTag))
       if (!block) return null
-      return {
+      const result: ArbitrumBlock = {
         hash: block.hash ?? '',
         parentHash: block.parentHash,
         number: block.number,
@@ -190,6 +192,22 @@ export function wrapProvider(provider: Ethers6Provider): ArbitrumProvider {
         baseFeePerGas: block.baseFeePerGas,
         transactions: [...block.transactions],
       }
+      // Fetch Arbitrum-specific sendCount via raw RPC (ethers6 strips it)
+      if (provider.send) {
+        try {
+          const tag = toBlockTag(blockTag)
+          const isHash = typeof tag === 'string' && tag.startsWith('0x') && tag.length === 66
+          const method = isHash ? 'eth_getBlockByHash' : 'eth_getBlockByNumber'
+          const param = isHash ? tag : typeof tag === 'number' ? '0x' + tag.toString(16) : tag
+          const rawBlock = await provider.send(method, [param, false]) as { sendCount?: string } | null
+          if (rawBlock?.sendCount) {
+            result.sendCount = BigInt(rawBlock.sendCount)
+          }
+        } catch {
+          // Not an Arbitrum chain or send not available
+        }
+      }
+      return result
     },
 
     async getTransactionReceipt(

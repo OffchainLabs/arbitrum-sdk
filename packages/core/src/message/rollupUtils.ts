@@ -10,6 +10,7 @@ import type { ArbitrumNetwork } from '../networks'
 import { ArbitrumContract } from '../contracts/Contract'
 import { RollupUserLogicAbi } from '../abi/RollupUserLogic'
 import { BoldRollupUserLogicAbi } from '../abi/BoldRollupUserLogic'
+import { OutboxAbi } from '../abi/Outbox'
 import { EventFetcher } from '../utils/eventFetcher'
 import { ContractCallError, ArbSdkError } from '../errors'
 import type { ChildToParentEventData } from './childToParentMessage'
@@ -120,9 +121,8 @@ async function getSendPropsClassic(
 
   // Get the confirmed node to find createdAtBlock
   const nodeResult = await rollup.read('getNode', [latestConfirmedNodeNum])
-  // nodeResult[0] is the Node struct tuple
-  const nodeTuple = nodeResult[0] as unknown[]
-  const createdAtBlock = nodeTuple[10] as bigint // createdAtBlock is index 10
+  const nodeStruct = nodeResult[0] as Record<string, unknown>
+  const createdAtBlock = nodeStruct.createdAtBlock as bigint
 
   // Fetch NodeCreated event at the creation block to get assertion data
   const eventFetcher = new EventFetcher(parentProvider)
@@ -172,9 +172,7 @@ async function getSendPropsClassic(
   }
 
   // The child block has sendCount as a property (Arbitrum-specific)
-  const sendCount = BigInt(
-    (childBlock as unknown as { sendCount: string }).sendCount
-  )
+  const sendCount = childBlock.sendCount ?? 0n
 
   if (sendCount > event.position) {
     return {
@@ -196,69 +194,48 @@ async function getSendPropsBold(
   event: ChildToParentEventData,
   network: ArbitrumNetwork
 ): Promise<SendProps> {
-  const rollup = new ArbitrumContract(
-    BoldRollupUserLogicAbi,
-    network.ethBridge.rollup,
-    parentProvider
-  )
-
-  // Get the latest confirmed assertion hash
-  const latestConfirmedResult = await rollup.read('latestConfirmed', [])
-  const latestConfirmedHash = latestConfirmedResult[0] as string
-
-  // Get the assertion to find createdAtBlock
-  const assertionResult = await rollup.read('getAssertion', [latestConfirmedHash])
-  const assertionTuple = assertionResult[0] as unknown[]
-  const createdAtBlock = assertionTuple[2] as bigint // createdAtBlock is index 2
-
-  // Fetch AssertionCreated event at the creation block
+  // For BOLD rollups, use the Outbox's SendRootUpdated events to find the
+  // latest confirmed send root. This is more robust than parsing the complex
+  // AssertionCreated event which may have ABI differences across versions.
   const eventFetcher = new EventFetcher(parentProvider)
-  const logs = await eventFetcher.getEvents(
-    BoldRollupUserLogicAbi,
-    'AssertionCreated',
+
+  // Get the latest block to search for recent SendRootUpdated events
+  const latestBlock = await parentProvider.getBlockNumber()
+  // Look back up to 1000 blocks for a SendRootUpdated event
+  const fromBlock = Math.max(0, latestBlock - 1000)
+
+  const sendRootEvents = await eventFetcher.getEvents(
+    OutboxAbi,
+    'SendRootUpdated',
     {
-      fromBlock: Number(createdAtBlock),
-      toBlock: Number(createdAtBlock),
-      address: network.ethBridge.rollup,
+      fromBlock,
+      toBlock: latestBlock,
+      address: network.ethBridge.outbox,
     }
   )
 
-  if (logs.length === 0) {
+  if (sendRootEvents.length === 0) {
     return { sendRootSize: undefined, sendRootHash: undefined, sendRootConfirmed: false }
   }
 
-  // Find the matching assertion
-  const matchingLog = logs.find(
-    l => (l.args.assertionHash as string) === latestConfirmedHash
-  ) || logs[0]
+  // Use the most recent SendRootUpdated event (last in the array)
+  const latestEvent = sendRootEvents[sendRootEvents.length - 1]
+  const l2BlockHash = latestEvent.args.l2BlockHash as string
+  const sendRoot = latestEvent.args.outputRoot as string
 
-  // Parse afterState from the assertion event
-  const assertion = matchingLog.args.assertion as {
-    afterState: {
-      globalState: {
-        bytes32Vals: [string, string]
-      }
-    }
-  }
-
-  const blockHash = assertion.afterState.globalState.bytes32Vals[0]
-  const sendRoot = assertion.afterState.globalState.bytes32Vals[1]
-
-  // Get the child block
-  const childBlock = await childProvider.getBlock(blockHash as unknown as number)
+  // Get the child block by hash to find sendCount
+  const childBlock = await childProvider.getBlock(l2BlockHash as unknown as number)
   if (!childBlock) {
     if (
-      blockHash ===
+      l2BlockHash ===
       '0x0000000000000000000000000000000000000000000000000000000000000000'
     ) {
       return { sendRootSize: undefined, sendRootHash: undefined, sendRootConfirmed: false }
     }
-    throw new ArbSdkError(`Block not found for hash ${blockHash}`)
+    return { sendRootSize: undefined, sendRootHash: undefined, sendRootConfirmed: false }
   }
 
-  const sendCount = BigInt(
-    (childBlock as unknown as { sendCount: string }).sendCount
-  )
+  const sendCount = childBlock.sendCount ?? 0n
 
   if (sendCount > event.position) {
     return {

@@ -33,6 +33,8 @@ export interface Ethers5Provider {
   getNetwork(): Promise<{ chainId: number }>
   getBlockNumber(): Promise<number>
   getBlock(blockTag: number | string): Promise<Ethers5Block | null>
+  /** Raw JSON-RPC send (available on JsonRpcProvider) */
+  send?(method: string, params: unknown[]): Promise<unknown>
   getTransactionReceipt(txHash: string): Promise<Ethers5Receipt | null>
   call(tx: { to: string; data: string }, blockTag?: number | string): Promise<string>
   estimateGas(tx: {
@@ -113,6 +115,15 @@ export interface Ethers5Log {
 
 function toBigInt(value: BigNumberish | null): bigint | null {
   if (value === null || value === undefined) return null
+  if (typeof value === 'bigint') return value
+  if (typeof value === 'number') return BigInt(value)
+  return value.toBigInt()
+}
+
+function toBigIntRequired(value: BigNumberish | number): bigint {
+  if (typeof value === 'bigint') return value
+  if (typeof value === 'number') return BigInt(value)
+  if (value === null || value === undefined) return 0n
   return value.toBigInt()
 }
 
@@ -184,19 +195,35 @@ export function wrapProvider(provider: Ethers5Provider): ArbitrumProvider {
     async getBlock(blockTag: BlockTag): Promise<ArbitrumBlock | null> {
       const block = await provider.getBlock(toBlockTag(blockTag))
       if (!block) return null
-      return {
+      const result: ArbitrumBlock = {
         hash: block.hash,
         parentHash: block.parentHash,
         number: block.number,
         timestamp: block.timestamp,
         nonce: block.nonce,
-        difficulty: block.difficulty.toBigInt(),
-        gasLimit: block.gasLimit.toBigInt(),
-        gasUsed: block.gasUsed.toBigInt(),
+        difficulty: toBigIntRequired(block.difficulty),
+        gasLimit: toBigIntRequired(block.gasLimit),
+        gasUsed: toBigIntRequired(block.gasUsed),
         miner: block.miner,
         baseFeePerGas: toBigInt(block.baseFeePerGas),
         transactions: [...block.transactions],
       }
+      // Fetch Arbitrum-specific sendCount via raw RPC (ethers5 strips it)
+      if (provider.send) {
+        try {
+          const tag = toBlockTag(blockTag)
+          const isHash = typeof tag === 'string' && tag.startsWith('0x') && tag.length === 66
+          const method = isHash ? 'eth_getBlockByHash' : 'eth_getBlockByNumber'
+          const param = isHash ? tag : typeof tag === 'number' ? '0x' + tag.toString(16) : tag
+          const rawBlock = await provider.send(method, [param, false]) as { sendCount?: string } | null
+          if (rawBlock?.sendCount) {
+            result.sendCount = BigInt(rawBlock.sendCount)
+          }
+        } catch {
+          // Not an Arbitrum chain or send not available
+        }
+      }
+      return result
     },
 
     async getTransactionReceipt(

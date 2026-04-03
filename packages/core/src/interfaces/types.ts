@@ -81,6 +81,11 @@ export interface ArbitrumBlock {
   miner: string
   baseFeePerGas: bigint | null
   transactions: string[]
+  /**
+   * Arbitrum-specific: number of L2-to-L1 messages sent up to and including
+   * this block. Present on Arbitrum Nitro blocks; absent on L1/non-Arbitrum.
+   */
+  sendCount?: bigint
 }
 
 /**

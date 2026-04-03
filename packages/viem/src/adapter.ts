@@ -25,7 +25,7 @@ export interface ViemPublicClient {
   getBlock(params: {
     blockNumber?: bigint
     blockTag?: string
-    blockHash?: string
+    blockHash?: `0x${string}`
   }): Promise<ViemBlock | null>
   getTransactionReceipt(params: {
     hash: string
@@ -117,9 +117,17 @@ interface ViemLog {
  */
 function blockTagToViemParam(
   blockTag: BlockTag
-): { blockNumber: bigint } | { blockTag: string } {
+): { blockNumber: bigint } | { blockTag: string } | { blockHash: string } {
   if (typeof blockTag === 'number') {
     return { blockNumber: BigInt(blockTag) }
+  }
+  // Detect block hashes: 0x-prefixed, 66 chars total (32 bytes)
+  if (
+    typeof blockTag === 'string' &&
+    blockTag.startsWith('0x') &&
+    blockTag.length === 66
+  ) {
+    return { blockHash: blockTag }
   }
   return { blockTag: blockTag }
 }
@@ -167,7 +175,7 @@ export function fromViemReceipt(
  * Convert a viem Block to ArbitrumBlock.
  */
 function fromViemBlock(block: ViemBlock): ArbitrumBlock {
-  return {
+  const result: ArbitrumBlock = {
     hash: block.hash ?? '',
     parentHash: block.parentHash,
     number: Number(block.number ?? 0),
@@ -180,6 +188,14 @@ function fromViemBlock(block: ViemBlock): ArbitrumBlock {
     baseFeePerGas: block.baseFeePerGas,
     transactions: block.transactions,
   }
+  // Preserve Arbitrum-specific sendCount if present
+  const arbBlock = block as ViemBlock & { sendCount?: bigint | string }
+  if (arbBlock.sendCount !== undefined && arbBlock.sendCount !== null) {
+    result.sendCount = typeof arbBlock.sendCount === 'bigint'
+      ? arbBlock.sendCount
+      : BigInt(arbBlock.sendCount)
+  }
+  return result
 }
 
 /**

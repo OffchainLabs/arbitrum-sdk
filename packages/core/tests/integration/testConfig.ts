@@ -7,7 +7,38 @@
  */
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
-import { registerCustomArbitrumNetwork, type ArbitrumNetwork } from '../../src'
+import {
+  registerCustomArbitrumNetwork,
+  isArbitrumNetworkNativeTokenEther,
+  type ArbitrumNetwork,
+} from '../../src'
+import type { TestConfig } from './harness'
+
+// Load .env file from project root if present
+try {
+  const envPath = resolve(__dirname, '../../../../.env')
+  const envContent = readFileSync(envPath, 'utf-8')
+  for (const line of envContent.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) continue
+    const eqIdx = trimmed.indexOf('=')
+    if (eqIdx === -1) continue
+    const key = trimmed.slice(0, eqIdx).trim()
+    let value = trimmed.slice(eqIdx + 1).trim()
+    // Remove surrounding quotes
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1)
+    }
+    if (!process.env[key]) {
+      process.env[key] = value
+    }
+  }
+} catch {
+  // .env not found — rely on existing env vars
+}
 
 // RPC endpoints (match .env defaults)
 const l1RpcUrl = process.env.ETH_URL || 'http://127.0.0.1:8545'
@@ -45,6 +76,32 @@ function loadLocalNetwork(): LocalNetworkData {
   }
 
   return raw
+}
+
+/**
+ * Load the full TestConfig used by integration test scenarios.
+ */
+export function loadTestConfig(): TestConfig {
+  const local = loadLocalNetwork()
+  const isOrbitTest = process.env.ORBIT_TEST === '1'
+
+  // When testing orbit chains, L2 becomes "parent" and L3 becomes "child"
+  const network = isOrbitTest
+    ? local.l3Network ?? local.l2Network
+    : local.l2Network
+
+  const isEthNative = isArbitrumNetworkNativeTokenEther(network)
+
+  return {
+    l1RpcUrl,
+    l2RpcUrl,
+    l3RpcUrl,
+    funnelKey,
+    l2Network: local.l2Network,
+    l3Network: local.l3Network,
+    isEthNative,
+    isOrbitTest,
+  }
 }
 
 export { l1RpcUrl, l2RpcUrl, l3RpcUrl, funnelKey, loadLocalNetwork }
