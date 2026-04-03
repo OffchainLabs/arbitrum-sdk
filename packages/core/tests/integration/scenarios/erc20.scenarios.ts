@@ -242,8 +242,9 @@ export function erc20Scenarios(
       )
 
       // Step 2: Build and send the deposit request.
-      // Use a higher submission fee buffer to account for base fee changes
-      // between estimation and sending (testnode timing issue).
+      // Use higher buffers to account for:
+      // - base fee changes between estimation and sending (testnode timing)
+      // - first-deposit gas overhead (deploying child token proxy)
       const depositTx = await getErc20DepositRequest({
         network,
         erc20ParentAddress: parentTokenAddress,
@@ -253,6 +254,7 @@ export function erc20Scenarios(
         childProvider,
         retryableGasOverrides: {
           maxSubmissionFee: { percentIncrease: 500n },
+          gasLimit: { percentIncrease: 200n, min: 1_000_000n },
         },
       })
       const depositReceipt = await harness.sendTransaction(
@@ -395,6 +397,7 @@ export function erc20Scenarios(
             childProvider,
             retryableGasOverrides: {
               maxSubmissionFee: { percentIncrease: 500n },
+              gasLimit: { percentIncrease: 200n, min: 1_000_000n },
             },
           })
           const depositReceipt = await harness.sendTransaction(

@@ -213,8 +213,8 @@ export function wethScenarios(
       expect(approveReceipt.status).toBe(1)
 
       // Step 3: Deposit WETH via the gateway router.
-      // Use a higher submission fee buffer to account for base fee changes
-      // between estimation and sending (testnode timing issue).
+      // Use higher buffers to account for base fee changes between estimation
+      // and sending (testnode timing issue).
       const depositTx = await getErc20DepositRequest({
         network,
         erc20ParentAddress: parentWethAddress,
@@ -224,6 +224,7 @@ export function wethScenarios(
         childProvider,
         retryableGasOverrides: {
           maxSubmissionFee: { percentIncrease: 500n },
+          gasLimit: { percentIncrease: 200n, min: 300_000n },
         },
       })
       const depositReceipt = await harness.sendTransaction(
