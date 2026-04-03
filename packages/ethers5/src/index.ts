@@ -120,6 +120,26 @@ export {
 // WETH detection
 export { isWethGateway } from './weth'
 
+// L1→L3 teleportation
+export {
+  getEthL1L3DepositRequest,
+  getErc20L1L3DepositRequest,
+  getErc20L1L3ApproveTokenRequest,
+  getErc20L1L3ApproveGasTokenRequest,
+  predictL2ForwarderAddress,
+} from './l1l3'
+export type {
+  GetEthL1L3DepositRequestParams,
+  GetErc20L1L3DepositRequestParams,
+  GetErc20L1L3ApproveTokenRequestParams,
+  GetErc20L1L3ApproveGasTokenRequestParams,
+  TeleporterRetryableGasParams,
+  Erc20L1L3DepositRequestResult,
+  PredictL2ForwarderAddressParams,
+  L1L3DepositStatus,
+  Erc20L1L3DepositStatus,
+} from './l1l3'
+
 // Network discovery from rollup
 export { getArbitrumNetworkInformationFromRollup } from './fromRollup'
 
