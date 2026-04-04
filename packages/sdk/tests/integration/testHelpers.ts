@@ -16,11 +16,11 @@
 /* eslint-env node */
 'use strict'
 
-import { expect } from 'chai'
+import { expect } from 'vitest'
 import chalk from 'chalk'
 
 import { BigNumber } from '@ethersproject/bignumber'
-import { JsonRpcProvider, Provider } from '@ethersproject/providers'
+import { JsonRpcProvider } from '@ethersproject/providers'
 import { parseEther } from 'ethers/lib/utils'
 
 import { config, getSigner, testSetup } from '../testSetup'
@@ -31,7 +31,6 @@ import { ParentToChildMessageStatus } from '../../src/lib/message/ParentToChildM
 import {
   ArbitrumNetwork,
   assertArbitrumNetworkHasTokenBridge,
-  getArbitrumNetwork,
 } from '../../src/lib/dataEntities/networks'
 import { GasOverrides } from '../../src/lib/message/ParentToChildMessageGasEstimator'
 import { ArbSdkError } from '../../src/lib/dataEntities/errors'
@@ -39,10 +38,6 @@ import { ERC20 } from '../../src/lib/abi/ERC20'
 import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { scaleFrom18DecimalsToNativeTokenDecimals } from '../../src/lib/utils/lib'
-import { ArbitrumProvider } from '../../src/lib/utils/arbProvider'
-import { RollupUserLogic__factory } from '../../src/lib/abi/factories/RollupUserLogic__factory'
-import { BoldRollupUserLogic__factory } from '../../src/lib/abi-bold/factories/BoldRollupUserLogic__factory'
-import { Bridge__factory } from '../../src/lib/abi/factories/Bridge__factory'
 
 const preFundAmount = parseEther('0.1')
 
@@ -72,18 +67,6 @@ interface WithdrawalParams {
   gatewayType: GatewayType
 }
 
-const FAST_MINER_INTERVAL_MS = 50
-const WITHDRAWAL_READY_POLL_INTERVAL_MS = 250
-
-interface ReadyToExecuteMessage {
-  waitUntilReadyToExecute(
-    childProvider: Provider,
-    retryDelay?: number
-  ): Promise<
-    ChildToParentMessageStatus.EXECUTED | ChildToParentMessageStatus.CONFIRMED
-  >
-}
-
 export const mineUntilStop = async (
   miner: Signer,
   state: { mining: boolean }
@@ -95,120 +78,7 @@ export const mineUntilStop = async (
         value: 0,
       })
     ).wait()
-    await wait(FAST_MINER_INTERVAL_MS)
-  }
-}
-
-/**
- * Listens for NodeConfirmed/AssertionConfirmed events on the rollup contract
- * and resolves as soon as the confirmed assertion covers the withdrawal's position.
- * Much faster than polling waitUntilReadyToExecute every 500ms.
- */
-export const waitForConfirmationEvent = async (
-  position: BigNumber,
-  childProvider: Provider,
-  parentProvider: Provider
-): Promise<{ promise: Promise<void>; cleanup: () => void }> => {
-  const childChain = await getArbitrumNetwork(childProvider)
-  const bridge = Bridge__factory.connect(
-    childChain.ethBridge.bridge,
-    parentProvider
-  )
-  const rollupAddr = await bridge.rollup()
-  const arbProvider = new ArbitrumProvider(childProvider as JsonRpcProvider)
-
-  // Detect BoLD vs classic by trying a classic-only method
-  let isBold = false
-  const classicRollup = RollupUserLogic__factory.connect(
-    rollupAddr,
-    parentProvider
-  )
-  try {
-    await classicRollup.callStatic.extraChallengeTimeBlocks()
-  } catch {
-    isBold = true
-  }
-
-  const boldRollup = isBold
-    ? BoldRollupUserLogic__factory.connect(rollupAddr, parentProvider)
-    : undefined
-
-  let cleanedUp = false
-  const cleanup = () => {
-    if (cleanedUp) return
-    cleanedUp = true
-    if (boldRollup) {
-      boldRollup.removeAllListeners('AssertionConfirmed')
-    } else {
-      classicRollup.removeAllListeners('NodeConfirmed')
-    }
-  }
-
-  const promise = new Promise<void>((resolve, reject) => {
-    const resolveReady = () => {
-      cleanup()
-      resolve()
-    }
-
-    const rejectReady = (err: unknown) => {
-      cleanup()
-      reject(err)
-    }
-
-    const checkBlock = async (blockHash: string) => {
-      try {
-        const zeroHash =
-          '0x0000000000000000000000000000000000000000000000000000000000000000'
-        const childBlock = await arbProvider.getBlock(
-          blockHash === zeroHash ? 0 : blockHash
-        )
-        if (BigNumber.from(childBlock.sendCount).gt(position)) {
-          resolveReady()
-        }
-      } catch (err) {
-        rejectReady(err)
-      }
-    }
-
-    if (boldRollup) {
-      boldRollup.on(
-        'AssertionConfirmed',
-        (_assertionHash: string, blockHash: string) => {
-          void checkBlock(blockHash)
-        }
-      )
-    } else {
-      classicRollup.on(
-        'NodeConfirmed',
-        (_nodeNum: BigNumber, blockHash: string) => {
-          void checkBlock(blockHash)
-        }
-      )
-    }
-  })
-
-  return { promise, cleanup }
-}
-
-export const waitForReadyToExecuteFast = async (
-  message: ReadyToExecuteMessage,
-  position: BigNumber,
-  childProvider: Provider,
-  parentProvider: Provider
-): Promise<void> => {
-  const { promise: confirmationEventPromise, cleanup } =
-    await waitForConfirmationEvent(position, childProvider, parentProvider)
-
-  try {
-    await Promise.race([
-      confirmationEventPromise,
-      message.waitUntilReadyToExecute(
-        childProvider,
-        WITHDRAWAL_READY_POLL_INTERVAL_MS
-      ),
-    ])
-  } finally {
-    cleanup()
+    await wait(15000)
   }
 }
 
@@ -234,15 +104,15 @@ export const withdrawToken = async (params: WithdrawalParams) => {
     childSigner: params.childSigner,
   })
   const withdrawRec = await withdrawRes.wait()
-  expect(withdrawRec.status).to.equal(1, 'initiate token withdraw txn failed')
+  expect(withdrawRec.status, 'initiate token withdraw txn failed').toBe(1)
 
   const message = (
     await withdrawRec.getChildToParentMessages(params.parentSigner)
   )[0]
-  expect(message, 'withdraw message not found').to.exist
+  expect(message, 'withdraw message not found').toBeTruthy()
 
   const messageStatus = await message.status(params.childSigner.provider!)
-  expect(messageStatus, `invalid withdraw status`).to.eq(
+  expect(messageStatus, `invalid withdraw status`).toBe(
     ChildToParentMessageStatus.UNCONFIRMED
   )
 
@@ -260,7 +130,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   expect(
     testWalletChildBalance.toNumber(),
     'token withdraw balance not deducted'
-  ).to.eq(params.startBalance.sub(params.amount).toNumber())
+  ).toBe(params.startBalance.sub(params.amount).toNumber())
   const walletAddress = await params.parentSigner.getAddress()
 
   const gatewayAddress = await params.erc20Bridger.getChildGatewayAddress(
@@ -272,7 +142,7 @@ export const withdrawToken = async (params: WithdrawalParams) => {
     params.gatewayType,
     params.erc20Bridger.childNetwork
   )
-  expect(gatewayAddress, 'Gateway is not custom gateway').to.eq(
+  expect(gatewayAddress, 'Gateway is not custom gateway').toBe(
     expectedL2Gateway
   )
 
@@ -283,36 +153,29 @@ export const withdrawToken = async (params: WithdrawalParams) => {
     params.parentToken.address,
     walletAddress
   )
-  expect(gatewayWithdrawEvents.length).to.equal(1, 'token query failed')
+  expect(gatewayWithdrawEvents.length, 'token query failed').toBe(1)
 
   const balBefore = await params.parentToken.balanceOf(
     await params.parentSigner.getAddress()
   )
 
-  // whilst waiting for status we mine on both parent and child chains
+  // whilst waiting for status we miner on both parent and child chains
   const miner1 = Wallet.createRandom().connect(params.parentSigner.provider!)
   const miner2 = Wallet.createRandom().connect(params.childSigner.provider!)
   await fundParentSigner(miner1, parseEther('1'))
   await fundChildSigner(miner2, parseEther('1'))
   const state = { mining: true }
-  const events = withdrawRec.getChildToParentEvents()
-  const position = (events[0] as { position: BigNumber }).position
   await Promise.race([
     mineUntilStop(miner1, state),
     mineUntilStop(miner2, state),
-    waitForReadyToExecuteFast(
-      message,
-      position,
-      params.childSigner.provider!,
-      params.parentSigner.provider!
-    ),
+    message.waitUntilReadyToExecute(params.childSigner.provider!),
   ])
   state.mining = false
 
   expect(
     await message.status(params.childSigner.provider!),
     'confirmed status'
-  ).to.eq(ChildToParentMessageStatus.CONFIRMED)
+  ).toBe(ChildToParentMessageStatus.CONFIRMED)
 
   const execTx = await message.execute(params.childSigner.provider!)
   const execRec = await execTx.wait()
@@ -320,17 +183,17 @@ export const withdrawToken = async (params: WithdrawalParams) => {
   expect(
     execRec.gasUsed.toNumber(),
     'Gas used greater than estimate'
-  ).to.be.lessThan(parentGasEstimate.toNumber())
+  ).toBeLessThan(parentGasEstimate.toNumber())
 
   expect(
     await message.status(params.childSigner.provider!),
     'executed status'
-  ).to.eq(ChildToParentMessageStatus.EXECUTED)
+  ).toBe(ChildToParentMessageStatus.EXECUTED)
 
   const balAfter = await params.parentToken.balanceOf(
     await params.parentSigner.getAddress()
   )
-  expect(balBefore.add(params.amount).toString(), 'Not withdrawn').to.eq(
+  expect(balBefore.add(params.amount).toString(), 'Not withdrawn').toBe(
     balAfter.toString()
   )
 }
@@ -413,8 +276,10 @@ export const depositToken = async ({
     senderAddress,
     expectedParentGatewayAddress
   )
-  expect(allowance.eq(Erc20Bridger.MAX_APPROVAL), 'set token allowance failed')
-    .to.be.true
+  expect(
+    allowance.eq(Erc20Bridger.MAX_APPROVAL),
+    'set token allowance failed'
+  ).toBe(true)
 
   if (isArbitrumNetworkWithCustomFeeToken()) {
     await (
@@ -432,7 +297,7 @@ export const depositToken = async ({
     expect(
       feeTokenAllowance.eq(Erc20Bridger.MAX_APPROVAL),
       'set fee token allowance failed'
-    ).to.be.true
+    ).toBe(true)
 
     feeTokenBalanceBefore = await ERC20__factory.connect(
       erc20Bridger.nativeToken!,
@@ -466,14 +331,14 @@ export const depositToken = async ({
   expect(
     finalBridgeTokenBalance.toNumber(),
     'bridge balance not updated after L1 token deposit txn'
-  ).to.eq(
+  ).toBe(
     // for weth the eth is actually withdrawn, rather than transferred
     expectedGatewayType === GatewayType.WETH
       ? 0
       : initialBridgeTokenBalance.add(depositAmount).toNumber()
   )
   const parentTokenBalanceAfter = await parentToken.balanceOf(senderAddress)
-  expect(parentTokenBalanceAfter.toString(), 'user bal after').to.eq(
+  expect(parentTokenBalanceAfter.toString(), 'user bal after').toBe(
     parentTokenBalanceBefore.sub(depositAmount).toString()
   )
 
@@ -502,7 +367,7 @@ export const depositToken = async ({
         .sub(feeTokenBalanceAfter)
         .lte(maxScaledEstimatedGasFee),
       'Too much custom fee token used as gas'
-    ).to.be.true
+    ).toBe(true)
   }
 
   const waitRes = await depositRec.waitForChildTransactionReceipt(childSigner)
@@ -511,7 +376,7 @@ export const depositToken = async ({
     destinationAddress || senderAddress
   )
 
-  expect(waitRes.status, 'Unexpected status').to.eq(expectedStatus)
+  expect(waitRes.status, 'Unexpected status').toBe(expectedStatus)
   if (retryableOverrides) {
     return {
       parentToken,
@@ -528,7 +393,7 @@ export const depositToken = async ({
     parentTokenAddress,
     parentSigner.provider!
   )
-  expect(parentGateway, 'incorrect parent chain gateway address').to.eq(
+  expect(parentGateway, 'incorrect parent chain gateway address').toBe(
     expectedL1Gateway
   )
 
@@ -536,7 +401,7 @@ export const depositToken = async ({
     parentTokenAddress,
     childSigner.provider!
   )
-  expect(childGateway, 'incorrect child chain gateway address').to.eq(
+  expect(childGateway, 'incorrect child chain gateway address').toBe(
     expectedL2Gateway
   )
 
@@ -552,10 +417,10 @@ export const depositToken = async ({
     childErc20Addr,
     childSigner.provider!
   )
-  expect(parentErc20Addr).to.equal(
-    parentTokenAddress,
+  expect(
+    parentErc20Addr,
     'getERC20L1Address/getERC20L2Address failed with proper token address'
-  )
+  ).toBe(parentTokenAddress)
 
   const tokenBalOnChildAfter = await childToken.balanceOf(
     destinationAddress || senderAddress
@@ -566,7 +431,7 @@ export const depositToken = async ({
     expect(
       tokenBalOnChildAfter.eq(depositAmount),
       'child wallet not updated after deposit'
-    ).to.be.true
+    ).toBe(true)
   }
 
   // batched token+eth
@@ -574,7 +439,7 @@ export const depositToken = async ({
     expect(
       childEthBalanceAfter.gte(childEthBalanceBefore.add(ethDepositAmount)),
       'child wallet not updated with the extra eth deposit'
-    ).to.be.true
+    ).toBe(true)
   }
 
   return { parentToken, waitRes, childToken }

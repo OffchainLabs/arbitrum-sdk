@@ -117,14 +117,18 @@ function toBigInt(value: BigNumberish | null): bigint | null {
   if (value === null || value === undefined) return null
   if (typeof value === 'bigint') return value
   if (typeof value === 'number') return BigInt(value)
-  return value.toBigInt()
+  if (typeof value === 'string') return BigInt(value)
+  if (typeof value === 'object' && 'toBigInt' in value) return (value as any).toBigInt()
+  return BigInt(String(value))
 }
 
 function toBigIntRequired(value: BigNumberish | number): bigint {
   if (typeof value === 'bigint') return value
   if (typeof value === 'number') return BigInt(value)
+  if (typeof value === 'string') return BigInt(value)
   if (value === null || value === undefined) return 0n
-  return value.toBigInt()
+  if (typeof value === 'object' && 'toBigInt' in value) return value.toBigInt()
+  return BigInt(String(value))
 }
 
 function toBlockTag(tag: BlockTag): number | string {
@@ -201,7 +205,7 @@ export function wrapProvider(provider: Ethers5Provider): ArbitrumProvider {
         number: block.number,
         timestamp: block.timestamp,
         nonce: block.nonce,
-        difficulty: toBigIntRequired(block.difficulty),
+        difficulty: block.difficulty != null ? BigInt(block.difficulty.toString()) : 0n,
         gasLimit: toBigIntRequired(block.gasLimit),
         gasUsed: toBigIntRequired(block.gasUsed),
         miner: block.miner,

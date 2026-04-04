@@ -17,13 +17,14 @@ import {
   getTokenDepositEvents as coreGetTokenDepositEvents,
   getMessageEvents as coreGetMessageEvents,
   InboxMessageKind,
-  getArbitrumNetwork,
+  getArbitrumNetwork as _coreGetArbitrumNetwork,
   SubmitRetryableMessageDataParser,
   ArbSdkError,
   ARB1_NITRO_GENESIS_L1_BLOCK,
 } from '@arbitrum/core'
 import { wrapProvider, fromEthersReceipt } from '@arbitrum/ethers5'
 import type { Ethers5Provider, Ethers5Receipt } from '@arbitrum/ethers5'
+import { getArbitrumNetwork as getArbitrumNetworkOld } from '../lib/dataEntities/networks'
 import { toCoreReceipt, toCoreLog, toBigNumber } from './convert'
 import {
   SignerProviderUtils,
@@ -110,7 +111,7 @@ export class ParentTransactionReceipt implements TransactionReceipt {
   ): Promise<boolean> {
     const provider = SignerProviderUtils.getProviderOrThrow(childSignerOrProvider)
     const wrappedProvider = wrapProvider(provider as unknown as Ethers5Provider)
-    const network = await getArbitrumNetwork(await wrappedProvider.getChainId())
+    const network = await getArbitrumNetworkOld(await wrappedProvider.getChainId())
 
     // All networks except Arbitrum One started off with Nitro
     if (network.chainId === 42161) {
@@ -202,7 +203,7 @@ export class ParentTransactionReceipt implements TransactionReceipt {
   ): Promise<ParentToChildMessageReader[] | ParentToChildMessageWriter[]> {
     const provider = SignerProviderUtils.getProviderOrThrow(childSignerOrProvider)
     const wrappedProvider = wrapProvider(provider as unknown as Ethers5Provider)
-    const network = await getArbitrumNetwork(await wrappedProvider.getChainId())
+    const network = await getArbitrumNetworkOld(await wrappedProvider.getChainId())
     const chainId = network.chainId
 
     const isClassic = await this.isClassic(provider)

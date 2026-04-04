@@ -14,13 +14,13 @@ import type { ContractTransaction } from '@ethersproject/contracts'
 import {
   ChildToParentMessageReader as CoreChildToParentMessageReader,
   getExecuteRequest,
-  getArbitrumNetwork,
   ArbSdkError,
   ChildToParentMessageStatus,
 } from '@arbitrum/core'
 import type { ChildToParentEventData } from '@arbitrum/core'
 import { wrapProvider } from '@arbitrum/ethers5'
 import type { Ethers5Provider } from '@arbitrum/ethers5'
+import { getArbitrumNetwork } from '../lib/dataEntities/networks'
 import { SignerProviderUtils } from './types'
 import type { SignerOrProvider } from './types'
 
