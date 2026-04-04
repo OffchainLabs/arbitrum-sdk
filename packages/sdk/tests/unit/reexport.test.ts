@@ -1,88 +1,138 @@
 /**
- * Smoke tests verifying key symbols are importable from @arbitrum/sdk
- * (which now re-exports from @arbitrum/ethers5).
+ * Smoke tests verifying the old SDK API surface is preserved.
+ * Every symbol that was importable from @arbitrum/sdk should still be importable.
  */
 import { describe, it, expect } from 'vitest'
 import {
+  // Bridger classes
+  EthBridger,
+  Erc20Bridger,
+  AdminErc20Bridger,
+  // Transaction receipt classes
+  ParentTransactionReceipt,
+  ChildTransactionReceipt,
+  // Message classes
+  ParentToChildMessageReader,
+  ParentToChildMessageWriter,
+  ChildToParentMessageReader,
+  ChildToParentMessageWriter,
+  ChildToParentMessage,
+  EthDepositMessage,
+  // Gas estimator
+  ParentToChildMessageGasEstimator,
+  // Utilities
+  InboxTools,
+  EventFetcher,
+  MultiCaller,
+  ArbitrumProvider,
+  Address,
+  // Network functions
   getArbitrumNetwork,
-  getDepositRequest,
-  ParentToChildMessageStatus,
-  getErc20L1L3ApproveTokenRequest,
-  getErc20L1L3ApproveGasTokenRequest,
   getArbitrumNetworks,
-  isArbitrumNetworkNativeTokenEther,
-  NODE_INTERFACE_ADDRESS,
-  ADDRESS_ZERO,
-  ArbSdkError,
+  registerCustomArbitrumNetwork,
+  getChildrenForNetwork,
+  // Enums
+  ParentToChildMessageStatus,
+  ChildToParentMessageStatus,
+  EthDepositMessageStatus,
+  // Retryable data
+  RetryableDataTools,
+  // Scaling
+  scaleFrom18DecimalsToNativeTokenDecimals,
+  scaleFromNativeTokenDecimalsTo18Decimals,
+  // Constants
+  constants,
+  // L1-L3
+  EthL1L3Bridger,
+  Erc20L1L3Bridger,
 } from '../../src/index'
 
-import type {
-  ArbitrumNetwork,
-  TransactionRequestData,
-  GetEthL1L3DepositRequestParams,
-  GetErc20L1L3DepositRequestParams,
-  L1L3DepositStatus,
-  Erc20L1L3DepositStatus,
-} from '../../src/index'
+import type { ArbitrumNetwork } from '../../src/index'
 
-describe('SDK re-export smoke tests', () => {
-  it('getArbitrumNetwork(42161) returns Arbitrum One', () => {
+describe('SDK backwards-compat smoke tests', () => {
+  it('EthBridger class is constructable', () => {
     const network = getArbitrumNetwork(42161)
-    expect(network).toBeDefined()
+    const bridger = new EthBridger(network)
+    expect(bridger).toBeDefined()
+    expect(bridger.childNetwork.chainId).toBe(42161)
+  })
+
+  it('Erc20Bridger class is constructable', () => {
+    const network = getArbitrumNetwork(42161)
+    const bridger = new Erc20Bridger(network)
+    expect(bridger).toBeDefined()
+  })
+
+  it('AdminErc20Bridger extends Erc20Bridger', () => {
+    const network = getArbitrumNetwork(42161)
+    const bridger = new AdminErc20Bridger(network)
+    expect(bridger).toBeInstanceOf(Erc20Bridger)
+  })
+
+  it('ParentTransactionReceipt has monkeyPatchWait static methods', () => {
+    expect(typeof ParentTransactionReceipt.monkeyPatchWait).toBe('function')
+    expect(typeof ParentTransactionReceipt.monkeyPatchEthDepositWait).toBe('function')
+    expect(typeof ParentTransactionReceipt.monkeyPatchContractCallWait).toBe('function')
+  })
+
+  it('ChildTransactionReceipt has monkeyPatchWait', () => {
+    expect(typeof ChildTransactionReceipt.monkeyPatchWait).toBe('function')
+  })
+
+  it('Message classes exist', () => {
+    expect(ParentToChildMessageReader).toBeDefined()
+    expect(ParentToChildMessageWriter).toBeDefined()
+    expect(ChildToParentMessageReader).toBeDefined()
+    expect(ChildToParentMessageWriter).toBeDefined()
+    expect(ChildToParentMessage).toBeDefined()
+    expect(EthDepositMessage).toBeDefined()
+  })
+
+  it('Enums have correct values', () => {
+    expect(ParentToChildMessageStatus.REDEEMED).toBeDefined()
+    expect(ChildToParentMessageStatus.EXECUTED).toBeDefined()
+    expect(EthDepositMessageStatus.DEPOSITED).toBeDefined()
+  })
+
+  it('Network functions work', () => {
+    const network = getArbitrumNetwork(42161)
     expect(network.chainId).toBe(42161)
     expect(network.name).toBe('Arbitrum One')
+    const all = getArbitrumNetworks()
+    expect(all.length).toBeGreaterThan(0)
   })
 
-  it('getDepositRequest is a function', () => {
-    expect(typeof getDepositRequest).toBe('function')
+  it('Utility classes exist', () => {
+    expect(ParentToChildMessageGasEstimator).toBeDefined()
+    expect(InboxTools).toBeDefined()
+    expect(EventFetcher).toBeDefined()
+    expect(MultiCaller).toBeDefined()
+    expect(ArbitrumProvider).toBeDefined()
+    expect(Address).toBeDefined()
+    expect(RetryableDataTools).toBeDefined()
   })
 
-  it('ParentToChildMessageStatus enum exists with expected values', () => {
-    expect(ParentToChildMessageStatus).toBeDefined()
-    expect(ParentToChildMessageStatus.REDEEMED).toBeDefined()
+  it('Constants namespace is exported', () => {
+    expect(constants).toBeDefined()
+    expect(typeof constants.NODE_INTERFACE_ADDRESS).toBe('string')
   })
 
-  it('ArbitrumNetwork type is available (compile-time check)', () => {
-    const network: ArbitrumNetwork = getArbitrumNetwork(42161)
-    expect(network.chainId).toBe(42161)
+  it('Scaling functions exist', () => {
+    expect(typeof scaleFrom18DecimalsToNativeTokenDecimals).toBe('function')
+    expect(typeof scaleFromNativeTokenDecimalsTo18Decimals).toBe('function')
   })
 
-  it('getArbitrumNetworks returns an array', () => {
-    const networks = getArbitrumNetworks()
-    expect(Array.isArray(networks)).toBe(true)
-    expect(networks.length).toBeGreaterThan(0)
+  it('L1-L3 bridger classes exist', () => {
+    expect(EthL1L3Bridger).toBeDefined()
+    expect(Erc20L1L3Bridger).toBeDefined()
   })
 
-  it('constants are re-exported', () => {
-    expect(typeof NODE_INTERFACE_ADDRESS).toBe('string')
-    expect(typeof ADDRESS_ZERO).toBe('string')
-  })
-
-  it('error classes are re-exported', () => {
-    expect(ArbSdkError).toBeDefined()
-    const err = new ArbSdkError('test')
-    expect(err).toBeInstanceOf(Error)
-    expect(err.message).toBe('test')
-  })
-
-  it('isArbitrumNetworkNativeTokenEther works', () => {
-    const network = getArbitrumNetwork(42161)
-    expect(isArbitrumNetworkNativeTokenEther(network)).toBe(true)
-  })
-
-  it('L1L3 pure functions are re-exported', () => {
-    expect(typeof getErc20L1L3ApproveTokenRequest).toBe('function')
-    expect(typeof getErc20L1L3ApproveGasTokenRequest).toBe('function')
-  })
-
-  it('L1L3 types compile (compile-time only)', () => {
-    // These are compile-time checks -- the types are imported above
-    // and used in type positions. If this file compiles, the types work.
-    const _check1: GetEthL1L3DepositRequestParams | undefined = undefined
-    const _check2: GetErc20L1L3DepositRequestParams | undefined = undefined
-    const _check3: L1L3DepositStatus | undefined = undefined
-    const _check4: Erc20L1L3DepositStatus | undefined = undefined
-    const _check5: TransactionRequestData | undefined = undefined
-    expect(true).toBe(true)
+  it('Address class works', () => {
+    const addr = new Address('0x1234567890123456789012345678901234567890')
+    expect(addr.value).toBe('0x1234567890123456789012345678901234567890')
+    const aliased = addr.applyAlias()
+    expect(aliased).toBeInstanceOf(Address)
+    const unaliased = aliased.undoAlias()
+    expect(unaliased.value.toLowerCase()).toBe(addr.value.toLowerCase())
   })
 })
