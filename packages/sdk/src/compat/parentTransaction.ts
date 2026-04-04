@@ -125,17 +125,19 @@ export class ParentTransactionReceipt implements TransactionReceipt {
    * Get any MessageDelivered events that were emitted during this transaction.
    * Uses core event parsing on the receipt logs.
    */
-  public getMessageDeliveredEvents(): ParsedEventLog[] {
+  public getMessageDeliveredEvents(): Record<string, unknown>[] {
     const coreLogs = this.logs.map(toCoreLog)
-    return coreGetMessageDeliveredEvents(coreLogs)
+    const events = coreGetMessageDeliveredEvents(coreLogs)
+    return events.map(e => ({ ...e, ...(e.args as Record<string, unknown>) }))
   }
 
   /**
    * Get any InboxMessageDelivered events that were emitted during this transaction.
    */
-  public getInboxMessageDeliveredEvents(): ParsedEventLog[] {
+  public getInboxMessageDeliveredEvents(): Record<string, unknown>[] {
     const coreLogs = this.logs.map(toCoreLog)
-    return coreGetInboxMessageDeliveredEvents(coreLogs)
+    const events = coreGetInboxMessageDeliveredEvents(coreLogs)
+    return events.map(e => ({ ...e, ...(e.args as Record<string, unknown>) }))
   }
 
   /**

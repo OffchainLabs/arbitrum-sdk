@@ -108,9 +108,11 @@ export class ChildTransactionReceipt implements TransactionReceipt {
   /**
    * Get event data for any redeems that were scheduled in this transaction.
    */
-  public getRedeemScheduledEvents(): ParsedEventLog[] {
+  public getRedeemScheduledEvents(): Record<string, unknown>[] {
     const coreLogs = this.logs.map(toCoreLog)
-    return coreGetRedeemScheduledEvents(coreLogs)
+    const events = coreGetRedeemScheduledEvents(coreLogs)
+    // Flatten args to top level for backwards compat (old SDK returned EventArgs<T>)
+    return events.map(e => ({ ...e, ...(e.args as Record<string, unknown>) }))
   }
 
   /**
