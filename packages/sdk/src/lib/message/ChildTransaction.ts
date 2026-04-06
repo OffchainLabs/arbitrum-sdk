@@ -287,7 +287,8 @@ export class ChildTransactionReceipt implements TransactionReceipt {
         currentTo = currentFrom - 1
       } catch (error) {
         // Some providers cap block range size; retry same interval with smaller chunks.
-        if (!ChildTransactionReceipt.isLogQueryRangeLimitError(error)) throw error
+        if (!ChildTransactionReceipt.isLogQueryRangeLimitError(error))
+          throw error
         if (chunkSize <= 1) throw error
         chunkSize = Math.max(1, Math.floor(chunkSize / 2))
       }

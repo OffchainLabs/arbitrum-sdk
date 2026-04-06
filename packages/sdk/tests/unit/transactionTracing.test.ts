@@ -139,8 +139,7 @@ function mockChildProvider(
           ethers.utils.hexDataSlice(data, 4)
         )
         const childBlock = decoded[0].toNumber()
-        const num =
-          cfg.blockL1Nums?.[childBlock] ?? cfg.blockL1Num ?? 50000
+        const num = cfg.blockL1Nums?.[childBlock] ?? cfg.blockL1Num ?? 50000
         return ethers.utils.defaultAbiCoder.encode(['uint64'], [num])
       }
 
@@ -158,7 +157,9 @@ function mockChildProvider(
     getBlockNumber: async () => 1000000,
     getBlock: async () => null,
     getTransaction: async () => null,
-    getTransactionReceipt: async (txHashOrPromise: string | Promise<string>) => {
+    getTransactionReceipt: async (
+      txHashOrPromise: string | Promise<string>
+    ) => {
       const txHash = (await txHashOrPromise).toLowerCase()
       return cfg.txReceipts?.[txHash] ?? null
     },
@@ -633,7 +634,10 @@ describe('Reverse Tracing Unit Tests', () => {
       const receipt = makeChildReceipt()
 
       try {
-        await receipt.getParentDepositTransactionHash(childProvider, parentProvider)
+        await receipt.getParentDepositTransactionHash(
+          childProvider,
+          parentProvider
+        )
         expect.fail('Expected getParentDepositTransactionHash to throw')
       } catch (error) {
         expect((error as Error).message).to.equal('authentication failed')
