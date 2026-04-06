@@ -111,11 +111,20 @@ describeOnlyWhenCustomGasToken(
         ethBridger,
         nativeTokenContract,
         parentSigner,
+        parentProvider,
         childSigner,
         childProvider,
+        childChain,
       } = await testSetup()
       const bridge = ethBridger.childNetwork.ethBridge.bridge
-      const amount = parseEther('2')
+      const decimals = await getNativeTokenDecimals({
+        parentProvider,
+        childNetwork: childChain,
+      })
+      // Use native token decimals for the deposit (depositERC20 takes raw token units)
+      const amount = parseUnits('2', decimals)
+      // On child chain, values are always in 18-decimal format
+      const amountIn18Decimals = parseEther('2')
 
       await fundParentSignerEther(parentSigner)
       await fundParentCustomFeeToken(parentSigner)
@@ -150,7 +159,10 @@ describeOnlyWhenCustomGasToken(
       )
       expect(depositMessages.length, 'failed to find deposit message').toBe(1)
       const [depositMessage] = depositMessages
-      expect(depositMessage.value.toString()).toBe(amount.toString())
+      // deposit message value is in 18-decimal format on child chain
+      expect(depositMessage.value.toString()).toBe(
+        amountIn18Decimals.toString()
+      )
       expect(depositMessage.to).toBe(await childSigner.getAddress())
 
       expect(
@@ -158,8 +170,8 @@ describeOnlyWhenCustomGasToken(
         (await childSigner.getBalance()).toString(),
         'incorrect balance in depositor account after deposit'
       ).toBe(
-        // balance in the depositor account after the deposit should equal to the initial balance in the depositor account + the amount deposited
-        initialBalanceDepositor.add(amount).toString()
+        // child chain balance is in 18-decimal format
+        initialBalanceDepositor.add(amountIn18Decimals).toString()
       )
     })
 
