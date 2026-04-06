@@ -111,11 +111,6 @@
     // from: ethers>@ethersproject/signing-key>elliptic
     // from: @arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>secp256k1>elliptic
     "GHSA-848j-6mx2-7j84",
-    // https://github.com/advisories/GHSA-g9mf-h72j-4rw9
-    // undici unbounded decompression chain in HTTP responses
-    // Fix requires undici >=6.23.0 but hardhat depends on undici 5.x; dev-only dependency
-    // from: hardhat>undici
-    "GHSA-g9mf-h72j-4rw9",
     // https://github.com/advisories/GHSA-43fc-jf86-j433
     // axios DoS via __proto__ key in mergeConfig
     // Fix requires axios >=1.13.5 but sol2uml depends on axios ^0.27.2; dev-only contract package dep
@@ -125,6 +120,60 @@
     // ajv ReDoS when using $data option (CVE-2025-69873)
     // Fix requires ajv >=8.18.0 but eslint 7.x depends on ajv 6.x/8.x; dev-only dependency
     // from: eslint>ajv, eslint>@eslint/eslintrc>ajv, eslint>table>ajv
-    "GHSA-2g4f-4pwh-qvx6"
+    "GHSA-2g4f-4pwh-qvx6",
+
+    // mocha / hardhat transitive dependencies (dev-only)
+    // https://github.com/advisories/GHSA-5c6j-r48x-rmvq
+    // serialize-javascript RCE via RegExp.flags / Date.prototype.toISOString
+    // Fix requires serialize-javascript >=7.0.3, but all 7.x releases require Node >=20
+    // This repo still tests/supports Node 18 in CI, and the affected package is only used via mocha in dev tooling
+    // from: mocha>serialize-javascript
+    // from: hardhat>mocha>serialize-javascript
+    "GHSA-5c6j-r48x-rmvq",
+    // https://github.com/advisories/GHSA-qj8w-gfj5-8c6v
+    // serialize-javascript CPU exhaustion DoS via crafted array-like objects
+    // Fix requires serialize-javascript >=7.0.5, but all 7.x releases require Node >=20; dev-only mocha dep
+    // from: mocha>serialize-javascript
+    // from: hardhat>mocha>serialize-javascript
+    "GHSA-qj8w-gfj5-8c6v",
+
+    // ethers transitive dependencies (dev-only)
+    // https://github.com/advisories/GHSA-378v-28hj-76wf
+    // bn.js infinite loop vulnerability
+    // Affects bn.js >=5.0.0 <5.2.3; yarn 1 cannot selectively resolve 5.x without also changing 4.x (elliptic)
+    // from: ethers>@ethersproject/bignumber>bn.js
+    "GHSA-378v-28hj-76wf",
+
+    // https://github.com/advisories/GHSA-f886-m6hf-6m8v
+    // brace-expansion zero-step sequence can hang on untrusted brace patterns
+    // Current hits are dev-only tooling paths through eslint, nyc, patch-package, and sol2uml/puppeteer.
+    // Those tools consume repository-controlled glob patterns in CI/local scripts, not runtime user input.
+    // The advisory currently only lists patched versions on brace-expansion >=5.0.5, which is not compatible
+    // with the older minimatch/glob stacks in this dependency graph.
+    "GHSA-f886-m6hf-6m8v",
+
+    // hardhat transitive dependencies (dev-only)
+    // https://github.com/advisories/GHSA-g9mf-h72j-4rw9
+    // undici unbounded decompression chain in HTTP responses
+    // Fix requires undici >=6.23.0 but hardhat depends on undici 5.x; dev-only dependency
+    // from: hardhat>undici
+    "GHSA-g9mf-h72j-4rw9",
+    // https://github.com/advisories/GHSA-2mjp-6q6p-2qxm
+    // undici HTTP Request/Response Smuggling
+    // Fix requires undici >=7.8.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-2mjp-6q6p-2qxm",
+    // https://github.com/advisories/GHSA-vrm6-8vpv-qv8q
+    // undici unbounded memory consumption in WebSocket permessage-deflate decompression
+    // from: hardhat>undici
+    "GHSA-vrm6-8vpv-qv8q",
+    // https://github.com/advisories/GHSA-v9p9-hfj2-hcw8
+    // undici unhandled exception in WebSocket client due to invalid server_max_window_bits validation
+    // from: hardhat>undici
+    "GHSA-v9p9-hfj2-hcw8",
+    // https://github.com/advisories/GHSA-4992-7rv2-5pvq
+    // undici CRLF injection via `upgrade` option
+    // from: hardhat>undici
+    "GHSA-4992-7rv2-5pvq"
   ]
 }

@@ -23,7 +23,7 @@
     "dist/**/*"
   ],
   "scripts": {
-    "audit:ci": "audit-ci --config ./audit-ci.jsonc",
+    "audit:ci": "yarn --cwd ../.. audit:ci",
     "prepare": "yarn run gen:abi",
     "gen:abi": "ts-node ./scripts/genAbi.ts",
     "gen:network": "ts-node ./scripts/genNetwork.ts",
@@ -36,7 +36,7 @@
     "test:coverage": "nyc mocha",
     "test:fork": "SHOULD_FORK=1 hardhat test tests/fork/*.test.ts",
     "test:integration": "mocha tests/integration/ --timeout 30000000 --bail",
-    "test:unit": "mocha --parallel tests/unit/ --timeout 30000 --bail",
+    "test:unit": "vitest run --config ../../vitest.config.ts tests/unit",
     "test:ci": "nyc --reporter=lcovonly mocha --reporter xunit",
     "lint": "eslint .",
     "format": "prettier './**/*.{js,json,md,ts,yml}' '!./src/lib/abi' --write && yarn run lint --fix",

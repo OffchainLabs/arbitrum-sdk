@@ -1,0 +1,12 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directories:
+      - '**/*'
+    schedule:
+      interval: daily
+    versioning-strategy: increase
+    open-pull-requests-limit: 5
+    allow:
+      - dependency-name: '@arbitrum/*'
+      - dependency-name: '@offchainlabs/*'
