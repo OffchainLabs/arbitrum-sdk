@@ -69,13 +69,21 @@ interface ChildProviderConfig {
   defaultLogs?: ethers.providers.Log[]
   /** Return value for NodeInterface.blockL1Num (as a number). */
   blockL1Num?: number
+  /** Return values for NodeInterface.blockL1Num keyed by child block number. */
+  blockL1Nums?: Record<number, number>
   /** Chain ID (default 42161). */
   chainId?: number
+  /** Receipts returned by getTransactionReceipt keyed by tx hash (lowercase). */
+  txReceipts?: Record<string, ethers.providers.TransactionReceipt | null>
 }
 
 interface ParentProviderConfig {
   /** Logs returned by getLogs. Default []. */
   logs?: ethers.providers.Log[]
+  /** Optional getLogs override. */
+  getLogsImpl?: (
+    filter: ethers.providers.Filter
+  ) => Promise<ethers.providers.Log[]>
   /** Whether arbOSVersion should succeed (true = Arbitrum parent / L3 scenario). */
   isArbitrumChain?: boolean
   /** l2BlockRangeForL1 responses keyed by l1Block number. */
@@ -126,7 +134,13 @@ function mockChildProvider(
         selector === blockL1NumSighash &&
         tx.to?.toLowerCase() === NODE_INTERFACE_ADDRESS.toLowerCase()
       ) {
-        const num = cfg.blockL1Num ?? 50000
+        const decoded = ethers.utils.defaultAbiCoder.decode(
+          ['uint64'],
+          ethers.utils.hexDataSlice(data, 4)
+        )
+        const childBlock = decoded[0].toNumber()
+        const num =
+          cfg.blockL1Nums?.[childBlock] ?? cfg.blockL1Num ?? 50000
         return ethers.utils.defaultAbiCoder.encode(['uint64'], [num])
       }
 
@@ -144,7 +158,10 @@ function mockChildProvider(
     getBlockNumber: async () => 1000000,
     getBlock: async () => null,
     getTransaction: async () => null,
-    getTransactionReceipt: async () => null,
+    getTransactionReceipt: async (txHashOrPromise: string | Promise<string>) => {
+      const txHash = (await txHashOrPromise).toLowerCase()
+      return cfg.txReceipts?.[txHash] ?? null
+    },
     resolveName: async () => null,
     lookupAddress: async () => null,
     on: () => undefined,
@@ -167,6 +184,9 @@ function mockParentProvider(
     getLogs: async (filter: ethers.providers.Filter) => {
       if (cfg.getLogsSpy) {
         cfg.getLogsSpy.lastFilter = filter
+      }
+      if (cfg.getLogsImpl) {
+        return cfg.getLogsImpl(filter)
       }
       return cfg.logs ?? []
     },
@@ -551,6 +571,76 @@ describe('Reverse Tracing Unit Tests', () => {
       )
       expect(result).to.equal(expectedParentHash)
     })
+
+    it('shrinks chunk size for block-range errors and still traces', async () => {
+      const messageNumber = 5
+      const expectedParentHash = '0x' + 'ac'.repeat(32)
+      let attempts = 0
+
+      const childProvider = mockChildProvider({
+        defaultTxResponse: {
+          type: '0x64',
+          hash: RECEIPT_TX_HASH,
+          requestId: padRequestId(messageNumber),
+        },
+        blockL1Num: 50000,
+      })
+
+      const parentProvider = mockParentProvider({
+        getLogsImpl: async filter => {
+          attempts++
+          const fromBlock = filter.fromBlock as number
+          const toBlock = filter.toBlock as number
+
+          if (toBlock - fromBlock + 1 > 500) {
+            throw new Error('requested too many blocks in one getLogs call')
+          }
+
+          return [makeMessageDeliveredLog(messageNumber, expectedParentHash)]
+        },
+      })
+
+      const receipt = makeChildReceipt()
+      const result = await receipt.getParentDepositTransactionHash(
+        childProvider,
+        parentProvider
+      )
+
+      expect(result).to.equal(expectedParentHash)
+      expect(attempts).to.be.greaterThan(1)
+    })
+
+    it('rethrows non-range getLogs errors without repeated retries', async () => {
+      const messageNumber = 5
+      let attempts = 0
+
+      const childProvider = mockChildProvider({
+        defaultTxResponse: {
+          type: '0x64',
+          hash: RECEIPT_TX_HASH,
+          requestId: padRequestId(messageNumber),
+        },
+        blockL1Num: 50000,
+      })
+
+      const parentProvider = mockParentProvider({
+        getLogsImpl: async () => {
+          attempts++
+          throw new Error('authentication failed')
+        },
+      })
+
+      const receipt = makeChildReceipt()
+
+      try {
+        await receipt.getParentDepositTransactionHash(childProvider, parentProvider)
+        expect.fail('Expected getParentDepositTransactionHash to throw')
+      } catch (error) {
+        expect((error as Error).message).to.equal('authentication failed')
+      }
+
+      expect(attempts).to.equal(1)
+    })
   })
 
   describe('getParentTransactionHash (full flow)', () => {
@@ -626,6 +716,67 @@ describe('Reverse Tracing Unit Tests', () => {
         parentProvider
       )
       expect(result).to.equal(expectedParentHash)
+    })
+
+    it('redeem tx anchors parent search on ticket creation receipt block', async () => {
+      const ticketId = '0x' + 'ab'.repeat(32)
+      const messageNumber = 10
+      const expectedParentHash = '0x' + 'cd'.repeat(32)
+      const spy: ParentProviderConfig['getLogsSpy'] = {}
+
+      const redeemScheduledLog = makeRedeemScheduledLog(
+        ticketId,
+        RECEIPT_TX_HASH
+      )
+
+      const redeemTopic =
+        ArbRetryableTx__factory.createInterface().getEventTopic(
+          'RedeemScheduled'
+        )
+
+      const ticketReceipt = {
+        ...makeChildReceipt({
+          transactionHash: ticketId,
+          blockNumber: 50,
+        }),
+      } as unknown as ethers.providers.TransactionReceipt
+
+      const childProvider = mockChildProvider({
+        txResponses: {
+          [ticketId.toLowerCase()]: {
+            type: '0x69',
+            hash: ticketId,
+            requestId: padRequestId(messageNumber),
+          },
+        },
+        defaultTxResponse: null,
+        logsByTopic: {
+          [redeemTopic]: [redeemScheduledLog],
+        },
+        blockL1Nums: {
+          50: 1234,
+          100: 999999,
+        },
+        txReceipts: {
+          [ticketId.toLowerCase()]: ticketReceipt,
+        },
+      })
+
+      const parentProvider = mockParentProvider({
+        logs: [makeMessageDeliveredLog(messageNumber, expectedParentHash)],
+        getLogsSpy: spy,
+      })
+
+      const receipt = makeChildReceipt({ blockNumber: 100 })
+      const result = await receipt.getParentTransactionHash(
+        childProvider,
+        parentProvider
+      )
+
+      expect(result).to.equal(expectedParentHash)
+      expect(spy.lastFilter).to.exist
+      expect(spy.lastFilter!.fromBlock).to.equal(235)
+      expect(spy.lastFilter!.toBlock).to.equal(1234)
     })
 
     it('redeem tx returns null when ticket is wrong type (not 0x69)', async () => {

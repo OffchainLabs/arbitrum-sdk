@@ -213,14 +213,14 @@ export class ChildTransactionReceipt implements TransactionReceipt {
         parentProvider
       )
       try {
-        const [upperRange, lowerRange] = await Promise.all([
-          parentNodeInterface.l2BlockRangeForL1(l1Block),
+        const [lowerRange, upperRange] = await Promise.all([
           parentNodeInterface.l2BlockRangeForL1(
             Math.max(
               0,
               l1Block - ChildTransactionReceipt.PARENT_EVENT_LOOKBACK_BLOCKS
             )
           ),
+          parentNodeInterface.l2BlockRangeForL1(l1Block),
         ])
         return {
           fromBlock: lowerRange.firstBlock.toNumber(),
@@ -256,9 +256,10 @@ export class ChildTransactionReceipt implements TransactionReceipt {
     parentEventFetcher: EventFetcher,
     messageNumber: BigNumber,
     bridgeAddress: string,
-    blockRange: { fromBlock: number; toBlock: number }
+    blockRange: { fromBlock: number; toBlock: number },
+    initialChunkSize = ChildTransactionReceipt.PARENT_EVENT_QUERY_CHUNK_SIZE
   ): Promise<string | null> {
-    let chunkSize = ChildTransactionReceipt.PARENT_EVENT_QUERY_CHUNK_SIZE
+    let chunkSize = initialChunkSize
     let currentTo = blockRange.toBlock
 
     while (currentTo >= blockRange.fromBlock) {
@@ -286,12 +287,34 @@ export class ChildTransactionReceipt implements TransactionReceipt {
         currentTo = currentFrom - 1
       } catch (error) {
         // Some providers cap block range size; retry same interval with smaller chunks.
+        if (!ChildTransactionReceipt.isLogQueryRangeLimitError(error)) throw error
         if (chunkSize <= 1) throw error
         chunkSize = Math.max(1, Math.floor(chunkSize / 2))
       }
     }
 
     return null
+  }
+
+  private static isLogQueryRangeLimitError(error: unknown): boolean {
+    const err = error as { code?: number | string; message?: string } | null
+    const message = (err?.message || '').toLowerCase()
+    const code = err?.code
+
+    if (code === -32005) return true
+
+    return [
+      'too many blocks',
+      'too many results',
+      'block range',
+      'query returned more than',
+      'response size exceeded',
+      'exceed max block range',
+      'requested too many blocks',
+      'range is too wide',
+      'limit exceeded',
+      'log response size exceeded',
+    ].some(fragment => message.includes(fragment))
   }
 
   /**
@@ -303,6 +326,9 @@ export class ChildTransactionReceipt implements TransactionReceipt {
    *
    * This approach works on Nitro-based Arbitrum chains
    * without requiring the non-standard eth_getRawTransactionByHash method.
+   * We intentionally use the raw RPC response because ethers v5's
+   * provider.getTransaction() does not preserve requestId for these
+   * Arbitrum-specific transaction types.
    */
   private static async getMessageNumber(
     childProvider: providers.Provider,
@@ -340,6 +366,8 @@ export class ChildTransactionReceipt implements TransactionReceipt {
       }
     )
 
+    // For redeem transactions the ticket id comes from RedeemScheduled;
+    // for ticket creation transactions, this transaction hash is the ticket id.
     const ticketId =
       redeemScheduledEvents.length > 0
         ? redeemScheduledEvents[0].event.ticketId
@@ -353,8 +381,8 @@ export class ChildTransactionReceipt implements TransactionReceipt {
     )
     if (!messageNumber) return null
 
-    // For delayed redeems, use the ticket creation block as the anchor for
-    // parent log range selection when available.
+    // For delayed redeems, anchor the parent log range selection on the
+    // ticket creation receipt instead of the later redeem receipt.
     let ticketCreationReceipt: TransactionReceipt | null = null
     if (ticketId !== this.transactionHash) {
       ticketCreationReceipt = await childProvider
