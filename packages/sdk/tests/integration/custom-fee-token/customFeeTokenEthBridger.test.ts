@@ -191,7 +191,10 @@ describeOnlyWhenCustomGasToken(
       })
 
       const bridge = ethBridger.childNetwork.ethBridge.bridge
-      const amount = parseUnits('0.2', decimals)
+      // Child-chain balances are always 18-decimal formatted, even when the
+      // parent/native token uses a different decimal count.
+      const amount = parseEther('0.2')
+      const amountInNativeDecimals = parseUnits('0.2', decimals)
 
       await fundParentSignerEther(parentSigner)
       await fundChildCustomFeeToken(childSigner)
@@ -289,7 +292,7 @@ describeOnlyWhenCustomGasToken(
         'incorrect balance in bridge after withdrawal'
       ).toBe(
         // balance in the bridge after the withdrawal should equal to the initial balance in the bridge - the amount withdrawn
-        initialBalanceBridge.sub(amount).toString()
+        initialBalanceBridge.sub(amountInNativeDecimals).toString()
       )
 
       expect(
@@ -298,7 +301,7 @@ describeOnlyWhenCustomGasToken(
         'incorrect balance in destination after withdrawal'
       ).toBe(
         // balance in the destination after the withdrawal should equal to the initial balance in the destination + the amount withdrawn
-        initialBalanceDestination.add(amount).toString()
+        initialBalanceDestination.add(amountInNativeDecimals).toString()
       )
     })
   }
