@@ -20,7 +20,7 @@ import { expect } from 'chai'
 import chalk from 'chalk'
 
 import { BigNumber } from '@ethersproject/bignumber'
-import { JsonRpcProvider } from '@ethersproject/providers'
+import { JsonRpcProvider, Provider } from '@ethersproject/providers'
 import { parseEther } from 'ethers/lib/utils'
 
 import { config, getSigner, testSetup } from '../testSetup'
@@ -31,6 +31,7 @@ import { ParentToChildMessageStatus } from '../../src/lib/message/ParentToChildM
 import {
   ArbitrumNetwork,
   assertArbitrumNetworkHasTokenBridge,
+  getArbitrumNetwork,
 } from '../../src/lib/dataEntities/networks'
 import { GasOverrides } from '../../src/lib/message/ParentToChildMessageGasEstimator'
 import { ArbSdkError } from '../../src/lib/dataEntities/errors'
@@ -38,6 +39,10 @@ import { ERC20 } from '../../src/lib/abi/ERC20'
 import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { scaleFrom18DecimalsToNativeTokenDecimals } from '../../src/lib/utils/lib'
+import { ArbitrumProvider } from '../../src/lib/utils/arbProvider'
+import { RollupUserLogic__factory } from '../../src/lib/abi/factories/RollupUserLogic__factory'
+import { BoldRollupUserLogic__factory } from '../../src/lib/abi-bold/factories/BoldRollupUserLogic__factory'
+import { Bridge__factory } from '../../src/lib/abi/factories/Bridge__factory'
 
 const preFundAmount = parseEther('0.1')
 
@@ -67,6 +72,18 @@ interface WithdrawalParams {
   gatewayType: GatewayType
 }
 
+const FAST_MINER_INTERVAL_MS = 50
+const WITHDRAWAL_READY_POLL_INTERVAL_MS = 250
+
+interface ReadyToExecuteMessage {
+  waitUntilReadyToExecute(
+    childProvider: Provider,
+    retryDelay?: number
+  ): Promise<
+    ChildToParentMessageStatus.EXECUTED | ChildToParentMessageStatus.CONFIRMED
+  >
+}
+
 export const mineUntilStop = async (
   miner: Signer,
   state: { mining: boolean }
@@ -78,7 +95,120 @@ export const mineUntilStop = async (
         value: 0,
       })
     ).wait()
-    await wait(15000)
+    await wait(FAST_MINER_INTERVAL_MS)
+  }
+}
+
+/**
+ * Listens for NodeConfirmed/AssertionConfirmed events on the rollup contract
+ * and resolves as soon as the confirmed assertion covers the withdrawal's position.
+ * Much faster than polling waitUntilReadyToExecute every 500ms.
+ */
+export const waitForConfirmationEvent = async (
+  position: BigNumber,
+  childProvider: Provider,
+  parentProvider: Provider
+): Promise<{ promise: Promise<void>; cleanup: () => void }> => {
+  const childChain = await getArbitrumNetwork(childProvider)
+  const bridge = Bridge__factory.connect(
+    childChain.ethBridge.bridge,
+    parentProvider
+  )
+  const rollupAddr = await bridge.rollup()
+  const arbProvider = new ArbitrumProvider(childProvider as JsonRpcProvider)
+
+  // Detect BoLD vs classic by trying a classic-only method
+  let isBold = false
+  const classicRollup = RollupUserLogic__factory.connect(
+    rollupAddr,
+    parentProvider
+  )
+  try {
+    await classicRollup.callStatic.extraChallengeTimeBlocks()
+  } catch {
+    isBold = true
+  }
+
+  const boldRollup = isBold
+    ? BoldRollupUserLogic__factory.connect(rollupAddr, parentProvider)
+    : undefined
+
+  let cleanedUp = false
+  const cleanup = () => {
+    if (cleanedUp) return
+    cleanedUp = true
+    if (boldRollup) {
+      boldRollup.removeAllListeners('AssertionConfirmed')
+    } else {
+      classicRollup.removeAllListeners('NodeConfirmed')
+    }
+  }
+
+  const promise = new Promise<void>((resolve, reject) => {
+    const resolveReady = () => {
+      cleanup()
+      resolve()
+    }
+
+    const rejectReady = (err: unknown) => {
+      cleanup()
+      reject(err)
+    }
+
+    const checkBlock = async (blockHash: string) => {
+      try {
+        const zeroHash =
+          '0x0000000000000000000000000000000000000000000000000000000000000000'
+        const childBlock = await arbProvider.getBlock(
+          blockHash === zeroHash ? 0 : blockHash
+        )
+        if (BigNumber.from(childBlock.sendCount).gt(position)) {
+          resolveReady()
+        }
+      } catch (err) {
+        rejectReady(err)
+      }
+    }
+
+    if (boldRollup) {
+      boldRollup.on(
+        'AssertionConfirmed',
+        (_assertionHash: string, blockHash: string) => {
+          void checkBlock(blockHash)
+        }
+      )
+    } else {
+      classicRollup.on(
+        'NodeConfirmed',
+        (_nodeNum: BigNumber, blockHash: string) => {
+          void checkBlock(blockHash)
+        }
+      )
+    }
+  })
+
+  return { promise, cleanup }
+}
+
+export const waitForReadyToExecuteFast = async (
+  message: ReadyToExecuteMessage,
+  position: BigNumber,
+  childProvider: Provider,
+  parentProvider: Provider
+): Promise<void> => {
+  const { promise: confirmationEventPromise, cleanup } =
+    await waitForConfirmationEvent(position, childProvider, parentProvider)
+
+  try {
+    await Promise.race([
+      confirmationEventPromise,
+      message.waitUntilReadyToExecute(
+        childProvider,
+        WITHDRAWAL_READY_POLL_INTERVAL_MS
+      ),
+    ])
+  } finally {
+    cleanup()
   }
 }
 
@@ -159,16 +289,23 @@ export const withdrawToken = async (params: WithdrawalParams) => {
     await params.parentSigner.getAddress()
   )
 
-  // whilst waiting for status we miner on both parent and child chains
+  // whilst waiting for status we mine on both parent and child chains
   const miner1 = Wallet.createRandom().connect(params.parentSigner.provider!)
   const miner2 = Wallet.createRandom().connect(params.childSigner.provider!)
   await fundParentSigner(miner1, parseEther('1'))
   await fundChildSigner(miner2, parseEther('1'))
   const state = { mining: true }
+  const events = withdrawRec.getChildToParentEvents()
+  const position = (events[0] as { position: BigNumber }).position
   await Promise.race([
     mineUntilStop(miner1, state),
     mineUntilStop(miner2, state),
-    message.waitUntilReadyToExecute(params.childSigner.provider!),
+    waitForReadyToExecuteFast(
+      message,
+      position,
+      params.childSigner.provider!,
+      params.parentSigner.provider!
+    ),
   ])
   state.mining = false
 
