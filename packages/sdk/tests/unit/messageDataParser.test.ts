@@ -1,7 +1,7 @@
 /* eslint-env node */
 'use strict'
 
-import { expect } from 'chai'
+import { describe, it, expect } from 'vitest'
 
 import { BigNumber } from 'ethers'
 import { parseEther } from 'ethers/lib/utils'
@@ -16,32 +16,36 @@ describe('SubmitRetryableMessageDataParser', () => {
 
     const res = messageDataParser.parse(retryableData)
 
-    expect(res.callValueRefundAddress).to.eq(
+    expect(res.callValueRefundAddress).toBe(
       '0x7F869dC59A96e798e759030b3c39398ba584F087'
     )
-    expect(res.data).to.eq(
+    expect(res.data).toBe(
       '0x2E567B360000000000000000000000006B175474E89094C44DA98B954EEDEAC495271D0F0000000000000000000000007F869DC59A96E798E759030B3C39398BA584F0870000000000000000000000007F869DC59A96E798E759030B3C39398BA584F08700000000000000000000000000000000000000000000003871022F1082344C7700000000000000000000000000000000000000000000000000000000000000A000000000000000000000000000000000000000000000000000000000000000800000000000000000000000000000000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000'
     )
-    expect(res.destAddress).to.eq('0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65')
-    expect(res.excessFeeRefundAddress).to.eq(
+    expect(res.destAddress).toBe('0x467194771dAe2967Aef3ECbEDD3Bf9a310C76C65')
+    expect(res.excessFeeRefundAddress).toBe(
       '0x7F869dC59A96e798e759030b3c39398ba584F087'
     )
-    expect(res.gasLimit.eq(BigNumber.from('0x0210f1')), 'incorrect gas limit')
-      .to.be.true
+    expect(
+      res.gasLimit.eq(BigNumber.from('0x0210f1')),
+      'incorrect gas limit'
+    ).toBe(true)
     expect(
       res.l1Value.eq(BigNumber.from('0x30346f1c785e')),
       'incorrect l1 value'
-    ).to.be.true
-    expect(res.l2CallValue.eq(BigNumber.from(0)), 'incorrect l2 call value').to
-      .be.true
+    ).toBe(true)
+    expect(
+      res.l2CallValue.eq(BigNumber.from(0)),
+      'incorrect l2 call value'
+    ).toBe(true)
     expect(
       res.maxFeePerGas.eq(BigNumber.from('0x172c5865')),
       'incorrect max fee per gas'
-    ).to.be.true
+    ).toBe(true)
     expect(
       res.maxSubmissionFee.eq(BigNumber.from('0x53280cf149')),
       'incorrect max submission fee'
-    ).to.be.true
+    ).toBe(true)
   })
 
   // left a separate test here for eth deposits done via a retryable
@@ -55,23 +59,27 @@ describe('SubmitRetryableMessageDataParser', () => {
 
     const res = messageDataParser.parse(retryableData)
 
-    expect(res.callValueRefundAddress).to.eq(
+    expect(res.callValueRefundAddress).toBe(
       '0xf71946496600e1e1d47b8A77EB2f109Fd82dc86a'
     )
-    expect(res.data).to.eq('0x')
-    expect(res.destAddress).to.eq('0xf71946496600e1e1d47b8A77EB2f109Fd82dc86a')
-    expect(res.excessFeeRefundAddress).to.eq(
+    expect(res.data).toBe('0x')
+    expect(res.destAddress).toBe('0xf71946496600e1e1d47b8A77EB2f109Fd82dc86a')
+    expect(res.excessFeeRefundAddress).toBe(
       '0xf71946496600e1e1d47b8A77EB2f109Fd82dc86a'
     )
-    expect(res.gasLimit.eq(BigNumber.from(0)), 'incorrect gas limit').to.be.true
-    expect(res.l1Value.eq(parseEther('30.01')), 'incorrect l1 value').to.be.true
-    expect(res.l2CallValue.eq(BigNumber.from(0)), 'incorrect l2 call value').to
-      .be.true
-    expect(res.maxFeePerGas.eq(BigNumber.from(0)), 'incorrect max fee per gas')
-      .to.be.true
+    expect(res.gasLimit.eq(BigNumber.from(0)), 'incorrect gas limit').toBe(true)
+    expect(res.l1Value.eq(parseEther('30.01')), 'incorrect l1 value').toBe(true)
+    expect(
+      res.l2CallValue.eq(BigNumber.from(0)),
+      'incorrect l2 call value'
+    ).toBe(true)
+    expect(
+      res.maxFeePerGas.eq(BigNumber.from(0)),
+      'incorrect max fee per gas'
+    ).toBe(true)
     expect(
       res.maxSubmissionFee.eq(BigNumber.from('0x370e285a0c')),
       'incorrect max submission fee'
-    ).to.be.true
+    ).toBe(true)
   })
 })

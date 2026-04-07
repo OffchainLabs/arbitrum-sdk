@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { expect } from 'chai'
+import { describe, it, expect } from 'vitest'
 
 import { AeWETH__factory } from '../../src/lib/abi/factories/AeWETH__factory'
 import { L2GatewayRouter__factory } from '../../src/lib/abi/factories/L2GatewayRouter__factory'
@@ -32,7 +32,7 @@ import { randomBytes, hexlify } from 'ethers/lib/utils'
 import { itOnlyWhenEth } from './custom-fee-token/mochaExtensions'
 
 const expectIgnoreCase = (expected: string, actual: string) => {
-  expect(expected.toLocaleLowerCase()).to.equal(actual.toLocaleLowerCase())
+  expect(expected.toLocaleLowerCase()).toBe(actual.toLocaleLowerCase())
 }
 
 describe('sanity checks (read-only)', async () => {
@@ -49,27 +49,25 @@ describe('sanity checks (read-only)', async () => {
 
     const l1ClonableProxyHash = await l1Gateway.cloneableProxyHash()
     const l2ClonableProxyHash = await l2Gateway.cloneableProxyHash()
-    expect(l1ClonableProxyHash).to.equal(l2ClonableProxyHash)
+    expect(l1ClonableProxyHash).toBe(l2ClonableProxyHash)
 
     const l1BeaconProxyHash = await l1Gateway.l2BeaconProxyFactory()
     const l2BeaconProxyHash = await l2Gateway.beaconProxyFactory()
-    expect(l1BeaconProxyHash).to.equal(l2BeaconProxyHash)
+    expect(l1BeaconProxyHash).toBe(l2BeaconProxyHash)
 
     const l1GatewayCounterParty = await l1Gateway.counterpartGateway()
-    expect(l1GatewayCounterParty).to.equal(
-      childChain.tokenBridge.childErc20Gateway
-    )
+    expect(l1GatewayCounterParty).toBe(childChain.tokenBridge.childErc20Gateway)
 
     const l2GatewayCounterParty = await l2Gateway.counterpartGateway()
-    expect(l2GatewayCounterParty).to.equal(
+    expect(l2GatewayCounterParty).toBe(
       childChain.tokenBridge.parentErc20Gateway
     )
 
     const l1Router = await l1Gateway.router()
-    expect(l1Router).to.equal(childChain.tokenBridge.parentGatewayRouter)
+    expect(l1Router).toBe(childChain.tokenBridge.parentGatewayRouter)
 
     const l2Router = await l2Gateway.router()
-    expect(l2Router).to.equal(childChain.tokenBridge.childGatewayRouter)
+    expect(l2Router).toBe(childChain.tokenBridge.childGatewayRouter)
   })
 
   it('custom gateways public storage vars properly set', async () => {
@@ -83,20 +81,20 @@ describe('sanity checks (read-only)', async () => {
       childSigner
     )
     const l1GatewayCounterParty = await l1Gateway.counterpartGateway()
-    expect(l1GatewayCounterParty).to.equal(
+    expect(l1GatewayCounterParty).toBe(
       childChain.tokenBridge.childCustomGateway
     )
 
     const l2GatewayCounterParty = await l2Gateway.counterpartGateway()
-    expect(l2GatewayCounterParty).to.equal(
+    expect(l2GatewayCounterParty).toBe(
       childChain.tokenBridge.parentCustomGateway
     )
 
     const l1Router = await l1Gateway.router()
-    expect(l1Router).to.equal(childChain.tokenBridge.parentGatewayRouter)
+    expect(l1Router).toBe(childChain.tokenBridge.parentGatewayRouter)
 
     const l2Router = await l2Gateway.router()
-    expect(l2Router).to.equal(childChain.tokenBridge.childGatewayRouter)
+    expect(l2Router).toBe(childChain.tokenBridge.childGatewayRouter)
   })
 
   itOnlyWhenEth(
@@ -162,7 +160,7 @@ describe('sanity checks (read-only)', async () => {
       parentSigner.provider!
     )
 
-    expect(gateway).to.equal(childChain.tokenBridge.parentWethGateway)
+    expect(gateway).toBe(childChain.tokenBridge.parentWethGateway)
   })
 
   it('parent and child chain implementations of calculateL2ERC20Address match', async () => {
@@ -180,6 +178,6 @@ describe('sanity checks (read-only)', async () => {
     const erc20ChildAddressAsPerChild =
       await childGatewayRouter.calculateL2TokenAddress(address)
 
-    expect(erc20ChildAddressAsPerChild).to.equal(erc20ChildAddressAsPerParent)
+    expect(erc20ChildAddressAsPerChild).toBe(erc20ChildAddressAsPerParent)
   })
 })

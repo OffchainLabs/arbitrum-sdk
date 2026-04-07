@@ -1,4 +1,4 @@
-import { expect } from 'chai'
+import { describe, it, expect } from 'vitest'
 import { BigNumber, providers } from 'ethers'
 import { createPublicClient, defineChain, http, TransactionReceipt } from 'viem'
 import { arbitrumSepolia, mainnet } from 'viem/chains'
@@ -30,10 +30,10 @@ describe('viem compatibility', () => {
       })
 
       const provider = publicClientToProvider(publicClient)
-      expect(provider).to.be.instanceOf(providers.StaticJsonRpcProvider)
-      expect(provider.network.chainId).to.equal(testChain.id)
-      expect(provider.network.name).to.equal(testChain.name)
-      expect(provider.connection.url).to.equal('https://example.com')
+      expect(provider).toBeInstanceOf(providers.StaticJsonRpcProvider)
+      expect(provider.network.chainId).toBe(testChain.id)
+      expect(provider.network.name).toBe(testChain.name)
+      expect(provider.connection.url).toBe('https://example.com')
     })
 
     it('successfully converts PublicClient to Provider', () => {
@@ -44,9 +44,9 @@ describe('viem compatibility', () => {
 
       const provider = publicClientToProvider(publicClient)
 
-      expect(provider.network.chainId).to.equal(publicClient.chain!.id)
-      expect(provider.network.name).to.equal(publicClient.chain!.name)
-      expect(provider.connection.url).to.equal(
+      expect(provider.network.chainId).toBe(publicClient.chain!.id)
+      expect(provider.network.name).toBe(publicClient.chain!.name)
+      expect(provider.connection.url).toBe(
         'https://sepolia-rollup.arbitrum.io/rpc'
       )
     })
@@ -59,9 +59,9 @@ describe('viem compatibility', () => {
 
       const provider = publicClientToProvider(publicClient)
 
-      expect(provider.network.chainId).to.equal(publicClient.chain!.id)
-      expect(provider.network.name).to.equal(publicClient.chain!.name)
-      expect(provider.connection.url).to.equal(
+      expect(provider.network.chainId).toBe(publicClient.chain!.id)
+      expect(provider.network.name).toBe(publicClient.chain!.name)
+      expect(provider.connection.url).toBe(
         'https://arbitrum-sepolia.gateway.tenderly.co'
       )
     })
@@ -73,7 +73,7 @@ describe('viem compatibility', () => {
         transport,
       })
 
-      expect(() => publicClientToProvider(publicClient)).to.throw(
+      expect(() => publicClientToProvider(publicClient)).toThrow(
         '[publicClientToProvider] "chain" is undefined'
       )
     })
@@ -113,15 +113,15 @@ describe('viem compatibility', () => {
       const ethersReceipt =
         viemTransactionReceiptToEthersTransactionReceipt(viemReceipt)
 
-      expect(ethersReceipt.to).to.equal('0x1234')
-      expect(ethersReceipt.from).to.equal('0x5678')
-      expect(ethersReceipt.contractAddress).to.equal('0xabcd')
-      expect(ethersReceipt.transactionIndex).to.equal(1)
-      expect(ethersReceipt.gasUsed.eq(BigNumber.from(21000))).to.equal(true)
-      expect(ethersReceipt.blockNumber).to.equal(123)
-      expect(ethersReceipt.status).to.equal(1)
-      expect(ethersReceipt.logs[0].address).to.equal('0xcontract')
-      expect(ethersReceipt.byzantium).to.equal(true)
+      expect(ethersReceipt.to).toBe('0x1234')
+      expect(ethersReceipt.from).toBe('0x5678')
+      expect(ethersReceipt.contractAddress).toBe('0xabcd')
+      expect(ethersReceipt.transactionIndex).toBe(1)
+      expect(ethersReceipt.gasUsed.eq(BigNumber.from(21000))).toBe(true)
+      expect(ethersReceipt.blockNumber).toBe(123)
+      expect(ethersReceipt.status).toBe(1)
+      expect(ethersReceipt.logs[0].address).toBe('0xcontract')
+      expect(ethersReceipt.byzantium).toBe(true)
     })
 
     it('handles failed transaction status', () => {
@@ -144,7 +144,7 @@ describe('viem compatibility', () => {
 
       const ethersReceipt =
         viemTransactionReceiptToEthersTransactionReceipt(viemReceipt)
-      expect(ethersReceipt.status).to.equal(0)
+      expect(ethersReceipt.status).toBe(0)
     })
   })
 })

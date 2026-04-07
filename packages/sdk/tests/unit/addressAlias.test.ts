@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { expect } from 'chai'
+import { describe, it, expect } from 'vitest'
 
 import { Address } from '../../src/lib/dataEntities/address'
 import { BigNumber } from 'ethers'
@@ -35,16 +35,16 @@ describe('Address', () => {
     const address = new Address(addr)
 
     const afterApply = address.applyAlias()
-    expect(afterApply.value, 'invalid apply alias').to.eq(expectedApply)
+    expect(afterApply.value, 'invalid apply alias').toBe(expectedApply)
 
     const afterApplyUndo = afterApply.undoAlias()
-    expect(afterApplyUndo.value, 'invalid undo after apply alias').to.eq(addr)
+    expect(afterApplyUndo.value, 'invalid undo after apply alias').toBe(addr)
 
     const afterUndo = address.undoAlias()
-    expect(afterUndo.value, 'invalid undo alias').to.eq(expectedUndo)
+    expect(afterUndo.value, 'invalid undo alias').toBe(expectedUndo)
 
     const afterUndoApply = afterUndo.applyAlias()
-    expect(afterUndoApply.value, 'invalid apply after undo alias').to.eq(addr)
+    expect(afterUndoApply.value, 'invalid apply after undo alias').toBe(addr)
   }
 
   it('does alias correctly below offset', async () => {
