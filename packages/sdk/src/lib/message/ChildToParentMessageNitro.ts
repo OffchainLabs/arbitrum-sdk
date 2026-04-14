@@ -33,7 +33,7 @@ import { Outbox__factory } from '../abi/factories/Outbox__factory'
 import { NodeInterface__factory } from '../abi/factories/NodeInterface__factory'
 
 import { L2ToL1TxEvent as ChildToParentTxEvent } from '../abi/ArbSys'
-import { ContractTransaction, Overrides } from 'ethers'
+import { ContractTransaction, Overrides, PopulatedTransaction } from 'ethers'
 import { Mutex } from 'async-mutex'
 import { EventFetcher, FetchedEvent } from '../utils/eventFetcher'
 import { ArbSdkError } from '../dataEntities/errors'
@@ -762,15 +762,15 @@ export class ChildToParentMessageWriterNitro extends ChildToParentMessageReaderN
   }
 
   /**
-   * Executes the ChildToParentMessage on Parent Chain.
+   * Gets the execute transaction for the ChildToParentMessage on Parent Chain.
    * Will throw an error if the outbox entry has not been created, which happens when the
    * corresponding assertion is confirmed.
-   * @returns
+   * @returns The populated transaction that can be sent to execute the message
    */
-  public async execute(
+  public async getExecuteTransaction(
     childProvider: Provider,
     overrides?: Overrides
-  ): Promise<ContractTransaction> {
+  ): Promise<PopulatedTransaction> {
     const status = await this.status(childProvider)
     if (status !== ChildToParentMessageStatus.CONFIRMED) {
       throw new ArbSdkError(
@@ -784,7 +784,7 @@ export class ChildToParentMessageWriterNitro extends ChildToParentMessageReaderN
       this.parentSigner
     )
 
-    return await outbox.executeTransaction(
+    return await outbox.populateTransaction.executeTransaction(
       proof,
       this.event.position,
       this.event.caller,
@@ -796,5 +796,19 @@ export class ChildToParentMessageWriterNitro extends ChildToParentMessageReaderN
       this.event.data,
       overrides || {}
     )
+  }
+
+  /**
+   * Executes the ChildToParentMessage on Parent Chain.
+   * Will throw an error if the outbox entry has not been created, which happens when the
+   * corresponding assertion is confirmed.
+   * @returns
+   */
+  public async execute(
+    childProvider: Provider,
+    overrides?: Overrides
+  ): Promise<ContractTransaction> {
+    const txRequest = await this.getExecuteTransaction(childProvider, overrides)
+    return await this.parentSigner.sendTransaction(txRequest)
   }
 }
