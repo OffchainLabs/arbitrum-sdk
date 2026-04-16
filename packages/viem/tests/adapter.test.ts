@@ -119,6 +119,28 @@ describe('wrapPublicClient', () => {
       expect(mock.getBlock).toHaveBeenCalledWith({ blockTag: 'latest' })
     })
 
+    it('passes block hashes via blockHash param', async () => {
+      const mock = createMockViemClient()
+      mock.getBlock.mockResolvedValue({
+        hash: '0xblockhash',
+        parentHash: '0xparenthash',
+        number: 100n,
+        timestamp: 1700000000n,
+        nonce: '0x0000000000000000',
+        difficulty: 0n,
+        gasLimit: 30000000n,
+        gasUsed: 15000000n,
+        miner: '0x0000000000000000000000000000000000000000',
+        baseFeePerGas: null,
+        transactions: [],
+      })
+      const provider = wrapPublicClient(mock as any)
+      const blockHash =
+        '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef'
+      await provider.getBlock(blockHash)
+      expect(mock.getBlock).toHaveBeenCalledWith({ blockHash })
+    })
+
     it('returns null when viem returns null', async () => {
       const mock = createMockViemClient()
       mock.getBlock.mockResolvedValue(null)

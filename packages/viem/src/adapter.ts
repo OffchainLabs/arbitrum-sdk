@@ -117,7 +117,7 @@ interface ViemLog {
  */
 function blockTagToViemParam(
   blockTag: BlockTag
-): { blockNumber: bigint } | { blockTag: string } | { blockHash: string } {
+): { blockNumber: bigint } | { blockTag: string } | { blockHash: `0x${string}` } {
   if (typeof blockTag === 'number') {
     return { blockNumber: BigInt(blockTag) }
   }
@@ -127,7 +127,7 @@ function blockTagToViemParam(
     blockTag.startsWith('0x') &&
     blockTag.length === 66
   ) {
-    return { blockHash: blockTag }
+    return { blockHash: blockTag as `0x${string}` }
   }
   return { blockTag: blockTag }
 }

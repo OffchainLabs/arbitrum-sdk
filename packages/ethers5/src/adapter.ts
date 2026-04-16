@@ -205,7 +205,7 @@ export function wrapProvider(provider: Ethers5Provider): ArbitrumProvider {
         number: block.number,
         timestamp: block.timestamp,
         nonce: block.nonce,
-        difficulty: block.difficulty != null ? BigInt(block.difficulty.toString()) : 0n,
+        difficulty: toBigIntRequired(block.difficulty),
         gasLimit: toBigIntRequired(block.gasLimit),
         gasUsed: toBigIntRequired(block.gasUsed),
         miner: block.miner,
