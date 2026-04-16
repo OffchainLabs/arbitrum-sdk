@@ -16,6 +16,8 @@ export interface TransactionRequestData {
   value: bigint
   /** Sender address (for gas estimation) */
   from?: string
+  /** Gas limit override (optional — adapters let the provider estimate if omitted) */
+  gasLimit?: bigint
 }
 
 /**

@@ -5,7 +5,9 @@ import {
   createPublicClient,
   createWalletClient,
   http,
+  keccak256 as viemKeccak256,
   type Chain,
+  type Hex,
 } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { wrapPublicClient, fromViemReceipt } from '../../src/adapter'
@@ -79,6 +81,7 @@ export const viemHarness: TestHarness = {
       to: tx.to as `0x${string}`,
       data: tx.data as `0x${string}`,
       value: tx.value,
+      ...(tx.gasLimit !== undefined && { gas: tx.gasLimit }),
       chain,
     })
 
@@ -160,5 +163,82 @@ export const viemHarness: TestHarness = {
       throw new Error('Contract deployment failed: no contract address')
     }
     return { address: coreReceipt.contractAddress, receipt: coreReceipt }
+  },
+
+  async signTransaction(
+    privateKey: string,
+    rpcUrl: string,
+    tx: TransactionRequestData
+  ): Promise<string> {
+    const account = privateKeyToAccount(ensureHexKey(privateKey))
+    const chainId = await getChainIdForUrl(rpcUrl)
+    const chain = localChain(chainId, rpcUrl)
+
+    const publicClient = createPublicClient({
+      chain,
+      transport: http(rpcUrl),
+    })
+
+    const nonce = await publicClient.getTransactionCount({
+      address: account.address,
+    })
+
+    let gas: bigint
+    if (tx.gasLimit) {
+      gas = tx.gasLimit
+    } else {
+      gas = await publicClient.estimateGas({
+        account,
+        to: (tx.to || '0x0000000000000000000000000000000000000000') as Hex,
+        data: tx.data as Hex,
+        value: tx.value,
+      })
+    }
+
+    const txToSign: Record<string, unknown> = {
+      to: tx.to ? (tx.to as Hex) : undefined,
+      data: tx.data as Hex,
+      value: tx.value,
+      chainId,
+      nonce,
+      type: 'eip1559' as const,
+      gas,
+    }
+
+    if ((tx as any).maxFeePerGas !== undefined) {
+      txToSign.maxFeePerGas = (tx as any).maxFeePerGas
+      txToSign.maxPriorityFeePerGas = (tx as any).maxPriorityFeePerGas
+    } else {
+      const block = await publicClient.getBlock()
+      const baseFee = block.baseFeePerGas ?? 0n
+      txToSign.maxPriorityFeePerGas = 1_000_000_000n
+      txToSign.maxFeePerGas = baseFee * 2n + (txToSign.maxPriorityFeePerGas as bigint)
+    }
+
+    if ((tx as any).nonce !== undefined) {
+      txToSign.nonce = (tx as any).nonce
+    }
+
+    return account.signTransaction(txToSign as any)
+  },
+
+  getTransactionHash(signedTx: string): string {
+    return viemKeccak256(signedTx as Hex)
+  },
+
+  async waitForTransaction(
+    rpcUrl: string,
+    txHash: string,
+    timeout?: number
+  ): Promise<ArbitrumTransactionReceipt> {
+    const publicClient = createPublicClient({
+      transport: http(rpcUrl),
+    })
+
+    const receipt = await publicClient.waitForTransactionReceipt({
+      hash: txHash as Hex,
+      timeout: timeout ?? 60_000,
+    })
+    return fromViemReceipt(receipt as any)
   },
 }

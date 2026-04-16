@@ -26,6 +26,8 @@ import {
   ArbitrumContract,
   ERC20Abi,
   getChildToParentEvents,
+  getRedeemScheduledEvents,
+  isDefined,
   type ArbitrumNetwork,
 } from '../../../src'
 
@@ -314,34 +316,386 @@ export function erc20Scenarios(
     // ---------------------------------------------------------------
     // Test 2.3: deposit with no funds, manual redeem
     // ---------------------------------------------------------------
-    it.skip('deposit with no funds, manual redeem', async () => {
-      // TODO: Port from old SDK. Requires deposit with gasLimit=0, maxFeePerGas=0
-      // to force auto-redeem failure, then manual redeem via getRedeemRequest.
-    })
+    it(
+      'deposit with no funds, manual redeem',
+      { timeout: 120_000 },
+      async () => {
+        await ensureSetup()
+
+        assertArbitrumNetworkHasTokenBridge(network)
+
+        const testAddr = harness.getAddress(config.funnelKey)
+        const parentProvider = harness.createProvider(parentRpcUrl)
+        const childProvider = harness.createProvider(childRpcUrl)
+
+        // Approve token for gateway
+        const approveTx = await getApproveTokenRequest({
+          network,
+          erc20ParentAddress: parentTokenAddress,
+          from: testAddr,
+          parentProvider,
+        })
+        await harness.sendTransaction(config.funnelKey, parentRpcUrl, approveTx)
+
+        // Get child token balance before deposit
+        const childErc20Addr = await getChildErc20Address(
+          parentTokenAddress,
+          parentProvider,
+          network
+        )
+        const childBalanceBefore = await getTokenBalance(
+          harness,
+          childRpcUrl,
+          childErc20Addr,
+          testAddr
+        )
+
+        // Deposit with zero gas to force auto-redeem failure
+        const depositTx = await getErc20DepositRequest({
+          network,
+          erc20ParentAddress: parentTokenAddress,
+          amount: DEPOSIT_AMOUNT,
+          from: testAddr,
+          parentProvider,
+          childProvider,
+          retryableGasOverrides: {
+            gasLimit: { base: 0n, percentIncrease: 0n },
+            maxFeePerGas: { base: 0n, percentIncrease: 0n },
+          },
+        })
+        const depositReceipt = await harness.sendTransaction(
+          config.funnelKey,
+          parentRpcUrl,
+          depositTx
+        )
+        expect(depositReceipt.status).toBe(1)
+
+        // Get message and wait for status — should NOT be auto-redeemed
+        const messages = getParentToChildMessages(
+          depositReceipt,
+          childProvider,
+          network
+        )
+        expect(messages.length).toBe(1)
+
+        const message = messages[0]
+        const waitResult = await message.waitForStatus(60_000)
+        expect(waitResult.status).toBe(
+          ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
+        )
+
+        // Manual redeem
+        const redeemTx = getRedeemRequest(message.retryableCreationId)
+        const redeemReceipt = await harness.sendTransaction(
+          config.funnelKey,
+          childRpcUrl,
+          redeemTx
+        )
+        expect(redeemReceipt.status).toBe(1)
+
+        // Verify status is now REDEEMED
+        const finalStatus = await message.status()
+        expect(finalStatus).toBe(ParentToChildMessageStatus.REDEEMED)
+
+        // Verify child token balance increased
+        const childBalanceAfter = await getTokenBalance(
+          harness,
+          childRpcUrl,
+          childErc20Addr,
+          testAddr
+        )
+        expect(childBalanceAfter).toBe(childBalanceBefore + DEPOSIT_AMOUNT)
+      }
+    )
 
     // ---------------------------------------------------------------
     // Test 2.4: deposit with low funds, manual redeem
     // ---------------------------------------------------------------
-    it.skip('deposit with low funds, manual redeem', async () => {
-      // TODO: Port from old SDK. Requires deposit with gasLimit=5, maxFeePerGas=5
-      // to force auto-redeem failure, then manual redeem.
-    })
+    it(
+      'deposit with low funds, manual redeem',
+      { timeout: 120_000 },
+      async () => {
+        await ensureSetup()
+
+        assertArbitrumNetworkHasTokenBridge(network)
+
+        const testAddr = harness.getAddress(config.funnelKey)
+        const parentProvider = harness.createProvider(parentRpcUrl)
+        const childProvider = harness.createProvider(childRpcUrl)
+
+        // Approve token for gateway
+        const approveTx = await getApproveTokenRequest({
+          network,
+          erc20ParentAddress: parentTokenAddress,
+          from: testAddr,
+          parentProvider,
+        })
+        await harness.sendTransaction(config.funnelKey, parentRpcUrl, approveTx)
+
+        // Get child token balance before deposit
+        const childErc20Addr = await getChildErc20Address(
+          parentTokenAddress,
+          parentProvider,
+          network
+        )
+        const childBalanceBefore = await getTokenBalance(
+          harness,
+          childRpcUrl,
+          childErc20Addr,
+          testAddr
+        )
+
+        // Deposit with low gas to force auto-redeem failure
+        const depositTx = await getErc20DepositRequest({
+          network,
+          erc20ParentAddress: parentTokenAddress,
+          amount: DEPOSIT_AMOUNT,
+          from: testAddr,
+          parentProvider,
+          childProvider,
+          retryableGasOverrides: {
+            gasLimit: { base: 5n, percentIncrease: 0n },
+            maxFeePerGas: { base: 5n, percentIncrease: 0n },
+          },
+        })
+        const depositReceipt = await harness.sendTransaction(
+          config.funnelKey,
+          parentRpcUrl,
+          depositTx
+        )
+        expect(depositReceipt.status).toBe(1)
+
+        // Get message and wait for status — should NOT be auto-redeemed
+        const messages = getParentToChildMessages(
+          depositReceipt,
+          childProvider,
+          network
+        )
+        expect(messages.length).toBe(1)
+
+        const message = messages[0]
+        const waitResult = await message.waitForStatus(60_000)
+        expect(waitResult.status).toBe(
+          ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
+        )
+
+        // Manual redeem
+        const redeemTx = getRedeemRequest(message.retryableCreationId)
+        const redeemReceipt = await harness.sendTransaction(
+          config.funnelKey,
+          childRpcUrl,
+          redeemTx
+        )
+        expect(redeemReceipt.status).toBe(1)
+
+        // Verify status is now REDEEMED
+        const finalStatus = await message.status()
+        expect(finalStatus).toBe(ParentToChildMessageStatus.REDEEMED)
+
+        // Verify child token balance increased
+        const childBalanceAfter = await getTokenBalance(
+          harness,
+          childRpcUrl,
+          childErc20Addr,
+          testAddr
+        )
+        expect(childBalanceAfter).toBe(childBalanceBefore + DEPOSIT_AMOUNT)
+      }
+    )
 
     // ---------------------------------------------------------------
     // Test 2.5: deposit with low gas limit only, manual redeem
     // ---------------------------------------------------------------
-    it.skip('deposit with low gas limit only, manual redeem succeeds', async () => {
-      // TODO: Port from old SDK. Deposit with gasLimit=21000 to produce a
-      // RedeemScheduled event but no actual retry receipt, then manual redeem.
-    })
+    it(
+      'deposit with low gas limit only, manual redeem succeeds',
+      { timeout: 120_000 },
+      async () => {
+        await ensureSetup()
+
+        assertArbitrumNetworkHasTokenBridge(network)
+
+        const testAddr = harness.getAddress(config.funnelKey)
+        const parentProvider = harness.createProvider(parentRpcUrl)
+        const childProvider = harness.createProvider(childRpcUrl)
+
+        // Approve token for gateway
+        const approveTx = await getApproveTokenRequest({
+          network,
+          erc20ParentAddress: parentTokenAddress,
+          from: testAddr,
+          parentProvider,
+        })
+        await harness.sendTransaction(config.funnelKey, parentRpcUrl, approveTx)
+
+        // Get child token balance before deposit
+        const childErc20Addr = await getChildErc20Address(
+          parentTokenAddress,
+          parentProvider,
+          network
+        )
+        const childBalanceBefore = await getTokenBalance(
+          harness,
+          childRpcUrl,
+          childErc20Addr,
+          testAddr
+        )
+
+        // Deposit with low gas limit only (maxFeePerGas is normal)
+        // This produces a RedeemScheduled event but the retry tx fails
+        const depositTx = await getErc20DepositRequest({
+          network,
+          erc20ParentAddress: parentTokenAddress,
+          amount: DEPOSIT_AMOUNT,
+          from: testAddr,
+          parentProvider,
+          childProvider,
+          retryableGasOverrides: {
+            gasLimit: { base: 21000n, percentIncrease: 0n },
+          },
+        })
+        const depositReceipt = await harness.sendTransaction(
+          config.funnelKey,
+          parentRpcUrl,
+          depositTx
+        )
+        expect(depositReceipt.status).toBe(1)
+
+        // Get message and wait for status — should NOT be auto-redeemed
+        const messages = getParentToChildMessages(
+          depositReceipt,
+          childProvider,
+          network
+        )
+        expect(messages.length).toBe(1)
+
+        const message = messages[0]
+        const waitResult = await message.waitForStatus(60_000)
+        expect(waitResult.status).toBe(
+          ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
+        )
+
+        // Verify a RedeemScheduled event was emitted but the retry tx has no receipt
+        const creationReceipt = await message.getRetryableCreationReceipt()
+        expect(isDefined(creationReceipt)).toBe(true)
+        const redeemEvents = getRedeemScheduledEvents(creationReceipt!)
+        expect(redeemEvents.length).toBe(1)
+        const retryReceipt = await childProvider.getTransactionReceipt(
+          redeemEvents[0].args.retryTxHash as string
+        )
+        expect(isDefined(retryReceipt)).toBe(false)
+
+        // Manual redeem
+        const redeemTx = getRedeemRequest(message.retryableCreationId)
+        const redeemReceipt = await harness.sendTransaction(
+          config.funnelKey,
+          childRpcUrl,
+          redeemTx
+        )
+        expect(redeemReceipt.status).toBe(1)
+
+        // Verify status is now REDEEMED
+        const finalStatus = await message.status()
+        expect(finalStatus).toBe(ParentToChildMessageStatus.REDEEMED)
+
+        // Verify child token balance increased
+        const childBalanceAfter = await getTokenBalance(
+          harness,
+          childRpcUrl,
+          childErc20Addr,
+          testAddr
+        )
+        expect(childBalanceAfter).toBe(childBalanceBefore + DEPOSIT_AMOUNT)
+      }
+    )
 
     // ---------------------------------------------------------------
     // Test 2.6: deposit low funds, first redeem fails, second succeeds
     // ---------------------------------------------------------------
-    it.skip('deposit with low funds, fails first redeem, succeeds second', async () => {
-      // TODO: Port from old SDK. Deposit with low gas, first redeem with
-      // insufficient gas fails (status 0), second redeem succeeds.
-    })
+    it(
+      'deposit with low funds, fails first redeem, succeeds second',
+      { timeout: 120_000 },
+      async () => {
+        await ensureSetup()
+
+        assertArbitrumNetworkHasTokenBridge(network)
+
+        const testAddr = harness.getAddress(config.funnelKey)
+        const parentProvider = harness.createProvider(parentRpcUrl)
+        const childProvider = harness.createProvider(childRpcUrl)
+
+        // Approve token for gateway
+        const approveTx = await getApproveTokenRequest({
+          network,
+          erc20ParentAddress: parentTokenAddress,
+          from: testAddr,
+          parentProvider,
+        })
+        await harness.sendTransaction(config.funnelKey, parentRpcUrl, approveTx)
+
+        // Deposit with low gas to force auto-redeem failure
+        const depositTx = await getErc20DepositRequest({
+          network,
+          erc20ParentAddress: parentTokenAddress,
+          amount: DEPOSIT_AMOUNT,
+          from: testAddr,
+          parentProvider,
+          childProvider,
+          retryableGasOverrides: {
+            gasLimit: { base: 5n, percentIncrease: 0n },
+            maxFeePerGas: { base: 5n, percentIncrease: 0n },
+          },
+        })
+        const depositReceipt = await harness.sendTransaction(
+          config.funnelKey,
+          parentRpcUrl,
+          depositTx
+        )
+        expect(depositReceipt.status).toBe(1)
+
+        // Get message and wait for status — should NOT be auto-redeemed
+        const messages = getParentToChildMessages(
+          depositReceipt,
+          childProvider,
+          network
+        )
+        expect(messages.length).toBe(1)
+
+        const message = messages[0]
+        const waitResult = await message.waitForStatus(60_000)
+        expect(waitResult.status).toBe(
+          ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
+        )
+
+        // First redeem attempt with low gas — should fail
+        const redeemTx1 = getRedeemRequest(message.retryableCreationId)
+        redeemTx1.gasLimit = 21000n
+        const redeemReceipt1 = await harness.sendTransaction(
+          config.funnelKey,
+          childRpcUrl,
+          redeemTx1
+        )
+        expect(redeemReceipt1.status).toBe(0)
+
+        // Status should still be FUNDS_DEPOSITED_ON_CHILD
+        const statusAfterFail = await message.status()
+        expect(statusAfterFail).toBe(
+          ParentToChildMessageStatus.FUNDS_DEPOSITED_ON_CHILD
+        )
+
+        // Second redeem attempt with normal gas — should succeed
+        const redeemTx2 = getRedeemRequest(message.retryableCreationId)
+        const redeemReceipt2 = await harness.sendTransaction(
+          config.funnelKey,
+          childRpcUrl,
+          redeemTx2
+        )
+        expect(redeemReceipt2.status).toBe(1)
+
+        // Verify status is now REDEEMED
+        const finalStatus = await message.status()
+        expect(finalStatus).toBe(ParentToChildMessageStatus.REDEEMED)
+      }
+    )
 
     // ---------------------------------------------------------------
     // Test 2.7: withdraws ERC-20 (full lifecycle)

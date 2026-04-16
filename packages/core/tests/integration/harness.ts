@@ -42,6 +42,23 @@ export interface TestHarness {
     rpcUrl: string,
     bytecode: string
   ): Promise<{ address: string; receipt: ArbitrumTransactionReceipt }>
+
+  /** Sign a transaction without sending it, return serialized hex */
+  signTransaction(
+    privateKey: string,
+    rpcUrl: string,
+    tx: TransactionRequestData
+  ): Promise<string>
+
+  /** Parse a signed transaction to get its hash */
+  getTransactionHash(signedTx: string): string
+
+  /** Wait for a transaction by hash to be mined, return receipt */
+  waitForTransaction(
+    rpcUrl: string,
+    txHash: string,
+    timeout?: number
+  ): Promise<ArbitrumTransactionReceipt>
 }
 
 export interface TestConfig {
