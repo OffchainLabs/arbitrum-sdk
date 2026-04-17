@@ -26,7 +26,7 @@
   "scripts": {
     "build": "tsc",
     "test": "vitest run",
-    "test:unit": "vitest run",
+    "test:unit": "vitest run --exclude '**/tests/integration/**'",
     "lint": "echo 'lint not configured yet'",
     "format": "echo 'format not configured yet'"
   },

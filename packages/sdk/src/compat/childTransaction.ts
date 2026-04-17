@@ -166,7 +166,7 @@ export class ChildTransactionReceipt implements TransactionReceipt {
       }
 
       return (await childProvider.getTransactionReceipt(
-        redeemScheduledEvents[0].args.retryTxHash as string
+        (redeemScheduledEvents[0].args as { retryTxHash: string }).retryTxHash
       ))!
     }
     return returnRec

@@ -27,7 +27,7 @@
     "format": "echo 'format not configured yet'"
   },
   "dependencies": {
-    "@arbitrum/core": "0.1.0"
+    "@arbitrum/core": "workspace:*"
   },
   "peerDependencies": {
     "ethers": "^6.0.0"

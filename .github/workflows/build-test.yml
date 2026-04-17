@@ -13,27 +13,29 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18, 20]
+        node-version: [24]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
 
-      - name: Install node_modules
-        uses: OffchainLabs/actions/node-modules/install@main
-        with:
-          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
   lint:
     name: Lint on Node.js v${{ matrix.node-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18, 20]
+        node-version: [24]
     needs: install
     permissions:
       checks: write # https://github.com/mikepenz/action-junit-report/issues/23#issuecomment-1412597753
@@ -43,21 +45,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
 
-      - name: Install node_modules
-        uses: OffchainLabs/actions/node-modules/install@main
-        with:
-          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Lint sdk
         run: |
-          yarn gen:abi
-          yarn build
-          yarn lint --format junit -o $TEST_PATH/sdk-lint.xml
+          pnpm gen:abi
+          pnpm build
+          pnpm lint --format junit -o $TEST_PATH/sdk-lint.xml
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -77,52 +81,56 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18, 20]
+        node-version: [24]
     needs: install
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
 
-      - name: Install node_modules
-        uses: OffchainLabs/actions/node-modules/install@main
-        with:
-          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
-      - run: yarn audit:ci
+      - run: pnpm audit:ci
 
   test-unit:
     name: Test (Unit) on Node.js v${{ matrix.node-version }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18, 20]
+        node-version: [24]
     needs: install
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
 
-      - name: Install node_modules
-        uses: OffchainLabs/actions/node-modules/install@main
-        with:
-          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Build
         run: |
-          yarn gen:abi
-          yarn build
+          pnpm gen:abi
+          pnpm build
 
       - name: Run unit tests
-        run: CI=true yarn test:unit
+        run: CI=true pnpm test:unit
 
   test-integration:
     name: Test (Integration) on Node.js v${{ matrix.node-version }}${{ matrix.orbit-test == '1' && ' with L3' || '' }}${{ matrix.decimals == '16' && ' with custom gas token (16 decimals)' || matrix.decimals == '20' && ' with custom gas token (20 decimals)' || matrix.decimals == '18' && ' with custom gas token (18 decimals)' || '' }}
@@ -132,35 +140,22 @@ jobs:
       matrix:
         include:
           - orbit-test: '0'
-            node-version: 18
-          - orbit-test: '0'
-            node-version: 20
+            node-version: 24
 
           - orbit-test: '1'
-            node-version: 18
-          - orbit-test: '1'
-            node-version: 20
+            node-version: 24
 
           - orbit-test: '1'
             decimals: 16
-            node-version: 18
-          - orbit-test: '1'
-            decimals: 16
-            node-version: 20
+            node-version: 24
 
           - orbit-test: '1'
             decimals: 18
-            node-version: 18
-          - orbit-test: '1'
-            decimals: 18
-            node-version: 20
+            node-version: 24
 
           - orbit-test: '1'
             decimals: 20
-            node-version: 18
-          - orbit-test: '1'
-            decimals: 20
-            node-version: 20
+            node-version: 24
 
     needs: install
     env:
@@ -170,32 +165,37 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
 
-      - name: Install node_modules
-        uses: OffchainLabs/actions/node-modules/install@main
-        with:
-          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
 
       - name: Set up the local node
-        uses: OffchainLabs/arbitrum-testnode@dl/ci-runtime-fast-snapshot
+        uses: OffchainLabs/actions/run-nitro-test-node@main
         with:
-          version: dl-ci-fast-1
+          nitro-testnode-ref: release
           l3-node: ${{ matrix.orbit-test == '1' }}
-          fee-token-decimals: ${{ matrix.decimals }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          network-config-path: packages/sdk/localNetwork.json
+          args: ${{ matrix.decimals == 16 && '--l3-fee-token --l3-fee-token-decimals 16' || matrix.decimals == 20 && '--l3-fee-token --l3-fee-token-decimals 20' || matrix.decimals == 18 && '--l3-fee-token' || '' }}
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
 
       - name: Build
         run: |
-          yarn gen:abi
-          yarn build
+          pnpm gen:abi
+          pnpm build
+
+      - name: Generate network file
+        run: pnpm gen:network
 
       - name: Run integration tests
-        run: CI=true yarn test:integration
+        env:
+          NODE_OPTIONS: --no-experimental-strip-types
+        run: CI=true pnpm test:integration
