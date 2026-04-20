@@ -27,6 +27,7 @@ overrides:
   sol2uml>axios: 0.30.2
   brace-expansion: 1.1.12
   eslint>js-yaml: 3.14.2
+  '@eslint/eslintrc>js-yaml': 3.14.2
   mocha>js-yaml: 4.1.1
   diff: 5.2.2
   anymatch>picomatch: 2.3.2
@@ -46,7 +47,7 @@ importers:
   .:
     devDependencies:
       '@arbitrum/nitro-contracts':
-        specifier: 1.1.1
+        specifier: ^1.1.1
         version: 1.1.1
       '@arbitrum/token-bridge-contracts':
         specifier: ^1.2.1
