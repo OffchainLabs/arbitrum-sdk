@@ -42,9 +42,7 @@ export type {
 } from './parentTransaction'
 
 // Child transaction receipts and monkey-patching
-export {
-  ChildTransactionReceipt,
-} from './childTransaction'
+export { ChildTransactionReceipt } from './childTransaction'
 export type {
   ChildContractTransaction,
   RedeemTransaction,
@@ -57,9 +55,7 @@ export {
   ParentToChildMessageWriter,
   EthDepositMessage,
 } from './parentToChildMessage'
-export type {
-  ParentToChildMessageReaderOrWriter,
-} from './parentToChildMessage'
+export type { ParentToChildMessageReaderOrWriter } from './parentToChildMessage'
 
 // Child-to-parent message classes
 export {

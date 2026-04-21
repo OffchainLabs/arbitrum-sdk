@@ -71,8 +71,12 @@ describe('SDK backwards-compat smoke tests', () => {
 
   it('ParentTransactionReceipt has monkeyPatchWait static methods', () => {
     expect(typeof ParentTransactionReceipt.monkeyPatchWait).toBe('function')
-    expect(typeof ParentTransactionReceipt.monkeyPatchEthDepositWait).toBe('function')
-    expect(typeof ParentTransactionReceipt.monkeyPatchContractCallWait).toBe('function')
+    expect(typeof ParentTransactionReceipt.monkeyPatchEthDepositWait).toBe(
+      'function'
+    )
+    expect(typeof ParentTransactionReceipt.monkeyPatchContractCallWait).toBe(
+      'function'
+    )
   })
 
   it('ChildTransactionReceipt has monkeyPatchWait', () => {

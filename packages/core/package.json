@@ -24,6 +24,7 @@
   },
   "files": ["dist", "package.json", "README.md", "LICENSE"],
   "scripts": {
+    "gen:abi": "ts-node ./scripts/genAbi.ts",
     "build": "tsc",
     "test": "vitest run",
     "test:unit": "vitest run --exclude '**/tests/integration/**'",

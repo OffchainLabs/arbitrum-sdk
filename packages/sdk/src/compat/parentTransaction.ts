@@ -26,10 +26,7 @@ import { wrapProvider, fromEthersReceipt } from '@arbitrum/ethers5'
 import type { Ethers5Provider, Ethers5Receipt } from '@arbitrum/ethers5'
 import { getArbitrumNetwork as getArbitrumNetworkOld } from '../lib/dataEntities/networks'
 import { toCoreReceipt, toCoreLog, toBigNumber } from './convert'
-import {
-  SignerProviderUtils,
-  ParentToChildMessageStatus,
-} from './types'
+import { SignerProviderUtils, ParentToChildMessageStatus } from './types'
 import type {
   SignerOrProvider,
   RetryableMessageParams,
@@ -49,7 +46,7 @@ import type { ParentToChildMessageReaderOrWriter } from './parentToChildMessage'
 // ---------------------------------------------------------------------------
 
 export interface ParentContractTransaction<
-  TReceipt extends ParentTransactionReceipt = ParentTransactionReceipt,
+  TReceipt extends ParentTransactionReceipt = ParentTransactionReceipt
 > extends ContractTransaction {
   wait(confirmations?: number): Promise<TReceipt>
 }
@@ -109,9 +106,13 @@ export class ParentTransactionReceipt implements TransactionReceipt {
   public async isClassic<T extends SignerOrProvider>(
     childSignerOrProvider: T
   ): Promise<boolean> {
-    const provider = SignerProviderUtils.getProviderOrThrow(childSignerOrProvider)
+    const provider = SignerProviderUtils.getProviderOrThrow(
+      childSignerOrProvider
+    )
     const wrappedProvider = wrapProvider(provider as unknown as Ethers5Provider)
-    const network = await getArbitrumNetworkOld(await wrappedProvider.getChainId())
+    const network = await getArbitrumNetworkOld(
+      await wrappedProvider.getChainId()
+    )
 
     // All networks except Arbitrum One started off with Nitro
     if (network.chainId === 42161) {
@@ -174,14 +175,16 @@ export class ParentTransactionReceipt implements TransactionReceipt {
   public async getEthDeposits(
     childProvider: Provider
   ): Promise<EthDepositMessage[]> {
-    const wrappedProvider = wrapProvider(childProvider as unknown as Ethers5Provider)
+    const wrappedProvider = wrapProvider(
+      childProvider as unknown as Ethers5Provider
+    )
     const chainId = await wrappedProvider.getChainId()
 
     return this.getMessageEvents()
       .filter(
         e =>
-          (e.bridgeMessageEvent.args.kind as bigint) ===
-          BigInt(InboxMessageKind.L1MessageType_ethDeposit)
+          Number(e.bridgeMessageEvent.args.kind) ===
+          InboxMessageKind.L1MessageType_ethDeposit
       )
       .map(m =>
         EthDepositMessage.fromEventComponents(
@@ -203,9 +206,13 @@ export class ParentTransactionReceipt implements TransactionReceipt {
   public async getParentToChildMessages<T extends SignerOrProvider>(
     childSignerOrProvider: T
   ): Promise<ParentToChildMessageReader[] | ParentToChildMessageWriter[]> {
-    const provider = SignerProviderUtils.getProviderOrThrow(childSignerOrProvider)
+    const provider = SignerProviderUtils.getProviderOrThrow(
+      childSignerOrProvider
+    )
     const wrappedProvider = wrapProvider(provider as unknown as Ethers5Provider)
-    const network = await getArbitrumNetworkOld(await wrappedProvider.getChainId())
+    const network = await getArbitrumNetworkOld(
+      await wrappedProvider.getChainId()
+    )
     const chainId = network.chainId
 
     const isClassic = await this.isClassic(provider)
@@ -221,8 +228,8 @@ export class ParentTransactionReceipt implements TransactionReceipt {
     return events
       .filter(
         e =>
-          (e.bridgeMessageEvent.args.kind as bigint) ===
-            BigInt(InboxMessageKind.L1MessageType_submitRetryableTx) &&
+          Number(e.bridgeMessageEvent.args.kind) ===
+            InboxMessageKind.L1MessageType_submitRetryableTx &&
           (e.bridgeMessageEvent.args.inbox as string).toLowerCase() ===
             network.ethBridge.inbox.toLowerCase()
       )

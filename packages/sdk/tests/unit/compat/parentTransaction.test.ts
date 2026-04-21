@@ -82,8 +82,7 @@ describe('ParentTransactionReceipt', () => {
         wait: vi.fn().mockResolvedValue(innerReceipt),
       } as unknown as ContractTransaction
 
-      const patched =
-        ParentTransactionReceipt.monkeyPatchEthDepositWait(mockTx)
+      const patched = ParentTransactionReceipt.monkeyPatchEthDepositWait(mockTx)
       const result = await patched.wait()
 
       expect(result).toBeInstanceOf(ParentEthDepositTransactionReceipt)

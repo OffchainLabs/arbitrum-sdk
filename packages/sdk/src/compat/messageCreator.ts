@@ -14,15 +14,11 @@ export class ParentToChildMessageCreator {
     this.parentSigner = parentSigner
   }
 
-  public static async getTicketCreationRequest(
-    ..._args: any[]
-  ): Promise<any> {
+  public static async getTicketCreationRequest(..._args: any[]): Promise<any> {
     throw new Error('Not implemented')
   }
 
-  public async createRetryableTicket(
-    ..._args: any[]
-  ): Promise<any> {
+  public async createRetryableTicket(..._args: any[]): Promise<any> {
     throw new Error('Not implemented')
   }
 }

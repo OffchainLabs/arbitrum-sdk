@@ -121,7 +121,9 @@ type DepositRequest = OmitTyped<
 }
 
 export class Erc20Bridger {
-  public static MAX_APPROVAL: BigNumber = BigNumber.from(ethers.constants.MaxUint256)
+  public static MAX_APPROVAL: BigNumber = BigNumber.from(
+    ethers.constants.MaxUint256
+  )
   public static MIN_CUSTOM_DEPOSIT_GAS_LIMIT = BigNumber.from(275000)
 
   public readonly childNetwork: ArbitrumNetwork & {

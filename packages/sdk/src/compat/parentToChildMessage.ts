@@ -27,10 +27,7 @@ import {
 import { wrapProvider } from '@arbitrum/ethers5'
 import type { Ethers5Provider } from '@arbitrum/ethers5'
 import { toEthersReceipt, toBigNumber } from './convert'
-import {
-  SignerProviderUtils,
-  ParentToChildMessageStatus,
-} from './types'
+import { SignerProviderUtils, ParentToChildMessageStatus } from './types'
 import type {
   SignerOrProvider,
   RetryableMessageParams,
@@ -166,7 +163,9 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
     super(chainId, sender, messageNumber, parentBaseFee, messageData)
 
     // Create the core reader with wrapped provider and bigint params
-    const wrappedProvider = wrapProvider(childProvider as unknown as Ethers5Provider)
+    const wrappedProvider = wrapProvider(
+      childProvider as unknown as Ethers5Provider
+    )
     this.coreReader = new CoreParentToChildMessageReader(
       wrappedProvider,
       chainId,
@@ -259,14 +258,19 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
    */
   public async getTimeout(): Promise<BigNumber> {
     // Delegate to the core reader's wrapped provider to call the contract
-    const wrappedProvider = wrapProvider(this.childProvider as unknown as Ethers5Provider)
-    const { ArbitrumContract, ArbRetryableTxAbi, ARB_RETRYABLE_TX_ADDRESS } = await import('@arbitrum/core')
+    const wrappedProvider = wrapProvider(
+      this.childProvider as unknown as Ethers5Provider
+    )
+    const { ArbitrumContract, ArbRetryableTxAbi, ARB_RETRYABLE_TX_ADDRESS } =
+      await import('@arbitrum/core')
     const arbRetryableTx = new ArbitrumContract(
       ArbRetryableTxAbi,
       ARB_RETRYABLE_TX_ADDRESS,
       wrappedProvider
     )
-    const result = await arbRetryableTx.read('getTimeout', [this.retryableCreationId])
+    const result = await arbRetryableTx.read('getTimeout', [
+      this.retryableCreationId,
+    ])
     return BigNumber.from(result[0] as bigint)
   }
 
@@ -274,14 +278,19 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
    * Address to which CallValue will be credited if the retryable ticket times out or is cancelled.
    */
   public async getBeneficiary(): Promise<string> {
-    const wrappedProvider = wrapProvider(this.childProvider as unknown as Ethers5Provider)
-    const { ArbitrumContract, ArbRetryableTxAbi, ARB_RETRYABLE_TX_ADDRESS } = await import('@arbitrum/core')
+    const wrappedProvider = wrapProvider(
+      this.childProvider as unknown as Ethers5Provider
+    )
+    const { ArbitrumContract, ArbRetryableTxAbi, ARB_RETRYABLE_TX_ADDRESS } =
+      await import('@arbitrum/core')
     const arbRetryableTx = new ArbitrumContract(
       ArbRetryableTxAbi,
       ARB_RETRYABLE_TX_ADDRESS,
       wrappedProvider
     )
-    const result = await arbRetryableTx.read('getBeneficiary', [this.retryableCreationId])
+    const result = await arbRetryableTx.read('getBeneficiary', [
+      this.retryableCreationId,
+    ])
     return result[0] as string
   }
 }
@@ -328,7 +337,9 @@ export class ParentToChildMessageWriter extends ParentToChildMessageReader {
       })
 
       return ChildTransactionReceipt.toRedeemTransaction(
-        ChildTransactionReceipt.monkeyPatchWait(redeemTx as ContractTransaction),
+        ChildTransactionReceipt.monkeyPatchWait(
+          redeemTx as ContractTransaction
+        ),
         this.childProvider
       )
     } else {
@@ -469,8 +480,12 @@ export class EthDepositMessage {
   }
 
   public async status(): Promise<EthDepositMessageStatus> {
-    const wrappedProvider = wrapProvider(this.childProvider as unknown as Ethers5Provider)
-    const receipt = await wrappedProvider.getTransactionReceipt(this.childTxHash)
+    const wrappedProvider = wrapProvider(
+      this.childProvider as unknown as Ethers5Provider
+    )
+    const receipt = await wrappedProvider.getTransactionReceipt(
+      this.childTxHash
+    )
     if (receipt === null) return EthDepositMessageStatus.PENDING
     return EthDepositMessageStatus.DEPOSITED
   }
@@ -485,10 +500,14 @@ export class EthDepositMessage {
       return this.childTxReceipt ?? null
     }
 
-    const wrappedProvider = wrapProvider(this.childProvider as unknown as Ethers5Provider)
+    const wrappedProvider = wrapProvider(
+      this.childProvider as unknown as Ethers5Provider
+    )
     const startTime = Date.now()
     while (Date.now() - startTime < chosenTimeout) {
-      const receipt = await wrappedProvider.getTransactionReceipt(this.childTxHash)
+      const receipt = await wrappedProvider.getTransactionReceipt(
+        this.childTxHash
+      )
       if (receipt) {
         const ethersReceipt = toEthersReceipt(receipt)
         this.childTxReceipt = ethersReceipt

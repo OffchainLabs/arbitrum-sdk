@@ -174,6 +174,22 @@
     // https://github.com/advisories/GHSA-4992-7rv2-5pvq
     // undici CRLF injection via `upgrade` option
     // from: hardhat>undici
-    "GHSA-4992-7rv2-5pvq"
+    "GHSA-4992-7rv2-5pvq",
+
+    // sol2uml transitive dev deps (dev-only, diagram generation for contracts)
+    // These surfaced under pnpm where yarn's resolutions had previously shadowed them.
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>...
+    // https://github.com/advisories/GHSA-xxjr-mmjv-4gpg — lodash
+    "GHSA-xxjr-mmjv-4gpg",
+    // https://github.com/advisories/GHSA-r5fr-rjxr-66jc — lodash
+    "GHSA-r5fr-rjxr-66jc",
+    // https://github.com/advisories/GHSA-f23m-r3pf-42rh — lodash
+    "GHSA-f23m-r3pf-42rh",
+    // https://github.com/advisories/GHSA-r4q5-vmmm-2653 — follow-redirects
+    "GHSA-r4q5-vmmm-2653",
+    // https://github.com/advisories/GHSA-3p68-rc4w-qgx5 — axios
+    "GHSA-3p68-rc4w-qgx5",
+    // https://github.com/advisories/GHSA-fvcv-3m26-pcqx — axios
+    "GHSA-fvcv-3m26-pcqx"
   ]
 }

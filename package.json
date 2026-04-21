@@ -8,7 +8,7 @@
     "format": "pnpm -r run format",
     "test:unit": "pnpm --filter @arbitrum/core test:unit && pnpm --filter @arbitrum/ethers5 test:unit && pnpm --filter @arbitrum/ethers6 test:unit && pnpm --filter @arbitrum/viem test:unit",
     "test:integration": "pnpm --filter @arbitrum/ethers5 test:integration && pnpm --filter @arbitrum/ethers6 test:integration && pnpm --filter @arbitrum/viem test:integration",
-    "gen:abi": "pnpm --filter @arbitrum/sdk gen:abi",
+    "gen:abi": "pnpm --filter @arbitrum/sdk gen:abi && pnpm --filter @arbitrum/core gen:abi",
     "gen:network": "pnpm --filter @arbitrum/sdk gen:network"
   },
   "devDependencies": {

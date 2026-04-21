@@ -51,7 +51,9 @@ export type ChildToParentMessageReaderOrWriter<T extends SignerOrProvider> =
 // Convert compat event -> core event
 // ---------------------------------------------------------------------------
 
-function toCorEventData(event: ChildToParentTransactionEvent): ChildToParentEventData {
+function toCorEventData(
+  event: ChildToParentTransactionEvent
+): ChildToParentEventData {
   return {
     caller: event.caller,
     destination: event.destination,
@@ -107,7 +109,9 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
   ) {
     super()
     this.event = event
-    const wrappedProvider = wrapProvider(parentProvider as unknown as Ethers5Provider)
+    const wrappedProvider = wrapProvider(
+      parentProvider as unknown as Ethers5Provider
+    )
     this.coreReader = new CoreChildToParentMessageReader(
       wrappedProvider,
       toCorEventData(event)
@@ -120,13 +124,17 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
   public async getOutboxProof(
     childProvider: Provider
   ): Promise<string[] | null> {
-    const wrappedChild = wrapProvider(childProvider as unknown as Ethers5Provider)
+    const wrappedChild = wrapProvider(
+      childProvider as unknown as Ethers5Provider
+    )
     const childChainId = await wrappedChild.getChainId()
     const network = await getArbitrumNetwork(childChainId)
 
     // Get send props to find sendRootSize
     const { getSendProps } = await import('@arbitrum/core')
-    const wrappedParent = wrapProvider(this.parentProvider as unknown as Ethers5Provider)
+    const wrappedParent = wrapProvider(
+      this.parentProvider as unknown as Ethers5Provider
+    )
     const sendProps = await getSendProps(
       wrappedParent,
       wrappedChild,
@@ -144,7 +152,9 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
   public async status(
     childProvider: Provider
   ): Promise<ChildToParentMessageStatus> {
-    const wrappedChild = wrapProvider(childProvider as unknown as Ethers5Provider)
+    const wrappedChild = wrapProvider(
+      childProvider as unknown as Ethers5Provider
+    )
     const childChainId = await wrappedChild.getChainId()
     const network = await getArbitrumNetwork(childChainId)
     return this.coreReader.status(network, wrappedChild)
@@ -159,7 +169,9 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
   ): Promise<
     ChildToParentMessageStatus.EXECUTED | ChildToParentMessageStatus.CONFIRMED
   > {
-    const wrappedChild = wrapProvider(childProvider as unknown as Ethers5Provider)
+    const wrappedChild = wrapProvider(
+      childProvider as unknown as Ethers5Provider
+    )
     const childChainId = await wrappedChild.getChainId()
     const network = await getArbitrumNetwork(childChainId)
     return this.coreReader.waitUntilReadyToExecute(
@@ -175,7 +187,9 @@ export class ChildToParentMessageReader extends ChildToParentMessage {
   public async getFirstExecutableBlock(
     childProvider: Provider
   ): Promise<BigNumber | null> {
-    const wrappedChild = wrapProvider(childProvider as unknown as Ethers5Provider)
+    const wrappedChild = wrapProvider(
+      childProvider as unknown as Ethers5Provider
+    )
     const childChainId = await wrappedChild.getChainId()
     const network = await getArbitrumNetwork(childChainId)
     const result = await this.coreReader.getFirstExecutableBlock(
@@ -211,7 +225,9 @@ export class ChildToParentMessageWriter extends ChildToParentMessageReader {
     childProvider: Provider,
     overrides?: Overrides
   ): Promise<ContractTransaction> {
-    const wrappedChild = wrapProvider(childProvider as unknown as Ethers5Provider)
+    const wrappedChild = wrapProvider(
+      childProvider as unknown as Ethers5Provider
+    )
     const childChainId = await wrappedChild.getChainId()
     const network = await getArbitrumNetwork(childChainId)
 

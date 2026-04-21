@@ -102,7 +102,9 @@ export class EthBridger {
     this.nativeToken = childNetwork.nativeToken
   }
 
-  public static async fromProvider(childProvider: Provider): Promise<EthBridger> {
+  public static async fromProvider(
+    childProvider: Provider
+  ): Promise<EthBridger> {
     return new EthBridger(await getArbitrumNetwork(childProvider))
   }
 
