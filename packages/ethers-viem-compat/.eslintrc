@@ -1,8 +1,0 @@
-{
-  "root": false,
-  "extends": ["../../.eslintrc.js"],
-  "parserOptions": {
-    "files": ["src/**/*.ts", "src/**/*.js"]
-  },
-  "ignorePatterns": ["dist/**/*", "node_modules/**/*"]
-} 

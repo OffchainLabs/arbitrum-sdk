@@ -11,9 +11,8 @@
     "url": "git+https://github.com/offchainlabs/arbitrum-sdk.git"
   },
   "engines": {
-    "node": ">=v11",
-    "npm": ">=7",
-    "yarn": ">= 1.0.0"
+    "node": ">=v18",
+    "pnpm": ">=10.0.0"
   },
   "bugs": {
     "url": "https://github.com/offchainlabs/arbitrum-sdk/issues"
@@ -23,13 +22,13 @@
     "dist/**/*"
   ],
   "scripts": {
-    "audit:ci": "yarn --cwd ../.. audit:ci",
-    "prepare": "yarn run gen:abi",
+    "audit:ci": "pnpm -w run audit:ci",
+    "prepare": "pnpm run gen:abi",
     "gen:abi": "ts-node ./scripts/genAbi.ts",
     "gen:network": "ts-node ./scripts/genNetwork.ts",
-    "prepublishOnly": "yarn build && yarn format",
-    "preversion": "yarn lint",
-    "prebuild": "yarn gen:abi",
+    "prepublishOnly": "pnpm run build && pnpm run format",
+    "preversion": "pnpm run lint",
+    "prebuild": "pnpm run gen:abi",
     "build": "rm -rf dist && tsc -p tsconfig.json",
     "watch": "tsc --watch",
     "test": "mocha",
@@ -39,7 +38,7 @@
     "test:unit": "vitest run --config ../../vitest.config.ts tests/unit",
     "test:ci": "nyc --reporter=lcovonly mocha --reporter xunit",
     "lint": "eslint .",
-    "format": "prettier './**/*.{js,json,md,ts,yml}' '!./src/lib/abi' --write && yarn run lint --fix",
+    "format": "prettier './**/*.{js,json,md,ts,yml}' '!./src/lib/abi' --write && pnpm run lint --fix",
     "clean:compile": "ts-node scripts/cleanCompileContracts.ts",
     "checkRetryable": "ts-node scripts/checkRetryableStatus.ts",
     "redeemRetryable": "ts-node scripts/redeemRetryable.ts",
@@ -49,9 +48,8 @@
     "bridgeStandardToken": "ts-node scripts/deployStandard.ts"
   },
   "dependencies": {
-    "@ethersproject/address": "^5.0.8",
-    "@ethersproject/bignumber": "^5.1.1",
-    "@ethersproject/bytes": "^5.0.8",
+    "@arbitrum/core": "workspace:*",
+    "@arbitrum/ethers5": "workspace:*",
     "async-mutex": "^0.4.0",
     "ethers": "^5.1.0"
   }
