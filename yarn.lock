@@ -20,7 +20,7 @@
     "@jridgewell/gen-mapping" "^0.3.0"
     "@jridgewell/trace-mapping" "^0.3.9"
 
-"@arbitrum/nitro-contracts@1.1.0", "@arbitrum/nitro-contracts@^1.0.0-beta.8":
+"@arbitrum/nitro-contracts@1.1.0":
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.1.0.tgz#37ca26e026306ca9cc9fbeb183841fd8666ac7bb"
   integrity sha512-/tLlU++IFdaD9Bn+RYzQ6+6k+0iDPuqi/cNf9kv5N1I9NAApNx1qfsIHoHMEQAvLuY+gj+raH7TAESBbzTAuuw==
@@ -32,7 +32,7 @@
   optionalDependencies:
     sol2uml "2.2.0"
 
-"@arbitrum/nitro-contracts@1.1.1", "@arbitrum/nitro-contracts@^1.1.1":
+"@arbitrum/nitro-contracts@1.1.1", "@arbitrum/nitro-contracts@^1.0.0-beta.8", "@arbitrum/nitro-contracts@^1.1.1":
   version "1.1.1"
   resolved "https://registry.yarnpkg.com/@arbitrum/nitro-contracts/-/nitro-contracts-1.1.1.tgz#2d8a2f9ab757bb7654562aebe435bff833c4b98d"
   integrity sha512-4Tyk3XVHz+bm8UujUC78LYSw3xAxyYvBCxfEX4z3qE4/ww7Qck/rmce5gbHMzQjArEAzAP2YSfYIFuIFuRXtfg==
@@ -54,12 +54,13 @@
   optionalDependencies:
     "@openzeppelin/upgrades-core" "^1.24.1"
 
-"@arbitrum/token-bridge-contracts@^1.2.1":
-  version "1.2.1"
-  resolved "https://registry.yarnpkg.com/@arbitrum/token-bridge-contracts/-/token-bridge-contracts-1.2.1.tgz#4838d70182bc0d6b36adfd733d7b4650e596c979"
-  integrity sha512-ngKeay/0O91QyVLCbcd2pyJIWtzKi2KsPm+O9q3xCfPkjuCZ0+MK5OdhYKCbvGc0jf39R7izRsvmUHE0qA603A==
+"@arbitrum/token-bridge-contracts@^1.2.5":
+  version "1.2.5"
+  resolved "https://registry.yarnpkg.com/@arbitrum/token-bridge-contracts/-/token-bridge-contracts-1.2.5.tgz#ca954e75383c8d4b1baacdc004043fc2dd5adce5"
+  integrity sha512-wIekHs2hNGt0uxlKN8NiEcAoiN1Y4rN9jhbx/BX8T6E1B6XsabrLNVRs0lbsn7uLhV5Z61OaRTy9HirGmTs5+A==
   dependencies:
     "@arbitrum/nitro-contracts" "1.1.1"
+    "@offchainlabs/stablecoin-evm" "1.0.0-orbit-alpha.2"
     "@offchainlabs/upgrade-executor" "1.1.0-beta.0"
     "@openzeppelin/contracts" "4.8.3"
     "@openzeppelin/contracts-upgradeable" "4.8.3"
@@ -1311,6 +1312,11 @@
     "@arbitrum/nitro-contracts" "1.1.0"
     "@arbitrum/token-bridge-contracts" "1.2.0"
     "@openzeppelin/contracts" "4.9.4"
+
+"@offchainlabs/stablecoin-evm@1.0.0-orbit-alpha.2":
+  version "1.0.0-orbit-alpha.2"
+  resolved "https://registry.yarnpkg.com/@offchainlabs/stablecoin-evm/-/stablecoin-evm-1.0.0-orbit-alpha.2.tgz#1156ab9436d0791739b56b355d7cff2e3aadaede"
+  integrity sha512-g9SO/KD4QoIA5Mvo+wE7GDe3PwNtQ0IK3b+RNRClHKH2if4emneQtEj/eD0Tc32BuYzPRK5cbd4/lBjARo9izQ==
 
 "@offchainlabs/upgrade-executor@1.1.0-beta.0":
   version "1.1.0-beta.0"
