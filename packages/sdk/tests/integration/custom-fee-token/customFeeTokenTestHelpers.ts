@@ -100,7 +100,7 @@ export async function fundChildCustomFeeToken(childSigner: Signer) {
 
   const decimals = await getNativeTokenDecimals({
     parentProvider: ethProvider(),
-    childNetwork: localNetworks().l2Network,
+    childNetwork: localNetworks().l3Network ?? localNetworks().l2Network,
   })
 
   const tx = await deployerWallet.sendTransaction({

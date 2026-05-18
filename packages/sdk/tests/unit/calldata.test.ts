@@ -1,4 +1,4 @@
-import { expect } from 'chai'
+import { describe, it, expect } from 'vitest'
 import { getErc20ParentAddressFromParentToChildTxRequest } from '../../src/lib/utils/calldata'
 import { ParentToChildTxReqAndSigner } from '../../src/lib/assetBridger/ethBridger'
 
@@ -11,7 +11,7 @@ describe('Calldata', () => {
       const output = getErc20ParentAddressFromParentToChildTxRequest({
         txRequest: { data: calldata },
       } as ParentToChildTxReqAndSigner)
-      expect(output).to.eq(expectedAddress)
+      expect(output).toBe(expectedAddress)
     })
 
     it('decodes calldata to get token address from `outboundTransferCustomRefund` method call on gateway router', async () => {
@@ -21,44 +21,31 @@ describe('Calldata', () => {
       const output = getErc20ParentAddressFromParentToChildTxRequest({
         txRequest: { data: calldata },
       } as ParentToChildTxReqAndSigner)
-      expect(output).to.eq(expectedAddress)
+      expect(output).toBe(expectedAddress)
     })
 
     it('throws when handling bad calldata', async () => {
-      try {
-        const calldata = '0xInvalidCalldata'
+      expect(() =>
         getErc20ParentAddressFromParentToChildTxRequest({
-          txRequest: { data: calldata },
+          txRequest: { data: '0xInvalidCalldata' },
         } as ParentToChildTxReqAndSigner)
-      } catch (err: any) {
-        expect(err.message).to.eq(
-          'data signature not matching deposits methods'
-        )
-      }
+      ).toThrow('data signature not matching deposits methods')
     })
 
     it('throws when handling an empty string', async () => {
-      try {
+      expect(() =>
         getErc20ParentAddressFromParentToChildTxRequest({
           txRequest: { data: '' },
         } as ParentToChildTxReqAndSigner)
-      } catch (err: any) {
-        expect(err.message).to.eq(
-          'data signature not matching deposits methods'
-        )
-      }
+      ).toThrow('data signature not matching deposits methods')
     })
 
     it('throws when handling `undefined` data ', async () => {
-      try {
+      expect(() =>
         getErc20ParentAddressFromParentToChildTxRequest({
           txRequest: { data: undefined },
         } as any as ParentToChildTxReqAndSigner)
-      } catch (err: any) {
-        expect(err.message).to.eq(
-          'data signature not matching deposits methods'
-        )
-      }
+      ).toThrow('data signature not matching deposits methods')
     })
   })
 })
