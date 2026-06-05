@@ -174,6 +174,47 @@
     // https://github.com/advisories/GHSA-4992-7rv2-5pvq
     // undici CRLF injection via `upgrade` option
     // from: hardhat>undici
-    "GHSA-4992-7rv2-5pvq"
+    "GHSA-4992-7rv2-5pvq",
+
+    // https://github.com/advisories/GHSA-w5hq-g745-h8pq
+    // uuid v3/v5/v6 missing bounds check on caller-provided buffers
+    // Fix requires uuid >=14.0.0 but hardhat and nyc pin uuid 8.x; dev-only
+    // SDK does not invoke uuid with external buffer arguments
+    // from: hardhat>uuid
+    // from: nyc>istanbul-lib-processinfo>uuid
+    "GHSA-w5hq-g745-h8pq",
+
+    // axios transitive / dev dependencies (dev-only)
+    // https://github.com/advisories/GHSA-3p68-rc4w-qgx5
+    // axios NO_PROXY hostname normalization bypass leading to SSRF
+    // Fix requires axios >=1.15.0; sol2uml depends on axios ^0.27.2 (resolved to 0.30.2); dev-only
+    // Direct axios dep is dev-only and not invoked by SDK runtime
+    // from: axios
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>axios
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>sol2uml>axios
+    "GHSA-3p68-rc4w-qgx5",
+    // https://github.com/advisories/GHSA-fvcv-3m26-pcqx
+    // axios unrestricted cloud metadata exfiltration via header injection chain
+    // Fix requires axios >=1.15.0; same constraints as GHSA-3p68-rc4w-qgx5; dev-only
+    // from: axios
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>axios
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>sol2uml>axios
+    "GHSA-fvcv-3m26-pcqx",
+    // https://github.com/advisories/GHSA-r4q5-vmmm-2653
+    // follow-redirects leaks custom authentication headers on cross-domain redirects
+    // Fix requires follow-redirects >=1.16.0; current resolution pinned to 1.15.6 for older axios/solc/sol2uml chains; dev-only
+    // from: axios>follow-redirects
+    // from: hardhat>solc>follow-redirects
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>axios>follow-redirects
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>sol2uml>axios>follow-redirects
+    "GHSA-r4q5-vmmm-2653",
+
+    // vitest transitive dependencies (dev-only)
+    // https://github.com/advisories/GHSA-qx2v-qp2m-jg93
+    // postcss XSS via unescaped </style> in CSS stringify output
+    // Fix requires postcss >=8.5.10; reached only through vitest>vite>postcss in dev test tooling
+    // SDK does not render CSS at runtime
+    // from: vitest>vite>postcss
+    "GHSA-qx2v-qp2m-jg93"
   ]
 }
