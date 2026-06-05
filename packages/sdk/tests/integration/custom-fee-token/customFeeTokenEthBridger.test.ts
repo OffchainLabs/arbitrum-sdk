@@ -27,6 +27,7 @@ import {
   mineUntilStop,
   skipIfMainnet,
   wait,
+  WITHDRAWAL_RETRY_DELAY_MS,
 } from '../testHelpers'
 
 import { describeOnlyWhenCustomGasToken } from './mochaExtensions'
@@ -257,7 +258,10 @@ describeOnlyWhenCustomGasToken(
       await Promise.race([
         mineUntilStop(miner1, state),
         mineUntilStop(miner2, state),
-        message.waitUntilReadyToExecute(childProvider),
+        message.waitUntilReadyToExecute(
+          childProvider,
+          WITHDRAWAL_RETRY_DELAY_MS
+        ),
       ])
       state.mining = false
 

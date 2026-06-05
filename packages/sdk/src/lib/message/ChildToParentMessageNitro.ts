@@ -193,6 +193,7 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
   protected sendRootConfirmed?: boolean
   protected outboxAddress?: string
   protected l1BatchNumber?: number
+  private parentIsArbitrumChain?: boolean
 
   constructor(
     protected readonly parentProvider: Provider,
@@ -331,7 +332,10 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
     parentBlock: BigNumber,
     childProvider: Provider
   ): Promise<{ fromBlock: BigNumber; toBlock: BigNumber }> {
-    if (!(await isArbitrumChain(this.parentProvider))) {
+    if (this.parentIsArbitrumChain === undefined) {
+      this.parentIsArbitrumChain = await isArbitrumChain(this.parentProvider)
+    }
+    if (!this.parentIsArbitrumChain) {
       return { fromBlock: parentBlock, toBlock: parentBlock }
     }
 

@@ -27,6 +27,7 @@ import {
   fundChildSigner,
   mineUntilStop,
   skipIfMainnet,
+  WITHDRAWAL_RETRY_DELAY_MS,
 } from './testHelpers'
 import { ChildToParentMessage } from '../../src/lib/message/ChildToParentMessage'
 import { ChildToParentMessageStatus } from '../../src/lib/dataEntities/message'
@@ -423,7 +424,10 @@ describe('Ether', async () => {
     await Promise.race([
       mineUntilStop(miner1, state),
       mineUntilStop(miner2, state),
-      withdrawMessage.waitUntilReadyToExecute(childSigner.provider!),
+      withdrawMessage.waitUntilReadyToExecute(
+        childSigner.provider!,
+        WITHDRAWAL_RETRY_DELAY_MS
+      ),
     ])
     state.mining = false
 
