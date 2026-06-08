@@ -17,7 +17,6 @@
 'use strict'
 
 import { expect } from 'chai'
-import { BigNumber } from '@ethersproject/bignumber'
 import { ethers, constants, Wallet } from 'ethers'
 import { loadEnv } from '../../../src/lib/utils/env'
 
@@ -28,7 +27,7 @@ import {
   mineUntilStop,
   skipIfMainnet,
   wait,
-  waitForReadyToExecuteFast,
+  WITHDRAWAL_RETRY_DELAY_MS,
 } from '../testHelpers'
 
 import { describeOnlyWhenCustomGasToken } from './mochaExtensions'
@@ -259,11 +258,9 @@ describeOnlyWhenCustomGasToken(
       await Promise.race([
         mineUntilStop(miner1, state),
         mineUntilStop(miner2, state),
-        waitForReadyToExecuteFast(
-          message,
-          (withdrawalEvents[0] as { position: BigNumber }).position,
+        message.waitUntilReadyToExecute(
           childProvider,
-          parentProvider
+          WITHDRAWAL_RETRY_DELAY_MS
         ),
       ])
       state.mining = false
