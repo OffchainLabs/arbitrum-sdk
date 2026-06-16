@@ -168,7 +168,7 @@ jobs:
           cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
       - name: Set up the local node
-        uses: OffchainLabs/arbitrum-testnode@v0.2.2
+        uses: OffchainLabs/arbitrum-testnode@v0.2.4
         with:
           version: v0.2.2
           image-repository: ghcr.io/offchainlabs/arbitrum-testnode-ci
