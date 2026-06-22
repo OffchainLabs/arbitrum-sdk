@@ -55,13 +55,13 @@
   },
   "resolutions": {
     "lodash.pick": "https://github.com/lodash/lodash/archive/refs/tags/4.17.21.tar.gz",
-    "**/@ethersproject/providers/ws": "7.5.10",
-    "**/puppeteer/ws": "8.20.1",
-    "**/viem/ws": "8.20.1",
-    "**/tmp": "0.2.6",
+    "**/@ethersproject/providers/ws": "7.5.11",
+    "**/puppeteer/ws": "8.21.0",
+    "**/viem/ws": "8.21.0",
+    "**/tmp": "0.2.7",
     "**/fast-uri": "3.1.2",
     "**/puppeteer/tar-fs": "2.1.4",
-    "**/hardhat/ws": "7.5.10",
+    "**/hardhat/ws": "7.5.11",
     "**/hardhat/@sentry/node/cookie": "0.7.0",
     "**/follow-redirects": "1.15.6",
     "**/micromatch": "4.0.8",
@@ -88,12 +88,12 @@
     "**/readdirp/picomatch": "2.3.2",
     "**/micromatch/picomatch": "2.3.2",
     "**/tinyglobby/picomatch": "4.0.4",
-    "**/form-data": "4.0.5",
+    "**/form-data": "4.0.6",
     "**/lodash": "4.18.1",
     "**/minimatch": "3.1.5",
     "**/immutable": "4.3.8",
     "**/flatted": "3.4.2",
     "**/patch-package/yaml": "1.10.3",
-    "**/vite": "8.0.5"
+    "**/vite": "8.0.16"
   }
 }
