@@ -164,6 +164,26 @@
     // undici CRLF injection via `upgrade` option
     // from: hardhat>undici
     "GHSA-4992-7rv2-5pvq",
+    // https://github.com/advisories/GHSA-vxpw-j846-p89q
+    // undici WebSocket client DoS via fragment count bypass
+    // Fix requires undici >=6.27.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-vxpw-j846-p89q",
+    // https://github.com/advisories/GHSA-p88m-4jfj-68fv
+    // undici HTTP header injection via Set-Cookie percent-decoding
+    // Fix requires undici >=6.27.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-p88m-4jfj-68fv",
+    // https://github.com/advisories/GHSA-35p6-xmwp-9g52
+    // undici HTTP response queue poisoning via keep-alive socket reuse
+    // Fix requires undici >=6.27.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-35p6-xmwp-9g52",
+    // https://github.com/advisories/GHSA-g8m3-5g58-fq7m
+    // undici Set-Cookie SameSite attribute downgrade via permissive substring matching
+    // Fix requires undici >=6.27.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-g8m3-5g58-fq7m",
 
     // https://github.com/advisories/GHSA-w5hq-g745-h8pq
     // uuid v3/v5/v6 missing bounds check on caller-provided buffers
