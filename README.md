@@ -40,6 +40,10 @@ npm install @arbitrum/sdk
 # or
 
 yarn add @arbitrum/sdk
+
+# or
+
+pnpm add @arbitrum/sdk
 ```
 
 ## Key Features
@@ -92,13 +96,13 @@ For more detailed usage examples and API references, please refer to the [Arbitr
 3. Generate the network configuration against your active Nitro test node:
 
    ```sh
-   yarn gen:network
+   pnpm gen:network
    ```
 
 4. Execute the integration tests:
 
    ```sh
-   yarn test:integration
+   pnpm test:integration
    ```
 
 ## Documentation

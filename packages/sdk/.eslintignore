@@ -2,4 +2,5 @@ dist/**
 node_modules/**
 coverage/**
 src/lib/abi
+src/lib/utils/env.ts
 docs/**

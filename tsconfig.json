@@ -12,9 +12,6 @@
     "noImplicitThis": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
-    "experimentalDecorators": true,
-    "paths": {
-      "@ethersproject/*": ["./node_modules/@ethersproject/*"]
-    }
+    "experimentalDecorators": true
   }
 }

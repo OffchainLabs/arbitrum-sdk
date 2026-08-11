@@ -164,6 +164,20 @@
     // undici CRLF injection via `upgrade` option
     // from: hardhat>undici
     "GHSA-4992-7rv2-5pvq",
+    // sol2uml transitive dev deps (dev-only, diagram generation for contracts)
+    // These surfaced under pnpm where yarn's resolutions had previously shadowed them.
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>...
+    // https://github.com/advisories/GHSA-xxjr-mmjv-4gpg — lodash
+    "GHSA-xxjr-mmjv-4gpg",
+    // https://github.com/advisories/GHSA-r5fr-rjxr-66jc — lodash
+    "GHSA-r5fr-rjxr-66jc",
+    // https://github.com/advisories/GHSA-f23m-r3pf-42rh — lodash
+    "GHSA-f23m-r3pf-42rh",
+    // https://github.com/advisories/GHSA-3p68-rc4w-qgx5 — axios
+    "GHSA-3p68-rc4w-qgx5",
+    // https://github.com/advisories/GHSA-fvcv-3m26-pcqx — axios
+    "GHSA-fvcv-3m26-pcqx",
+
     // https://github.com/advisories/GHSA-vxpw-j846-p89q
     // undici WebSocket client DoS via fragment count bypass
     // Fix requires undici >=6.27.0 but hardhat depends on undici 5.x; dev-only
@@ -184,6 +198,21 @@
     // Fix requires undici >=6.27.0 but hardhat depends on undici 5.x; dev-only
     // from: hardhat>undici
     "GHSA-g8m3-5g58-fq7m",
+    // https://github.com/advisories/GHSA-8xcm-r25x-g524
+    // undici retry interceptor can expose a stale Content-Length after partial responses
+    // Fix requires undici >=6.28.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-8xcm-r25x-g524",
+    // https://github.com/advisories/GHSA-m8rv-5g2x-5cg5
+    // undici accepts CRLF in a duck-typed blob content type
+    // Fix requires undici >=6.28.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-m8rv-5g2x-5cg5",
+    // https://github.com/advisories/GHSA-v3r7-h72x-cjcm
+    // undici setCookie accepts injected attributes in domain and unparsed fields
+    // Fix requires undici >=6.28.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-v3r7-h72x-cjcm",
 
     // https://github.com/advisories/GHSA-w5hq-g745-h8pq
     // uuid v3/v5/v6 missing bounds check on caller-provided buffers

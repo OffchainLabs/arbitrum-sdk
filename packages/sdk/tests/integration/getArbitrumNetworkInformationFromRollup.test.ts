@@ -1,6 +1,6 @@
 import { JsonRpcProvider } from '@ethersproject/providers'
 import { constants } from 'ethers'
-import { expect } from 'chai'
+import { describe, it, expect } from 'vitest'
 import { loadEnv } from '../../src/lib/utils/env'
 
 import {
@@ -23,26 +23,26 @@ describe('getArbitrumNetworkInformationFromRollup', () => {
         ethProvider
       )
 
-    expect(parentChainId, 'parentChainId is not correct').to.eq(
+    expect(parentChainId, 'parentChainId is not correct').toBe(
       arb1.parentChainId
     )
 
-    expect(confirmPeriodBlocks, 'confirmPeriodBlocks is not correct').to.eq(
+    expect(confirmPeriodBlocks, 'confirmPeriodBlocks is not correct').toBe(
       arb1.confirmPeriodBlocks
     )
 
     const { bridge, inbox, sequencerInbox, outbox, rollup } = ethBridge
     const arb1EthBridge = arb1.ethBridge
 
-    expect(bridge, 'Bridge contract is not correct').to.eq(arb1EthBridge.bridge)
-    expect(inbox, 'Inbox contract is not correct').to.eq(arb1EthBridge.inbox)
-    expect(sequencerInbox, 'SequencerInbox contract is not correct').to.eq(
+    expect(bridge, 'Bridge contract is not correct').toBe(arb1EthBridge.bridge)
+    expect(inbox, 'Inbox contract is not correct').toBe(arb1EthBridge.inbox)
+    expect(sequencerInbox, 'SequencerInbox contract is not correct').toBe(
       arb1EthBridge.sequencerInbox
     )
-    expect(outbox, 'Outbox contract is not correct').to.eq(arb1EthBridge.outbox)
-    expect(rollup, 'Rollup contract is not correct').to.eq(arb1EthBridge.rollup)
+    expect(outbox, 'Outbox contract is not correct').toBe(arb1EthBridge.outbox)
+    expect(rollup, 'Rollup contract is not correct').toBe(arb1EthBridge.rollup)
 
-    expect(nativeToken, 'Native token is not correct').to.eq(
+    expect(nativeToken, 'Native token is not correct').toBe(
       constants.AddressZero
     )
   })
@@ -54,31 +54,31 @@ describe('getArbitrumNetworkInformationFromRollup', () => {
         new JsonRpcProvider('https://arb1.arbitrum.io/rpc')
       )
 
-    expect(parentChainId, 'parentChainId is not correct').to.eq(42161)
+    expect(parentChainId, 'parentChainId is not correct').toBe(42161)
 
-    expect(confirmPeriodBlocks, 'confirmPeriodBlocks is not correct').to.eq(
+    expect(confirmPeriodBlocks, 'confirmPeriodBlocks is not correct').toBe(
       45818
     )
 
     const { bridge, inbox, sequencerInbox, outbox, rollup } = ethBridge
 
-    expect(bridge, 'Bridge contract is not correct').to.eq(
+    expect(bridge, 'Bridge contract is not correct').toBe(
       '0x7dd8A76bdAeBE3BBBaCD7Aa87f1D4FDa1E60f94f'
     )
-    expect(inbox, 'Inbox contract is not correct').to.eq(
+    expect(inbox, 'Inbox contract is not correct').toBe(
       '0xaE21fDA3de92dE2FDAF606233b2863782Ba046F9'
     )
-    expect(sequencerInbox, 'SequencerInbox contract is not correct').to.eq(
+    expect(sequencerInbox, 'SequencerInbox contract is not correct').toBe(
       '0x995a9d3ca121D48d21087eDE20bc8acb2398c8B1'
     )
-    expect(outbox, 'Outbox contract is not correct').to.eq(
+    expect(outbox, 'Outbox contract is not correct').toBe(
       '0x1E400568AD4840dbE50FB32f306B842e9ddeF726'
     )
-    expect(rollup, 'Rollup contract is not correct').to.eq(
+    expect(rollup, 'Rollup contract is not correct').toBe(
       '0xC47DacFbAa80Bd9D8112F4e8069482c2A3221336'
     )
 
-    expect(nativeToken, 'Native token is not correct').to.eq(
+    expect(nativeToken, 'Native token is not correct').toBe(
       '0x4Cb9a7AE498CEDcBb5EAe9f25736aE7d428C9D66'
     )
   })

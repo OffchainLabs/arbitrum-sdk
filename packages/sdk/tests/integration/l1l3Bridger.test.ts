@@ -18,7 +18,7 @@ import {
   EthL1L3Bridger,
   Erc20L1L3DepositRequestParams,
 } from '../../src/lib/assetBridger/l1l3Bridger'
-import { assert, expect } from 'chai'
+import { describe, it, expect, beforeAll } from 'vitest'
 import { isArbitrumNetworkWithCustomFeeToken } from './custom-fee-token/customFeeTokenTestHelpers'
 import { ERC20__factory } from '../../src/lib/abi/factories/ERC20__factory'
 import { Deferrable } from 'ethers/lib/utils'
@@ -210,7 +210,7 @@ describe('L1 to L3 Bridging', () => {
   }
 
   // setup for all test cases
-  before(async function () {
+  beforeAll(async function () {
     await skipIfMainnet(this)
 
     const setup = await testSetup()
@@ -305,7 +305,7 @@ describe('L1 to L3 Bridging', () => {
     itOnlyWhenCustomGasToken(
       'should fail construction if l3 uses a custom fee token',
       async () => {
-        expect(() => new EthL1L3Bridger(l3Network)).to.throw(
+        expect(() => new EthL1L3Bridger(l3Network)).toThrow(
           `L3 network ${l3Network.name} uses a custom fee token`
         )
       }
@@ -342,10 +342,10 @@ describe('L1 to L3 Bridging', () => {
 
       // check eth balances
       const l3Balance = await l3Provider.getBalance(l3Recipient)
-      assert(l3Balance.gt(ethers.utils.parseEther('0.1')))
+      expect(l3Balance.gt(ethers.utils.parseEther('0.1'))).toBe(true)
 
       const l2Balance = await l2Signer.provider!.getBalance(l2RefundAddress)
-      assert(l2Balance.gt(ethers.utils.parseEther('0')))
+      expect(l2Balance.gt(ethers.utils.parseEther('0'))).toBe(true)
     })
   })
 
@@ -355,7 +355,7 @@ describe('L1 to L3 Bridging', () => {
     let l1l3Bridger: Erc20L1L3Bridger
 
     // deploy teleporter contracts and mock token
-    before(async function () {
+    beforeAll(async function () {
       const { l2ContractsDeployer, l1Teleporter } =
         await deployTeleportContracts(l1Signer, l2Signer)
 
@@ -377,21 +377,21 @@ describe('L1 to L3 Bridging', () => {
 
     itOnlyWhenCustomGasToken(
       'should properly get l2 and l1 fee token addresses',
-      async function () {
+      async function (context) {
         const decimals = await getNativeTokenDecimals({
           parentProvider: l1Signer.provider!,
           childNetwork: l3Network,
         })
 
         if (decimals !== 18) {
-          this.skip()
+          context.skip()
         }
 
         if (l1l3Bridger.l2GasTokenAddress === undefined) {
           throw new Error('L2 fee token address is undefined')
         }
         // make sure l2 token equals l3 native token
-        expect(l1l3Bridger.l2GasTokenAddress).to.eq(l3Network.nativeToken)
+        expect(l1l3Bridger.l2GasTokenAddress).toBe(l3Network.nativeToken)
         // make sure l1 token maps to l2 token
         expect(
           await new Erc20Bridger(l2Network).getChildErc20Address(
@@ -401,20 +401,20 @@ describe('L1 to L3 Bridging', () => {
             ))!,
             l1Signer.provider!
           )
-        ).to.eq(l1l3Bridger.l2GasTokenAddress)
+        ).toBe(l1l3Bridger.l2GasTokenAddress)
       }
     )
 
     itOnlyWhenCustomGasToken(
       'should throw getting l1 gas token address when it is unavailable',
-      async function () {
+      async function (context) {
         const decimals = await getNativeTokenDecimals({
           parentProvider: l1Signer.provider!,
           childNetwork: l3Network,
         })
 
         if (decimals !== 18) {
-          this.skip()
+          context.skip()
         }
 
         const networkCopy = JSON.parse(
@@ -435,14 +435,14 @@ describe('L1 to L3 Bridging', () => {
 
     itOnlyWhenCustomGasToken(
       'should throw when the fee token does not use 18 decimals on L1 or L2',
-      async function () {
+      async function (context) {
         const decimals = await getNativeTokenDecimals({
           parentProvider: l1Signer.provider!,
           childNetwork: l3Network,
         })
 
         if (decimals !== 18) {
-          this.skip()
+          context.skip()
         }
 
         const hackedL1Provider = new ethers.providers.JsonRpcProvider(
@@ -498,7 +498,7 @@ describe('L1 to L3 Bridging', () => {
 
     itOnlyWhenEth('should not have l1 and l2 fee token addresses', async () => {
       // make sure l2 is undefined and l1 is also undefined
-      expect(l1l3Bridger.l2GasTokenAddress).to.be.undefined
+      expect(l1l3Bridger.l2GasTokenAddress).toBeUndefined()
       await expectPromiseToReject(
         l1l3Bridger.getGasTokenOnL1(l1Signer.provider!, l2Signer.provider!),
         'L3 uses ETH for gas'
@@ -514,7 +514,7 @@ describe('L1 to L3 Bridging', () => {
         parentWeth,
         l1Signer.provider!
       )
-      expect(ans).to.eq(childWeth)
+      expect(ans).toBe(childWeth)
     })
 
     it('getL1L2GatewayAddress', async () => {
@@ -528,7 +528,7 @@ describe('L1 to L3 Bridging', () => {
         l1Signer.provider!
       )
 
-      expect(wethAns).to.eq(l1l2WethGateway)
+      expect(wethAns).toBe(l1l2WethGateway)
 
       // test default gateway
       const l1l2Gateway = l2Network.tokenBridge.parentErc20Gateway
@@ -536,7 +536,7 @@ describe('L1 to L3 Bridging', () => {
         l1Token.address,
         l1Signer.provider!
       )
-      expect(defaultAns).to.eq(l1l2Gateway)
+      expect(defaultAns).toBe(l1l2Gateway)
     })
 
     itOnlyWhenEth('getL3Erc20Address', async () => {
@@ -551,7 +551,7 @@ describe('L1 to L3 Bridging', () => {
         l1Signer.provider!,
         l2Signer.provider!
       )
-      expect(ans).to.eq(l3Weth)
+      expect(ans).toBe(l3Weth)
     })
 
     itOnlyWhenEth('getL2L3GatewayAddress', async () => {
@@ -568,7 +568,7 @@ describe('L1 to L3 Bridging', () => {
         l2Signer.provider!
       )
 
-      expect(wethAns).to.eq(l2l3WethGateway)
+      expect(wethAns).toBe(l2l3WethGateway)
 
       // test default gateway
       const l2l3Gateway = l3Network.tokenBridge.parentErc20Gateway
@@ -577,7 +577,7 @@ describe('L1 to L3 Bridging', () => {
         l1Signer.provider!,
         l2Signer.provider!
       )
-      expect(defaultAns).to.eq(l2l3Gateway)
+      expect(defaultAns).toBe(l2l3Gateway)
     })
 
     it('approves', async () => {
@@ -589,14 +589,14 @@ describe('L1 to L3 Bridging', () => {
         })
       ).wait()
 
-      assert(
+      expect(
         (
           await l1Token.allowance(
             await l1Signer.getAddress(),
             l1l3Bridger.teleporter.l1Teleporter
           )
         ).eq(ethers.constants.MaxUint256)
-      )
+      ).toBe(true)
     })
 
     it('functions should be guarded by check*Network', async () => {
@@ -813,7 +813,7 @@ describe('L1 to L3 Bridging', () => {
         l1Signer,
       })
 
-      assert(depositTxRequest.gasTokenAmount.eq(0))
+      expect(depositTxRequest.gasTokenAmount.eq(0)).toBe(true)
 
       const depositTx = await l1l3Bridger.deposit({
         l1Signer,
@@ -866,7 +866,7 @@ describe('L1 to L3 Bridging', () => {
 
       const l3Balance = await l3Token.balanceOf(l3Recipient)
 
-      assert(l3Balance.eq(amount))
+      expect(l3Balance.eq(amount)).toBe(true)
     })
 
     async function testHappyPathNonFeeOrStandard(
@@ -878,7 +878,7 @@ describe('L1 to L3 Bridging', () => {
       })
 
       if (isArbitrumNetworkWithCustomFeeToken()) {
-        assert(depositTxRequest.gasTokenAmount.gt('0'))
+        expect(depositTxRequest.gasTokenAmount.gt('0')).toBe(true)
         // approve fee token
         await (
           await l1l3Bridger.approveGasToken({
@@ -888,7 +888,7 @@ describe('L1 to L3 Bridging', () => {
           })
         ).wait()
       } else {
-        assert(depositTxRequest.gasTokenAmount.eq('0'))
+        expect(depositTxRequest.gasTokenAmount.eq('0')).toBe(true)
       }
 
       const depositTx = await l1l3Bridger.deposit({
@@ -921,25 +921,25 @@ describe('L1 to L3 Bridging', () => {
         depositParams.destinationAddress || (await l1Signer.getAddress())
       )
 
-      assert(
+      expect(
         (
           await l3Provider.getBalance(
             depositParams.destinationAddress || (await l1Signer.getAddress())
           )
         ).gt('0')
-      )
+      ).toBe(true)
 
-      assert(l3Balance.eq(amount))
+      expect(l3Balance.eq(amount)).toBe(true)
     }
 
-    it('happy path non fee token or standard', async function () {
+    it('happy path non fee token or standard', async function (context) {
       const decimals = await getNativeTokenDecimals({
         parentProvider: l1Signer.provider!,
         childNetwork: l3Network,
       })
 
       if (decimals !== 18) {
-        this.skip()
+        context.skip()
       }
 
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
@@ -955,14 +955,14 @@ describe('L1 to L3 Bridging', () => {
       await testHappyPathNonFeeOrStandard(depositParams)
     })
 
-    it('happy path weth', async function () {
+    it('happy path weth', async function (context) {
       const decimals = await getNativeTokenDecimals({
         parentProvider: l1Signer.provider!,
         childNetwork: l3Network,
       })
 
       if (decimals !== 18) {
-        this.skip()
+        context.skip()
       }
 
       const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
@@ -994,59 +994,62 @@ describe('L1 to L3 Bridging', () => {
       await testHappyPathNonFeeOrStandard(depositParams)
     })
 
-    itOnlyWhenCustomGasToken('happy path OnlyCustomFee', async function () {
-      const decimals = await getNativeTokenDecimals({
-        parentProvider: l1Signer.provider!,
-        childNetwork: l3Network,
-      })
+    itOnlyWhenCustomGasToken(
+      'happy path OnlyCustomFee',
+      async function (context) {
+        const decimals = await getNativeTokenDecimals({
+          parentProvider: l1Signer.provider!,
+          childNetwork: l3Network,
+        })
 
-      if (decimals !== 18) {
-        this.skip()
-      }
+        if (decimals !== 18) {
+          context.skip()
+        }
 
-      const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
-      const l1FeeToken = (await l1l3Bridger.getGasTokenOnL1(
-        l1Signer.provider!,
-        l2Signer.provider!
-      ))!
+        const l3Recipient = ethers.utils.hexlify(ethers.utils.randomBytes(20))
+        const l1FeeToken = (await l1l3Bridger.getGasTokenOnL1(
+          l1Signer.provider!,
+          l2Signer.provider!
+        ))!
 
-      const depositParams: Erc20L1L3DepositRequestParams = {
-        erc20L1Address: l1FeeToken,
-        destinationAddress: l3Recipient,
-        amount: ethers.utils.parseEther('0.1'),
-        l2Provider: l2Signer.provider!,
-        l3Provider,
-      }
-
-      const depositTxRequest = await l1l3Bridger.getDepositRequest({
-        ...depositParams,
-        l1Signer,
-      })
-
-      await (
-        await l1l3Bridger.approveToken({ ...depositParams, l1Signer })
-      ).wait()
-
-      const depositTx = await l1l3Bridger.deposit({
-        l1Signer,
-        txRequest: depositTxRequest.txRequest,
-      })
-
-      const depositReceipt = await depositTx.wait()
-
-      // poll status
-      await poll(async () => {
-        const status = await l1l3Bridger.getDepositStatus({
-          txHash: depositReceipt.transactionHash,
-          l1Provider: l1Signer.provider!,
+        const depositParams: Erc20L1L3DepositRequestParams = {
+          erc20L1Address: l1FeeToken,
+          destinationAddress: l3Recipient,
+          amount: ethers.utils.parseEther('0.1'),
           l2Provider: l2Signer.provider!,
           l3Provider,
-        })
-        return status.completed
-      }, 1000)
+        }
 
-      // todo make this check better
-      assert((await l3Provider.getBalance(l3Recipient)).gt('0'))
-    })
+        const depositTxRequest = await l1l3Bridger.getDepositRequest({
+          ...depositParams,
+          l1Signer,
+        })
+
+        await (
+          await l1l3Bridger.approveToken({ ...depositParams, l1Signer })
+        ).wait()
+
+        const depositTx = await l1l3Bridger.deposit({
+          l1Signer,
+          txRequest: depositTxRequest.txRequest,
+        })
+
+        const depositReceipt = await depositTx.wait()
+
+        // poll status
+        await poll(async () => {
+          const status = await l1l3Bridger.getDepositStatus({
+            txHash: depositReceipt.transactionHash,
+            l1Provider: l1Signer.provider!,
+            l2Provider: l2Signer.provider!,
+            l3Provider,
+          })
+          return status.completed
+        }, 1000)
+
+        // todo make this check better
+        expect((await l3Provider.getBalance(l3Recipient)).gt('0')).toBe(true)
+      }
+    )
   })
 })
