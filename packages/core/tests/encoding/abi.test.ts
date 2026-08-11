@@ -6,6 +6,7 @@ import {
   decodeEventLog,
   getFunctionSelector,
 } from '../../src/encoding/abi'
+import { COMPREHENSIVE_ABI } from './abi.fixtures'
 
 /**
  * Minimal ERC20 ABI for testing.
@@ -72,123 +73,6 @@ const ERC20_ABI = [
       { name: 'spender', type: 'address', indexed: true },
       { name: 'value', type: 'uint256', indexed: false },
     ],
-  },
-] as const
-
-/**
- * ABI with various types for comprehensive testing.
- */
-const COMPREHENSIVE_ABI = [
-  {
-    type: 'function',
-    name: 'testBool',
-    inputs: [{ name: 'val', type: 'bool' }],
-    outputs: [{ name: '', type: 'bool' }],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    name: 'testBytes',
-    inputs: [{ name: 'data', type: 'bytes' }],
-    outputs: [{ name: '', type: 'bytes' }],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    name: 'testBytes32',
-    inputs: [{ name: 'data', type: 'bytes32' }],
-    outputs: [{ name: '', type: 'bytes32' }],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    name: 'testString',
-    inputs: [{ name: 'str', type: 'string' }],
-    outputs: [{ name: '', type: 'string' }],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    name: 'testUint8',
-    inputs: [{ name: 'val', type: 'uint8' }],
-    outputs: [{ name: '', type: 'uint8' }],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    name: 'testInt256',
-    inputs: [{ name: 'val', type: 'int256' }],
-    outputs: [{ name: '', type: 'int256' }],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    name: 'testTuple',
-    inputs: [
-      {
-        name: 'val',
-        type: 'tuple',
-        components: [
-          { name: 'a', type: 'uint256' },
-          { name: 'b', type: 'address' },
-        ],
-      },
-    ],
-    outputs: [],
-    stateMutability: 'nonpayable',
-  },
-  {
-    type: 'function',
-    name: 'testDynamicArray',
-    inputs: [{ name: 'vals', type: 'uint256[]' }],
-    outputs: [],
-    stateMutability: 'nonpayable',
-  },
-  {
-    type: 'function',
-    name: 'testFixedArray',
-    inputs: [{ name: 'vals', type: 'uint256[3]' }],
-    outputs: [],
-    stateMutability: 'nonpayable',
-  },
-  {
-    type: 'function',
-    name: 'testMultipleOutputs',
-    inputs: [],
-    outputs: [
-      { name: 'a', type: 'uint256' },
-      { name: 'b', type: 'address' },
-      { name: 'c', type: 'bool' },
-    ],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    name: 'testUint32',
-    inputs: [{ name: 'val', type: 'uint32' }],
-    outputs: [{ name: '', type: 'uint32' }],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    name: 'testUint64',
-    inputs: [{ name: 'val', type: 'uint64' }],
-    outputs: [{ name: '', type: 'uint64' }],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    name: 'testUint128',
-    inputs: [{ name: 'val', type: 'uint128' }],
-    outputs: [{ name: '', type: 'uint128' }],
-    stateMutability: 'view',
-  },
-  {
-    type: 'function',
-    name: 'testAddressArray',
-    inputs: [{ name: 'addrs', type: 'address[]' }],
-    outputs: [],
-    stateMutability: 'nonpayable',
   },
 ] as const
 
@@ -364,9 +248,7 @@ describe('ABI encoder/decoder', () => {
     })
 
     it('encodes uint32, uint64, uint128', () => {
-      const d32 = encodeFunctionData(COMPREHENSIVE_ABI, 'testUint32', [
-        100000n,
-      ])
+      const d32 = encodeFunctionData(COMPREHENSIVE_ABI, 'testUint32', [100000n])
       expect(d32.slice(10, 74)).toBe(
         '00000000000000000000000000000000000000000000000000000000000186a0'
       )
@@ -479,11 +361,7 @@ describe('ABI encoder/decoder', () => {
     it('decodes int256 negative', () => {
       const data =
         '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff'
-      const result = decodeFunctionResult(
-        COMPREHENSIVE_ABI,
-        'testInt256',
-        data
-      )
+      const result = decodeFunctionResult(COMPREHENSIVE_ABI, 'testInt256', data)
       expect(result).toEqual([-1n])
     })
 
@@ -540,12 +418,8 @@ describe('ABI encoder/decoder', () => {
         '0x00000000000000000000000000000000000000000000000000000000000003e8' // 1000
 
       const result = decodeEventLog(ERC20_ABI, 'Transfer', { topics, data })
-      expect(result.from).toBe(
-        '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'
-      )
-      expect(result.to).toBe(
-        '0x0000000000000000000000000000000000000001'
-      )
+      expect(result.from).toBe('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')
+      expect(result.to).toBe('0x0000000000000000000000000000000000000001')
       expect(result.value).toBe(1000n)
     })
 
@@ -561,9 +435,7 @@ describe('ABI encoder/decoder', () => {
         '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff' // max uint256
 
       const result = decodeEventLog(ERC20_ABI, 'Approval', { topics, data })
-      expect(result.owner).toBe(
-        '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'
-      )
+      expect(result.owner).toBe('0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045')
       expect(result.value).toBe(2n ** 256n - 1n)
     })
   })
@@ -861,11 +733,7 @@ describe('ABI encoder/decoder', () => {
         // bytes data = cafe
         'cafe000000000000000000000000000000000000000000000000000000000000'
 
-      const result = decodeFunctionResult(
-        MULTICALL2_ABI,
-        'tryAggregate',
-        data
-      )
+      const result = decodeFunctionResult(MULTICALL2_ABI, 'tryAggregate', data)
       const tuples = result[0] as Array<Record<string, unknown>>
       expect(tuples).toHaveLength(2)
       expect(tuples[0].success).toBe(true)
@@ -892,9 +760,7 @@ describe('ABI encoder/decoder', () => {
       ] as const
 
       // "0x" is empty data — should throw, not produce SyntaxError
-      expect(() =>
-        decodeFunctionResult(UINT_ABI, 'getValue', '0x')
-      ).toThrow()
+      expect(() => decodeFunctionResult(UINT_ABI, 'getValue', '0x')).toThrow()
     })
 
     it('decoding from data shorter than expected throws meaningful error', () => {
@@ -1045,9 +911,7 @@ describe('ABI encoder/decoder', () => {
 
     it('rejects too-long address', () => {
       expect(() =>
-        encodeFunctionData(ERC20_ABI, 'balanceOf', [
-          '0x' + '0'.repeat(42),
-        ])
+        encodeFunctionData(ERC20_ABI, 'balanceOf', ['0x' + '0'.repeat(42)])
       ).toThrow()
     })
 
