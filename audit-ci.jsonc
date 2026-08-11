@@ -79,12 +79,6 @@
 
     // Crypto/contract package deep transitive dev dependencies
     ////////////////////////////////////////////////////////////
-    // https://github.com/advisories/GHSA-52f5-9888-hmc6
-    // tmp allows arbitrary temp file write via symbolic link dir parameter
-    // Dev-only dependency in contract packages (patch-package, puppeteer); not used in SDK runtime
-    // from: @arbitrum/nitro-contracts>patch-package>tmp
-    // from: @offchainlabs/l1-l3-teleport-contracts>...>sol2uml>convert-svg-core>tmp
-    "GHSA-52f5-9888-hmc6",
     // https://github.com/advisories/GHSA-v62p-rq8g-8h59
     // pbkdf2 silently disregards Uint8Array input on Node.js <3.0.0
     // Only affects Node.js <3.0.0 which this repo does not target; dev-only contract package dep
@@ -111,11 +105,6 @@
     // from: ethers>@ethersproject/signing-key>elliptic
     // from: @arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>secp256k1>elliptic
     "GHSA-848j-6mx2-7j84",
-    // https://github.com/advisories/GHSA-43fc-jf86-j433
-    // axios DoS via __proto__ key in mergeConfig
-    // Fix requires axios >=1.13.5 but sol2uml depends on axios ^0.27.2; dev-only contract package dep
-    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>axios
-    "GHSA-43fc-jf86-j433",
     // https://github.com/advisories/GHSA-2g4f-4pwh-qvx6
     // ajv ReDoS when using $data option (CVE-2025-69873)
     // Fix requires ajv >=8.18.0 but eslint 7.x depends on ajv 6.x/8.x; dev-only dependency
@@ -175,7 +164,6 @@
     // undici CRLF injection via `upgrade` option
     // from: hardhat>undici
     "GHSA-4992-7rv2-5pvq",
-
     // sol2uml transitive dev deps (dev-only, diagram generation for contracts)
     // These surfaced under pnpm where yarn's resolutions had previously shadowed them.
     // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>...
@@ -185,11 +173,81 @@
     "GHSA-r5fr-rjxr-66jc",
     // https://github.com/advisories/GHSA-f23m-r3pf-42rh — lodash
     "GHSA-f23m-r3pf-42rh",
-    // https://github.com/advisories/GHSA-r4q5-vmmm-2653 — follow-redirects
-    "GHSA-r4q5-vmmm-2653",
     // https://github.com/advisories/GHSA-3p68-rc4w-qgx5 — axios
     "GHSA-3p68-rc4w-qgx5",
     // https://github.com/advisories/GHSA-fvcv-3m26-pcqx — axios
-    "GHSA-fvcv-3m26-pcqx"
+    "GHSA-fvcv-3m26-pcqx",
+
+    // https://github.com/advisories/GHSA-vxpw-j846-p89q
+    // undici WebSocket client DoS via fragment count bypass
+    // Fix requires undici >=6.27.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-vxpw-j846-p89q",
+    // https://github.com/advisories/GHSA-p88m-4jfj-68fv
+    // undici HTTP header injection via Set-Cookie percent-decoding
+    // Fix requires undici >=6.27.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-p88m-4jfj-68fv",
+    // https://github.com/advisories/GHSA-35p6-xmwp-9g52
+    // undici HTTP response queue poisoning via keep-alive socket reuse
+    // Fix requires undici >=6.27.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-35p6-xmwp-9g52",
+    // https://github.com/advisories/GHSA-g8m3-5g58-fq7m
+    // undici Set-Cookie SameSite attribute downgrade via permissive substring matching
+    // Fix requires undici >=6.27.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-g8m3-5g58-fq7m",
+    // https://github.com/advisories/GHSA-8xcm-r25x-g524
+    // undici retry interceptor can expose a stale Content-Length after partial responses
+    // Fix requires undici >=6.28.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-8xcm-r25x-g524",
+    // https://github.com/advisories/GHSA-m8rv-5g2x-5cg5
+    // undici accepts CRLF in a duck-typed blob content type
+    // Fix requires undici >=6.28.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-m8rv-5g2x-5cg5",
+    // https://github.com/advisories/GHSA-v3r7-h72x-cjcm
+    // undici setCookie accepts injected attributes in domain and unparsed fields
+    // Fix requires undici >=6.28.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-v3r7-h72x-cjcm",
+
+    // https://github.com/advisories/GHSA-w5hq-g745-h8pq
+    // uuid v3/v5/v6 missing bounds check on caller-provided buffers
+    // Fix requires uuid >=14.0.0 but hardhat and nyc pin uuid 8.x; dev-only
+    // SDK does not invoke uuid with external buffer arguments
+    // from: hardhat>uuid
+    // from: nyc>istanbul-lib-processinfo>uuid
+    "GHSA-w5hq-g745-h8pq",
+
+    // axios transitive / dev dependencies (dev-only)
+    // https://github.com/advisories/GHSA-r4q5-vmmm-2653
+    // follow-redirects leaks custom authentication headers on cross-domain redirects
+    // Fix requires follow-redirects >=1.16.0; current resolution pinned to 1.15.6 for older axios/solc/sol2uml chains; dev-only
+    // from: axios>follow-redirects
+    // from: hardhat>solc>follow-redirects
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>axios>follow-redirects
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>sol2uml>axios>follow-redirects
+    "GHSA-r4q5-vmmm-2653",
+
+    // js-yaml (dev-only)
+    // https://github.com/advisories/GHSA-h67p-54hq-rp68
+    // js-yaml quadratic-complexity DoS in merge-key handling via repeated aliases
+    // Fix requires js-yaml >=4.2.0, but eslint 7.x pins js-yaml 3.x (no 3.x patch exists); dev-only
+    // eslint and mocha parse repository-controlled config/YAML, not untrusted runtime input
+    // from: eslint>js-yaml
+    // from: eslint>@eslint/eslintrc>js-yaml
+    // from: mocha>js-yaml
+    // from: hardhat>mocha>js-yaml
+    "GHSA-h67p-54hq-rp68",
+
+    // @babel/core (dev-only)
+    // https://github.com/advisories/GHSA-4x5r-pxfx-6jf8
+    // @babel/core arbitrary file read via crafted sourceMappingURL comment (low severity)
+    // Only reached via nyc coverage instrumentation of this repo's own code in dev tooling
+    // from: nyc>istanbul-lib-instrument>@babel/core
+    "GHSA-4x5r-pxfx-6jf8"
   ]
 }

@@ -178,11 +178,14 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Set up the local node
-        uses: OffchainLabs/actions/run-nitro-test-node@main
+        uses: OffchainLabs/arbitrum-testnode@v0.2.4
         with:
-          nitro-testnode-ref: release
-          l3-node: ${{ matrix.orbit-test == '1' }}
-          args: ${{ matrix.decimals == 16 && '--l3-fee-token --l3-fee-token-decimals 16' || matrix.decimals == 20 && '--l3-fee-token --l3-fee-token-decimals 20' || matrix.decimals == 18 && '--l3-fee-token' || '' }}
+          version: v0.2.2
+          image-repository: ghcr.io/offchainlabs/arbitrum-testnode-ci
+          l3-enabled: ${{ matrix.orbit-test == '1' }}
+          fee-token-decimals: ${{ matrix.decimals }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          network-config-path: packages/sdk/localNetwork.json
 
       - name: Copy .env
         run: cp ./.env-sample ./.env
@@ -191,9 +194,6 @@ jobs:
         run: |
           pnpm gen:abi
           pnpm build
-
-      - name: Generate network file
-        run: pnpm gen:network
 
       - name: Run integration tests
         env:
