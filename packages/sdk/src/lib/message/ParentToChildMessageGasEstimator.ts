@@ -29,7 +29,7 @@ import {
  * base fee increase. Since submission fee is a small amount it isn't too bas for UX to increase
  * it by a large amount, and provide better safety.
  */
-const DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE = BigNumber.from(300)
+export const DEFAULT_SUBMISSION_FEE_PERCENT_INCREASE = BigNumber.from(300)
 
 /**
  * When submitting a retryable we need to estimate what the gas price for it will be when we actually come
