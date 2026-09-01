@@ -1060,6 +1060,11 @@ export class AdminErc20Bridger extends Erc20Bridger {
     await parentToken.deployed()
     await childToken.deployed()
 
+    const nativeTokenDecimals = await getNativeTokenDecimals({
+      parentProvider,
+      childNetwork: this.childNetwork,
+    })
+
     if (!this.nativeTokenIsEth) {
       const nativeTokenContract = ERC20__factory.connect(
         this.nativeToken!,
@@ -1080,8 +1085,16 @@ export class AdminErc20Bridger extends Erc20Bridger {
       const estimatedGasFee = BigNumber.from(60_000).mul(
         maxFeePerGasOnChildWithBuffer
       )
+      // `estimatedGasFee` is denominated in 18-decimal wei, but `allowance`
+      // is denominated in the native/fee token's own decimals - scale
+      // before comparing, same as the deposit amounts further below.
+      const estimatedGasFeeInNativeTokenDecimals =
+        scaleFrom18DecimalsToNativeTokenDecimals({
+          amount: estimatedGasFee,
+          decimals: nativeTokenDecimals,
+        })
 
-      if (allowance.lt(estimatedGasFee)) {
+      if (allowance.lt(estimatedGasFeeInNativeTokenDecimals)) {
         throw new Error(
           `Insufficient allowance. Please increase spending for: owner - ${parentSenderAddress}, spender - ${parentToken.address}.`
         )
@@ -1089,16 +1102,14 @@ export class AdminErc20Bridger extends Erc20Bridger {
     }
 
     const parentAddressFromChild = await childToken.l1Address()
-    if (parentAddressFromChild !== parentTokenAddress) {
+    if (
+      ethers.utils.getAddress(parentAddressFromChild) !==
+      ethers.utils.getAddress(parentTokenAddress)
+    ) {
       throw new ArbSdkError(
         `child token does not have parent address set. Set address: ${parentAddressFromChild}, expected address: ${parentTokenAddress}.`
       )
     }
-
-    const nativeTokenDecimals = await getNativeTokenDecimals({
-      parentProvider,
-      childNetwork: this.childNetwork,
-    })
 
     type GasParams = {
       maxSubmissionCost: BigNumber
