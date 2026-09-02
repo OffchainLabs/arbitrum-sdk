@@ -215,4 +215,106 @@ describe('ChildToParentMessage events', () => {
       )
     ).once()
   })
+
+  it('does call for classic events in a single classic block (fromBlock === toBlock)', async () => {
+    const { l2Provider, l2ProviderMock } = await createProviderMock()
+    const fromBlock = 100
+    const toBlock = 100
+
+    await ChildToParentMessage.getChildToParentEvents(l2Provider, {
+      fromBlock: fromBlock,
+      toBlock: toBlock,
+    })
+
+    // a single-block range entirely within the classic era must still issue
+    // a query - it is not "empty" just because fromBlock === toBlock.
+    verify(l2ProviderMock.getLogs(anything())).once()
+    verify(
+      l2ProviderMock.getLogs(
+        deepEqual({
+          address: arbSys,
+          topics: [classicTopic],
+          fromBlock: fromBlock,
+          toBlock: toBlock,
+        })
+      )
+    ).once()
+  })
+
+  it('does call for nitro events in a single nitro block (fromBlock === toBlock)', async () => {
+    const { l2Network, l2Provider, l2ProviderMock } = await createProviderMock()
+    const fromBlock = getNitroGenesisBlock(l2Network) + 500
+    const toBlock = getNitroGenesisBlock(l2Network) + 500
+
+    await ChildToParentMessage.getChildToParentEvents(l2Provider, {
+      fromBlock: fromBlock,
+      toBlock: toBlock,
+    })
+
+    // a single-block range entirely within the nitro era must still issue
+    // a query - it is not "empty" just because fromBlock === toBlock.
+    verify(l2ProviderMock.getLogs(anything())).once()
+    verify(
+      l2ProviderMock.getLogs(
+        deepEqual({
+          address: arbSys,
+          topics: [nitroTopic],
+          fromBlock: fromBlock,
+          toBlock: toBlock,
+        })
+      )
+    ).once()
+  })
+
+  it('does call for nitro events only for a single block exactly at nitro genesis', async () => {
+    const { l2Network, l2Provider, l2ProviderMock } = await createProviderMock()
+    const fromBlock = getNitroGenesisBlock(l2Network)
+    const toBlock = getNitroGenesisBlock(l2Network)
+
+    await ChildToParentMessage.getChildToParentEvents(l2Provider, {
+      fromBlock: fromBlock,
+      toBlock: toBlock,
+    })
+
+    // the nitro genesis block itself is the first nitro block, so a single
+    // block query at exactly that height should only hit the nitro path -
+    // matching the existing "does call for nitro events" case above, whose
+    // range also starts at the genesis block.
+    verify(l2ProviderMock.getLogs(anything())).once()
+    verify(
+      l2ProviderMock.getLogs(
+        deepEqual({
+          address: arbSys,
+          topics: [nitroTopic],
+          fromBlock: fromBlock,
+          toBlock: toBlock,
+        })
+      )
+    ).once()
+  })
+
+  it('does call for classic events for a single-block earliest/earliest range', async () => {
+    const { l2Provider, l2ProviderMock } = await createProviderMock()
+    const fromBlock = 'earliest'
+    const toBlock = 'earliest'
+
+    await ChildToParentMessage.getChildToParentEvents(l2Provider, {
+      fromBlock: fromBlock,
+      toBlock: toBlock,
+    })
+
+    // 'earliest' to 'earliest' resolves to a single-block classic-era query
+    // (block 0) on a chain with a real classic era - it must still fire.
+    verify(l2ProviderMock.getLogs(anything())).once()
+    verify(
+      l2ProviderMock.getLogs(
+        deepEqual({
+          address: arbSys,
+          topics: [classicTopic],
+          fromBlock: 0,
+          toBlock: 0,
+        })
+      )
+    ).once()
+  })
 })
