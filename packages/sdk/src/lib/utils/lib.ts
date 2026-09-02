@@ -260,11 +260,14 @@ export async function getNativeTokenDecimals({
     parentProvider
   )
 
-  try {
-    return await nativeTokenContract.decimals()
-  } catch {
-    return 0
-  }
+  // Any failure here (a transient RPC error, a rate limit, a network blip)
+  // must not be silently treated as "this token has 0 decimals" - a wrong
+  // decimals value is fed straight into scaleFrom18DecimalsToNativeTokenDecimals
+  // / scaleFromNativeTokenDecimalsTo18Decimals, which would silently compute
+  // a wildly wrong deposit/fee amount rather than fail. Propagate the error
+  // so callers can retry or surface it, instead of masking a lookup failure
+  // as a real (and incorrect) token property.
+  return await nativeTokenContract.decimals()
 }
 
 export function scaleFrom18DecimalsToNativeTokenDecimals({
