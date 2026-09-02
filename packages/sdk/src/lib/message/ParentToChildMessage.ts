@@ -401,7 +401,15 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
 
       const toBlock = await this.childProvider.getBlock(toBlockNumber)
       if (toBlock.timestamp > timeout) {
-        // Check for LifetimeExtended event
+        // Check for LifetimeExtended events across every previously queried
+        // range. A retryable can be kept alive more than once, and each
+        // keepalive can only extend (never shorten) the ticket's lifetime,
+        // so we need the latest (largest) newTimeout found across *all*
+        // ranges scanned so far - not just the first range that happens to
+        // contain a keepalive. Stopping at the first match would silently
+        // discard a later keepalive still waiting in an unscanned range,
+        // understating `timeout` and potentially reporting EXPIRED for a
+        // ticket that was, in fact, still alive (and successfully redeemed).
         while (queriedRange.length > 0) {
           const blockRange = queriedRange.shift()
           const keepaliveEvents = await eventFetcher.getEvents(
@@ -415,18 +423,18 @@ export class ParentToChildMessageReader extends ParentToChildMessage {
             }
           )
           if (keepaliveEvents.length > 0) {
-            timeout = keepaliveEvents
-              .map(e => e.event.newTimeout.toNumber())
-              .sort()
-              .reverse()[0]
-            break
+            // Array.prototype.sort() is lexicographic by default, which is
+            // wrong for numbers (e.g. [900, 1000].sort() -> [1000, 900]) -
+            // use a genuine numeric max instead.
+            timeout = keepaliveEvents.reduce(
+              (latest, e) => Math.max(latest, e.event.newTimeout.toNumber()),
+              timeout
+            )
           }
         }
         // the retryable no longer exists, but we've searched beyond the timeout
         // so it must have expired
         if (toBlock.timestamp > timeout) break
-        // It is possible to have another keepalive in the last range as it might include block after previous timeout
-        while (queriedRange.length > 1) queriedRange.shift()
       }
       const processedSeconds = toBlock.timestamp - fromBlock.timestamp
       if (processedSeconds != 0) {
