@@ -71,6 +71,28 @@ export type ChildToParentMessageReaderOrWriterNitro<
 const ASSERTION_CREATED_PADDING = 50
 // expected number of parent blocks that it takes for a validator to confirm a parent block after the assertion deadline is passed
 const ASSERTION_CONFIRMED_PADDING = 20
+// public RPCs commonly reject eth_getLogs windows larger than this
+const DEFAULT_MAX_LOG_RANGE = 10_000
+
+/** Inclusive eth_getLogs windows of at most `maxBlockRange` blocks. */
+async function getEventsInLogChunks<T>(
+  fetchChunk: (fromBlock: number, toBlock: number) => Promise<T[]>,
+  fromBlock: number,
+  toBlock: number,
+  maxBlockRange = DEFAULT_MAX_LOG_RANGE
+): Promise<T[]> {
+  if (maxBlockRange < 1) {
+    throw new ArbSdkError(`maxBlockRange must be >= 1, got ${maxBlockRange}`)
+  }
+  const events: T[] = []
+  let start = fromBlock
+  while (start <= toBlock) {
+    const end = Math.min(start + maxBlockRange - 1, toBlock)
+    events.push(...(await fetchChunk(start, end)))
+    start = end + 1
+  }
+  return events
+}
 
 const childBlockRangeCache: { [key in string]: (number | undefined)[] } = {}
 const mutex = new Mutex()
@@ -645,43 +667,48 @@ export class ChildToParentMessageReaderNitro extends ChildToParentMessageNitro {
 
     const latestBlock = await this.parentProvider.getBlockNumber()
     const eventFetcher = new EventFetcher(this.parentProvider)
+    const fromBlock = Math.max(
+      latestBlock -
+        BigNumber.from(arbitrumNetwork.confirmPeriodBlocks)
+          .add(ASSERTION_CONFIRMED_PADDING)
+          .toNumber(),
+      0
+    )
     let logs:
       | FetchedEvent<NodeCreatedEvent>[]
       | FetchedEvent<AssertionCreatedEvent>[]
     if (arbitrumNetwork.isBold) {
       logs = (
-        await eventFetcher.getEvents(
-          BoldRollupUserLogic__factory,
-          t => t.filters.AssertionCreated(),
-          {
-            fromBlock: Math.max(
-              latestBlock -
-                BigNumber.from(arbitrumNetwork.confirmPeriodBlocks)
-                  .add(ASSERTION_CONFIRMED_PADDING)
-                  .toNumber(),
-              0
+        await getEventsInLogChunks(
+          (start, end) =>
+            eventFetcher.getEvents(
+              BoldRollupUserLogic__factory,
+              t => t.filters.AssertionCreated(),
+              {
+                fromBlock: start,
+                toBlock: end,
+                address: rollup.address,
+              }
             ),
-            toBlock: 'latest',
-            address: rollup.address,
-          }
+          fromBlock,
+          latestBlock
         )
       ).sort((a, b) => a.blockNumber - b.blockNumber)
     } else {
       logs = (
-        await eventFetcher.getEvents(
-          RollupUserLogic__factory,
-          t => t.filters.NodeCreated(),
-          {
-            fromBlock: Math.max(
-              latestBlock -
-                BigNumber.from(arbitrumNetwork.confirmPeriodBlocks)
-                  .add(ASSERTION_CONFIRMED_PADDING)
-                  .toNumber(),
-              0
+        await getEventsInLogChunks(
+          (start, end) =>
+            eventFetcher.getEvents(
+              RollupUserLogic__factory,
+              t => t.filters.NodeCreated(),
+              {
+                fromBlock: start,
+                toBlock: end,
+                address: rollup.address,
+              }
             ),
-            toBlock: 'latest',
-            address: rollup.address,
-          }
+          fromBlock,
+          latestBlock
         )
       ).sort((a, b) => a.event.nodeNum.toNumber() - b.event.nodeNum.toNumber())
     }
