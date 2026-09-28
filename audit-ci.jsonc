@@ -133,13 +133,6 @@
     // from: ethers>@ethersproject/bignumber>bn.js
     "GHSA-378v-28hj-76wf",
 
-    // https://github.com/advisories/GHSA-f886-m6hf-6m8v
-    // brace-expansion zero-step sequence can hang on untrusted brace patterns
-    // Current hits are dev-only tooling paths through eslint, nyc, patch-package, and sol2uml/puppeteer.
-    // Those tools consume repository-controlled glob patterns in CI/local scripts, not runtime user input.
-    // The advisory currently only lists patched versions on brace-expansion >=5.0.5, which is not compatible
-    // with the older minimatch/glob stacks in this dependency graph.
-    "GHSA-f886-m6hf-6m8v",
 
     // hardhat transitive dependencies (dev-only)
     // https://github.com/advisories/GHSA-g9mf-h72j-4rw9
@@ -203,16 +196,6 @@
     // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>sol2uml>axios>follow-redirects
     "GHSA-r4q5-vmmm-2653",
 
-    // js-yaml (dev-only)
-    // https://github.com/advisories/GHSA-h67p-54hq-rp68
-    // js-yaml quadratic-complexity DoS in merge-key handling via repeated aliases
-    // Fix requires js-yaml >=4.2.0, but eslint 7.x pins js-yaml 3.x (no 3.x patch exists); dev-only
-    // eslint and mocha parse repository-controlled config/YAML, not untrusted runtime input
-    // from: eslint>js-yaml
-    // from: eslint>@eslint/eslintrc>js-yaml
-    // from: mocha>js-yaml
-    // from: hardhat>mocha>js-yaml
-    "GHSA-h67p-54hq-rp68",
 
     // @babel/core (dev-only)
     // https://github.com/advisories/GHSA-4x5r-pxfx-6jf8
