@@ -50,7 +50,7 @@
     "typechain": "7.0.0",
     "typescript": "^5.7.2",
     "viem": "^2.0.0",
-    "vitest": "^4.1.2",
+    "vitest": "^4.1.11",
     "yargs": "^17.3.1"
   },
   "resolutions": {
@@ -59,7 +59,7 @@
     "**/puppeteer/ws": "8.21.0",
     "**/viem/ws": "8.21.0",
     "**/tmp": "0.2.7",
-    "**/fast-uri": "3.1.4",
+    "**/fast-uri": "3.1.6",
     "**/puppeteer/tar-fs": "2.1.4",
     "**/hardhat/ws": "7.5.11",
     "**/hardhat/@sentry/node/cookie": "0.7.0",
@@ -67,7 +67,7 @@
     "**/micromatch": "4.0.8",
     "**/elliptic": "6.6.1",
     "**/secp256k1": "4.0.4",
-    "**/nanoid": "3.3.8",
+    "**/nanoid": "3.3.18",
     "**/serialize-javascript": "6.0.2",
     "**/patch-package/cross-spawn": "6.0.6",
     "**/eslint/cross-spawn": "7.0.5",
@@ -77,12 +77,12 @@
     "**/hardhat/undici": "5.29.0",
     "**/chokidar/braces": "3.0.3",
     "**/sol2uml/axios": "0.33.0",
-    "**/brace-expansion": "1.1.16",
+    "**/brace-expansion": "1.1.18",
     "**/mocha/minimatch/brace-expansion": "2.1.2",
     "**/convert-svg-core/glob/minimatch/brace-expansion": "2.1.2",
-    "**/eslint/js-yaml": "3.15.0",
-    "**/eslint/@eslint/eslintrc/js-yaml": "3.15.0",
-    "**/mocha/js-yaml": "4.3.0",
+    "**/eslint/js-yaml": "3.15.2",
+    "**/eslint/@eslint/eslintrc/js-yaml": "3.15.2",
+    "**/mocha/js-yaml": "4.3.2",
     "**/diff": "5.2.2",
     "**/anymatch/picomatch": "2.3.2",
     "**/readdirp/picomatch": "2.3.2",
@@ -95,6 +95,8 @@
     "**/flatted": "3.4.2",
     "**/patch-package/yaml": "1.10.3",
     "**/vite": "8.0.16",
-    "**/hardhat/adm-zip": "0.6.0"
+    "**/hardhat/adm-zip": "0.6.1",
+    "**/postcss": "8.5.23",
+    "**/browserslist": "4.28.7"
   }
 }

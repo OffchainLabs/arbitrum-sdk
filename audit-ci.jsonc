@@ -177,6 +177,21 @@
     // Fix requires undici >=6.27.0 but hardhat depends on undici 5.x; dev-only
     // from: hardhat>undici
     "GHSA-g8m3-5g58-fq7m",
+    // https://github.com/advisories/GHSA-v3r7-h72x-cjcm
+    // undici cookie attribute injection via unsanitized domain and unparsed setCookie fields
+    // Fix requires undici >=6.28.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-v3r7-h72x-cjcm",
+    // https://github.com/advisories/GHSA-m8rv-5g2x-5cg5
+    // undici CRLF injection via blob-like body 'type' property
+    // Fix requires undici >=6.28.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-m8rv-5g2x-5cg5",
+    // https://github.com/advisories/GHSA-8xcm-r25x-g524
+    // undici downstream response desynchronization via retry interceptor
+    // Fix requires undici >=6.28.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-8xcm-r25x-g524",
 
     // https://github.com/advisories/GHSA-w5hq-g745-h8pq
     // uuid v3/v5/v6 missing bounds check on caller-provided buffers
@@ -195,6 +210,20 @@
     // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>axios>follow-redirects
     // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>sol2uml>axios>follow-redirects
     "GHSA-r4q5-vmmm-2653",
+
+    // puppeteer transitive dependencies (dev-only)
+    // https://github.com/advisories/GHSA-7pqw-9j4j-h8q3
+    // extract-zip allows arbitrary file writes through symlink archive entries
+    // No patched version exists; only used by puppeteer to unpack its own Chromium download for sol2uml, which the SDK never runs
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>convert-svg-to-png>convert-svg-core>puppeteer>extract-zip
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>sol2uml>convert-svg-to-png>convert-svg-core>puppeteer>extract-zip
+    "GHSA-7pqw-9j4j-h8q3",
+    // https://github.com/advisories/GHSA-jmr9-qjv8-65gv
+    // extract-zip unvalidated symlink path traversal
+    // No patched version exists; only used by puppeteer to unpack its own Chromium download for sol2uml, which the SDK never runs
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>convert-svg-to-png>convert-svg-core>puppeteer>extract-zip
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>sol2uml>convert-svg-to-png>convert-svg-core>puppeteer>extract-zip
+    "GHSA-jmr9-qjv8-65gv",
 
 
     // @babel/core (dev-only)
