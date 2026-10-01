@@ -39,6 +39,7 @@ import { ArbSdkError } from '../dataEntities/errors'
 import {
   NODE_INTERFACE_ADDRESS,
   ARB_RETRYABLE_TX_ADDRESS,
+  ARB_SYS_ADDRESS,
 } from '../dataEntities/constants'
 import { EventArgs, parseTypedLogs } from '../dataEntities/event'
 import { ArbitrumProvider } from '../utils/arbProvider'
@@ -107,12 +108,24 @@ export class ChildTransactionReceipt implements TransactionReceipt {
    * @returns
    */
   public getChildToParentEvents(): ChildToParentTransactionEvent[] {
+    // ARB_SYS_ADDRESS is a fixed precompile address, identical on every
+    // Arbitrum chain, so this can always be scoped - unlike the parent-chain
+    // Bridge/Inbox addresses, there's no per-network lookup needed. Without
+    // this, any other contract touched by the same transaction could forge
+    // a log matching L2ToL1Transaction/L2ToL1Tx's topic and have it parsed
+    // as a real child-to-parent message.
     const classicLogs = parseTypedLogs(
       ArbSys__factory,
       this.logs,
-      'L2ToL1Transaction'
+      'L2ToL1Transaction',
+      ARB_SYS_ADDRESS
     )
-    const nitroLogs = parseTypedLogs(ArbSys__factory, this.logs, 'L2ToL1Tx')
+    const nitroLogs = parseTypedLogs(
+      ArbSys__factory,
+      this.logs,
+      'L2ToL1Tx',
+      ARB_SYS_ADDRESS
+    )
     return [...classicLogs, ...nitroLogs]
   }
 
@@ -121,7 +134,14 @@ export class ChildTransactionReceipt implements TransactionReceipt {
    * @returns
    */
   public getRedeemScheduledEvents(): EventArgs<RedeemScheduledEvent>[] {
-    return parseTypedLogs(ArbRetryableTx__factory, this.logs, 'RedeemScheduled')
+    // ARB_RETRYABLE_TX_ADDRESS is likewise a fixed precompile address - see
+    // getChildToParentEvents above for why this is always safe to scope.
+    return parseTypedLogs(
+      ArbRetryableTx__factory,
+      this.logs,
+      'RedeemScheduled',
+      ARB_RETRYABLE_TX_ADDRESS
+    )
   }
 
   /**

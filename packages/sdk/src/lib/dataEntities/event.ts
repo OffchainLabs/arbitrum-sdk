@@ -48,7 +48,14 @@ export type TypeChainContractFactory<TContract extends Contract> = {
  * @param contractFactory
  * @param log The log to parse
  * @param filterName
- * @returns Null if filter name topic does not match log topic
+ * @param expectedAddress When provided, a log emitted by any other address is
+ * treated as a non-match (returns null) even if its topic matches. Logs
+ * pulled from a transaction receipt (as opposed to an address-scoped
+ * `eth_getLogs` query) can include events emitted by *any* contract the
+ * transaction touched, so a topic-only check lets any contract - malicious
+ * or otherwise - forge a log that matches a well-known event signature.
+ * @returns Null if filter name topic does not match log topic, or if
+ * `expectedAddress` is given and does not match the log's address
  */
 export const parseTypedLog = <
   TContract extends Contract,
@@ -56,13 +63,22 @@ export const parseTypedLog = <
 >(
   contractFactory: TypeChainContractFactory<TContract>,
   log: Log,
-  filterName: TFilterName
+  filterName: TFilterName,
+  expectedAddress?: string
 ): EventType<TContract, TFilterName> | null => {
   const iFace = contractFactory.createInterface()
   const event = iFace.getEvent(filterName)
   const topic = iFace.getEventTopic(event)
 
-  if (log.topics[0] === topic) {
+  if (
+    log.topics[0] === topic &&
+    // Only skip the address check when the caller genuinely omitted the
+    // argument. A falsy-but-provided value (e.g. an empty string from a
+    // misconfigured network) must fail closed - rejecting every log - not
+    // silently fall back to accepting logs from any address.
+    (expectedAddress === undefined ||
+      log.address.toLowerCase() === expectedAddress.toLowerCase())
+  ) {
     return iFace.parseLog(log).args as EventType<TContract, TFilterName>
   } else return null
 }
@@ -73,6 +89,8 @@ export const parseTypedLog = <
  * @param contractFactory
  * @param logs The logs to parse
  * @param filterName
+ * @param expectedAddress When provided, only logs emitted by this address are
+ * parsed - see {@link parseTypedLog}
  * @returns
  */
 export const parseTypedLogs = <
@@ -81,9 +99,10 @@ export const parseTypedLogs = <
 >(
   contractFactory: TypeChainContractFactory<TContract>,
   logs: Log[],
-  filterName: TFilterName
+  filterName: TFilterName,
+  expectedAddress?: string
 ): EventType<TContract, TFilterName>[] => {
   return logs
-    .map(l => parseTypedLog(contractFactory, l, filterName))
+    .map(l => parseTypedLog(contractFactory, l, filterName, expectedAddress))
     .filter((i): i is NonNullable<typeof i> => i !== null)
 }

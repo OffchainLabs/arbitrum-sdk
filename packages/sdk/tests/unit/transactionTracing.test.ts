@@ -19,6 +19,7 @@ const NODE_INTERFACE_ADDRESS = '0x00000000000000000000000000000000000000C8'
 const ARB_SYS_ADDRESS = '0x0000000000000000000000000000000000000064'
 const ARB_RETRYABLE_TX_ADDRESS = '0x000000000000000000000000000000000000006E'
 const ARB_ONE_BRIDGE = '0x8315177aB297bA92A06054cE80a67Ed4DBd7ed3a'
+const ARB_ONE_OUTBOX = '0x0B9857ae2D4A3DBe74ffE1d7DF045bb7F96E4840'
 
 // Function selectors used by provider.call dispatch
 const blockL1NumSighash =
@@ -355,12 +356,22 @@ function makeRedeemScheduledLog(
 
 function makeOutboxExecutedLog(transactionIndex: number): ethers.providers.Log {
   const iface = Outbox__factory.createInterface()
-  return encodeLog(iface, 'OutBoxTransactionExecuted', {
-    to: ZERO_ADDR,
-    l2Sender: ZERO_ADDR,
-    zero: BigNumber.from(0),
-    transactionIndex: BigNumber.from(transactionIndex),
-  })
+  return encodeLog(
+    iface,
+    'OutBoxTransactionExecuted',
+    {
+      to: ZERO_ADDR,
+      l2Sender: ZERO_ADDR,
+      zero: BigNumber.from(0),
+      transactionIndex: BigNumber.from(transactionIndex),
+    },
+    // getChildWithdrawTransactionHash now scopes this event to the real
+    // Outbox address for the resolved network (chainId 42161 here, via
+    // mockChildProvider's default) - use the real Arbitrum One Outbox
+    // rather than the arbitrary ZERO_ADDR placeholder this log otherwise
+    // defaults to, so this test still exercises the code path it claims to.
+    { address: ARB_ONE_OUTBOX }
+  )
 }
 
 function makeL2ToL1TxLog(

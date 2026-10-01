@@ -127,51 +127,72 @@ export class ParentTransactionReceipt implements TransactionReceipt {
 
   /**
    * Get any MessageDelivered events that were emitted during this transaction
+   * @param bridgeAddress When provided, only logs actually emitted by this
+   * address are accepted. This transaction's logs come from a full receipt,
+   * which can contain events from *any* contract the transaction touched -
+   * without this check, a different contract could forge a log matching
+   * MessageDelivered's signature and have it parsed as a real bridge event.
+   * Omitting it preserves the previous (unscoped) behavior for callers that
+   * don't have a known bridge address on hand.
    * @returns
    */
-  public getMessageDeliveredEvents(): EventArgs<MessageDeliveredEvent>[] {
-    return parseTypedLogs(Bridge__factory, this.logs, 'MessageDelivered')
+  public getMessageDeliveredEvents(
+    bridgeAddress?: string
+  ): EventArgs<MessageDeliveredEvent>[] {
+    return parseTypedLogs(
+      Bridge__factory,
+      this.logs,
+      'MessageDelivered',
+      bridgeAddress
+    )
   }
 
   /**
    * Get any InboxMessageDelivered events that were emitted during this transaction
+   * @param inboxAddress When provided, only logs actually emitted by this
+   * address are accepted - see {@link getMessageDeliveredEvents}
    * @returns
    */
-  public getInboxMessageDeliveredEvents() {
+  public getInboxMessageDeliveredEvents(inboxAddress?: string) {
     return parseTypedLogs(
       Inbox__factory,
       this.logs,
-      'InboxMessageDelivered(uint256,bytes)'
+      'InboxMessageDelivered(uint256,bytes)',
+      inboxAddress
     )
   }
 
   /**
    * Get combined data for any InboxMessageDelivered and MessageDelivered events
    * emitted during this transaction
+   * @param bridgeAddress When provided, scopes MessageDelivered events to
+   * this address - see {@link getMessageDeliveredEvents}. A Bridge is a
+   * per-network singleton, so this is always unambiguous.
    * @returns
    */
-  public getMessageEvents(): {
+  public getMessageEvents(bridgeAddress?: string): {
     inboxMessageEvent: EventArgs<InboxMessageDeliveredEvent>
     bridgeMessageEvent: EventArgs<MessageDeliveredEvent>
   }[] {
-    const bridgeMessages = this.getMessageDeliveredEvents()
-    const inboxMessages = this.getInboxMessageDeliveredEvents()
-
-    if (bridgeMessages.length !== inboxMessages.length) {
-      throw new ArbSdkError(
-        `Unexpected missing events. Inbox message count: ${
-          inboxMessages.length
-        } does not equal bridge message count: ${
-          bridgeMessages.length
-        }. ${JSON.stringify(inboxMessages)} ${JSON.stringify(bridgeMessages)}`
-      )
-    }
+    const bridgeMessages = this.getMessageDeliveredEvents(bridgeAddress)
 
     const messages: {
       inboxMessageEvent: EventArgs<InboxMessageDeliveredEvent>
       bridgeMessageEvent: EventArgs<MessageDeliveredEvent>
     }[] = []
     for (const bm of bridgeMessages) {
+      // Once a MessageDelivered log is authenticated as coming from the
+      // real Bridge (bridgeAddress above), its own `inbox` field is itself
+      // trustworthy: the Bridge contract only accepts enqueue calls from
+      // inboxes it has explicitly allow-listed, so this value reflects the
+      // Bridge's own record of which registered inbox delivered THIS
+      // specific message. Scoping the paired InboxMessageDelivered lookup
+      // to that address (rather than a single hardcoded network inbox
+      // constant) authenticates the pairing without assuming a Bridge only
+      // ever has one allowed delayed inbox over its lifetime - and without
+      // it, a forged InboxMessageDelivered log from any other contract with
+      // a matching messageNum could be paired in as if it were genuine.
+      const inboxMessages = this.getInboxMessageDeliveredEvents(bm.inbox)
       const im = inboxMessages.filter(i => i.messageNum.eq(bm.messageIndex))[0]
       if (!im) {
         throw new ArbSdkError(
@@ -197,8 +218,9 @@ export class ParentTransactionReceipt implements TransactionReceipt {
   public async getEthDeposits(
     childProvider: Provider
   ): Promise<EthDepositMessage[]> {
+    const network = await getArbitrumNetwork(childProvider)
     return Promise.all(
-      this.getMessageEvents()
+      this.getMessageEvents(network.ethBridge.bridge)
         .filter(
           e =>
             e.bridgeMessageEvent.kind ===
@@ -233,9 +255,9 @@ export class ParentTransactionReceipt implements TransactionReceipt {
       )
     }
 
-    const messageNums = this.getInboxMessageDeliveredEvents().map(
-      msg => msg.messageNum
-    )
+    const messageNums = this.getInboxMessageDeliveredEvents(
+      network.ethBridge.inbox
+    ).map(msg => msg.messageNum)
 
     return messageNums.map(
       messageNum =>
@@ -271,7 +293,7 @@ export class ParentTransactionReceipt implements TransactionReceipt {
       )
     }
 
-    const events = this.getMessageEvents()
+    const events = this.getMessageEvents(network.ethBridge.bridge)
     return events
       .filter(
         e =>
@@ -299,6 +321,15 @@ export class ParentTransactionReceipt implements TransactionReceipt {
 
   /**
    * Get any token deposit events created by this transaction
+   *
+   * KNOWN LIMITATION: unlike the Bridge/Inbox/Outbox methods above, this is
+   * not address-scoped. A network can have several legitimate gateway
+   * contracts (standard, custom, weth, ...), so there is no single correct
+   * address to check here - closing this properly needs the caller (or the
+   * SDK, via the network's GatewayRouter) to supply the set of gateway
+   * addresses actually registered for the token(s) in question. Left
+   * unscoped rather than guessing a wrong single address. No internal
+   * caller currently relies on this method's output.
    * @returns
    */
   public getTokenDepositEvents() {
@@ -320,11 +351,17 @@ export class ParentTransactionReceipt implements TransactionReceipt {
     childProvider: Provider,
     parentProvider: Provider
   ): Promise<string | null> {
-    // Step 1: Parse OutBoxTransactionExecuted from this tx's logs
+    // Step 1: Parse OutBoxTransactionExecuted from this tx's logs. Scoped to
+    // the real Outbox address (a per-network singleton, like Bridge) - an
+    // unrelated contract touched by the same transaction could otherwise
+    // forge a log matching this event's topic, with an attacker-controlled
+    // transactionIndex driving the child-chain lookup below.
+    const network = await getArbitrumNetwork(childProvider)
     const outboxEvents = parseTypedLogs(
       Outbox__factory,
       this.logs,
-      'OutBoxTransactionExecuted'
+      'OutBoxTransactionExecuted',
+      network.ethBridge.outbox
     )
     if (outboxEvents.length === 0) return null
 
