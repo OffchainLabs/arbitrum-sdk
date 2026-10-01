@@ -156,13 +156,44 @@ export class ChildToParentMessage {
       return Math.max(blockTag, nitroGenBlock)
     }
 
+    // Resolve a block tag to a comparable number so we can determine whether
+    // the *original*, unclamped filter range genuinely overlaps the classic
+    // or nitro era. Comparing the two clamped, era-specific query bounds to
+    // each other (the previous approach) incorrectly treats every
+    // single-block query (fromBlock === toBlock) as "empty", since both
+    // bounds always clamp to the same value in that case - even though
+    // eth_getLogs treats {fromBlock: N, toBlock: N} as a valid, inclusive
+    // single-block query, not an empty one.
+    const toComparableBlock = (blockTag: BlockTag): number => {
+      if (typeof blockTag !== 'string') return blockTag
+      switch (blockTag) {
+        case 'earliest':
+          return 0
+        case 'latest':
+        case 'pending':
+          return Number.POSITIVE_INFINITY
+        default:
+          throw new ArbSdkError(`Unrecognised block tag. ${blockTag}`)
+      }
+    }
+
+    const comparableFromBlock = toComparableBlock(filter.fromBlock)
+    const comparableToBlock = toComparableBlock(filter.toBlock)
+
+    // The classic era is every block strictly before the nitro genesis
+    // block - the genesis block itself is the *first* nitro block, so it
+    // belongs to the nitro era, not the classic one.
+    const overlapsClassicRange = comparableFromBlock < childNitroGenesisBlock
+    // The nitro era is every block from the genesis block onwards.
+    const overlapsNitroRange = comparableToBlock >= childNitroGenesisBlock
+
     // only fetch nitro events after the genesis block
     const classicFilter = {
       fromBlock: inClassicRange(filter.fromBlock, childNitroGenesisBlock),
       toBlock: inClassicRange(filter.toBlock, childNitroGenesisBlock),
     }
     const logQueries = []
-    if (classicFilter.fromBlock !== classicFilter.toBlock) {
+    if (overlapsClassicRange) {
       logQueries.push(
         classic.ChildToParentMessageClassic.getChildToParentEvents(
           childProvider,
@@ -179,7 +210,7 @@ export class ChildToParentMessage {
       fromBlock: inNitroRange(filter.fromBlock, childNitroGenesisBlock),
       toBlock: inNitroRange(filter.toBlock, childNitroGenesisBlock),
     }
-    if (nitroFilter.fromBlock !== nitroFilter.toBlock) {
+    if (overlapsNitroRange) {
       logQueries.push(
         nitro.ChildToParentMessageNitro.getChildToParentEvents(
           childProvider,
