@@ -701,8 +701,18 @@ export class Erc20Bridger extends AssetBridger<
         decimals
       )
 
+      // `outboundTransfer` is a thin wrapper around
+      // `outboundTransferCustomRefund` that hardcodes the refund
+      // destination to the deposit's `_to` address (see
+      // L1ArbitrumGateway.sol: `outboundTransfer(...) { return
+      // outboundTransferCustomRefund(_l1Token, _to, _to, ...) }`). So the
+      // plain `outboundTransfer` call is only equivalent to what the caller
+      // asked for when the excess-fee refund address already equals the
+      // deposit destination - comparing against `from` (the sender) checks
+      // the wrong variable and silently redirects the refund to the
+      // recipient whenever the caller deposits to someone else.
       const functionData =
-        defaultedParams.excessFeeRefundAddress !== defaultedParams.from
+        defaultedParams.excessFeeRefundAddress !== destinationAddress
           ? iGatewayRouter.encodeFunctionData('outboundTransferCustomRefund', [
               erc20ParentAddress,
               defaultedParams.excessFeeRefundAddress,
