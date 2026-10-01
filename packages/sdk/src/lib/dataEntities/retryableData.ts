@@ -1,6 +1,7 @@
 import { Interface } from '@ethersproject/abi'
 import { BigNumber } from 'ethers'
 import { isDefined } from '../utils/lib'
+import { isHexString } from 'ethers/lib/utils'
 
 // TODO: add typechain support
 const errorInterface = new Interface([
@@ -82,7 +83,37 @@ export class RetryableDataTools {
             body?: string
             data?: string
           }
+
+          // there may be a json string at this key of the form:
+          // {
+          //   "error": {
+          //     "code": -32015,
+          //     "message": "...",
+          //     "data": "0x..."
+          //   }
+          // }
+          // nethermind may return revert data this way
+          body?: string
         }
+      }
+
+      try {
+        const possibleErrorBody = JSON.parse(typedError.error?.body || '') as {
+          error?: {
+            code?: number
+            message?: string
+            data?: string
+          }
+        }
+
+        if (
+          possibleErrorBody.error?.code === -32015 &&
+          isHexString(possibleErrorBody.error.data)
+        ) {
+          return possibleErrorBody.error.data
+        }
+      } catch {
+        // ignore parsing error
       }
 
       if (typedError.data) {
