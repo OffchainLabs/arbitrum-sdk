@@ -41,6 +41,7 @@ import { ArbSdkError } from '../dataEntities/errors'
 import { EventArgs } from '../dataEntities/event'
 import { ChildToParentMessageStatus } from '../dataEntities/message'
 import { getArbitrumNetwork } from '../dataEntities/networks'
+import { ErrorCode, Logger } from '@ethersproject/logger'
 
 export interface MessageBatchProofInfo {
   /**
@@ -323,9 +324,25 @@ export class ChildToParentMessageReaderClassic extends ChildToParentMessageClass
       )
       return false
     } catch (err) {
-      const e = err as Error
-      if (e?.message?.toString().includes('ALREADY_SPENT')) return true
-      if (e?.message?.toString().includes('NO_OUTBOX_ENTRY')) return false
+      const e = err as unknown as { code: ErrorCode; reason: string }
+
+      if (e.code === Logger.errors.CALL_EXCEPTION) {
+        if (e.reason === 'ALREADY_SPENT') return true
+
+        // throw for reverts in Outbox that result from malformed inputs
+        if (
+          ['PROOF_TOO_LONG', 'PATH_NOT_MINIMAL', 'BAD_ROOT'].some(
+            (revertReason: string) => revertReason === e.reason
+          )
+        )
+          throw e
+
+        // return false for all other reverts
+        // this includes other reverts in the outbox like NO_OUTBOX / NO_OUTBOX_ENTRY
+        // as well as reverts within the execution of the ChildToParent message itself
+        return false
+      }
+
       throw e
     }
   }
