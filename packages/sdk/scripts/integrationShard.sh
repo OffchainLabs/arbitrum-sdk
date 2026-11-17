@@ -5,9 +5,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")/../tests/integration"
 
-shard2="customerc20.test.ts l1l3Bridger.test.ts"
-shard3="transactionTracing.test.ts sendChildmsg.test.ts parentToChildMessageCreator.test.ts childTransactionReceipt.test.ts"
-shard4="eth.test.ts weth.test.ts"
+shard2="customerc20.test.ts sendChildmsg.test.ts parentToChildMessageCreator.test.ts"
+shard3="transactionTracing.test.ts l1l3Bridger.test.ts"
+shard4="eth.test.ts weth.test.ts childTransactionReceipt.test.ts"
 
 listed=" $shard2 $shard3 $shard4 "
 for f in $listed; do
