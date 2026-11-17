@@ -68,10 +68,47 @@ interface WithdrawalParams {
   gatewayType: GatewayType
 }
 
+const l1Provider = process.env['ETH_URL']
+  ? new JsonRpcProvider(process.env['ETH_URL'])
+  : undefined
+let l1IsAnvil: Promise<boolean> | undefined
+const isL1Anvil = (): Promise<boolean> => {
+  if (!l1IsAnvil) {
+    l1IsAnvil = l1Provider
+      ? l1Provider
+          .send('web3_clientVersion', [])
+          .then(v => String(v).toLowerCase().includes('anvil'))
+          .catch(() => false)
+      : Promise.resolve(false)
+  }
+  return l1IsAnvil
+}
+
+/**
+ * Nitro validators only assert batches that L1 has finalized, and anvil
+ * finalizes 64 blocks behind its head. Mining those blocks at once lets the
+ * next assertion be posted without waiting 64 block times.
+ */
+const advanceL1Finality = async (state: { mining: boolean }) => {
+  if (!(await isL1Anvil())) return
+  while (state.mining) {
+    await l1Provider!.send('anvil_mine', ['0x40'])
+    await wait(2000)
+  }
+}
+
+const finalizing = new WeakSet<{ mining: boolean }>()
+
 export const mineUntilStop = async (
   miner: Signer,
   state: { mining: boolean }
 ) => {
+  if (!finalizing.has(state)) {
+    finalizing.add(state)
+    advanceL1Finality(state).catch(e =>
+      warn(`could not advance L1 finality: ${e}`)
+    )
+  }
   while (state.mining) {
     await (
       await miner.sendTransaction({
