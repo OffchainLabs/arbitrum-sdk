@@ -173,10 +173,8 @@ jobs:
       - name: Copy .env
         run: cp ./.env-sample ./.env
 
-      - name: Build
-        run: |
-          yarn gen:abi
-          yarn build
+      - name: Generate ABIs
+        run: yarn gen:abi
 
       - name: Run integration tests
         working-directory: packages/sdk
