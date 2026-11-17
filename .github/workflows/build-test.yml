@@ -125,34 +125,27 @@ jobs:
         run: CI=true yarn test:unit
 
   test-integration:
-    name: Test (Integration) on Node.js v${{ matrix.node-version }}${{ matrix.orbit-test == '1' && ' with L3' || '' }}${{ matrix.decimals == '16' && ' with custom gas token (16 decimals)' || matrix.decimals == '20' && ' with custom gas token (20 decimals)' || matrix.decimals == '18' && ' with custom gas token (18 decimals)' || '' }}
+    name: Test (Integration) on Node.js v${{ matrix.node-version }}${{ matrix.chain.orbit-test == '1' && ' with L3' || '' }}${{ matrix.chain.decimals && format(' with custom gas token ({0} decimals)', matrix.chain.decimals) || '' }} (shard ${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false # runs all tests to completion even if one fails
       matrix:
-        include:
+        node-version: [24]
+        chain:
           - orbit-test: '0'
-            node-version: 24
-
           - orbit-test: '1'
-            node-version: 24
-
           - orbit-test: '1'
             decimals: 16
-            node-version: 24
-
           - orbit-test: '1'
             decimals: 18
-            node-version: 24
-
           - orbit-test: '1'
             decimals: 20
-            node-version: 24
+        shard: [1, 2, 3, 4]
 
     needs: install
     env:
-      ORBIT_TEST: ${{ matrix.orbit-test }}
-      DECIMALS: ${{ matrix.decimals || '18' }}
+      ORBIT_TEST: ${{ matrix.chain.orbit-test }}
+      DECIMALS: ${{ matrix.chain.decimals || '18' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -172,8 +165,8 @@ jobs:
         with:
           version: v0.2.2
           image-repository: ghcr.io/offchainlabs/arbitrum-testnode-ci
-          l3-enabled: ${{ matrix.orbit-test == '1' }}
-          fee-token-decimals: ${{ matrix.decimals }}
+          l3-enabled: ${{ matrix.chain.orbit-test == '1' }}
+          fee-token-decimals: ${{ matrix.chain.decimals }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
           network-config-path: packages/sdk/localNetwork.json
 
@@ -186,6 +179,11 @@ jobs:
           yarn build
 
       - name: Run integration tests
+        working-directory: packages/sdk
         env:
           NODE_OPTIONS: --no-experimental-strip-types
-        run: CI=true yarn test:integration
+          CI: true
+        run: |
+          files=$(scripts/integrationShard.sh ${{ matrix.shard }})
+          echo "$files"
+          yarn mocha $files --timeout 30000000 --bail
