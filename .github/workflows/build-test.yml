@@ -161,10 +161,9 @@ jobs:
           cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
       - name: Set up the local node
-        uses: OffchainLabs/arbitrum-litro@v0.2.4
+        uses: OffchainLabs/arbitrum-litro@v0.6.0
         with:
-          version: v0.2.2
-          image-repository: ghcr.io/offchainlabs/arbitrum-testnode-ci
+          version: v0.6.0
           l3-enabled: ${{ matrix.chain.orbit-test == '1' }}
           fee-token-decimals: ${{ matrix.chain.decimals }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
