@@ -146,6 +146,7 @@ jobs:
     env:
       ORBIT_TEST: ${{ matrix.chain.orbit-test }}
       DECIMALS: ${{ matrix.chain.decimals || '18' }}
+      TESTNODE_TAG: v0.6.1-nc3.2-${{ matrix.chain.orbit-test == '0' && 'l2' || (matrix.chain.decimals && format('l3-custom-{0}', matrix.chain.decimals) || 'l3-eth') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -160,13 +161,42 @@ jobs:
         with:
           cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
+      # Pulls from GHCR usually take 10-30s but sometimes stall for minutes. The image
+      # comes from the Actions cache instead, tagged local/ so the action skips its pull.
+      - name: Restore testnode image
+        id: testnode-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/testnode-image.tar.zst
+          key: testnode-${{ env.TESTNODE_TAG }}
+
+      - name: Load testnode image
+        run: |
+          set -euo pipefail
+          file="$RUNNER_TEMP/testnode-image.tar.zst"
+          if [ -f "$file" ]; then
+            zstd -dc "$file" | docker load
+          else
+            docker pull "ghcr.io/offchainlabs/arbitrum-litro:$TESTNODE_TAG"
+            docker tag "ghcr.io/offchainlabs/arbitrum-litro:$TESTNODE_TAG" "local/arbitrum-testnode:$TESTNODE_TAG"
+            docker save "local/arbitrum-testnode:$TESTNODE_TAG" | zstd -T0 -3 -o "$file"
+          fi
+
+      - name: Save testnode image
+        if: steps.testnode-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        continue-on-error: true # another shard may save the same key first
+        with:
+          path: ${{ runner.temp }}/testnode-image.tar.zst
+          key: testnode-${{ env.TESTNODE_TAG }}
+
       - name: Set up the local node
         uses: OffchainLabs/arbitrum-litro@v0.6.1
         with:
           version: v0.6.1
+          image-repository: local/arbitrum-testnode
           l3-enabled: ${{ matrix.chain.orbit-test == '1' }}
           fee-token-decimals: ${{ matrix.chain.decimals }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
           network-config-path: packages/sdk/localNetwork.json
 
       - name: Copy .env
