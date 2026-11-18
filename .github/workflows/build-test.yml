@@ -205,7 +205,15 @@ jobs:
       - name: Copy .env
         run: cp ./.env-sample ./.env
 
+      - name: Restore ABIs
+        id: abi-cache
+        uses: actions/cache@v4
+        with:
+          path: packages/sdk/src/lib/abi
+          key: abi-${{ hashFiles('yarn.lock', 'packages/sdk/scripts/genAbi.ts', 'packages/sdk/src/lib/dataEntities/Outbox.json') }}
+
       - name: Generate ABIs
+        if: steps.abi-cache.outputs.cache-hit != 'true'
         run: yarn gen:abi
 
       - name: Run integration tests
