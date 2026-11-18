@@ -154,6 +154,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Pulls from GHCR usually take 10-30s but sometimes stall for minutes. The image
+      # comes from the Actions cache instead, tagged local/ so the action skips its pull.
+      - name: Restore testnode image
+        id: testnode-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/testnode-image.tar.zst
+          key: testnode-${{ env.TESTNODE_TAG }}
+
+      # Loads the image in the background while node_modules and the ABIs are set up.
+      - name: Start loading testnode image
+        run: |
+          (
+            set +e
+            bash -c '
+              set -euo pipefail
+              file="$RUNNER_TEMP/testnode-image.tar.zst"
+              if [ -f "$file" ]; then
+                zstd -dc "$file" | docker load
+              else
+                docker pull "ghcr.io/offchainlabs/arbitrum-litro:$TESTNODE_TAG"
+                docker tag "ghcr.io/offchainlabs/arbitrum-litro:$TESTNODE_TAG" "local/arbitrum-testnode:$TESTNODE_TAG"
+                docker save "local/arbitrum-testnode:$TESTNODE_TAG" | zstd -T0 -3 -o "$file"
+              fi
+            ' > "$RUNNER_TEMP/testnode-load.log" 2>&1 < /dev/null
+            echo $? > "$RUNNER_TEMP/testnode-load.rc.tmp"
+            mv "$RUNNER_TEMP/testnode-load.rc.tmp" "$RUNNER_TEMP/testnode-load.rc"
+          ) > /dev/null 2>&1 < /dev/null &
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -164,26 +193,25 @@ jobs:
         with:
           cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
-      # Pulls from GHCR usually take 10-30s but sometimes stall for minutes. The image
-      # comes from the Actions cache instead, tagged local/ so the action skips its pull.
-      - name: Restore testnode image
-        id: testnode-cache
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ runner.temp }}/testnode-image.tar.zst
-          key: testnode-${{ env.TESTNODE_TAG }}
+      - name: Copy .env
+        run: cp ./.env-sample ./.env
 
-      - name: Load testnode image
+      - name: Restore ABIs
+        id: abi-cache
+        uses: actions/cache@v4
+        with:
+          path: packages/sdk/src/lib/abi
+          key: abi-${{ hashFiles('yarn.lock', 'packages/sdk/scripts/genAbi.ts', 'packages/sdk/src/lib/dataEntities/Outbox.json') }}
+
+      - name: Generate ABIs
+        if: steps.abi-cache.outputs.cache-hit != 'true'
+        run: yarn gen:abi
+
+      - name: Wait for testnode image
         run: |
-          set -euo pipefail
-          file="$RUNNER_TEMP/testnode-image.tar.zst"
-          if [ -f "$file" ]; then
-            zstd -dc "$file" | docker load
-          else
-            docker pull "ghcr.io/offchainlabs/arbitrum-litro:$TESTNODE_TAG"
-            docker tag "ghcr.io/offchainlabs/arbitrum-litro:$TESTNODE_TAG" "local/arbitrum-testnode:$TESTNODE_TAG"
-            docker save "local/arbitrum-testnode:$TESTNODE_TAG" | zstd -T0 -3 -o "$file"
-          fi
+          timeout 600 bash -c 'until [ -f "$RUNNER_TEMP/testnode-load.rc" ]; do sleep 0.2; done'
+          cat "$RUNNER_TEMP/testnode-load.log"
+          exit "$(cat "$RUNNER_TEMP/testnode-load.rc")"
 
       - name: Save testnode image
         if: steps.testnode-cache.outputs.cache-hit != 'true'
@@ -201,20 +229,6 @@ jobs:
           l3-enabled: ${{ matrix.chain.orbit-test == '1' }}
           fee-token-decimals: ${{ matrix.chain.decimals }}
           network-config-path: packages/sdk/localNetwork.json
-
-      - name: Copy .env
-        run: cp ./.env-sample ./.env
-
-      - name: Restore ABIs
-        id: abi-cache
-        uses: actions/cache@v4
-        with:
-          path: packages/sdk/src/lib/abi
-          key: abi-${{ hashFiles('yarn.lock', 'packages/sdk/scripts/genAbi.ts', 'packages/sdk/src/lib/dataEntities/Outbox.json') }}
-
-      - name: Generate ABIs
-        if: steps.abi-cache.outputs.cache-hit != 'true'
-        run: yarn gen:abi
 
       - name: Run integration tests
         working-directory: packages/sdk
