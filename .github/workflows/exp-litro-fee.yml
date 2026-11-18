@@ -1,0 +1,118 @@
+name: Experiment litro bridged fee token
+
+# Builds an l3-custom-18 testnode image from arbitrum-litro#73 with init and runs the
+# integration shard holding the L1-to-L3 tests against it, for each custom-gas decimals.
+on:
+  push:
+    branches: [exp/litro-fee]
+
+jobs:
+  custom-fee:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      fail-fast: false
+      matrix:
+        decimals: ['16', '18', '20']
+    env:
+      TOKEN_BRIDGE_LOCAL_DIR: ${{ github.workspace }}/../token-bridge-contracts
+      NITRO_CONTRACTS_LOCAL_DIR: ${{ github.workspace }}/../nitro-contracts
+      SNAPSHOT_ID: init-ci
+      ORBIT_TEST: '1'
+      DECIMALS: ${{ matrix.decimals }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: OffchainLabs/arbitrum-litro
+          ref: dl/bridged-fee-token
+          path: litro
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 26
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: litro/package.json
+
+      - name: Install litro
+        working-directory: litro
+        run: pnpm install --frozen-lockfile && pnpm exec tsx scripts/ci/resolve-external-pins.ts
+
+      - uses: foundry-rs/foundry-toolchain@v1
+
+      - run: npm install -g yarn@1.22.22
+
+      - name: Prepare token-bridge-contracts
+        run: |
+          set -euxo pipefail
+          mkdir -p "$TOKEN_BRIDGE_LOCAL_DIR" && cd "$TOKEN_BRIDGE_LOCAL_DIR"
+          git init . && git remote add origin "$TOKEN_BRIDGE_REPOSITORY"
+          git fetch --depth 1 origin "$TOKEN_BRIDGE_COMMIT" && git checkout --detach FETCH_HEAD
+          git submodule update --init --recursive --depth 1
+          yarn install --frozen-lockfile && yarn build
+
+      - name: Prepare nitro-contracts
+        run: |
+          set -euxo pipefail
+          mkdir -p "$NITRO_CONTRACTS_LOCAL_DIR" && cd "$NITRO_CONTRACTS_LOCAL_DIR"
+          git init . && git remote add origin "$NITRO_CONTRACTS_REPOSITORY"
+          git fetch --depth 1 origin "$NITRO_CONTRACTS_COMMIT" && git checkout --detach FETCH_HEAD
+          git submodule update --init --recursive --depth 1
+
+      - name: Generate snapshot
+        working-directory: litro
+        run: |
+          set -uo pipefail
+          for attempt in 1 2 3; do
+            timeout 1500 pnpm dev init --capture-id "$SNAPSHOT_ID" --rebuild --skip-post-capture-verify --fee-token-decimals "$DECIMALS"
+            [ -s "config/snapshots/$SNAPSHOT_ID/anvil-state/state.json" ] && break
+            docker compose -f docker/docker-compose.yaml -p arbitrum-testnode down -v || true
+          done
+          test -f "config/snapshots/$SNAPSHOT_ID/manifest.json"
+          docker compose -f docker/docker-compose.yaml -p arbitrum-testnode down -v || true
+
+      - name: Build image
+        working-directory: litro
+        run: |
+          node scripts/ci/prepare-testnode-context.mjs --variant "l3-custom-$DECIMALS" --snapshot-id "$SNAPSHOT_ID"
+          docker build \
+            --build-context tokenbridge="$TOKEN_BRIDGE_DOCKER_CONTEXT" \
+            --build-arg BUNDLE_VERSION=${{ github.sha }} \
+            --build-arg BUNDLE_VARIANT="l3-custom-$DECIMALS" \
+            --build-arg NITRO_CONTRACTS_REF="$NITRO_CONTRACTS_REF" \
+            --build-arg NITRO_CONTRACTS_COMMIT="$NITRO_CONTRACTS_COMMIT" \
+            --build-arg TOKENBRIDGE_REF="$TOKEN_BRIDGE_REF" \
+            --build-arg TOKENBRIDGE_COMMIT="$TOKEN_BRIDGE_COMMIT" \
+            -f docker/testnode.Dockerfile \
+            -t "local/arbitrum-testnode:${{ github.sha }}-nc3.2-l3-custom-$DECIMALS" .
+
+      - name: Boot testnode
+        uses: ./litro
+        with:
+          image-repository: local/arbitrum-testnode
+          version: ${{ github.sha }}
+          l3-enabled: true
+          fee-token-decimals: ${{ matrix.decimals }}
+          nitro-contracts-version: v3.2
+          network-config-path: packages/sdk/localNetwork.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install node_modules
+        uses: OffchainLabs/actions/node-modules/install@main
+        with:
+          cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
+
+      - run: cp ./.env-sample ./.env && yarn gen:abi
+
+      - name: Run shard 3 (Reverse Tracing, L1 to L3 Bridging)
+        working-directory: packages/sdk
+        env:
+          NODE_OPTIONS: --no-experimental-strip-types
+          CI: true
+        run: yarn mocha $(scripts/integrationShard.sh 3) --timeout 30000000 --bail
