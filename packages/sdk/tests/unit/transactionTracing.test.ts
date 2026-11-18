@@ -1,4 +1,4 @@
-import { expect } from 'chai'
+import { describe, it, expect } from 'vitest'
 import { BigNumber } from '@ethersproject/bignumber'
 import { ethers } from 'ethers'
 import { ChildTransactionReceipt } from '../../src/lib/message/ChildTransaction'

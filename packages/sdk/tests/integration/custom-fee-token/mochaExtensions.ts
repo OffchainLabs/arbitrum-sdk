@@ -1,3 +1,4 @@
+import { describe, it } from 'vitest'
 import { isArbitrumNetworkWithCustomFeeToken } from './customFeeTokenTestHelpers'
 
 const customGasTokenEnvironment = isArbitrumNetworkWithCustomFeeToken()

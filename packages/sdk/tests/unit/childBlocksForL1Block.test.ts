@@ -1,5 +1,5 @@
 import { BigNumber } from 'ethers'
-import { expect } from 'chai'
+import { describe, it, expect } from 'vitest'
 import { JsonRpcProvider } from '@ethersproject/providers'
 import {
   getBlockRangesForL1Block,
@@ -59,7 +59,7 @@ describe('Child blocks lookup for a Parent block', () => {
       expect(
         startBlockCondition,
         `Child block is not the first block in range for parent block.`
-      ).to.be.true
+      ).toBe(true)
     }
 
     if (endBlock && blockAfterEndBlock) {
@@ -69,7 +69,7 @@ describe('Child blocks lookup for a Parent block', () => {
       expect(
         endBlockCondition,
         `Child block is not the last block in range for parent block.`
-      ).to.be.true
+      ).toBe(true)
     }
   }
 

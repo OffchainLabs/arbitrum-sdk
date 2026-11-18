@@ -1,4 +1,4 @@
-import { expect } from 'chai'
+import { describe, it, beforeEach, expect } from 'vitest'
 import { loadEnv } from '../../src/lib/utils/env'
 import { Wallet } from '@ethersproject/wallet'
 import { BigNumber } from '@ethersproject/bignumber'
@@ -31,7 +31,7 @@ import {
 loadEnv()
 
 describe('Reverse Tracing', () => {
-  beforeEach('skipIfMainnet', async function () {
+  beforeEach(async function () {
     await skipIfMainnet(this)
   })
 

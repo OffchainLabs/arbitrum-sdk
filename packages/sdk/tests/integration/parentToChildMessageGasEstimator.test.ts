@@ -16,7 +16,7 @@
 /* eslint-env node */
 'use strict'
 
-import { expect } from 'chai'
+import { describe, expect, beforeEach } from 'vitest'
 import { BigNumber } from 'ethers'
 
 import { skipIfMainnet } from './testHelpers'
@@ -28,7 +28,7 @@ import {
 } from './custom-fee-token/mochaExtensions'
 
 describe('ParentToChildMessageGasEstimator', () => {
-  beforeEach('skipIfMainnet', async function () {
+  beforeEach(async function () {
     await skipIfMainnet(this)
   })
 
@@ -45,7 +45,7 @@ describe('ParentToChildMessageGasEstimator', () => {
         123456
       )
 
-      expect(submissionFee.toString()).to.not.eq(BigNumber.from(0).toString())
+      expect(submissionFee.toString()).not.toBe(BigNumber.from(0).toString())
     }
   )
 
@@ -62,7 +62,7 @@ describe('ParentToChildMessageGasEstimator', () => {
         123456
       )
 
-      expect(submissionFee.toString()).to.eq(BigNumber.from(0).toString())
+      expect(submissionFee.toString()).toBe(BigNumber.from(0).toString())
     }
   )
 })

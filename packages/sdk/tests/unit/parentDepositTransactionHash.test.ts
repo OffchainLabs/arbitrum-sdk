@@ -1,4 +1,4 @@
-import { expect } from 'chai'
+import { describe, it, expect } from 'vitest'
 import { providers } from 'ethers'
 import { ChildTransactionReceipt } from '../../src/lib/message/ChildTransaction'
 import { buildReplayProviders } from './fixtureHarness'

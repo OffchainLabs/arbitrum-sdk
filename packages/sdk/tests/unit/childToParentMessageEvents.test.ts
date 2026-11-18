@@ -16,6 +16,7 @@
 /* eslint-env node */
 'use strict'
 
+import { describe, it } from 'vitest'
 import { Logger, LogLevel } from '@ethersproject/logger'
 Logger.setLogLevel(LogLevel.ERROR)
 import { ChildToParentMessage } from '../../src/lib/message/ChildToParentMessage'

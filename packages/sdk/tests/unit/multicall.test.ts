@@ -1,12 +1,12 @@
 'use strict'
 
+import { describe, it, expect } from 'vitest'
 import {
   getArbitrumNetwork,
   getNitroGenesisBlock,
 } from '../../src/lib/dataEntities/networks'
 import { providers } from 'ethers'
 import { mock, when, anything, instance, deepEqual } from 'ts-mockito'
-import { expect } from 'chai'
 
 import { MultiCaller } from '../../src'
 
@@ -74,12 +74,8 @@ describe('Multicall', () => {
       { symbol: true, name: true }
     )
 
-    expect(data.name, 'Failed to get token name from bytes32').to.be.equal(
-      'Maker'
-    )
-    expect(data.symbol, 'Failed to get token symbol from bytes32').to.be.equal(
-      'MKR'
-    )
+    expect(data.name, 'Failed to get token name from bytes32').toBe('Maker')
+    expect(data.symbol, 'Failed to get token symbol from bytes32').toBe('MKR')
   })
 
   it('returns parsed data from byte string', async function () {
@@ -91,12 +87,11 @@ describe('Multicall', () => {
       { symbol: true, name: true }
     )
 
-    expect(data.name, 'Failed to get token name from byte string').to.be.equal(
+    expect(data.name, 'Failed to get token name from byte string').toBe(
       'Uniswap'
     )
-    expect(
-      data.symbol,
-      'Failed to get token symbol from byte string'
-    ).to.be.equal('UNI')
+    expect(data.symbol, 'Failed to get token symbol from byte string').toBe(
+      'UNI'
+    )
   })
 })
