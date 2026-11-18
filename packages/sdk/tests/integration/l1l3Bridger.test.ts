@@ -1,4 +1,9 @@
-import { getLocalNetworksFromFile, getSigner, testSetup } from '../testSetup'
+import {
+  getLocalNetworksFromFile,
+  getSigner,
+  testSetup,
+  withFastPolling,
+} from '../testSetup'
 import {
   Address,
   Erc20Bridger,
@@ -225,14 +230,20 @@ describe('L1 to L3 Bridging', () => {
     l3Network = setup.childChain
 
     l1Signer = getSigner(
-      new ethers.providers.JsonRpcProvider(process.env['ETH_URL']),
+      withFastPolling(
+        new ethers.providers.JsonRpcProvider(process.env['ETH_URL'])
+      ),
       ethers.utils.hexlify(ethers.utils.randomBytes(32))
     )
     l2Signer = getSigner(
-      new ethers.providers.JsonRpcProvider(process.env['ARB_URL']),
+      withFastPolling(
+        new ethers.providers.JsonRpcProvider(process.env['ARB_URL'])
+      ),
       ethers.utils.hexlify(ethers.utils.randomBytes(32))
     )
-    l3Provider = new ethers.providers.JsonRpcProvider(process.env['ORBIT_URL'])
+    l3Provider = withFastPolling(
+      new ethers.providers.JsonRpcProvider(process.env['ORBIT_URL'])
+    )
     l3Signer = getSigner(
       l3Provider,
       ethers.utils.hexlify(ethers.utils.randomBytes(32))
