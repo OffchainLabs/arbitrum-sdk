@@ -79,12 +79,6 @@
 
     // Crypto/contract package deep transitive dev dependencies
     ////////////////////////////////////////////////////////////
-    // https://github.com/advisories/GHSA-52f5-9888-hmc6
-    // tmp allows arbitrary temp file write via symbolic link dir parameter
-    // Dev-only dependency in contract packages (patch-package, puppeteer); not used in SDK runtime
-    // from: @arbitrum/nitro-contracts>patch-package>tmp
-    // from: @offchainlabs/l1-l3-teleport-contracts>...>sol2uml>convert-svg-core>tmp
-    "GHSA-52f5-9888-hmc6",
     // https://github.com/advisories/GHSA-v62p-rq8g-8h59
     // pbkdf2 silently disregards Uint8Array input on Node.js <3.0.0
     // Only affects Node.js <3.0.0 which this repo does not target; dev-only contract package dep
@@ -111,11 +105,6 @@
     // from: ethers>@ethersproject/signing-key>elliptic
     // from: @arbitrum/token-bridge-contracts>@openzeppelin/upgrades-core>ethereumjs-util>ethereum-cryptography>secp256k1>elliptic
     "GHSA-848j-6mx2-7j84",
-    // https://github.com/advisories/GHSA-43fc-jf86-j433
-    // axios DoS via __proto__ key in mergeConfig
-    // Fix requires axios >=1.13.5 but sol2uml depends on axios ^0.27.2; dev-only contract package dep
-    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>axios
-    "GHSA-43fc-jf86-j433",
     // https://github.com/advisories/GHSA-2g4f-4pwh-qvx6
     // ajv ReDoS when using $data option (CVE-2025-69873)
     // Fix requires ajv >=8.18.0 but eslint 7.x depends on ajv 6.x/8.x; dev-only dependency
@@ -144,13 +133,6 @@
     // from: ethers>@ethersproject/bignumber>bn.js
     "GHSA-378v-28hj-76wf",
 
-    // https://github.com/advisories/GHSA-f886-m6hf-6m8v
-    // brace-expansion zero-step sequence can hang on untrusted brace patterns
-    // Current hits are dev-only tooling paths through eslint, nyc, patch-package, and sol2uml/puppeteer.
-    // Those tools consume repository-controlled glob patterns in CI/local scripts, not runtime user input.
-    // The advisory currently only lists patched versions on brace-expansion >=5.0.5, which is not compatible
-    // with the older minimatch/glob stacks in this dependency graph.
-    "GHSA-f886-m6hf-6m8v",
 
     // hardhat transitive dependencies (dev-only)
     // https://github.com/advisories/GHSA-g9mf-h72j-4rw9
@@ -174,6 +156,52 @@
     // https://github.com/advisories/GHSA-4992-7rv2-5pvq
     // undici CRLF injection via `upgrade` option
     // from: hardhat>undici
-    "GHSA-4992-7rv2-5pvq"
+    "GHSA-4992-7rv2-5pvq",
+    // https://github.com/advisories/GHSA-vxpw-j846-p89q
+    // undici WebSocket client DoS via fragment count bypass
+    // Fix requires undici >=6.27.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-vxpw-j846-p89q",
+    // https://github.com/advisories/GHSA-p88m-4jfj-68fv
+    // undici HTTP header injection via Set-Cookie percent-decoding
+    // Fix requires undici >=6.27.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-p88m-4jfj-68fv",
+    // https://github.com/advisories/GHSA-35p6-xmwp-9g52
+    // undici HTTP response queue poisoning via keep-alive socket reuse
+    // Fix requires undici >=6.27.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-35p6-xmwp-9g52",
+    // https://github.com/advisories/GHSA-g8m3-5g58-fq7m
+    // undici Set-Cookie SameSite attribute downgrade via permissive substring matching
+    // Fix requires undici >=6.27.0 but hardhat depends on undici 5.x; dev-only
+    // from: hardhat>undici
+    "GHSA-g8m3-5g58-fq7m",
+
+    // https://github.com/advisories/GHSA-w5hq-g745-h8pq
+    // uuid v3/v5/v6 missing bounds check on caller-provided buffers
+    // Fix requires uuid >=14.0.0 but hardhat and nyc pin uuid 8.x; dev-only
+    // SDK does not invoke uuid with external buffer arguments
+    // from: hardhat>uuid
+    // from: nyc>istanbul-lib-processinfo>uuid
+    "GHSA-w5hq-g745-h8pq",
+
+    // axios transitive / dev dependencies (dev-only)
+    // https://github.com/advisories/GHSA-r4q5-vmmm-2653
+    // follow-redirects leaks custom authentication headers on cross-domain redirects
+    // Fix requires follow-redirects >=1.16.0; current resolution pinned to 1.15.6 for older axios/solc/sol2uml chains; dev-only
+    // from: axios>follow-redirects
+    // from: hardhat>solc>follow-redirects
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/nitro-contracts>sol2uml>axios>follow-redirects
+    // from: @offchainlabs/l1-l3-teleport-contracts>@arbitrum/token-bridge-contracts>@arbitrum/nitro-contracts>sol2uml>axios>follow-redirects
+    "GHSA-r4q5-vmmm-2653",
+
+
+    // @babel/core (dev-only)
+    // https://github.com/advisories/GHSA-4x5r-pxfx-6jf8
+    // @babel/core arbitrary file read via crafted sourceMappingURL comment (low severity)
+    // Only reached via nyc coverage instrumentation of this repo's own code in dev tooling
+    // from: nyc>istanbul-lib-instrument>@babel/core
+    "GHSA-4x5r-pxfx-6jf8"
   ]
 }
