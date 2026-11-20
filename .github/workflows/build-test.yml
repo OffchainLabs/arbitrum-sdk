@@ -2,6 +2,9 @@ name: Build, Test
 
 on:
   pull_request:
+  # Runs on main save the testnode image caches that every PR run can restore.
+  push:
+    branches: [main]
   workflow_dispatch:
 
 env:
@@ -125,37 +128,60 @@ jobs:
         run: CI=true yarn test:unit
 
   test-integration:
-    name: Test (Integration) on Node.js v${{ matrix.node-version }}${{ matrix.orbit-test == '1' && ' with L3' || '' }}${{ matrix.decimals == '16' && ' with custom gas token (16 decimals)' || matrix.decimals == '20' && ' with custom gas token (20 decimals)' || matrix.decimals == '18' && ' with custom gas token (18 decimals)' || '' }}
+    name: Test (Integration) on Node.js v${{ matrix.node-version }}${{ matrix.chain.orbit-test == '1' && ' with L3' || '' }}${{ matrix.chain.decimals && format(' with custom gas token ({0} decimals)', matrix.chain.decimals) || '' }} (shard ${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false # runs all tests to completion even if one fails
       matrix:
-        include:
+        node-version: [24]
+        chain:
           - orbit-test: '0'
-            node-version: 24
-
           - orbit-test: '1'
-            node-version: 24
-
           - orbit-test: '1'
             decimals: 16
-            node-version: 24
-
           - orbit-test: '1'
             decimals: 18
-            node-version: 24
-
           - orbit-test: '1'
             decimals: 20
-            node-version: 24
+        shard: [1, 2, 3, 4]
 
     needs: install
     env:
-      ORBIT_TEST: ${{ matrix.orbit-test }}
-      DECIMALS: ${{ matrix.decimals || '18' }}
+      ORBIT_TEST: ${{ matrix.chain.orbit-test }}
+      DECIMALS: ${{ matrix.chain.decimals || '18' }}
+      TESTNODE_TAG: v0.6.9-nc3.2-${{ matrix.chain.orbit-test == '0' && 'l2' || (matrix.chain.decimals && format('l3-custom-{0}', matrix.chain.decimals) || 'l3-eth') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # Pulls from GHCR usually take 10-30s but sometimes stall for minutes. The image
+      # comes from the Actions cache instead, tagged local/ so the action skips its pull.
+      - name: Restore testnode image
+        id: testnode-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ runner.temp }}/testnode-image.tar.zst
+          key: testnode-${{ env.TESTNODE_TAG }}
+
+      # Loads the image in the background while node_modules and the ABIs are set up.
+      - name: Start loading testnode image
+        run: |
+          (
+            set +e
+            bash -c '
+              set -euo pipefail
+              file="$RUNNER_TEMP/testnode-image.tar.zst"
+              if [ -f "$file" ]; then
+                zstd -dc "$file" | docker load
+              else
+                docker pull "ghcr.io/offchainlabs/arbitrum-litro:$TESTNODE_TAG"
+                docker tag "ghcr.io/offchainlabs/arbitrum-litro:$TESTNODE_TAG" "local/arbitrum-testnode:$TESTNODE_TAG"
+                docker save "local/arbitrum-testnode:$TESTNODE_TAG" | zstd -T0 -3 -o "$file"
+              fi
+            ' > "$RUNNER_TEMP/testnode-load.log" 2>&1 < /dev/null
+            echo $? > "$RUNNER_TEMP/testnode-load.rc.tmp"
+            mv "$RUNNER_TEMP/testnode-load.rc.tmp" "$RUNNER_TEMP/testnode-load.rc"
+          ) > /dev/null 2>&1 < /dev/null &
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -167,25 +193,49 @@ jobs:
         with:
           cache-key: ${{ runner.os }}-yarn-${{ hashFiles('yarn.lock') }}-monorepo
 
-      - name: Set up the local node
-        uses: OffchainLabs/arbitrum-litro@v0.2.4
-        with:
-          version: v0.2.2
-          image-repository: ghcr.io/offchainlabs/arbitrum-testnode-ci
-          l3-enabled: ${{ matrix.orbit-test == '1' }}
-          fee-token-decimals: ${{ matrix.decimals }}
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          network-config-path: packages/sdk/localNetwork.json
-
       - name: Copy .env
         run: cp ./.env-sample ./.env
 
-      - name: Build
+      - name: Restore ABIs
+        id: abi-cache
+        uses: actions/cache@v4
+        with:
+          path: packages/sdk/src/lib/abi
+          key: abi-${{ hashFiles('yarn.lock', 'packages/sdk/scripts/genAbi.ts', 'packages/sdk/src/lib/dataEntities/Outbox.json') }}
+
+      - name: Generate ABIs
+        if: steps.abi-cache.outputs.cache-hit != 'true'
+        run: yarn gen:abi
+
+      - name: Wait for testnode image
         run: |
-          yarn gen:abi
-          yarn build
+          timeout 600 bash -c 'until [ -f "$RUNNER_TEMP/testnode-load.rc" ]; do sleep 0.2; done'
+          cat "$RUNNER_TEMP/testnode-load.log"
+          exit "$(cat "$RUNNER_TEMP/testnode-load.rc")"
+
+      - name: Save testnode image
+        if: steps.testnode-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        continue-on-error: true # another shard may save the same key first
+        with:
+          path: ${{ runner.temp }}/testnode-image.tar.zst
+          key: testnode-${{ env.TESTNODE_TAG }}
+
+      - name: Set up the local node
+        uses: OffchainLabs/arbitrum-litro@v0.6.9
+        with:
+          version: v0.6.9
+          image-repository: local/arbitrum-testnode
+          l3-enabled: ${{ matrix.chain.orbit-test == '1' }}
+          fee-token-decimals: ${{ matrix.chain.decimals }}
+          network-config-path: packages/sdk/localNetwork.json
 
       - name: Run integration tests
+        working-directory: packages/sdk
         env:
           NODE_OPTIONS: --no-experimental-strip-types
-        run: CI=true yarn test:integration
+          CI: true
+        run: |
+          files=$(scripts/integrationShard.sh ${{ matrix.shard }})
+          echo "$files"
+          yarn mocha $files --timeout 30000000 --bail

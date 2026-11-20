@@ -5,14 +5,17 @@ import {
   testSetup as _testSetup,
   config,
   getLocalNetworksFromFile,
+  withFastPolling,
 } from '../../testSetup'
 import { Erc20Bridger, EthBridger } from '../../../src'
 import { ERC20__factory } from '../../../src/lib/abi/factories/ERC20__factory'
 import { getNativeTokenDecimals } from '../../../src/lib/utils/lib'
 
 // `config` isn't initialized yet, so we have to wrap these in functions
-const ethProvider = () => new StaticJsonRpcProvider(config.ethUrl)
-const arbProvider = () => new StaticJsonRpcProvider(config.arbUrl)
+const ethProvider = () =>
+  withFastPolling(new StaticJsonRpcProvider(config.ethUrl))
+const arbProvider = () =>
+  withFastPolling(new StaticJsonRpcProvider(config.arbUrl))
 const localNetworks = () => getLocalNetworksFromFile()
 
 export function isArbitrumNetworkWithCustomFeeToken(): boolean {

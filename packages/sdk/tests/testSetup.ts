@@ -64,6 +64,14 @@ export const config = isTestingOrbitChains
       ethKey: process.env['ETH_KEY'] as string,
     }
 
+/**
+ * ethers polls every 4s by default, so each tx.wait() on a local chain took up to 4s.
+ */
+export const withFastPolling = <T extends JsonRpcProvider>(provider: T): T => {
+  provider.pollingInterval = 250
+  return provider
+}
+
 export const getSigner = (provider: JsonRpcProvider, key?: string) => {
   if (!key && !provider)
     throw new ArbSdkError('Provide at least one of key or provider.')
@@ -86,8 +94,8 @@ export const testSetup = async (): Promise<{
   parentDeployer: Signer
   childDeployer: Signer
 }> => {
-  const ethProvider = new JsonRpcProvider(config.ethUrl)
-  const arbProvider = new JsonRpcProvider(config.arbUrl)
+  const ethProvider = withFastPolling(new JsonRpcProvider(config.ethUrl))
+  const arbProvider = withFastPolling(new JsonRpcProvider(config.arbUrl))
 
   const parentDeployer = getSigner(ethProvider, config.ethKey)
   const childDeployer = getSigner(arbProvider, config.arbKey)
