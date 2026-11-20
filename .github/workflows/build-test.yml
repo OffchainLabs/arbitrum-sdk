@@ -149,7 +149,7 @@ jobs:
     env:
       ORBIT_TEST: ${{ matrix.chain.orbit-test }}
       DECIMALS: ${{ matrix.chain.decimals || '18' }}
-      TESTNODE_TAG: v0.6.7-nc3.2-${{ matrix.chain.orbit-test == '0' && 'l2' || (matrix.chain.decimals && format('l3-custom-{0}', matrix.chain.decimals) || 'l3-eth') }}
+      TESTNODE_TAG: v0.6.9-nc3.2-${{ matrix.chain.orbit-test == '0' && 'l2' || (matrix.chain.decimals && format('l3-custom-{0}', matrix.chain.decimals) || 'l3-eth') }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -222,9 +222,9 @@ jobs:
           key: testnode-${{ env.TESTNODE_TAG }}
 
       - name: Set up the local node
-        uses: OffchainLabs/arbitrum-litro@v0.6.7
+        uses: OffchainLabs/arbitrum-litro@v0.6.9
         with:
-          version: v0.6.7
+          version: v0.6.9
           image-repository: local/arbitrum-testnode
           l3-enabled: ${{ matrix.chain.orbit-test == '1' }}
           fee-token-decimals: ${{ matrix.chain.decimals }}
